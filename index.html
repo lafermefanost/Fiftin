@@ -585,10 +585,12 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .mfin-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mfin-detail{font-size:11px;color:#bbb;margin-top:2px;}
 
-/* ─── CODE D'ACCÈS ───────────────────────────────────────────
-   Écran plein cadre affiché avant toute chose (voir checkAccessGate) tant
-   que le code de cet appareil n'a pas été entré — au-dessus de tout le
-   reste (z-index supérieur aux modales). */
+/* ─── CONNEXION / INSCRIPTION ─────────────────────────────────
+   Écran plein cadre affiché avant toute chose (voir bootFirebaseApp /
+   onAuthStateChanged) tant qu'aucun compte n'est connecté — au-dessus de
+   tout le reste (z-index supérieur aux modales). Vrai contrôle d'accès
+   cette fois (Firebase Authentication + règles Firestore par compte),
+   plus le code d'appareil provisoire d'avant. */
 #lockScreen{position:fixed;inset:0;background:var(--cream);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
@@ -598,6 +600,9 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .lock-box{width:100%;max-width:280px;}
 .lock-box .fi{margin-bottom:10px;}
 .lock-err{color:var(--danger);font-size:12px;margin-top:10px;min-height:16px;}
+.lock-switch{font-size:12.5px;color:var(--gray);margin-top:16px;}
+.lock-switch a{color:var(--earth);cursor:pointer;text-decoration:underline;}
+.lock-forgot{font-size:12px;color:var(--gray);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
@@ -949,19 +954,24 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 </head>
 <body>
 
-<!-- ─── CODE D'ACCÈS ───────────────────────────────────────────
-     Recouvre tout le reste tant que checkAccessGate() ne l'a pas caché.
-     Protection légère de cet appareil/navigateur uniquement — la vraie
-     protection des données se règle côté Firebase (voir modal Synchro). --><div id="lockScreen">
+<!-- ─── CONNEXION / INSCRIPTION ─────────────────────────────────
+     Recouvre tout le reste tant qu'aucun compte n'est connecté (voir
+     bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
+     ses propres données (Firestore : accounts/{uid}, protégé par des
+     règles qui vérifient request.auth.uid). --><div id="lockScreen">
   <div class="lock-logo"><b>Fiftin</b></div>
-  <div class="lock-sub" id="lockSub">Entrez le code d'accès pour ouvrir le planning.</div>
+  <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
-    <input type="password" class="fi" id="lockCode" placeholder="Code d'accès" autocomplete="current-password"
-      style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter'){(lockMode==='setup'?byId('lockCodeConfirm'):byId('lockSubmitBtn')).focus();}">
-    <input type="password" class="fi" id="lockCodeConfirm" placeholder="Confirmez le code" autocomplete="new-password"
-      style="text-align:center;font-size:16px;display:none" onkeydown="if(event.key==='Enter')submitLockCode()">
-    <button class="btn-p" style="width:100%" id="lockSubmitBtn" onclick="submitLockCode()" onkeydown="if(event.key==='Enter')submitLockCode()">Ouvrir</button>
+    <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
+      style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')byId('authPassword').focus()">
+    <input type="password" class="fi" id="authPassword" placeholder="Mot de passe" autocomplete="current-password"
+      style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter'){(authMode==='signup'?byId('authPasswordConfirm'):byId('authSubmitBtn')).focus();}">
+    <input type="password" class="fi" id="authPasswordConfirm" placeholder="Confirmez le mot de passe" autocomplete="new-password"
+      style="text-align:center;font-size:16px;display:none" onkeydown="if(event.key==='Enter')submitAuth()">
+    <button class="btn-p" style="width:100%" id="authSubmitBtn" onclick="submitAuth()">Se connecter</button>
     <div class="lock-err" id="lockErr"></div>
+    <div class="lock-switch" id="authSwitch">Pas encore de compte ? <a onclick="toggleAuthMode()">Créez-en un</a></div>
+    <div class="lock-forgot" id="authForgot" onclick="forgotPassword()">Mot de passe oublié ?</div>
   </div>
 </div>
 
@@ -976,9 +986,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </svg>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
-  <button class="hbtn" onclick="lockNow()" title="Verrouiller">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-  </button>
   <button class="hbtn" onclick="openSettings()" title="Paramètres">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
@@ -1493,51 +1500,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
          font-size:13px;font-weight:600;color:var(--green);min-height:20px"></div>
     <div class="macts">
       <button class="btn-p" onclick="closeM('modalTH')">OK</button>
-    </div>
-  </div>
-</div>
-
-<!-- ─── SYNC SETUP MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalSync" style="display:none" onclick="ovClose(event,'modalSync')">
-  <div class="modal">
-    <div class="mhead">
-      <div class="mtitle">Synchronisation</div>
-      <button class="mclose" onclick="closeM('modalSync')">✕</button>
-    </div>
-    <p id="syncStatus" style="font-size:12px;margin-bottom:10px;"></p>
-    <p style="font-size:13px;line-height:1.6;color:var(--gray);margin-bottom:14px">
-      Pour synchroniser le planning entre deux appareils en temps réel,
-      créez un projet Firebase gratuit et collez votre configuration ci-dessous.
-    </p>
-    <div class="fg">
-      <label class="fl">Configuration Firebase (JSON)</label>
-      <textarea class="fi" id="fbConfigInput" rows="6"
-        style="resize:vertical;font-family:monospace;font-size:11px"
-        placeholder='{"apiKey":"...","authDomain":"...","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}'></textarea>
-    </div>
-    <p style="font-size:11px;color:var(--gray);margin-bottom:14px">
-      → <a href="https://console.firebase.google.com" target="_blank" style="color:var(--earth)">console.firebase.google.com</a>
-      — Créer un projet → Firestore Database → Ajouter une app Web → Copier la config
-    </p>
-    <div style="background:#FFF6E5;border:1px solid #F0DCA0;border-radius:8px;padding:12px;margin-bottom:14px">
-      <div style="font-size:12px;font-weight:600;color:#8A6D1E;margin-bottom:6px">⚠️ Étape importante : sécuriser Firestore</div>
-      <p style="font-size:11.5px;line-height:1.6;color:#6B5A2A;margin-bottom:8px">
-        Par défaut, un projet Firebase tout neuf ("mode test") laisse la base accessible à qui a le lien pendant 30 jours, puis se bloque tout seul. Dans <b>Firestore Database → Règles</b>, remplacez le contenu par ceci pour restreindre l'accès à ce seul planning :
-      </p>
-      <pre style="font-size:10px;background:#2C2C2C;color:#E8E4DC;padding:8px;border-radius:6px;overflow-x:auto;white-space:pre;margin-bottom:8px">rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /planning/data { allow read, write: if true; }
-    match /{document=**} { allow read, write: if false; }
-  }
-}</pre>
-      <p style="font-size:11px;color:#6B5A2A;line-height:1.5">
-        Limite honnête : sans vrai système de connexion (pas encore intégré), cette règle protège la base contre un usage détourné, mais pas contre quelqu'un qui aurait cette configuration en main. Ne partagez jamais ce JSON — gardez-le entre vous et la personne qui gère ce planning.
-      </p>
-    </div>
-    <div class="macts">
-      <button class="btn-s" onclick="closeM('modalSync')">Annuler</button>
-      <button class="btn-p" onclick="saveFirebaseConfig()">Activer la sync</button>
     </div>
   </div>
 </div>
@@ -2131,23 +2093,79 @@ function migrateExtDiners(){
 }
 
 // Firebase integration
-function initFirebase(cfg){
-  try{
-    if(typeof firebase==='undefined'){
-      // Load Firebase SDK dynamically
-      const s1=document.createElement('script');
-      s1.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
-      s1.onload=()=>{
-        const s2=document.createElement('script');
-        s2.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js';
-        s2.onload=()=>connectFirebase(cfg);
-        document.head.appendChild(s2);
-      };
-      document.head.appendChild(s1);
-    } else {
-      connectFirebase(cfg);
-    }
-  }catch(e){console.error('Firebase init error',e);}
+// Configuration du projet Firebase partagé de Fiftin (un seul projet pour
+// tous les comptes) — plus quelque chose que chaque client colle lui-même :
+// la séparation entre comptes se fait par Firebase Authentication + les
+// règles Firestore (chacun n'a accès qu'à son propre document, voir
+// connectFirestoreForUser), pas par un projet dédié comme avant.
+const FIFTIN_FIREBASE_CONFIG={
+  apiKey:"AIzaSyBr0AdydzhN_PLgTVb3yNoFeZC8RQMo854",
+  authDomain:"fiftin-e30c2.firebaseapp.com",
+  projectId:"fiftin-e30c2",
+  storageBucket:"fiftin-e30c2.firebasestorage.app",
+  messagingSenderId:"347369551612",
+  appId:"1:347369551612:web:0b9bc176418261bbb70979",
+  measurementId:"G-4PJLYEPW01",
+};
+let currentUid=null,currentUserEmail=null;
+
+function loadFirebaseSDK(cb){
+  if(typeof firebase!=='undefined'){cb();return;}
+  const onFail=()=>{
+    const el=byId('lockErr');
+    if(el)el.textContent="Impossible de charger Firebase — vérifiez votre connexion internet et rechargez la page.";
+  };
+  const s1=document.createElement('script');
+  s1.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
+  s1.onload=()=>{
+    const s2=document.createElement('script');
+    s2.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js';
+    s2.onload=()=>{
+      const s3=document.createElement('script');
+      s3.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js';
+      s3.onload=cb;
+      s3.onerror=onFail;
+      document.head.appendChild(s3);
+    };
+    s2.onerror=onFail;
+    document.head.appendChild(s2);
+  };
+  s1.onerror=onFail;
+  document.head.appendChild(s1);
+}
+
+// Point d'entrée de l'appli (remplace l'ancien checkAccessGate) : le vrai
+// contrôle d'accès, c'est la connexion Firebase — tant qu'onAuthStateChanged
+// n'a pas répondu, on ne sait même pas s'il faut afficher le planning ou
+// l'écran de connexion. L'écran de connexion est affiché tout de suite (pas
+// d'écran blanc pendant le chargement), et masqué seulement si un compte
+// est bien connecté.
+function bootFirebaseApp(){
+  showLockScreen('signin');
+  loadFirebaseSDK(()=>{
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.auth().onAuthStateChanged(user=>{
+      if(user){
+        currentUid=user.uid;
+        currentUserEmail=user.email;
+        byId('lockScreen').classList.remove('show');
+        init();
+        connectFirestoreForUser();
+      }else{
+        // Un compte vient de se déconnecter (ou aucun n'a jamais été
+        // connecté) : on coupe l'écoute Firestore de l'ancien compte pour
+        // qu'aucune donnée ne traîne à l'écran, et on efface le cache local
+        // de l'appareil — sur un poste partagé, la personne suivante ne
+        // doit jamais voir les données du compte précédent, même une seconde.
+        if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+        currentUid=null;currentUserEmail=null;
+        localStorage.removeItem('ff2_data');
+        localStorage.removeItem('ff2_settings');
+        localStorage.removeItem('ff2_catalog');
+        showLockScreen('signin');
+      }
+    });
+  });
 }
 
 function applyRemoteData(d,meta){
@@ -2216,6 +2234,7 @@ let lastReceiveAt=null;
 let unsubSnapshot=null;
 function showSyncDebug(){
   const lines=[
+    currentUserEmail?`Compte : ${currentUserEmail}`:'Aucun compte connecté',
     db?'Firebase : connecté':'Firebase : NON connecté',
     lastPayloadKB!=null?`Taille dernier envoi : ${lastPayloadKB} Ko`:'Aucun envoi effectué depuis ce chargement',
     lastWriteMs!=null?`Temps d'écriture serveur : ${lastWriteMs} ms`:'',
@@ -2225,9 +2244,12 @@ function showSyncDebug(){
   alert('Diagnostic sync\n\n'+lines.join('\n'));
 }
 let firestoreSettingsApplied=false;
-function connectFirebase(cfg){
+// Remplace l'ancien connectFirebase(cfg) : plus de config à passer (un seul
+// projet partagé, déjà initialisé dans bootFirebaseApp), juste le compte
+// actuellement connecté (currentUid). Chaque compte a son propre document
+// (accounts/{uid}) — jamais un document partagé entre tous comme avant.
+function connectFirestoreForUser(){
   try{
-    if(!firebase.apps.length) firebase.initializeApp(cfg);
     db=firebase.firestore();
     if(!firestoreSettingsApplied){
       // Bascule automatiquement en long-polling sur les réseaux qui négocient mal
@@ -2239,11 +2261,10 @@ function connectFirebase(cfg){
       firestoreSettingsApplied=true;
     }
     setSyncPip('busy','Connexion…');
-    // Évite d'empiler plusieurs listeners si connectFirebase est rappelé
-    // (reconfiguration de la sync depuis les réglages).
+    // Évite d'empiler plusieurs listeners si rappelé (changement de compte).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     // Real-time listener
-    unsubSnapshot=db.collection('planning').doc('data').onSnapshot({includeMetadataChanges:true},snap=>{
+    unsubSnapshot=db.collection('accounts').doc(currentUid).onSnapshot({includeMetadataChanges:true},snap=>{
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
       const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
       setSyncPip('ok','Synchronisé ✓'+delayTxt);
@@ -2261,12 +2282,12 @@ function connectFirebase(cfg){
 // directe sur le serveur pour être sûr d'avoir les dernières données.
 let lastVisRefresh=0;
 function refreshFromServer(){
-  if(!db)return;
+  if(!db||!currentUid)return;
   const now=Date.now();
   if(now-lastVisRefresh<2000)return; // évite les doubles déclenchements
   lastVisRefresh=now;
   setSyncPip('busy','Actualisation…');
-  db.collection('planning').doc('data').get({source:'server'}).then(snap=>{
+  db.collection('accounts').doc(currentUid).get({source:'server'}).then(snap=>{
     if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
@@ -2282,7 +2303,7 @@ window.addEventListener('pageshow',refreshFromServer);
 window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
-  if(!db)return;
+  if(!db||!currentUid)return;
   setSyncPip('busy','Envoi…');
   const t0=Date.now();
   const payload=JSON.stringify({
@@ -2291,7 +2312,7 @@ function pushToFirebase(){
   });
   lastPayloadKB=Math.round(payload.length/1024);
   console.log(`[sync] envoi… (${lastPayloadKB} Ko)`);
-  db.collection('planning').doc('data').set({
+  db.collection('accounts').doc(currentUid).set({
     ...JSON.parse(payload),
     updated:new Date().toISOString()
   }).then(()=>{
@@ -2310,30 +2331,6 @@ function setSyncPip(state,title){
   el.title=title||'';
 }
 
-function saveFirebaseConfig(){
-  const raw=byId('fbConfigInput').value.trim();
-  try{
-    const cfg=JSON.parse(raw);
-    localStorage.setItem('ff2_fbcfg',raw);
-    initFirebase(cfg);
-    closeM('modalSync');
-  }catch(e){alert('JSON invalide — vérifiez la configuration');}
-}
-
-function openSyncModal(){
-  const saved=localStorage.getItem('ff2_fbcfg');
-  const statusEl=byId('syncStatus');
-  if(saved){
-    byId('fbConfigInput').value=saved;
-    if(statusEl) statusEl.innerHTML=db
-      ?'<span style="color:#4CAF50;font-weight:600">● Connecté</span>'
-      :'<span style="color:#FF9800;font-weight:600">● Config sauvegardée — reconnexion en cours</span>';
-  }else{
-    byId('fbConfigInput').value='';
-    if(statusEl) statusEl.innerHTML='<span style="color:var(--gray)">● Non configuré</span>';
-  }
-  byId('modalSync').style.display='flex';
-}
 
 // Export / Import
 byId('exportBtn').onclick=()=>{
@@ -2342,7 +2339,6 @@ byId('exportBtn').onclick=()=>{
   menu.innerHTML=`
     <div onclick="doExport();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;hover:background:#f5f0e8">⬇ Exporter JSON</div>
     <div onclick="byId('importFile').click();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;border-top:1px solid var(--light)">⬆ Importer JSON</div>
-    <div onclick="openSyncModal();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;border-top:1px solid var(--light)">⚡ Configurer la sync</div>
   `;
   document.body.appendChild(menu);
   setTimeout(()=>document.addEventListener('click',function h(){menu.remove();document.removeEventListener('click',h);}),50);
@@ -2350,7 +2346,8 @@ byId('exportBtn').onclick=()=>{
 
 function doExport(){
   const d=JSON.stringify({bookings:S.bookings,guests:S.guests,events:S.events,exported:new Date().toISOString()},null,2);
-  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([d],{type:'application/json'})),download:`planning-fanost-${todayISO()}.json`});
+  const slug=(S.settings.name||'planning').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'planning';
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([d],{type:'application/json'})),download:`${slug}-${todayISO()}.json`});
   a.click();URL.revokeObjectURL(a.href);
   localStorage.setItem('ff2_lastExport',todayISO());
 }
@@ -4939,13 +4936,15 @@ function renderSettings(){
     </div>`;
   h+=settingsPanel('etablissement','Établissement',etabBody);
 
-  // — Sécurité : code d'accès de cet appareil —
-  const securityBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Code demandé à l'ouverture de l'outil sur cet appareil. Protection légère uniquement (voir « Synchronisation » pour la vraie protection des données via les règles Firestore) — propre à cet appareil, sans lien avec vos données.</div>
-    <div class="fg"><label class="fl">Nouveau code d'accès</label><input type="password" class="fi" id="newAccessCode" placeholder="4 caractères minimum" autocomplete="new-password"></div>
-    <div class="fg"><label class="fl">Confirmez</label><input type="password" class="fi" id="newAccessCodeConfirm" placeholder="Confirmez le code" autocomplete="new-password"></div>
-    <button class="btn-p" style="width:100%" onclick="updateAccessCode()">Mettre à jour le code d'accès</button>
-    <div id="accessCodeMsg" style="font-size:12px;margin-top:8px"></div>`;
-  h+=settingsPanel('securite','Sécurité',securityBody);
+  // — Compte : identifiants Firebase et déconnexion —
+  const accountBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Vos données sont liées à ce compte et ne sont visibles que par vous, où que vous vous connectiez.</div>
+    <div class="fg"><label class="fl">Connecté en tant que</label><div class="fi" style="background:var(--bg2,#f4f4f4);display:flex;align-items:center;">${currentUserEmail||'—'}</div></div>
+    <div class="fg"><label class="fl">Nouveau mot de passe</label><input type="password" class="fi" id="newPassword" placeholder="6 caractères minimum" autocomplete="new-password"></div>
+    <div class="fg"><label class="fl">Confirmez</label><input type="password" class="fi" id="newPasswordConfirm" placeholder="Confirmez le mot de passe" autocomplete="new-password"></div>
+    <button class="btn-p" style="width:100%" onclick="changePassword()">Changer le mot de passe</button>
+    <div id="accountMsg" style="font-size:12px;margin-top:8px"></div>
+    <button class="btn-s" style="width:100%;margin-top:14px" onclick="signOutUser()">Se déconnecter</button>`;
+  h+=settingsPanel('compte','Compte',accountBody);
 
   // — Structures juridiques, chacune avec ses propres seuils —
   const structsForThr=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
@@ -6598,7 +6597,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSync','modalSettings'];
+  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings'];
   for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
 });
 
@@ -6980,83 +6979,111 @@ function renderYear(){
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  CODE D'ACCÈS — protection légère de cet appareil/navigateur
+//  CONNEXION / INSCRIPTION — Firebase Authentication
 // ═══════════════════════════════════════════════════════════════
-// Ce code protège seulement l'écran affiché sur CET appareil : il n'a
-// aucun effet sur la base de données elle-même — quelqu'un qui contourne
-// cet écran (ex. via les outils de développement) et connaît/devine la
-// configuration Firebase pourrait quand même lire/écrire Firestore si ses
-// règles de sécurité sont laissées ouvertes. La vraie protection des
-// données se règle côté Firebase (voir modal Synchronisation → règles
-// Firestore recommandées, et le README).
-//
-// Stocké dans localStorage (jamais dans S.settings/Firestore) pour rester
-// propre à cet appareil : changer ou oublier ce code n'affecte jamais les
-// données, et se règle en local. Seul le hash (SHA-256) est conservé,
-// jamais le code en clair. Une fois entré correctement, reste déverrouillé
-// pour l'onglet en cours (sessionStorage) — redemandé à la prochaine
-// ouverture du navigateur, ou tout de suite via le bouton cadenas.
-async function sha256Hex(text){
-  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-let lockMode='enter'; // 'enter' (code déjà défini) | 'setup' (première ouverture)
-function showLockScreen(setup){
-  lockMode=setup?'setup':'enter';
-  byId('lockSub').textContent=setup
-    ?"Première ouverture sur cet appareil : choisissez un code d'accès pour protéger ce planning."
-    :"Entrez le code d'accès pour ouvrir le planning.";
-  byId('lockCodeConfirm').style.display=setup?'block':'none';
-  byId('lockCode').value='';byId('lockCodeConfirm').value='';
+// Chaque compte (email + mot de passe) n'a accès qu'à son propre document
+// Firestore (accounts/{uid}) — appliqué par les règles Firestore elles-
+// mêmes (request.auth.uid == uid), pas seulement par ce code JS. Voir
+// bootFirebaseApp pour le point d'entrée (onAuthStateChanged).
+let authMode='signin'; // 'signin' | 'signup'
+function showLockScreen(mode){
+  authMode=mode||'signin';
+  byId('lockSub').textContent=authMode==='signup'
+    ?'Créez votre compte pour démarrer votre planning.'
+    :'Connectez-vous pour accéder à votre planning.';
+  byId('authPasswordConfirm').style.display=authMode==='signup'?'block':'none';
+  byId('authSubmitBtn').textContent=authMode==='signup'?'Créer un compte':'Se connecter';
+  byId('authSwitch').innerHTML=authMode==='signup'
+    ?'Déjà un compte ? <a onclick="toggleAuthMode()">Connectez-vous</a>'
+    :'Pas encore de compte ? <a onclick="toggleAuthMode()">Créez-en un</a>';
+  byId('authForgot').style.display=authMode==='signup'?'none':'inline-block';
   byId('lockErr').textContent='';
   byId('lockScreen').classList.add('show');
-  setTimeout(()=>byId('lockCode').focus(),50);
+  setTimeout(()=>byId('authEmail').focus(),50);
 }
-async function submitLockCode(){
-  const code=byId('lockCode').value;
+function toggleAuthMode(){
+  showLockScreen(authMode==='signup'?'signin':'signup');
+}
+// Messages Firebase Auth traduits — la liste des codes vient de la
+// documentation officielle (https://firebase.google.com/docs/auth/admin/errors
+// et les erreurs client signInWithEmailAndPassword/createUserWithEmailAndPassword).
+const AUTH_ERROR_MESSAGES={
+  'auth/email-already-in-use':'Un compte existe déjà avec cet e-mail — connectez-vous plutôt.',
+  'auth/invalid-email':'Adresse e-mail invalide.',
+  'auth/weak-password':'Mot de passe trop court (6 caractères minimum).',
+  'auth/user-not-found':"Aucun compte avec cet e-mail.",
+  'auth/wrong-password':'Mot de passe incorrect.',
+  'auth/invalid-credential':'E-mail ou mot de passe incorrect.',
+  'auth/invalid-login-credentials':'E-mail ou mot de passe incorrect.',
+  'auth/too-many-requests':'Trop de tentatives — réessayez dans quelques minutes.',
+  'auth/network-request-failed':'Problème de connexion internet — réessayez.',
+  'auth/requires-recent-login':'Pour votre sécurité, reconnectez-vous avant de changer votre mot de passe.',
+};
+function authErrorMessage(err){
+  return AUTH_ERROR_MESSAGES[err.code]||('Erreur : '+(err.message||err.code||'inconnue'));
+}
+function submitAuth(){
+  const email=byId('authEmail').value.trim();
+  const password=byId('authPassword').value;
   const errEl=byId('lockErr');
-  if(lockMode==='setup'){
-    const confirmCode=byId('lockCodeConfirm').value;
-    if(!code||code.length<4){errEl.textContent='4 caractères minimum.';return;}
-    if(code!==confirmCode){errEl.textContent='Les deux codes ne correspondent pas.';byId('lockCodeConfirm').value='';byId('lockCodeConfirm').focus();return;}
-    localStorage.setItem('ff2_accesscode_hash',await sha256Hex(code));
-    sessionStorage.setItem('ff2_unlocked','true');
-    unlockApp();
+  errEl.textContent='';
+  if(!email||!password){errEl.textContent='Renseignez e-mail et mot de passe.';return;}
+  if(authMode==='signup'){
+    const confirmPw=byId('authPasswordConfirm').value;
+    if(password!==confirmPw){errEl.textContent='Les deux mots de passe ne correspondent pas.';return;}
+    byId('authSubmitBtn').disabled=true;
+    firebase.auth().createUserWithEmailAndPassword(email,password)
+      .then(()=>{}) // onAuthStateChanged prend le relais (démarre l'appli)
+      .catch(err=>{byId('authSubmitBtn').disabled=false;errEl.textContent=authErrorMessage(err);})
+      .finally(()=>{const b=byId('authSubmitBtn');if(b)b.disabled=false;});
   }else{
-    const stored=localStorage.getItem('ff2_accesscode_hash');
-    if(await sha256Hex(code)===stored){
-      sessionStorage.setItem('ff2_unlocked','true');
-      unlockApp();
-    }else{
-      errEl.textContent='Code incorrect.';
-      byId('lockCode').value='';byId('lockCode').focus();
-    }
+    byId('authSubmitBtn').disabled=true;
+    firebase.auth().signInWithEmailAndPassword(email,password)
+      .then(()=>{})
+      .catch(err=>{errEl.textContent=authErrorMessage(err);})
+      .finally(()=>{const b=byId('authSubmitBtn');if(b)b.disabled=false;});
   }
 }
-function unlockApp(){
-  byId('lockScreen').classList.remove('show');
-  init();
+function forgotPassword(){
+  const email=byId('authEmail').value.trim();
+  const errEl=byId('lockErr');
+  if(!email){errEl.textContent="Entrez d'abord votre e-mail ci-dessus, puis cliquez à nouveau ici.";return;}
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(()=>{errEl.style.color='var(--green)';errEl.textContent='E-mail de réinitialisation envoyé — vérifiez votre boîte de réception.';})
+    .catch(err=>{errEl.style.color='var(--danger)';errEl.textContent=authErrorMessage(err);});
 }
-function lockNow(){
-  sessionStorage.removeItem('ff2_unlocked');
-  location.reload();
+// Réglages → Compte : déconnexion — rechargement complet plutôt qu'un
+// simple retour à l'écran de connexion, pour repartir d'un état JS vierge
+// (aucune donnée du compte précédent ne doit rester en mémoire).
+function signOutUser(){
+  firebase.auth().signOut().then(()=>location.reload());
 }
-function checkAccessGate(){
-  const hash=localStorage.getItem('ff2_accesscode_hash');
-  if(hash&&sessionStorage.getItem('ff2_unlocked')==='true')init();
-  else showLockScreen(!hash);
-}
-// Réglages → Sécurité : change le code sans redemander l'ancien (on est déjà
-// passé par l'écran de verrouillage pour arriver jusqu'ici).
-async function updateAccessCode(){
-  const code=byId('newAccessCode').value;
-  const confirmCode=byId('newAccessCodeConfirm').value;
-  const msgEl=byId('accessCodeMsg');
-  if(!code||code.length<4){msgEl.textContent='4 caractères minimum.';msgEl.style.color='var(--danger)';return;}
-  if(code!==confirmCode){msgEl.textContent='Les deux codes ne correspondent pas.';msgEl.style.color='var(--danger)';return;}
-  localStorage.setItem('ff2_accesscode_hash',await sha256Hex(code));
-  byId('newAccessCode').value='';byId('newAccessCodeConfirm').value='';
-  msgEl.textContent='✓ Code mis à jour.';msgEl.style.color='var(--green)';
+// Réglages → Compte : changer de mot de passe. Firebase exige parfois une
+// reconnexion récente (auth/requires-recent-login) pour cette opération
+// sensible — on redemande alors le mot de passe actuel puis on réessaie.
+function changePassword(){
+  const newPw=byId('newPassword').value;
+  const confirmPw=byId('newPasswordConfirm').value;
+  const msgEl=byId('accountMsg');
+  msgEl.style.color='var(--danger)';
+  if(!newPw||newPw.length<6){msgEl.textContent='6 caractères minimum.';return;}
+  if(newPw!==confirmPw){msgEl.textContent='Les deux mots de passe ne correspondent pas.';return;}
+  const user=firebase.auth().currentUser;
+  user.updatePassword(newPw).then(()=>{
+    byId('newPassword').value='';byId('newPasswordConfirm').value='';
+    msgEl.style.color='var(--green)';msgEl.textContent='✓ Mot de passe mis à jour.';
+  }).catch(err=>{
+    if(err.code==='auth/requires-recent-login'){
+      const currentPw=prompt('Confirmez votre mot de passe actuel pour continuer :');
+      if(!currentPw)return;
+      const cred=firebase.auth.EmailAuthProvider.credential(user.email,currentPw);
+      user.reauthenticateWithCredential(cred).then(()=>changePassword()).catch(err2=>{
+        msgEl.textContent=authErrorMessage(err2);
+      });
+    }else{
+      msgEl.textContent=authErrorMessage(err);
+    }
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -7081,14 +7108,6 @@ function init(){
   // Auto-scroll to today after render
   setTimeout(()=>byId('row-today')?.scrollIntoView({block:'center'}),150);
 
-  // Load Firebase if configured
-  const fbraw=localStorage.getItem('ff2_fbcfg');
-  if(fbraw){
-    try{initFirebase(JSON.parse(fbraw));}catch(e){console.warn('Firebase config invalide');}
-  }else{
-    setSyncPip('ok','Local uniquement — cliquez ⬇ pour configurer la sync');
-  }
-
   // Backup reminder: show if no export in 7 days
   setTimeout(()=>{
     const last=localStorage.getItem('ff2_lastExport');
@@ -7105,7 +7124,7 @@ function init(){
   },3000);
 }
 
-checkAccessGate();
+bootFirebaseApp();
 </script>
 </body>
 </html>
