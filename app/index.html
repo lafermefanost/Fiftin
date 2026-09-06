@@ -1567,6 +1567,11 @@ let bankExpandedCat=null;
 let monthBklistOpen=false;
 let monthChargesOpen=false;
 let settingsPanelOpen={};
+// Cache local de la liste des comptes Personnel de ce propriétaire (Réglages
+// → Équipe) — rechargée depuis Firestore à l'ouverture du panneau, voir
+// loadTeamMembers(). Vide par défaut, y compris pour un compte Personnel qui
+// ne charge jamais cette liste (le panneau ne lui est pas montré).
+let teamMembers=[];
 let weekOpenDays=new Set();
 let weekOpenDaysFor=null;
 
@@ -2150,15 +2155,25 @@ function loadFirebaseSDK(cb){
 // l'écran de connexion. L'écran de connexion est affiché tout de suite (pas
 // d'écran blanc pendant le chargement), et masqué seulement si un compte
 // est bien connecté.
+// Lien d'invitation d'un membre de l'équipe (voir generateInviteLink) :
+// ?invite=<id> dans l'URL. Lu une seule fois au chargement — n'a d'effet que
+// si la personne choisit "Créer un compte" juste après (voir signupInProgress
+// et acceptInvite ci-dessous) : rouvrir ce lien sur une session déjà
+// connectée, ou l'utiliser pour se connecter à un compte existant, ne change
+// jamais rien.
+const pendingInviteId=new URLSearchParams(location.search).get('invite');
+let signupInProgress=false;
 function bootFirebaseApp(){
-  showLockScreen('signin');
+  showLockScreen(pendingInviteId?'signup':'signin');
   loadFirebaseSDK(()=>{
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     firebase.auth().onAuthStateChanged(user=>{
       if(user){
         currentUid=user.uid;
         currentUserEmail=user.email;
-        resolveAccountRole(user.uid).then(()=>{
+        const acceptPromise=(signupInProgress&&pendingInviteId)?acceptInvite(user.uid,pendingInviteId):Promise.resolve();
+        signupInProgress=false;
+        acceptPromise.then(()=>resolveAccountRole(user.uid)).then(()=>{
           byId('lockScreen').classList.remove('show');
           init();
           connectFirestoreForUser();
@@ -2174,7 +2189,13 @@ function bootFirebaseApp(){
         localStorage.removeItem('ff2_data');
         localStorage.removeItem('ff2_settings');
         localStorage.removeItem('ff2_catalog');
-        showLockScreen('signin');
+        // Redonne la priorité au lien d'invitation en cours (voir plus haut) :
+        // ce même code s'exécute juste après le tout premier chargement de
+        // la page (Firebase répond toujours par "personne connecté" avant de
+        // confirmer une session existante), donc sans ce garde-fou l'écran
+        // "Créez votre compte" affiché par bootFirebaseApp() serait aussitôt
+        // remplacé par l'écran de connexion classique.
+        showLockScreen(pendingInviteId?'signup':'signin');
       }
     });
   });
@@ -2202,6 +2223,30 @@ function resolveAccountRole(uid){
     // autre compte : aucune fuite possible, seulement une grille vide.
     console.error('Impossible de déterminer le rôle du compte',err);
     currentRole='owner';ownerUid=uid;
+  });
+}
+
+// Accepte un lien d'invitation (voir generateInviteLink) au moment précis où
+// la personne invitée vient de créer son compte (signupInProgress, voir
+// bootFirebaseApp) — jamais sur une connexion normale. Écrit la fiche
+// accountMembers qui fait de ce nouveau compte un compte Personnel rattaché
+// au propriétaire, puis marque l'invitation comme utilisée. Les règles
+// Firestore revérifient tout ceci côté serveur (voir README) : ce code ne
+// fait qu'appliquer côté client ce qu'elles autorisent de toute façon.
+function acceptInvite(memberUid,inviteId){
+  const db=firebase.firestore();
+  return db.collection('invites').doc(inviteId).get().then(snap=>{
+    if(!snap.exists||snap.data().used){
+      alert("Ce lien d'invitation n'est plus valide — demandez-en un nouveau à votre employeur.");
+      return;
+    }
+    const invitedOwnerUid=snap.data().ownerUid;
+    return db.collection('accountMembers').doc(memberUid).set({
+      ownerUid:invitedOwnerUid,role:'personnel',inviteId,email:currentUserEmail,addedAt:new Date().toISOString()
+    }).then(()=>db.collection('invites').doc(inviteId).update({used:true,usedBy:memberUid}));
+  }).catch(err=>{
+    console.error("Impossible d'accepter l'invitation",err);
+    alert("Impossible d'accepter l'invitation — vérifiez votre connexion et réessayez.");
   });
 }
 
@@ -5001,6 +5046,7 @@ function openSettings(){
 }
 function toggleSettingsPanel(id){
   settingsPanelOpen[id]=!settingsPanelOpen[id];
+  if(id==='equipe'&&settingsPanelOpen[id])loadTeamMembers();
   renderSettings();
 }
 // Enveloppe une section des réglages dans un volet dépliant, comme les volets des
@@ -5070,6 +5116,27 @@ function renderSettings(){
       </select>
     </div>`;
   h+=settingsPanel('compte','Compte',accountBody);
+
+  // — Équipe : comptes Personnel à droits limités (formule Pro) — un
+  // propriétaire seulement, jamais un compte Personnel lui-même.
+  if(currentRole==='owner'){
+    let teamBody;
+    if(st.plan!=='pro'){
+      teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Pro permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
+    }else{
+      teamBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Un compte Personnel voit uniquement la Grille, la vue du jour, le Ménage et les Événements — jamais les chiffres, les réglages ni les transactions. 2 comptes inclus, 5 €/mois au-delà.</div>
+        <button class="btn-p" style="width:100%" onclick="generateInviteLink()">+ Générer un lien d'invitation</button>
+        <div id="inviteLinkBox" style="margin-top:8px"></div>
+        <div class="set-card-sub" style="margin-top:14px;padding-top:10px">
+          <div class="set-card-sub-title">Membres de l'équipe (${teamMembers.length})</div>
+          ${teamMembers.length?teamMembers.map(m=>`<div class="set-card-row" style="justify-content:space-between;align-items:center;padding:6px 0">
+            <span style="font-size:12px;">${(m.email||m.uid).replace(/</g,'&lt;')}</span>
+            <button class="set-del" onclick="removeMember('${m.uid}')">×</button>
+          </div>`).join(''):'<div style="font-size:11px;color:#bbb;">Aucun membre pour l\'instant.</div>'}
+        </div>`;
+    }
+    h+=settingsPanel('equipe','Équipe',teamBody);
+  }
 
   // — Structures juridiques, chacune avec ses propres seuils —
   const structsForThr=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
@@ -5594,6 +5661,32 @@ function addStructure(){
 function setPlan(plan){
   S.settings.plan=plan==='pro'?'pro':'essentiel';
   saveSettings();renderSettings();
+}
+
+// Réglages → Équipe — voir acceptInvite() côté invité, et les règles
+// Firestore (README) pour la vérification serveur de tout ceci.
+function loadTeamMembers(){
+  if(!db||currentRole!=='owner')return Promise.resolve();
+  return db.collection('accountMembers').where('ownerUid','==',currentUid).get().then(snap=>{
+    teamMembers=snap.docs.map(d=>({uid:d.id,...d.data()}));
+    renderSettings();
+  }).catch(err=>console.error("Impossible de charger l'équipe",err));
+}
+function generateInviteLink(){
+  if(!db||S.settings.plan!=='pro')return;
+  const ref=db.collection('invites').doc();
+  ref.set({ownerUid:currentUid,createdAt:new Date().toISOString(),used:false}).then(()=>{
+    const link=`${location.origin}${location.pathname}?invite=${ref.id}`;
+    const box=byId('inviteLinkBox');
+    if(box)box.innerHTML=`<input class="set-fi" readonly value="${link}" onclick="this.select()" style="margin-bottom:6px;width:100%">
+      <button class="btn-s" style="width:100%" onclick="navigator.clipboard.writeText('${link}').then(()=>alert('Lien copié — envoyez-le à la personne à inviter (SMS, WhatsApp…). Il ne fonctionne qu\\'une seule fois.'))">Copier le lien</button>`;
+  }).catch(err=>{console.error(err);alert("Impossible de générer le lien d'invitation.");});
+}
+function removeMember(uid){
+  if(!confirm("Retirer l'accès de ce compte à votre planning ?"))return;
+  db.collection('accountMembers').doc(uid).delete().then(loadTeamMembers).catch(err=>{
+    console.error(err);alert('Impossible de retirer ce membre.');
+  });
 }
 function delStructure(id){
   if(!S.settings.structures||S.settings.structures.length<=1)return;
@@ -7175,9 +7268,13 @@ function submitAuth(){
     const confirmPw=byId('authPasswordConfirm').value;
     if(password!==confirmPw){errEl.textContent='Les deux mots de passe ne correspondent pas.';return;}
     byId('authSubmitBtn').disabled=true;
+    // Marque cette création de compte comme candidate à l'acceptation d'une
+    // invitation (voir bootFirebaseApp/acceptInvite) — sans effet si aucun
+    // lien d'invitation n'était présent au chargement de la page.
+    signupInProgress=true;
     firebase.auth().createUserWithEmailAndPassword(email,password)
       .then(()=>{}) // onAuthStateChanged prend le relais (démarre l'appli)
-      .catch(err=>{byId('authSubmitBtn').disabled=false;errEl.textContent=authErrorMessage(err);})
+      .catch(err=>{signupInProgress=false;byId('authSubmitBtn').disabled=false;errEl.textContent=authErrorMessage(err);})
       .finally(()=>{const b=byId('authSubmitBtn');if(b)b.disabled=false;});
   }else{
     byId('authSubmitBtn').disabled=true;
