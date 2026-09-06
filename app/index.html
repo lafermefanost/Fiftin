@@ -2223,6 +2223,8 @@ function resolveAccountRole(uid){
     // accounts/{uid} (son propre compte, vide), jamais les données d'un
     // autre compte : aucune fuite possible, seulement une grille vide.
     console.error('Impossible de déterminer le rôle du compte',err);
+    lastSyncErrorMsg='(resolveAccountRole) '+((err&&(err.code||err.message))||String(err));
+    lastSyncErrorAt=new Date().toLocaleTimeString('fr-FR');
     currentRole='owner';ownerUid=uid;
   });
 }
@@ -2368,6 +2370,12 @@ let lastPayloadKB=null;
 let lastWriteMs=null;
 let lastReceiveAt=null;
 let unsubSnapshot=null;
+// Dernière erreur de synchro rencontrée (voir onErr dans
+// connectFirestoreForUser) — jamais effacée automatiquement même après une
+// reprise réussie, pour qu'on puisse toujours voir ce qui a coincé au tout
+// premier chargement en cliquant sur le point de synchro plus tard.
+let lastSyncErrorMsg=null;
+let lastSyncErrorAt=null;
 function showSyncDebug(){
   const lines=[
     currentUserEmail?`Compte : ${currentUserEmail}`:'Aucun compte connecté',
@@ -2376,6 +2384,7 @@ function showSyncDebug(){
     lastWriteMs!=null?`Temps d'écriture serveur : ${lastWriteMs} ms`:'',
     lastSyncDelayMs!=null?`Délai dernière réception : ${Math.round(lastSyncDelayMs/1000)}s`:'Aucune donnée reçue depuis ce chargement',
     lastReceiveAt?`Dernière réception à : ${lastReceiveAt}`:'',
+    lastSyncErrorMsg?`⚠️ Dernière erreur (${lastSyncErrorAt}) : ${lastSyncErrorMsg}`:'Aucune erreur de synchro depuis ce chargement',
   ].filter(Boolean);
   alert('Diagnostic sync\n\n'+lines.join('\n'));
 }
@@ -2421,6 +2430,8 @@ function connectFirestoreForUser(){
     const onErr=err=>{
       setSyncPip('err','Erreur sync — nouvelle tentative…');
       console.error(err);
+      lastSyncErrorMsg=(err&&(err.code||err.message))||String(err);
+      lastSyncErrorAt=new Date().toLocaleTimeString('fr-FR');
       connectRetryCount++;
       const delay=Math.min(2000*connectRetryCount,15000);
       setTimeout(()=>{ if(currentUid) connectFirestoreForUser(); },delay);
@@ -2468,6 +2479,8 @@ function refreshFromServer(){
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
   }).catch(err=>{
     setSyncPip('err','Erreur sync');
+    lastSyncErrorMsg='(refreshFromServer) '+((err&&(err.code||err.message))||String(err));
+    lastSyncErrorAt=new Date().toLocaleTimeString('fr-FR');
     console.error(err);
   });
 }
