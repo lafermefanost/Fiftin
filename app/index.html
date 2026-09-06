@@ -2350,9 +2350,21 @@ function lockdownModalForPersonnelViewing(modalId){
   modal.querySelectorAll('button').forEach(btn=>{
     const oc=btn.getAttribute('onclick')||'';
     if(btn.classList.contains('mclose')||/closeM\(/.test(oc))return; // Fermer/Annuler restent actifs
+    if(btn.classList.contains('extras-day-tab'))return; // navigation entre jours = lecture seule, pas une modif
     btn.disabled=true;
   });
   alert('Ce compte est en lecture seule — vous pouvez consulter cette fiche mais pas la modifier.');
+}
+// Les onglets "extras-day-tab" (jour du séjour/événement) régénèrent leur
+// contenu (repas/consos du jour) en réécrivant le HTML de la zone — donc les
+// boutons/inputs qu'ils réinjectent ne passent pas par le verrouillage
+// ci-dessus. On regrise ce contenu après chaque changement de jour, sans
+// jamais toucher aux onglets eux-mêmes qui doivent rester navigables.
+function personnelLockExtrasBody(bodyId){
+  if(currentRole!=='personnel')return;
+  const body=byId(bodyId);
+  if(!body)return;
+  body.querySelectorAll('input,select,textarea,button').forEach(el=>{el.disabled=true;});
 }
 
 function applyRemoteData(d,meta){
@@ -2435,10 +2447,13 @@ function applySharedOpsData(d,meta){
   S.menus=d.menus||{};
   S.extDiners=d.extDiners||{};
   migrateExtDiners();
-  // Jamais reçus pour un compte Personnel — toujours vides, par sécurité
-  // autant que par cohérence (ces vues ne sont de toute façon pas accessibles).
+  // Jamais reçue pour un compte Personnel — toujours vide, par sécurité autant
+  // que par cohérence (la vue comptabilité n'est de toute façon pas accessible).
   S.transactions=[];
-  S.catalog=[];
+  // Le catalogue (nom/prix/emoji des extras) n'est PAS une donnée comptable —
+  // c'est juste la carte des repas/consos, indispensable pour que le staff
+  // puisse voir le détail d'une fiche (lecture seule) plutôt qu'une liste vide.
+  S.catalog=d.catalog||[];
   S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),rooms:d.rooms||[],name:d.name||''};
   applySettings();
   renderGrid();
@@ -2614,6 +2629,7 @@ function pushSharedOpsMirror(){
     rooms:roomsPublic,
     name:S.settings.name||'',
     bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners,
+    catalog:S.catalog, // juste la carte des extras (nom/prix/emoji) — pas une donnée comptable, le staff doit pouvoir voir le détail des repas/consos d'une fiche
     updated:new Date().toISOString()
   }).catch(err=>console.error('[sync] échec miroir équipe',err));
 }
@@ -3482,6 +3498,7 @@ function renderModalExtras(){
     return `<button type="button" class="extras-day-tab${ds===modalExtrasDay?' on':''}" onclick="modalExtrasDay='${ds}';renderModalExtras()">${fmtDateShort(ds)}${dt>0?` · ${dt.toLocaleString('fr-FR')}€`:''}</button>`;
   }).join('');
   byId('bExtrasDayBody').innerHTML=extrasHTMLFor(bk,modalExtrasDay);
+  personnelLockExtrasBody('bExtrasDayBody');
 }
 
 let gSearchTerm='';
@@ -4303,6 +4320,7 @@ function renderModalExtrasEv(){
     return `<button type="button" class="extras-day-tab${ds===evModalExtrasDay?' on':''}" onclick="evModalExtrasDay='${ds}';renderModalExtrasEv()">${fmtDateShort(ds)}${dt>0?` · ${dt.toLocaleString('fr-FR')}€`:''}</button>`;
   }).join('');
   byId('evExtrasDayBody').innerHTML=extrasHTMLForEv(ev,evModalExtrasDay);
+  personnelLockExtrasBody('evExtrasDayBody');
 }
 // Total d'un événement = prix (optionnel) + consommations — même principe
 // dépliable/copiable que "Total séjour" du modal réservation (updateModalTotal/
