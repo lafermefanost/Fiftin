@@ -2301,6 +2301,36 @@ function applyPersonnelUIRestrictions(){
   });
   // Le badge "Personnel" dans l'en-tête est géré par applySettings() (il
   // doit être réappliqué à chaque resynchro, pas juste une fois ici).
+  lockPersonnelWrites();
+}
+
+// Contrairement au masquage des menus/onglets ci-dessus (qui n'est qu'un
+// confort d'affichage, la protection réelle venant de ce que ces données ne
+// sont jamais reçues, voir applySharedOpsData), ceci EST la vraie protection
+// en écriture : les réservations, événements et repas externes sont bien
+// reçus par un compte Personnel (pour qu'il puisse les voir), donc rien ne
+// l'empêchait techniquement de les modifier localement — la modification ne
+// partait jamais vers le propriétaire (pushToFirebase est un no-op pour ce
+// rôle, voir plus haut), mais s'affichait quand même à l'écran jusqu'au
+// prochain rechargement, ce qui est trompeur. On bloque donc ici, en amont,
+// toutes les fonctions qui créent/modifient/suppriment quoi que ce soit dans
+// les vues auxquelles un compte Personnel a accès (Grille, Jour, Ménage,
+// Événements) — remplacées par une version qui prévient au lieu d'agir.
+function lockPersonnelWrites(){
+  const names=[
+    'saveBooking','delBooking','onDrop',
+    'updateBreakfastChip','updateDinnerChip','toggleDinnerNight','setExtra',
+    'toggleExtDinerMeal','addExtDiner','delExtDiner','setExtDinerExtra',
+    'saveEvent','delEvent','setExtraEv',
+    'saveGuest','delGuest',
+  ];
+  names.forEach(name=>{
+    const orig=window[name];
+    if(typeof orig!=='function')return;
+    window[name]=function(...args){
+      alert('Ce compte est en lecture seule — les modifications ne sont pas enregistrées.');
+    };
+  });
 }
 
 function applyRemoteData(d,meta){
