@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fiftin">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ─── RESET ─────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -34,12 +34,10 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .app-icon{flex-shrink:0;opacity:.92;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.logo b{font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;
-  letter-spacing:.04em;text-transform:uppercase;color:#fff;}
-/* Nom de l'établissement du client, à côté de "FIFTIN" : volontairement
-   plus fin et sans capitales pour contraster avec l'identité de marque,
-   qui doit rester la plus visible des deux. */
-.logo .tenant-name{font-weight:300;opacity:.85;}
+/* Nom de l'établissement du client — seul texte du logo dans l'appli (voir
+   applySettings) : Fiftin s'efface derrière le pictogramme, place normale
+   pour un outil en marque blanche vis-à-vis du client final. */
+.logo b{font-weight:600;color:#fff;}
 .hbtn{width:34px;height:34px;border:none;border-radius:50%;
   background:rgba(255,255,255,.1);color:var(--cream);cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:16px;
@@ -605,18 +603,26 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    tout le reste (z-index supérieur aux modales). Vrai contrôle d'accès
    cette fois (Firebase Authentication + règles Firestore par compte),
    plus le code d'appareil provisoire d'avant. */
-#lockScreen{position:fixed;inset:0;background:var(--cream);z-index:5000;
+/* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
+   — pour que l'écran de connexion porte déjà l'identité de l'appli avant
+   même d'y entrer, plutôt qu'un simple formulaire neutre. */
+#lockScreen{position:fixed;inset:0;background:var(--green);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
-.lock-logo{font-family:'Jost',sans-serif;font-size:26px;font-weight:500;margin-bottom:8px;}
-.lock-sub{font-size:13px;color:var(--gray);margin-bottom:22px;max-width:280px;line-height:1.5;}
+.lock-logo{font-family:'Jost',sans-serif;font-size:26px;font-weight:500;margin-bottom:8px;color:#fff;}
+.lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;}
 .lock-box{width:100%;max-width:280px;}
 .lock-box .fi{margin-bottom:10px;}
-.lock-err{color:var(--danger);font-size:12px;margin-top:10px;min-height:16px;}
-.lock-switch{font-size:12.5px;color:var(--gray);margin-top:16px;}
-.lock-switch a{color:var(--earth);cursor:pointer;text-decoration:underline;}
-.lock-forgot{font-size:12px;color:var(--gray);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
+.lock-err{color:#FFB4A8;font-size:12px;margin-top:10px;min-height:16px;}
+.lock-switch{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:16px;}
+.lock-switch a{color:#fff;font-weight:600;cursor:pointer;text-decoration:underline;}
+.lock-forgot{font-size:12px;color:rgba(255,255,255,.7);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
+/* Le bouton .btn-p partagé est vert par défaut — invisible sur un fond
+   maintenant vert lui aussi. Inversé ici pour rester le point le plus
+   visible de l'écran. */
+#lockScreen .btn-p{background:#fff;color:var(--green);}
+#lockScreen .btn-p:hover{filter:brightness(.96);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
@@ -977,7 +983,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
      ses propres données (Firestore : accounts/{uid}, protégé par des
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
-  <img width="40" height="40" alt="" style="margin-bottom:10px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAKSklEQVR4nO1ae4xcVRn/feecO7OvUtqFlTe4BZbutgWyPlPIlNB2t/5jgt7VRE2IoMZKNwUhRiWZjhpjAqggUG18EfuH7A0RE4LbR6ATqhaxPLplVwm23aYNiCyFtfuYued8n3/cO9vdnX3MbJc+cH7Jzczce8535vvu9z4HqKCCCiqooIIKKvg/BZUySAS0a1NKF36v2pR1RJCicem0mnahTIbH/Zx23EmCZx9SJrp8X5dz/2zDjBogABEgf9rYdmEVaKVS9CEI3hwe4r+s27LtjcLzwvidG9qba6pM1XAYjtHwAFgrbuDfC/d3BIEDgOuXXnG5Mro+H8YD5gmDg7a3v79/tJw5Zpr7JOk0USbD2zvb09WKNnpGn6uIwCJQdTi2o7PtJ/TQtu93+b7uCAIGIFDypAKu0iAoIogARhNCcYPnX5S/HMC7AOAUbSKlbiXtQFKSFZaE2lqvBUAvIhMryRymtMUC890b1j7SUJfcFDLOPT4ausGR0B4fDZ1lLDq/rup72zvbHuoIAifpNAEAAWHIIk7EhSxiWThkEYDyE+gLOYkQyjyCiIr8UtkC6PJ9TZkM77ijbfWi6sT6gaFcyCxCRJoIhoi0Y5GBoVx4TpW34en1q2+mTIa7fF+LgAggFD4jEyl8nwx6H66yUSSA85vfiggp+QpAIgIimkicCBQxS+IZdRsA+HNZ/QxAkQBuymRt9I2arGMCZJqQJcoyE4GuAQAKAlfqK4hciViArAjm7ZqLCRQ5wYJnJ4KdSaniPEAEcIV5z5S8rNQZYwzgDNH8OcGRvJ3OqU+Logm70imNTNaK0EueVq3DIKYpNIWFJKEVDQEvFubJsdkXFICuZXnQWn6KWVhkOg0rH9aqwyeWKQ1FAvhPb4MAgHWyORe6240CORZHRGOJj4g4o4hGQgexvBkAdmEV34g9JS26r+/Q8wCeL/VPzgFzF0Ac1hRlMi9237H27vra5P05yxi1DhBhEKkqz+iEUXhnOHdn+6M7Xo7H887OtpIWTaVS5ujRo3PKJBOJhFRXV0tdXV3MZHbsWTYLhzKYB6ZJhAphrf3h4IHuO9YeqUmY72qi5QmjVd4xnMi+d4fCH7Q/vD2Iw6YrZ9FsNmsB2HLmTAXfhwaAIECUiM0B0zqNcZrwOIBgZ2f7MiGpJ8LbqR8//SoAjp+XxTwArLimcZlJ0MXOORHokr0gE7NyMqiBN6/sO3QkCDC2tg/oACj7v8y6eJzqFhGe6v7OzrbeKs8sHQ0tE5ESgXiayLIMKCSvvOnBP74LAMubG3+XSJgvWutQbhQQEYhwDqBDRNjNDk/09B3oRqQBKv4sWRtm9cAxkyTptOryfR2XvDSVUEoFEUaY2YlwjpldGReLiACUVERNSqnbtFFPX9uy5IUVLY23AGOmUHJkKTVuCmUyc7KxKYkJFAAtAiHCXJyhsIiIZQaR0kq1KtAT1y5b8numcH1Pz+FjADRKMIn3qzHxfoMAKCIyBChmZuvYKUWfJzHPrbj6sg8jYn5W/k6LAOKq2oHgBGVcAiciVgQWE+1cEUFb60JNqoU8s7Op6dKLEJnEjDyeFgEwo9ZopRWppFZKl3oZrbQx2hijDBGRiExQcSLyrHNWadWY1OaJ1tZWz/dnrhTLzp1PFgLQdeTuCy0FzI4hpZexpJQWyAUE+iSAdcboeue4oAlRT4LIWOtCzzOfyA+/c28QIO370OND5niccgEAwCu9/S8DePkkSDza3Hz5BeRwjyK6i0UKoW+8EBwpfGv58sseC4LDBzFNl+i0CACAilWzbLz1VooaGrISBP1vAvjmipYr/kakt4oIIWKSEDUyxBidtKHcCWBDKpXS2Wz2jBEAB8Fcp47l/tTc3Ozte7X38WVLGxd5ntpsLbtCWCUizSwAUUdTU9N3stnsfxEJZ0I4P1vDIABIb29vvrW11dvfd+Dn1rpntVZaZMzWiUVYa92Q1HYlAPh+Mb9nswAAAHV1ewUAidD9RQ9FmAjC4JVAZD6Th5z1AiiUwKOh2u2cG1CKNMbUPPKJCtQEAA0N2aJs9qwXAGLv//rrrw8COBgXVwVnRyKAQBoAIAiKi6QPggCAQqJDNAqc8HLjCs1E/PmBFQADIEAWI8qsCIg6trFkjsfjzjwfkE5Ddfm+LmyszIGEAkAtLUsuIVAjR4lhTCemSHIEAFKp1JkTBdJpKEmnVSYD7ggC1xEEjgjS5ftaZsjdJyNmSsByi9aqKtpvmDyf9k03/7QkQul0WmUyGc4gg+671l6adLRESIUuzP9jzSPBAHBif2IWUiqbzbqmpqYFWuXvjrfwxl5qIRkidlkAOCMywcD3VSaTcX/4WtsVi2rUfWCsM0bVCgSaEm/v2rhu6+G37b20dcfQDEKgOLW1AJA04a+01peMzwQBOKVIWSc9+/v69yHSiiIBnHIT8IOAt3euvmpxjfpzbdJ8lkVqR0PL+dAxC85bWJ3YeHG93ta1PlWHdJpic1C+Dx13gRUAyWaztqmpfsGKlsatWit/EvOId4tJCTYDcKlUasrO0ykXwKY0SET9uiZhLnpvOJ8XIFJbIuVEZGBoNLe4NrlysUlmKJPhoMtXiGoHF5e03Hr11ectb268tcosfEFr9YXJzANgrZV21h2oWZj/LQDKZrOntxy29rgGgI+/s/pjtQlzw+Bo3hFRYvwYAkhAicHhPAN022NfuvmHHR3BwPKWxo1a0Y3OcUigC0MKW4zW9cKCKZgXETBABuBv7NlzZOSM6AeYZDUBgAf10YTRMhqyTNURJwKFLEgYvXDRArcUwG4FtBmj2wvOXWSMcZrcVBUR63nGC/PuRz19/d0zMQ+cjiggatY1CSIEkJEx5rS1zjorDAVNcQ9w0jQWAUfM29/09B38dsz8jEdlTpkPsLmRaNMV0hOfO5gy1gsgpBTlrBsZcfq1+PYCgAxFzGtMjPMsIpaIlDHKhNY90NN38MsAVClbZvMqgKjuEAaIIWACGJE9co6rGACE6LnjufCfNQlPi0hYREMkXFjlkYg8+Zkt294QEWKRakAKzHChOwyAI8aNEaA/DO3nel49cDfK2CGaVwEQIZkwWhlNxjNKGa10wiglkOrahBEA+NTPunNE6nbHnK9JGA8Qd+KUh/C51YnE4Gi+fzRv7xEBdbS0eCA0EJEiIqMUqUJ3WCmlBPIvdnyvUHj9/r5DXXGoLHmzdL59wKGcZWOZGQI1dsZIcKxacgxEe4prHgp2P7V+zZpzqsyDVZ65zlMKAiBnHYZztnvwuFv/6V8+c1R+AfrrJYN60Tnea455GCwQ0BAIRwnyCsDP1rxnn9tz5MgIEO0Wz+TwpsL8nU8B8PevtnoHLmwsotn4xiL5yJYtY+peOE/gA/rrd7bfIIxmUsizyEurf7rtRSCqFTKZCQ7MtLa20t69e4vMJpWCmcvZgNOK6c4Vi4DS6VlNU6VSKROr+0m9xHnVAABTHtMq1KZTPeryfVU4mrcKq3jSoeopyJxFb7mCCiqooIIKKqjgTMb/ANG6wzQOkNO1AAAAAElFTkSuQmCC">
+  <img width="40" height="40" alt="" style="margin-bottom:10px" src="data:image/png;base64,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">
   <div class="lock-logo"><b>Fiftin</b></div>
   <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
@@ -5075,8 +5081,12 @@ function applySettings(){
   // sinon le badge à la première synchro venue.
   const roleBadgeLabel=currentRole==='personnel'?'Staff':'Propriétaire';
   const roleBadge=` <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">${roleBadgeLabel}</span>`;
-  const tenantName=S.settings.name?` <span class="tenant-name">— ${S.settings.name}</span>`:'';
-  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+tenantName+roleBadge;
+  // Le pictogramme (à côté, voir .app-icon) suffit à identifier Fiftin — dans
+  // l'appli elle-même, l'espace du titre revient entièrement au nom de
+  // l'établissement du client, qui est ce qui l'identifie lui, pas nous.
+  // "Planning" reste un repère neutre tant qu'aucun nom n'a été renseigné.
+  const establishmentName=S.settings.name||'Planning';
+  if(logoEl)logoEl.innerHTML=`<b>${establishmentName}</b>`+roleBadge;
   document.body.classList.toggle('no-dinner',!dinnerEnabled());
   document.body.classList.toggle('no-breakfast',!breakfastEnabled());
   document.body.classList.toggle('no-taxe-sejour',!taxeSejourEnabled());
