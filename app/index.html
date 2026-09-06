@@ -2318,7 +2318,7 @@ function applyPersonnelUIRestrictions(){
 // Événements) — remplacées par une version qui prévient au lieu d'agir.
 function lockPersonnelWrites(){
   const names=[
-    'saveBooking','delBooking','onDrop',
+    'saveBooking','delBooking','onDrop','openAddModal','startOrExtendRange',
     'updateBreakfastChip','updateDinnerChip','toggleDinnerNight','setExtra',
     'toggleExtDinerMeal','addExtDiner','delExtDiner','setExtDinerExtra',
     'saveEvent','delEvent','setExtraEv',
@@ -2761,7 +2761,10 @@ function renderGrid(){
         div.className=`blk${isCin?' cin':''}${isCout?' cout':''} ${lbg?'lbg':'dbg'}${sc}${isPending?' pending':''}${isPaid?' paid':''}${isGhost?' ghost':''}`;
         div.style.background=dispCol;
         div.dataset.id=bk.id;
-        div.draggable=true;
+        // Empêche même le début du glisser-déposer pour un compte Personnel
+        // (au lieu de ne bloquer qu'à l'arrivée sur la case cible) : pas de
+        // curseur de déplacement, pas d'ambiguïté sur ce qui est permis.
+        div.draggable=currentRole!=='personnel';
 
         const hasDinner=bk.dinnerNights&&bk.dinnerNights[ds];
         const thIcon=hasDinner?`<span class="bth">${MEAL_ICON_SM}${bk.nbPersons||''}</span>`:'';
