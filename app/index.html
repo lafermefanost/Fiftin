@@ -2682,8 +2682,19 @@ byId('exportBtn').onclick=()=>{
   setTimeout(()=>document.addEventListener('click',function h(){menu.remove();document.removeEventListener('click',h);}),50);
 };
 
+// Export complet : réservations/clients/événements ET réglages/catalogue/
+// comptabilité — tout ce qui vit dans le document Firestore du compte, pas
+// seulement le sous-ensemble affiché à l'écran. Pensé notamment pour
+// transférer un planning existant (chambres, tarifs, sources, historique
+// comptable compris) vers un autre compte Fiftin en un aller-retour
+// export/import, sans rien ressaisir à la main.
 function doExport(){
-  const d=JSON.stringify({bookings:S.bookings,guests:S.guests,events:S.events,exported:new Date().toISOString()},null,2);
+  const d=JSON.stringify({
+    bookings:S.bookings,guests:S.guests,events:S.events,
+    cleaning:S.cleaning,menus:S.menus,extDiners:S.extDiners,transactions:S.transactions,
+    catalog:S.catalog,settings:S.settings,
+    exported:new Date().toISOString()
+  },null,2);
   const slug=(S.settings.name||'planning').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'planning';
   const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([d],{type:'application/json'})),download:`${slug}-${todayISO()}.json`});
   a.click();URL.revokeObjectURL(a.href);
@@ -2698,9 +2709,39 @@ function doImport(inp){
       if(d.bookings)S.bookings=d.bookings;
       if(d.guests)S.guests=d.guests;
       if(d.events){S.events=d.events;migrateEvents();}
-      persist();renderGrid();
-      alert('✓ Import réussi — '+S.bookings.length+' réservations');
-    }catch{alert('Fichier invalide');}
+      if(d.cleaning){S.cleaning=d.cleaning;migrateCleaning();}
+      if(d.menus)S.menus=d.menus;
+      if(d.extDiners){S.extDiners=d.extDiners;migrateExtDiners();}
+      if(d.transactions)S.transactions=d.transactions;
+      if(d.catalog&&d.catalog.length){
+        S.catalog=d.catalog;
+        mergeCatalogDefaults(S.catalog);
+        saveCatalog();
+      }
+      // Même logique de fusion/migration que la réception d'une donnée
+      // distante (voir applyRemoteData) — un import doit se comporter comme
+      // une resynchronisation complète, pas juste écraser bêtement le JSON.
+      if(d.settings){
+        S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...d.settings};
+        if(!d.settings.structures)S.settings.structures=null;
+        if(!d.settings.structureThresholds)S.settings.structureThresholds=null;
+        if(!S.settings.chargeCategories||!S.settings.chargeCategories.length)S.settings.chargeCategories=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.chargeCategories));
+        if(!S.settings.sources)S.settings.sources=[...DEFAULT_SETTINGS.sources];
+        migrateCleaners();
+        migrateStructures();
+        migrateRoomFields();
+        migrateTariffFields();
+        localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+        applySettings();
+      }
+      persist();
+      renderGrid();
+      if(S.view==='today')renderToday();
+      if(S.view==='week')renderWeek();
+      if(S.view==='month')renderMonth();
+      if(S.view==='year')renderYear();
+      alert('✓ Import réussi — '+S.bookings.length+' réservations'+(d.settings?' (réglages et catalogue inclus)':''));
+    }catch(err){console.error(err);alert('Fichier invalide');}
   };
   fr.readAsText(inp.files[0]);
   inp.value='';
