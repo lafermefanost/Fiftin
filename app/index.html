@@ -731,6 +731,9 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 #evList{margin:0 -18px;padding:0 18px;box-sizing:border-box;}
 
 /* Guest list */
+.glist-sep{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;
+  letter-spacing:.06em;padding:12px 0 4px;}
+.glist-sep:first-child{padding-top:0;}
 .gline{display:flex;align-items:center;gap:10px;padding:9px 0;
   border-bottom:1px solid var(--light);cursor:pointer;}
 .gline:hover{background:#FAFAF7;}
@@ -739,6 +742,12 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gline-name{font-weight:500;font-size:13px;}
 .gline-sub{font-size:10px;color:var(--gray);margin-top:1px;}
 .gnbadge{font-size:10px;color:var(--gray);}
+.rating-row{display:flex;gap:8px;}
+.rating-chip{width:42px;height:42px;border-radius:50%;border:1.5px solid var(--light);
+  background:#fff;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  filter:grayscale(1);opacity:.5;transition:filter .15s,opacity .15s,border-color .15s;}
+.rating-chip:hover{border-color:#bbb;opacity:.8;}
+.rating-chip.on{filter:grayscale(0);opacity:1;border-color:var(--green);background:#F7FAF6;}
 
 /* Mobile bottom nav */
 .mbnav{display:none;height:54px;background:var(--white);
@@ -1339,6 +1348,14 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
         <input type="text" class="fi" id="geNotes" placeholder="Préférences, infos utiles…">
       </div>
     </div>
+    <div class="fg">
+      <label class="fl">Appréciation <span style="font-weight:400;color:var(--gray)">(pour savoir si on reprend ce client)</span></label>
+      <div class="rating-row">
+        <button type="button" class="rating-chip" id="ge-rating-happy" onclick="setGuestRating('happy')" title="À reprendre avec plaisir">😊</button>
+        <button type="button" class="rating-chip" id="ge-rating-neutral" onclick="setGuestRating('neutral')" title="Sans avis particulier">😐</button>
+        <button type="button" class="rating-chip" id="ge-rating-unhappy" onclick="setGuestRating('unhappy')" title="À ne pas reprendre">🙁</button>
+      </div>
+    </div>
     <div id="geHistory"></div>
     <div class="macts">
       <button class="btn-d" id="gDelBtn" onclick="delGuest()">Supprimer</button>
@@ -1864,6 +1881,11 @@ const DEFAULT_CATALOG=[
   {id:'linge-sup',name:'Linge de maison suppl. (séjour)', price:10, cat:'Confort', emoji:'🧺'},
 ];
 let editBid = null, editGid = null, editEvid = null;
+// Brouillon d'appréciation client dans le modal (même principe que bkPayment
+// pour le paiement d'une résa) — appliqué au client seulement à l'enregistrement.
+let geRating = null;
+const GUEST_RATING_EMOJI = {happy:'😊',neutral:'😐',unhappy:'🙁'};
+const GUEST_RATING_LABEL = {happy:'À reprendre avec plaisir',neutral:'Sans avis particulier',unhappy:'À ne pas reprendre'};
 let selGid = null, newGMode = false;
 let bkPayment = null, bkSource = 'direct', bkTaxeSejour = false;
 let openExtrasId = null;
@@ -3217,6 +3239,29 @@ function renderToday(){
   // y a des événements), avec un ajout manuel possible directement dedans.
   const evAddBtn=`<div class="tsec-add" onclick="event.stopPropagation();openEventEdit(null,'${ds}')">+ Ajouter un événement</div>`;
   h+=panel('ev',EVENT_ICON,'Événements',dayEvs,evCard,evAddBtn);
+  h+=`<div class="wday-cols">
+    ${panel('arr','↓','Arrivées',arrs,b=>miniChip(b,b.arrivalTime||null))}
+    ${panel('dep','↑','Départs',deps,b=>miniChip(b,null))}
+  </div>`;
+  // Ménage — même volet (mêmes boutons femmes de ménage, mêmes champs heure/
+  // durée) que celui de la vue Semaine (voir renderWeek), pour ne pas avoir
+  // à y basculer juste pour cocher qui vient aujourd'hui.
+  const dayCleaners=S.cleaning[ds]||[];
+  h+=`<div class="tsec-panel menage">
+    <div class="tsec-hd${dayCleaners.length>0?' has-items':''}">${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span></div>
+    <div class="tsec-body">
+      <div class="cln-chips">${CLEANERS.map(cl=>{
+        const on=dayCleaners.some(c=>c.name===cl.name);
+        return`<button class="cleaner-btn${on?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${cl.name}')">${cl.name}</button>`;
+      }).join('')}</div>
+      ${dayCleaners.map(c=>`<div class="cln-detail-row">
+        <span class="cln-detail-name">${c.name}</span>
+        <input type="time" value="${c.time||''}" title="Heure de venue" onchange="setCleanerField('${ds}','${c.name}','time',this.value)">
+        <input type="number" min="0" step="0.5" placeholder="h" value="${c.hours!=null?c.hours:''}" title="Nombre d'heures" onchange="setCleanerField('${ds}','${c.name}','hours',this.value)">
+        <span class="cln-unit">h</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
   const dm=getMenu(ds);
   const menuHas=!!(dm.entree||dm.plat||dm.dessert);
   const thCount=S.bookings
@@ -3232,10 +3277,6 @@ function renderToday(){
       <div class="fg"><label class="fl">Plat</label><input class="fi" id="menu-plat" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
       <div class="fg" style="margin-bottom:0"><label class="fl">Dessert</label><input class="fi" id="menu-dessert" placeholder="—" onchange="setMenuField('${ds}','dessert',this.value)"></div>
     </div>
-  </div>`;
-  h+=`<div class="wday-cols">
-    ${panel('arr','↓','Arrivées',arrs,b=>miniChip(b,b.arrivalTime||null))}
-    ${panel('dep','↑','Départs',deps,b=>miniChip(b,null))}
   </div>`;
   h+=panel('stay','●','En séjour',inHouse,item=>item.ext?extDinerCard(item.ext):card(item.b,item.sub,true));
   if(tArrs.length) h+=panel('tom','⏰','Demain',tArrs,b=>card(b,b.arrivalTime?`Demain ${b.arrivalTime}`:'Demain'));
@@ -3930,17 +3971,36 @@ function renderGList(term){
   if(!sorted.length){
     byId('gList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun client</p>';return;
   }
+  // Petit repère de lecture par initiale (A, B, C…) — le tri alphabétique
+  // existait déjà, ça ne fait qu'aider l'œil à repérer où commence chaque
+  // lettre dans une liste qui peut vite s'allonger. Diacritiques ignorés
+  // (Émile groupe avec Emile) pour rester cohérent avec le tri lui-même.
+  let lastLetter=null;
   byId('gList').innerHTML=sorted.map(g=>{
     const n=S.bookings.filter(b=>b.guestId===g.id).length;
-    return`<div class="gline" onclick="openGuestEdit('${g.id}')">
+    const letter=g.name.trim().charAt(0).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+    let sep='';
+    if(letter&&letter!==lastLetter){sep=`<div class="glist-sep">${letter}</div>`;lastLetter=letter;}
+    return sep+`<div class="gline" onclick="openGuestEdit('${g.id}')">
       <div class="cswatch" style="background:${g.color}"></div>
       <div class="gline-info">
         <div class="gline-name">${g.name}</div>
         ${g.phone?`<div class="gline-sub">${g.phone}</div>`:''}
       </div>
+      ${g.rating?`<span title="${GUEST_RATING_LABEL[g.rating]}" style="font-size:15px">${GUEST_RATING_EMOJI[g.rating]}</span>`:''}
       <div class="gnbadge">${n} séj.</div>
     </div>`;
   }).join('');
+}
+
+// Re-cliquer sur l'émoji déjà sélectionné le désélectionne — repasser à "sans
+// avis" doit rester possible, plutôt que forcer un choix parmi les trois.
+function setGuestRating(v){
+  geRating=geRating===v?null:v;
+  renderGeRating();
+}
+function renderGeRating(){
+  ['happy','neutral','unhappy'].forEach(v=>byId('ge-rating-'+v)?.classList.toggle('on',geRating===v));
 }
 
 function openGuestEdit(id){
@@ -3954,6 +4014,8 @@ function openGuestEdit(id){
   byId('geAddress').value=g?g.address||'':'';
   byId('gePrice').value=g?g.price||'':'';
   byId('geNotes').value=g?g.notes||'':'';
+  geRating=g?g.rating||null:null;
+  renderGeRating();
   byId('gDelBtn').style.display=g?'block':'none';
   renderGeContact();
   renderGeHistory(id);
@@ -4016,7 +4078,7 @@ function saveGuest(){
   const data={name:nm,color:byId('geColor').value,phone:byId('gePhone').value,
     email:byId('geEmail').value,address:byId('geAddress').value,
     price:parseFloat(byId('gePrice').value)||0,
-    notes:byId('geNotes').value};
+    notes:byId('geNotes').value,rating:geRating};
   if(editGid){
     const i=S.guests.findIndex(g=>g.id===editGid);
     if(i!==-1)S.guests[i]={...S.guests[i],...data};
@@ -4864,7 +4926,11 @@ function toggleCleaner(ds,name){
   else list.push({name,hours:null,time:null});
   S.cleaning[ds]=list;
   persist();
-  renderWeek();
+  // Le volet Ménage existe aussi bien en vue Jour qu'en vue Semaine — on
+  // rafraîchit celle qui est effectivement à l'écran (sinon le bouton
+  // cliqué en vue Jour ne se met à jour qu'au prochain changement de vue).
+  if(S.view==='today')renderToday();
+  else renderWeek();
 }
 function setCleanerField(ds,name,field,val){
   const list=S.cleaning[ds]||[];
@@ -5129,17 +5195,15 @@ function monthTransactions(mStart,mEndExact){
 // cercle du "5" du logo de l'app. Couleurs reprises de STRUCTURE_COLORS
 // (déjà utilisées pour le graphe de revenus en vue Année) pour rester
 // cohérent avec le reste de l'appli.
-function buildChargesDonut(breakdown){
-  const MAX_SLICES=6;
-  let entries=Object.entries(breakdown).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
-  if(!entries.length)return'';
-  if(entries.length>MAX_SLICES){
-    const shown=entries.slice(0,MAX_SLICES-1);
-    const restTotal=entries.slice(MAX_SLICES-1).reduce((s,[,v])=>s+v,0);
-    entries=[...shown,['Autres',restTotal]];
-  }
-  const total=entries.reduce((s,[,v])=>s+v,0);
-  const size=168,R=size/2-6,cx=size/2,cy=size/2;
+// Cœur géométrique du camembert (tracé SVG, coins arrondis, écarts constants
+// en pixels) — factorisé pour être réutilisé par n'importe quelle répartition
+// (charges par catégorie, réservations par source…), chacune fournissant ses
+// propres entrées déjà résolues en {label,val,color} plutôt que de dupliquer
+// ce calcul à chaque nouvel usage.
+function buildDonutSlices(entries,size){
+  size=size||168;
+  const total=entries.reduce((s,e)=>s+e.val,0);
+  const R=size/2-6,cx=size/2,cy=size/2;
   const CORNER_R=9,TIP_R=5; // rayons d'arrondi (px), identiques pour tous les quartiers
   const GAP_PX=entries.length>1?3:0; // écart CONSTANT (px, pas en degrés) entre deux quartiers voisins
   const toRad=deg=>deg*Math.PI/180;
@@ -5155,13 +5219,12 @@ function buildChargesDonut(breakdown){
     return[p1[0]+t*d1[0],p1[1]+t*d1[1]];
   };
   let cursor=0;
-  const segs=entries.map(([label,val],i)=>{
-    const frac=val/total;
+  const segs=entries.map(e=>{
+    const frac=e.val/total;
     const span=frac*360;
     const a0=cursor,a1=cursor+span;
     cursor+=span;
-    const color=label==='Autres'?'#C7C2B8':STRUCTURE_COLORS[i%STRUCTURE_COLORS.length];
-    return{label,val,frac,color,a0,a1};
+    return{...e,frac,a0,a1};
   });
   const fmt=n=>n.toFixed(2);
   const pathsHTML=segs.length===1
@@ -5198,6 +5261,23 @@ function buildChargesDonut(breakdown){
           L${fmt(tipB[0])},${fmt(tipB[1])} Q${fmt(tip[0])},${fmt(tip[1])} ${fmt(tipA[0])},${fmt(tipA[1])} Z"
           fill="${s.color}"/>`;
       }).join('');
+  return{pathsHTML,segs,total,size};
+}
+// Camembert des charges par catégorie (vue Année) — regroupe le surplus au-delà
+// de MAX_SLICES sous "Autres", couleurs reprises de STRUCTURE_COLORS (déjà
+// utilisées pour le graphe de revenus en vue Année) faute de couleur propre à
+// chaque catégorie de charge.
+function buildChargesDonut(breakdown){
+  const MAX_SLICES=6;
+  let raw=Object.entries(breakdown).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  if(!raw.length)return'';
+  if(raw.length>MAX_SLICES){
+    const shown=raw.slice(0,MAX_SLICES-1);
+    const restTotal=raw.slice(MAX_SLICES-1).reduce((s,[,v])=>s+v,0);
+    raw=[...shown,['Autres',restTotal]];
+  }
+  const entries=raw.map(([label,val],i)=>({label,val,color:label==='Autres'?'#C7C2B8':STRUCTURE_COLORS[i%STRUCTURE_COLORS.length]}));
+  const{pathsHTML,segs,total,size}=buildDonutSlices(entries);
   const legendHTML=segs.map(s=>`<div class="mch-pie-row">
     <span class="mch-pie-dot" style="background:${s.color}"></span>
     <span class="mch-pie-label">${s.label.replace(/</g,'&lt;')}</span>
@@ -5210,6 +5290,36 @@ function buildChargesDonut(breakdown){
     </div>
     <div class="mch-pie-legend-col">
       <div class="mch-pie-total-line">${Math.round(total).toLocaleString('fr-FR')} € au total</div>
+      <div class="mch-pie-legend">${legendHTML}</div>
+    </div>
+  </div>`;
+}
+// Même camembert, mais pour la proportion de RÉSERVATIONS (pas de CA) entre
+// les sources — vue Mois, section "X réservations". Couleur propre à chaque
+// source (déjà utilisée pour les points/barres de la répartition juste en
+// dessous) plutôt que la palette générique des charges.
+function buildSourceCountDonut(srcActive,srcMap){
+  const MAX_SLICES=6;
+  let raw=srcActive.map(s=>({label:s.label,val:srcMap[s.id].n,color:s.color})).filter(e=>e.val>0).sort((a,b)=>b.val-a.val);
+  if(!raw.length)return'';
+  if(raw.length>MAX_SLICES){
+    const shown=raw.slice(0,MAX_SLICES-1);
+    const restTotal=raw.slice(MAX_SLICES-1).reduce((s,e)=>s+e.val,0);
+    raw=[...shown,{label:'Autres',val:restTotal,color:'#C7C2B8'}];
+  }
+  const{pathsHTML,segs,total,size}=buildDonutSlices(raw);
+  const legendHTML=segs.map(s=>`<div class="mch-pie-row">
+    <span class="mch-pie-dot" style="background:${s.color}"></span>
+    <span class="mch-pie-label">${s.label.replace(/</g,'&lt;')}</span>
+    <span class="mch-pie-pct">${Math.round(s.frac*100)}%</span>
+    <span class="mch-pie-val">${s.val} résa${s.val>1?'s':''}</span>
+  </div>`).join('');
+  return`<div class="mch-pie-block">
+    <div class="mch-pie-svgwrap" style="width:${size}px;height:${size}px">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${pathsHTML}</svg>
+    </div>
+    <div class="mch-pie-legend-col">
+      <div class="mch-pie-total-line">${total} réservation${total>1?'s':''} au total</div>
       <div class="mch-pie-legend">${legendHTML}</div>
     </div>
   </div>`;
@@ -6864,6 +6974,7 @@ function renderMonth(){
     h+=`<div class="month-bklist yr-regl${monthBklistOpen?' open':''}" onclick="toggleMonthPanel('bklist')">
     <div class="mbk-title" style="cursor:pointer;margin-bottom:0;display:flex;justify-content:space-between;align-items:center">${bks.length} réservation${bks.length>1?'s':''}<span class="yr-regl-chev">▾</span></div>
     <div class="yr-regl-body" style="margin-top:10px">
+    ${buildSourceCountDonut(srcActive,srcMap)}
     <div class="src-breakdown">`;
     srcActive.forEach(s=>{
       const d=srcMap[s.id];
@@ -7451,7 +7562,9 @@ function renderYear(){
     {m:6, d:15,title:'Acompte CFE',                       desc:'Si cotisation N-1 ≥ 3 000 € — règlement de 50 % de l\'acompte prévisionnel',          color:'#B57A7A', cond:true},
     {m:6, d:30,title:'Déclaration d\'occupation (GMBI)',  desc:'Mise à jour foncière obligatoire si changement d\'occupant ou d\'usage du bien',       color:'#7A8CB5'},
     {m:9, d:15,title:'Solde IR / acompte',                desc:'Versement d\'un acompte ou solde d\'impôt sur le revenu selon situation fiscale',       color:'#E07828', cond:true},
+    {m:10,d:15,title:'Paiement taxe foncière',            desc:'Règlement pour chaque bien possédé — mi-octobre (prélèvement/paiement en ligne : quelques jours de plus)', color:'#9E7A5C', approx:true},
     {m:11,d:1, title:'Avis de CFE disponibles',           desc:'Mise en ligne des avis de cotisation foncière — vérifier le montant par établissement',color:'#7A8800'},
+    {m:11,d:15,title:'Paiement taxe d\'habitation (résidences secondaires)', desc:'Concerne les logements loués qui ne sont pas votre résidence principale — mi-novembre (paiement en ligne : quelques jours de plus)', color:'#6B8A9E', approx:true, cond:true},
     {m:12,d:15,title:'Paiement CFE',                      desc:'Règlement de la CFE pour chaque établissement/structure',                              color:'#B57A7A'},
   ];
   const fiscalItems=FISCAL.map(f=>{
