@@ -208,6 +208,18 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .pt td.rc.empty:hover{background:#F0EDE7 !important;}
 .pt td.rc.dover{background:rgba(61,92,53,.15) !important;}
 
+/* Compte Staff (lecture seule) : ce que la personne ne peut pas modifier ne
+   doit pas non plus réagir au survol — sinon ça laisse croire qu'un clic va
+   faire quelque chose, pour finalement soit ne rien faire soit afficher une
+   alerte de blocage. On neutralise le pointeur (survol + clic en un geste)
+   plutôt que de garder le clic pour finalement afficher une alerte. Un champ
+   désactivé (input/select/textarea/button[disabled]) est déjà sans hover par
+   défaut dans les navigateurs — mais pas le <label> qui l'entoure (ex. les
+   cases repas/petit-déj) : on le couvre explicitement via :has(). */
+body.ro-ui .pt td.rc.empty{pointer-events:none;}
+body.ro-ui .tsec-add,body.ro-ui .tev-add-btn{pointer-events:none;}
+body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){pointer-events:none;}
+
 .blk{height:25px;border-radius:0;display:flex;align-items:center;
   padding:0 5px;gap:3px;cursor:pointer;user-select:none;overflow:hidden;
   white-space:nowrap;transition:filter .1s;}
@@ -225,16 +237,13 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
   45deg,transparent,transparent 3px,rgba(255,255,255,.18) 3px,rgba(255,255,255,.18) 6px);}
 .blk.canc{opacity:.38;text-decoration:line-through;}
 
-/* Payment / Ghost states */
+/* Payment states */
 .blk.paid{background:#A0A0A0!important;}
 .blk.paid .bname,.blk.paid .bcont-init{color:#FFF!important;}
 .blk.paid .sdot{background:#777!important;}
 .blk.pending{background:var(--pending-red)!important;}
 .blk.pending .bname,.blk.pending .bcont-init{color:#FFF!important;}
 .blk.pending .sdot{background:#8B0000!important;}
-.blk.ghost{background:#1A1A1A!important;}
-.blk.ghost,.blk.ghost *{color:#1A1A1A!important;}
-.blk.ghost .sdot{background:#1A1A1A!important;}
 
 /* Day view: simple one-line chip, color shown only as a discrete left bar (like .tcard) */
 .day-chip{background:var(--white);border-radius:8px;display:flex;flex-direction:row;
@@ -871,12 +880,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-bar{height:10px;background:var(--light);border-radius:6px;overflow:hidden;position:relative;}
 .yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
 .yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
-.yr-gauge-ghost{position:absolute;top:0;left:0;height:100%;
-  background:repeating-linear-gradient(45deg,rgba(26,26,26,.5) 0 4px,transparent 4px 8px);transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
-.yr-gauge-ghost-lgd{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--gray);margin-top:4px;}
-.yr-gauge-ghost-sw{width:10px;height:10px;border-radius:2px;flex-shrink:0;
-  background:repeating-linear-gradient(45deg,#1A1A1A 0 2px,#bbb 2px 4px);}
 .yr-gauge.yr-gauge-warn .yr-gauge-lbl{color:#E07828;}
 .yr-gauge.yr-gauge-danger .yr-gauge-lbl{color:#E07828;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
@@ -997,6 +1001,13 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </button>
   <button class="hbtn" id="exportBtn" title="Export / Import">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  </button>
+  <!-- Masqué par défaut : Réglages (où se trouve normalement "Se déconnecter")
+       est caché pour un compte Staff — sans ce bouton dédié, révélé par
+       applyPersonnelUIRestrictions(), il n'y avait aucun moyen de se
+       déconnecter depuis ce compte. -->
+  <button class="hbtn" id="logoutBtn" onclick="signOutUser()" title="Se déconnecter" style="display:none">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
 </header>
@@ -1646,11 +1657,15 @@ const DEFAULT_SETTINGS={
     struct1:[{id:'th-tva',type:'revenue',label:'Franchise TVA',amount:85000,color:'#E07828'}],
   },
   sources:[
-    {id:'direct',      label:'Direct',      color:'#7ABF6A',noRevenue:false},
-    {id:'airbnb',      label:'Airbnb',      color:'#F1948A',noRevenue:false},
-    {id:'booking',     label:'Booking',     color:'#9FA8DA',noRevenue:false},
-    {id:'homexchange', label:'HomeExchange',color:'#E6C96A',noRevenue:true},
-    {id:'ghost',       label:'Ghost',       color:'#888888',noRevenue:false},
+    // colorOverride : si activé, la couleur de la source prend le dessus sur
+    // la couleur du client pour l'affichage du bloc (Grille/Jour). noRevenue :
+    // aucun prix nuitée calculé pour cette source, et exclue des calculs
+    // comptables des vues Semaine/Mois/Année (ex. échange, compte personnel —
+    // pas un vrai client payant).
+    {id:'direct',      label:'Direct',      color:'#7ABF6A',colorOverride:false,noRevenue:false},
+    {id:'airbnb',      label:'Airbnb',      color:'#F1948A',colorOverride:false,noRevenue:false},
+    {id:'booking',     label:'Booking',     color:'#9FA8DA',colorOverride:false,noRevenue:false},
+    {id:'homexchange', label:'HomeExchange',color:'#E6C96A',colorOverride:false,noRevenue:true},
   ],
   // Champs du contrat de location généré depuis une résa (voir buildContractHTML).
   // Pré-remplis avec un exemple directement utilisable — pas des champs vides à
@@ -1765,11 +1780,13 @@ function getSource(id){
   const sources=S.settings?.sources||DEFAULT_SETTINGS.sources;
   return sources.find(s=>s.id===id)||{id,label:id,color:'#888',noRevenue:false};
 }
-// "Sans CA" ne pilote plus aucun calcul de tarif : une réservation à prix
-// personnalisé (y compris 0€, pour un échange/une gratuité) fait ça très bien
-// elle-même, quelle que soit sa source. Ce flag ne sert plus qu'à exclure une
-// source du décompte fiscal "nuits plateformes" (une source d'échange n'est
-// pas une plateforme commerciale).
+// Source "sans tarif nuitée" (réglages → Sources — ex. échange, personnel) :
+// aucun prix nuitée calculé (getNightlyRate) et entièrement exclue des
+// calculs comptables Semaine/Mois/Année (getBookingRevForPeriod), même à
+// prix personnalisé — ainsi que du décompte fiscal "nuits plateformes" (une
+// source d'échange n'est pas une plateforme commerciale). Remplace l'ancien
+// cas particulier "ghost" figé en dur : n'importe quelle source peut
+// désormais avoir ce comportement, configurable dans les réglages.
 function isSourceNoRevenue(src){
   return getSource(src).noRevenue;
 }
@@ -1799,6 +1816,9 @@ function getBabyCribRevenue(bk){
   return nights*(room.babyCribPrice||15);
 }
 function getNightlyRate(bk){
+  // Source "sans tarif nuitée" (réglages → Sources, ex. échange, personnel) :
+  // aucun prix calculé sur la nuitée, quel que soit le prix client/chambre.
+  if(isSourceNoRevenue(bk.source))return 0;
   const g=guest(bk.guestId);
   if(g&&g.price)return g.price;
   return getRoomPriceForDate(bk.roomId,bk.checkIn||todayISO(),bk.nbPersons||2);
@@ -2291,10 +2311,16 @@ function acceptInvite(memberUid,inviteId){
 // Firestore — même en contournant cette interface, il n'y a rien à voir.
 function applyPersonnelUIRestrictions(){
   if(currentRole!=='personnel')return;
+  // Neutralise le survol/pointeur des affordances "ajouter/modifier" qui de
+  // toute façon n'aboutissent à rien pour ce compte (voir CSS ".ro-ui ...") —
+  // le clic ne déclenche même plus l'alerte de blocage, plutôt que de réagir
+  // au survol pour finalement ne rien permettre.
+  document.body.classList.add('ro-ui');
   ['settingsBtn','exportBtn','guestsBtn','addResaBtn'].forEach(id=>{
     const el=byId(id);
     if(el)el.style.display='none';
   });
+  byId('logoutBtn').style.display='';
   ['week','month','year'].forEach(v=>{
     byId('vt-'+v)?.remove();
     byId('mn-'+v)?.remove();
@@ -2408,8 +2434,6 @@ function applyRemoteData(d,meta){
     if(!S.settings.chargeCategories||!S.settings.chargeCategories.length)S.settings.chargeCategories=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.chargeCategories));
     if(!S.settings.sources)S.settings.sources=[...DEFAULT_SETTINGS.sources];
     migrateCleaners();
-    const ghostSrc=S.settings.sources.find(s=>s.id==='ghost');
-    if(ghostSrc)ghostSrc.noRevenue=false;
     migrateStructures();
     migrateRoomFields();
     migrateTariffFields();
@@ -2728,7 +2752,7 @@ function renderGrid(){
       sSticky.appendChild(mlabel);
       sep.appendChild(sSticky);
       const sn=document.createElement('td');
-      sn.colSpan=ROOMS.length+2;
+      sn.colSpan=ROOMS.length+3; // chambres + TH + Ménage + Événement (sinon la barre s'arrête avant la colonne Événement)
       sep.appendChild(sn);
       frag.appendChild(sep);
     }
@@ -2784,7 +2808,6 @@ function renderGrid(){
         cell.classList.remove('empty');
         const g=guest(bk.guestId);
         const col=g?g.color:'#999';
-        const lbg=light(col);
         const isCin=isCI(bk,ds);
         const isCout=addDays(ds,1)===bk.checkOut;
         // Status classes
@@ -2793,10 +2816,15 @@ function renderGrid(){
 
         const isPaid=bk.payment==='paid';
         const isPending=bk.payment==='pending';
-        const isGhost=bk.source==='ghost'||bk.ghost;
-        const dispCol=isGhost?'#1A1A1A':isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
+        // Couleur dédiée d'une source (réglages → Sources) : prend le dessus
+        // sur la couleur du client ET sur les couleurs de statut de paiement —
+        // remplace l'ancien cas particulier "ghost" (couleur noire figée en
+        // dur), désormais une simple source parmi d'autres, configurable.
+        const srcColorOverride=getSource(bk.source).colorOverride?getSource(bk.source).color:null;
+        const dispCol=srcColorOverride||(isPending?'var(--pending-red)':isPaid?'#A0A0A0':col);
+        const lbg=light(dispCol);
         const div=document.createElement('div');
-        div.className=`blk${isCin?' cin':''}${isCout?' cout':''} ${lbg?'lbg':'dbg'}${sc}${isPending?' pending':''}${isPaid?' paid':''}${isGhost?' ghost':''}`;
+        div.className=`blk${isCin?' cin':''}${isCout?' cout':''} ${lbg?'lbg':'dbg'}${sc}${(!srcColorOverride&&isPending)?' pending':''}${(!srcColorOverride&&isPaid)?' paid':''}`;
         div.style.background=dispCol;
         div.dataset.id=bk.id;
         // Empêche même le début du glisser-déposer pour un compte Personnel
@@ -2825,7 +2853,8 @@ function renderGrid(){
         const co=S.bookings.find(b=>b.roomId===r.id&&isCO(b,ds));
         if(co){
           const g=guest(co.guestId);
-          const c=(co.source==='ghost'||co.ghost)?'#1A1A1A':co.payment==='pending'?'var(--pending-red)':co.payment==='paid'?'#A0A0A0':g?g.color:'#999';
+          const coSrc=getSource(co.source);
+          const c=coSrc.colorOverride?coSrc.color:co.payment==='pending'?'var(--pending-red)':co.payment==='paid'?'#A0A0A0':g?g.color:'#999';
           const d2=document.createElement('div');
           d2.className='co-half';
           d2.style.background=c;
@@ -3021,8 +3050,8 @@ function renderToday(){
   const miniChip=(b,timeLabel)=>{
     const g=guest(b.guestId);const col=g?g.color:'#999';const rm=room(b.roomId);
     const isPaid=b.payment==='paid';
-    const isGhost=b.source==='ghost'||b.ghost;
-    const barCol=isGhost?'#1A1A1A':isPaid?'#A0A0A0':col;
+    const bSrc=getSource(b.source);
+    const barCol=bSrc.colorOverride?bSrc.color:isPaid?'#A0A0A0':col;
     const sc=b.status==='opt'?' opt':b.status==='no'?' canc':'';
     const dot=b.status==='opt'?'#FF9800':b.status==='no'?'#F44336':'#4CAF50';
     const hasDin=b.dinnerNights&&b.dinnerNights[ds];
@@ -3900,7 +3929,7 @@ function renderGeHistory(id){
   const yrE=(yr+1)+'-01-01';
   const today=todayISO();
   const bks=S.bookings
-    .filter(b=>b.guestId===id&&b.checkOut>yrS&&b.checkIn<yrE&&b.source!=='ghost'&&!b.ghost)
+    .filter(b=>b.guestId===id&&b.checkOut>yrS&&b.checkIn<yrE&&!isSourceNoRevenue(b.source))
     .sort((a,b)=>a.checkIn.localeCompare(b.checkIn));
   if(!bks.length){
     el.innerHTML=`<div class="geh-wrap"><div class="geh-title">Séjours ${yr}</div><p class="geh-empty">Aucun séjour en ${yr}</p></div>`;
@@ -4842,8 +4871,6 @@ function loadSettings(){
   if(!S.settings.contract)S.settings.contract=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.contract));
   if(!S.settings.plan)S.settings.plan='essentiel';
   migrateCleaners();
-  const ghostSrc=S.settings.sources.find(s=>s.id==='ghost');
-  if(ghostSrc)ghostSrc.noRevenue=false;
   migrateStructures();
   migrateRoomFields();
   migrateTariffFields();
@@ -4931,11 +4958,12 @@ function applySettings(){
   ROOMS=S.settings.rooms||ROOMS;
   CLEANERS=S.settings.cleaners||CLEANERS;
   const logoEl=byId('appName');
-  // Le badge "Personnel" (voir applyPersonnelUIRestrictions) doit survivre à
-  // chaque resynchro — applySettings() est rappelée à chaque réception de
-  // données et écraserait sinon le badge à la première synchro venue.
-  const personnelBadge=currentRole==='personnel'?' <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">Personnel</span>':'';
-  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+(S.settings.name?' — '+S.settings.name:'')+personnelBadge;
+  // Le badge de rôle (Staff / Propriétaire) doit survivre à chaque resynchro —
+  // applySettings() est rappelée à chaque réception de données et écraserait
+  // sinon le badge à la première synchro venue.
+  const roleBadgeLabel=currentRole==='personnel'?'Staff':'Propriétaire';
+  const roleBadge=` <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">${roleBadgeLabel}</span>`;
+  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+(S.settings.name?' — '+S.settings.name:'')+roleBadge;
   document.body.classList.toggle('no-dinner',!dinnerEnabled());
   document.body.classList.toggle('no-breakfast',!breakfastEnabled());
   document.body.classList.toggle('no-taxe-sejour',!taxeSejourEnabled());
@@ -5290,7 +5318,7 @@ function renderSettings(){
     if(st.plan!=='pro'){
       teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Pro permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
     }else{
-      teamBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Un compte Personnel voit uniquement la Grille, la vue du jour, le Ménage et les Événements — jamais les chiffres, les réglages ni les transactions. 2 comptes inclus, 5 €/mois au-delà.</div>
+      teamBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Un compte Staff voit uniquement la Grille, la vue du jour, le Ménage et les Événements — jamais les chiffres, les réglages ni les transactions. 2 comptes inclus, 5 €/mois au-delà.</div>
         <button class="btn-p" style="width:100%" onclick="generateInviteLink()">+ Générer un lien d'invitation</button>
         <div id="inviteLinkBox" style="margin-top:8px"></div>
         <div class="set-card-sub" style="margin-top:14px;padding-top:10px">
@@ -5523,15 +5551,31 @@ function renderSettings(){
   </div>`;
   h+=settingsPanel('catalogue','Catalogue extras',catalogBody);
 
-  // — Sources de réservation —
+  // — Sources de réservation — chaque source est entièrement personnalisable
+  // (plus aucun comportement particulier figé en dur pour l'une d'elles) :
+  // couleur dédiée (prend le dessus sur la couleur du client) et/ou source
+  // sans tarif nuitée (échange, personnel… — exclue des calculs comptables
+  // Semaine/Mois/Année, voir getNightlyRate/getBookingRevForPeriod).
   let sourcesBody='';
-  const BUILTIN_SOURCES=['direct','airbnb','booking','homexchange','ghost'];
+  const BUILTIN_SOURCES=['direct','airbnb','booking','homexchange'];
   (st.sources||DEFAULT_SETTINGS.sources).forEach(s=>{
     const isBuiltin=BUILTIN_SOURCES.includes(s.id);
-    sourcesBody+=`<div class="set-card set-card-row">
-      <input class="set-fi" style="flex:1" value="${s.label.replace(/"/g,'&quot;')}" placeholder="Nom" onblur="updateSource('${s.id}','label',this.value)">
-      <input type="color" class="set-color" value="${s.color||'#888'}" oninput="updateSource('${s.id}','color',this.value)">
-      ${isBuiltin?'':`<button class="set-del" onclick="delSource('${s.id}')">×</button>`}
+    sourcesBody+=`<div class="set-card">
+      <div class="set-card-row">
+        <input class="set-fi" style="flex:1" value="${s.label.replace(/"/g,'&quot;')}" placeholder="Nom" onblur="updateSource('${s.id}','label',this.value)">
+        <input type="color" class="set-color" value="${s.color||'#888'}" oninput="updateSource('${s.id}','color',this.value)">
+        ${isBuiltin?'':`<button class="set-del" onclick="delSource('${s.id}')">×</button>`}
+      </div>
+      <div class="set-card-sub" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+          <input type="checkbox" ${s.colorOverride?'checked':''} onchange="updateSource('${s.id}','colorOverride',this.checked)">
+          <span>Couleur dédiée (remplace la couleur du client sur le planning)</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
+          <input type="checkbox" ${s.noRevenue?'checked':''} onchange="updateSource('${s.id}','noRevenue',this.checked)">
+          <span>Sans tarif nuitée (échange, personnel… — exclue des chiffres Semaine/Mois/Année)</span>
+        </label>
+      </div>
     </div>`;
   });
   sourcesBody+=`<button class="set-add" onclick="addSource()">+ Ajouter une source</button>`;
@@ -5896,7 +5940,7 @@ function updateStructureThreshold(sid,tid,field,val){
 // Source CRUD
 function addSource(){
   S.settings.sources=S.settings.sources||[...DEFAULT_SETTINGS.sources];
-  S.settings.sources.push({id:uid(),label:'Nouvelle source',color:'#9E9E9E',noRevenue:false});
+  S.settings.sources.push({id:uid(),label:'Nouvelle source',color:'#9E9E9E',colorOverride:false,noRevenue:false});
   saveSettings();renderSettings();renderSourceBtns();
 }
 function delSource(id){
@@ -5908,7 +5952,14 @@ function updateSource(id,field,val){
   const s=sources.find(x=>x.id===id);
   if(!s)return;
   s[field]=val;
-  saveSettings();renderSourceBtns();
+  saveSettings();renderSourceBtns();renderSourceBtnsEv();
+  // couleur/couleur dédiée/sans tarif nuitée changent l'affichage des blocs
+  // et les totaux déjà à l'écran — pas seulement les futures réservations.
+  renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
+  if(S.view==='year')renderYear();
 }
 
 // Cleaner CRUD
@@ -6007,8 +6058,14 @@ function getExtrasDayTotal(bk,ds){
 function extrasHTMLFor(b,ds){
   const dayX=b.extras&&b.extras[ds]?b.extras[ds]:{};
   const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  // Rendu désactivé directement au niveau du HTML pour un compte Staff — pas
+  // seulement dans le modal (voir personnelLockExtrasBody) : ce même HTML est
+  // aussi injecté tel quel dans la vue Jour (renderToday), qui n'a pas son
+  // propre verrouillage. Sans ça, "Modifier le catalogue" restait cliquable
+  // depuis la vue Jour et ouvrait un vrai éditeur de catalogue.
+  const ro=currentRole==='personnel'?' disabled':'';
   let xh=`<div class="tcard-extras-hd">
-    <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()">Modifier le catalogue</button>
+    <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()"${ro}>Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
     const items=S.catalog.filter(c=>c.cat===cat);
@@ -6016,8 +6073,8 @@ function extrasHTMLFor(b,ds){
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
       const qty=dayX[item.id]||0;
-      xh+=`<button class="xchip${qty>0?' on':''}" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',1)">
-        ${item.emoji} ${item.name}<span class="xchip-price">${item.price}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',-1)">×${qty}</span>`:''}
+      xh+=`<button class="xchip${qty>0?' on':''}" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',1)"${ro}>
+        ${item.emoji} ${item.name}<span class="xchip-price">${item.price}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',-1)"${ro}>×${qty}</span>`:''}
       </button>`;
     });
     xh+=`</div>`;
@@ -6219,6 +6276,11 @@ function getStayTotal(bk){
   return nights*getNightlyRate(bk)-getBreakfastDeduction(bk,bk.checkIn,bk.checkOut)+getThRevenue(bk,bk.checkIn,bk.checkOut)+getExtrasTotal(bk)+getBabyCribRevenue(bk);
 }
 function getBookingRevForPeriod(bk,pStart,pEnd){
+  // Source "sans tarif nuitée" : entièrement hors des calculs comptables des
+  // vues Semaine/Mois/Année, même avec un prix personnalisé (prixNet) —
+  // remplace l'ancien cas particulier "ghost" compté à part dans une jauge
+  // dédiée (voir renderYear) par un réglage explicite, par source.
+  if(isSourceNoRevenue(bk.source))return 0;
   const oStart=bk.checkIn>pStart?bk.checkIn:pStart;
   const oEnd=bk.checkOut<pEnd?bk.checkOut:pEnd;
   const n=daysBetween(oStart,oEnd);
@@ -7068,9 +7130,7 @@ function renderYear(){
       const oE=bk.checkOut<yEnd?bk.checkOut:yEnd;
       return s+daysBetween(oS,oE);
     },0);
-    const ghostBks=bks.filter(bk=>bk.source==='ghost');
-    const ghostCA=ghostBks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,yStart,yEnd),0);
-    return{rooms,bks,realCA,realNights,projCA,projNights,totalCap,occRate,platNights,ghostCA};
+    return{rooms,bks,realCA,realNights,projCA,projNights,totalCap,occRate,platNights};
   }
 
   function nightsGauge(nights,limit,label){
@@ -7093,10 +7153,9 @@ function renderYear(){
     </div>`;
   }
 
-  function gauge(realCA,projCA,threshold,color,label,ghostCA){
+  function gauge(realCA,projCA,threshold,color,label){
     const projPct=Math.min(100,projCA/threshold*100);
     const realPct=Math.min(100,realCA/threshold*100);
-    const ghostPct=Math.min(100,(ghostCA||0)/threshold*100);
     const cls=projPct>=100?'yr-gauge-danger':projPct>=80?'yr-gauge-warn':'';
     const fillColor=cls?'#E07828':color;
     return`<div class="yr-gauge${cls?' '+cls:''}">
@@ -7107,13 +7166,11 @@ function renderYear(){
       <div class="yr-gauge-bar">
         <div class="yr-gauge-proj" style="width:${projPct}%;background:${fillColor}44"></div>
         <div class="yr-gauge-real" style="width:${realPct}%;background:${fillColor}"></div>
-        ${ghostPct>0?`<div class="yr-gauge-ghost" style="width:${ghostPct}%" title="Dont ${Math.round(ghostCA).toLocaleString('fr-FR')} € via Ghost"></div>`:''}
       </div>
       <div class="yr-gauge-bot">
         <span style="font-size:10px;color:var(--gray)">Réalisé <b>${Math.round(realCA).toLocaleString('fr-FR')} €</b></span>
         <span style="font-size:10px;color:var(--gray)">Projeté <b>${Math.round(projCA).toLocaleString('fr-FR')} €</b></span>
       </div>
-      ${ghostPct>0?`<div class="yr-gauge-ghost-lgd"><span class="yr-gauge-ghost-sw"></span>dont <b>${Math.round(ghostCA).toLocaleString('fr-FR')} €</b> via Ghost</div>`:''}
     </div>`;
   }
 
@@ -7125,7 +7182,7 @@ function renderYear(){
     const nightsThr=(thresholdConfigs||[]).filter(t=>t.type==='nights');
     const showPlatform=nightsThr.length>0;
     const platLimit=nightsThr[0]?.amount||120;
-    const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#E07828',t.label,st.ghostCA)).join('')
+    const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#E07828',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
     const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
           <div class="mstat-val">${st.platNights}</div>
