@@ -2333,6 +2333,28 @@ function lockPersonnelWrites(){
   });
 }
 
+// Grise tous les champs d'une fiche (réservation, événement…) pour un compte
+// Personnel, dès son ouverture — plutôt que de laisser les champs cliquables
+// et de n'avertir qu'au moment d'enregistrer (ce qui laissait voir des
+// changements — nombre de personnes, cases cochées… — qui ne seraient de
+// toute façon jamais sauvegardés, source de confusion). Rien n'est
+// modifiable, même visuellement, dès l'ouverture de la fiche : la personne
+// peut tout lire, rien cliquer. Les boutons Fermer/Annuler restent actifs.
+// Le message ci-dessous n'apparaît qu'une fois par fiche ouverte, tout de
+// suite, plutôt qu'à chaque tentative de clic sur un champ déjà grisé.
+function lockdownModalForPersonnelViewing(modalId){
+  if(currentRole!=='personnel')return;
+  const modal=byId(modalId);
+  if(!modal)return;
+  modal.querySelectorAll('input,select,textarea').forEach(el=>{el.disabled=true;});
+  modal.querySelectorAll('button').forEach(btn=>{
+    const oc=btn.getAttribute('onclick')||'';
+    if(btn.classList.contains('mclose')||/closeM\(/.test(oc))return; // Fermer/Annuler restent actifs
+    btn.disabled=true;
+  });
+  alert('Ce compte est en lecture seule — vous pouvez consulter cette fiche mais pas la modifier.');
+}
+
 function applyRemoteData(d,meta){
   // Diagnostic : mesure le délai réel entre l'écriture (d.updated) et la
   // réception ici, pour savoir si un délai de synchro est réel ou perçu.
@@ -3432,6 +3454,7 @@ function openEditModal(id){
   renderDinnerList();
   updateModalTotal();
   byId('modalBooking').style.display='flex';
+  lockdownModalForPersonnelViewing('modalBooking');
 }
 
 function refreshBExtrasTotal(bk){
@@ -4014,6 +4037,13 @@ function renderEvList(term){
 }
 
 function openEventEdit(id,prefillDate){
+  // Un compte Personnel ne peut consulter que des événements existants
+  // (id fourni) — pas de formulaire de création vide, qui ne pourrait de
+  // toute façon jamais être enregistré (voir lockPersonnelWrites/saveEvent).
+  if(currentRole==='personnel'&&!id){
+    alert('Ce compte est en lecture seule — les modifications ne sont pas enregistrées.');
+    return;
+  }
   editEvid=id;
   const ev=id?S.events.find(e=>e.id===id):null;
   const def=prefillDate||todayISO();
@@ -4042,6 +4072,7 @@ function openEventEdit(id,prefillDate){
   updateEvTotal();
 
   closeM('modalEvents');byId('modalEventEdit').style.display='flex';
+  lockdownModalForPersonnelViewing('modalEventEdit');
 }
 
 function saveEvent(){
