@@ -2390,40 +2390,56 @@ let firestoreSettingsApplied=false;
 // cette séparation est appliquée par les règles Firestore elles-mêmes, pas
 // seulement par ce code : même une anomalie dans l'app ne peut pas faire
 // fuiter les données privées du propriétaire vers un compte Personnel.
+// Nombre de reprises automatiques déjà tentées après un échec du canal temps
+// réel (voir plus bas) — remis à zéro dès qu'une synchro réussit.
+let connectRetryCount=0;
 function connectFirestoreForUser(){
   try{
     db=firebase.firestore();
     if(!firestoreSettingsApplied){
-      // Bascule automatiquement en long-polling sur les réseaux qui négocient mal
-      // le canal streaming natif (satellite type Starlink, VPN, proxy restrictif...).
-      // Sur un réseau normal, Firestore continue d'utiliser le canal natif le plus
-      // rapide — ce réglage ne fait qu'ajouter une détection, jamais un ralentissement.
-      // Doit être appelé une seule fois, avant toute autre opération Firestore.
-      db.settings({experimentalAutoDetectLongPolling:true});
+      // Force le long-polling au lieu de se fier à la détection automatique :
+      // sur certains réseaux (proxy, VPN, certaines box/Wi-Fi), le canal de
+      // connexion permanent (streaming natif) échoue silencieusement au tout
+      // premier chargement alors qu'une simple lecture ponctuelle réussit —
+      // constaté en usage réel. Le long-polling est un peu plus lourd mais
+      // nettement plus fiable dans ce genre de cas ; sur un réseau normal la
+      // différence de vitesse est imperceptible. Doit être appelé une seule
+      // fois, avant toute autre opération Firestore.
+      db.settings({experimentalForceLongPolling:true});
       firestoreSettingsApplied=true;
     }
     setSyncPip('busy','Connexion…');
-    // Évite d'empiler plusieurs listeners si rappelé (changement de compte).
+    // Évite d'empiler plusieurs listeners si rappelé (changement de compte,
+    // ou reprise automatique après erreur, voir onErr ci-dessous).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
+    // Si le canal temps réel échoue quand même, on n'oblige plus la personne
+    // à cliquer elle-même sur le point de synchro pour débloquer la
+    // situation (ce qui ne faisait que forcer une lecture ponctuelle en
+    // coulisses) : on relance automatiquement la connexion, avec un délai
+    // qui augmente à chaque nouvel échec pour ne pas s'acharner en boucle.
+    const onErr=err=>{
+      setSyncPip('err','Erreur sync — nouvelle tentative…');
+      console.error(err);
+      connectRetryCount++;
+      const delay=Math.min(2000*connectRetryCount,15000);
+      setTimeout(()=>{ if(currentUid) connectFirestoreForUser(); },delay);
+    };
+    const onOk=()=>{ connectRetryCount=0; };
     if(currentRole==='personnel'){
       unsubSnapshot=sharedOpsRef().onSnapshot({includeMetadataChanges:true},snap=>{
         if(snap.exists) applySharedOpsData(snap.data(),snap.metadata);
+        onOk();
         setSyncPip('ok','Synchronisé ✓'+delayTxt());
-      },err=>{
-        setSyncPip('err','Erreur sync');
-        console.error(err);
-      });
+      },onErr);
       return;
     }
     // Real-time listener
     unsubSnapshot=db.collection('accounts').doc(currentUid).onSnapshot({includeMetadataChanges:true},snap=>{
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
+      onOk();
       setSyncPip('ok','Synchronisé ✓'+delayTxt());
-    },err=>{
-      setSyncPip('err','Erreur sync');
-      console.error(err);
-    });
+    },onErr);
   }catch(e){setSyncPip('err','Erreur Firebase');console.error(e);}
 }
 // Chemin du sous-document partagé avec l'équipe (voir plus haut). Un seul
