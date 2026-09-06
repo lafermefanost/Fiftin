@@ -2167,6 +2167,14 @@ function bootFirebaseApp(){
   showLockScreen(pendingInviteId?'signup':'signin');
   loadFirebaseSDK(()=>{
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    // Doit être fait ICI, avant toute autre opération Firestore — y compris
+    // resolveAccountRole() ci-dessous, qui fait sa propre lecture dès la
+    // connexion. Firestore verrouille son mode de connexion dès la toute
+    // première opération : un réglage posé plus tard (ex. dans
+    // connectFirestoreForUser, comme c'était fait avant) est silencieusement
+    // ignoré. C'était la vraie cause du canal temps réel qui restait bloqué
+    // en silence sans jamais forcer le long-polling comme prévu.
+    ensureFirestoreSettings();
     firebase.auth().onAuthStateChanged(user=>{
       if(user){
         currentUid=user.uid;
@@ -2200,6 +2208,26 @@ function bootFirebaseApp(){
       }
     });
   });
+}
+
+// Force le long-polling au lieu de se fier à la détection automatique de
+// Firestore : sur certains réseaux (proxy, VPN, certaines box/Wi-Fi), le
+// canal de connexion permanent (streaming natif) reste bloqué en silence
+// indéfiniment au premier chargement — ni succès, ni erreur — alors qu'une
+// simple lecture ponctuelle réussit sans problème. Constaté en usage réel,
+// reproduit sur plusieurs navigateurs (pas une particularité de l'un
+// d'eux) : le réseau lui-même semble mal négocier le canal natif.
+// DOIT être appelé avant la toute première opération Firestore, quelle
+// qu'elle soit — Firestore verrouille son mode de connexion dès sa première
+// utilisation, et un réglage posé plus tard est silencieusement ignoré
+// (c'est exactement ce qui se passait avant : resolveAccountRole() faisait
+// sa propre lecture avant que connectFirestoreForUser() ait la moindre
+// chance de configurer quoi que ce soit).
+let firestoreSettingsApplied=false;
+function ensureFirestoreSettings(){
+  if(firestoreSettingsApplied)return;
+  firebase.firestore().settings({experimentalForceLongPolling:true});
+  firestoreSettingsApplied=true;
 }
 
 // Détermine si le compte qui vient de se connecter est un propriétaire ou un
@@ -2388,7 +2416,6 @@ function showSyncDebug(){
   ].filter(Boolean);
   alert('Diagnostic sync\n\n'+lines.join('\n'));
 }
-let firestoreSettingsApplied=false;
 // Remplace l'ancien connectFirebase(cfg) : plus de config à passer (un seul
 // projet partagé, déjà initialisé dans bootFirebaseApp), juste le compte
 // actuellement connecté (currentUid) et son rôle (voir resolveAccountRole).
@@ -2405,29 +2432,30 @@ let connectRetryCount=0;
 function connectFirestoreForUser(){
   try{
     db=firebase.firestore();
-    if(!firestoreSettingsApplied){
-      // Force le long-polling au lieu de se fier à la détection automatique :
-      // sur certains réseaux (proxy, VPN, certaines box/Wi-Fi), le canal de
-      // connexion permanent (streaming natif) échoue silencieusement au tout
-      // premier chargement alors qu'une simple lecture ponctuelle réussit —
-      // constaté en usage réel. Le long-polling est un peu plus lourd mais
-      // nettement plus fiable dans ce genre de cas ; sur un réseau normal la
-      // différence de vitesse est imperceptible. Doit être appelé une seule
-      // fois, avant toute autre opération Firestore.
-      db.settings({experimentalForceLongPolling:true});
-      firestoreSettingsApplied=true;
-    }
+    ensureFirestoreSettings(); // filet de sécurité — voir bootFirebaseApp, où c'est fait au bon moment
     setSyncPip('busy','Connexion…');
     // Évite d'empiler plusieurs listeners si rappelé (changement de compte,
     // ou reprise automatique après erreur, voir onErr ci-dessous).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
-    // Si le canal temps réel échoue quand même, on n'oblige plus la personne
-    // à cliquer elle-même sur le point de synchro pour débloquer la
-    // situation (ce qui ne faisait que forcer une lecture ponctuelle en
-    // coulisses) : on relance automatiquement la connexion, avec un délai
-    // qui augmente à chaque nouvel échec pour ne pas s'acharner en boucle.
+    // Constaté en usage réel : sur certains navigateurs/réseaux, le canal
+    // temps réel (onSnapshot) ne répond parfois JAMAIS — ni succès, ni
+    // erreur, juste silencieux indéfiniment — alors qu'une lecture ponctuelle
+    // directe (refreshFromServer) réussit sans problème. Ce filet de
+    // sécurité déclenche cette lecture de secours si aucune réponse (succès
+    // OU erreur) n'est arrivée après quelques secondes, pour ne plus jamais
+    // dépendre d'un clic manuel sur le point de synchro pour débloquer la
+    // situation. Annulé dès qu'une réponse arrive par le canal normal.
+    let responded=false;
+    const watchdog=setTimeout(()=>{
+      if(responded)return;
+      console.warn('[sync] canal temps réel silencieux, lecture de secours');
+      lastVisRefresh=0; // garantit que refreshFromServer() ne sera pas ignoré (anti-doublon)
+      refreshFromServer();
+    },6000);
     const onErr=err=>{
+      if(responded)return;
+      responded=true;clearTimeout(watchdog);
       setSyncPip('err','Erreur sync — nouvelle tentative…');
       console.error(err);
       lastSyncErrorMsg=(err&&(err.code||err.message))||String(err);
@@ -2436,7 +2464,7 @@ function connectFirestoreForUser(){
       const delay=Math.min(2000*connectRetryCount,15000);
       setTimeout(()=>{ if(currentUid) connectFirestoreForUser(); },delay);
     };
-    const onOk=()=>{ connectRetryCount=0; };
+    const onOk=()=>{ responded=true;clearTimeout(watchdog);connectRetryCount=0; };
     if(currentRole==='personnel'){
       unsubSnapshot=sharedOpsRef().onSnapshot({includeMetadataChanges:true},snap=>{
         if(snap.exists) applySharedOpsData(snap.data(),snap.metadata);
