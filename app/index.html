@@ -986,13 +986,13 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </svg>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
-  <button class="hbtn" onclick="openSettings()" title="Paramètres">
+  <button class="hbtn" id="settingsBtn" onclick="openSettings()" title="Paramètres">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
   <button class="hbtn" onclick="openEventsModal()" title="Événements">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
   </button>
-  <button class="hbtn" onclick="openGuestsModal()" title="Clients">
+  <button class="hbtn" id="guestsBtn" onclick="openGuestsModal()" title="Clients">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
   </button>
   <button class="hbtn" id="exportBtn" title="Export / Import">
@@ -1016,7 +1016,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <button class="vtab" id="vt-year" onclick="setView('year')">Année</button>
   </div>
   <button class="tbtn tbtn-today" onclick="goToday()">Aujourd'hui</button>
-  <button class="tbtn tbtn-add" onclick="openAddModal()">+ Résa</button>
+  <button class="tbtn tbtn-add" id="addResaBtn" onclick="openAddModal()">+ Résa</button>
 </div>
 
 <!-- ─── GRID VIEW ─────────────────────────────────────────────── -->
@@ -2175,6 +2175,7 @@ function bootFirebaseApp(){
         signupInProgress=false;
         acceptPromise.then(()=>resolveAccountRole(user.uid)).then(()=>{
           byId('lockScreen').classList.remove('show');
+          applyPersonnelUIRestrictions();
           init();
           connectFirestoreForUser();
         });
@@ -2248,6 +2249,28 @@ function acceptInvite(memberUid,inviteId){
     console.error("Impossible d'accepter l'invitation",err);
     alert("Impossible d'accepter l'invitation — vérifiez votre connexion et réessayez.");
   });
+}
+
+// Réduit l'interface à ce qu'un compte Personnel a le droit de voir : Grille,
+// Jour, Ménage (déjà inclus dans ces deux vues) et Événements — jamais les
+// chiffres (Semaine/Mois/Année affichent des totaux financiers), Réglages,
+// l'export ou le fichier client détaillé. Appelé une seule fois, juste après
+// la connexion (voir bootFirebaseApp). Ce n'est qu'un confort d'affichage :
+// la vraie protection vient de ce que ces données ne sont de toute façon
+// jamais reçues par ce compte (voir applySharedOpsData) et des règles
+// Firestore — même en contournant cette interface, il n'y a rien à voir.
+function applyPersonnelUIRestrictions(){
+  if(currentRole!=='personnel')return;
+  ['settingsBtn','exportBtn','guestsBtn','addResaBtn'].forEach(id=>{
+    const el=byId(id);
+    if(el)el.style.display='none';
+  });
+  ['week','month','year'].forEach(v=>{
+    byId('vt-'+v)?.remove();
+    byId('mn-'+v)?.remove();
+  });
+  // Le badge "Personnel" dans l'en-tête est géré par applySettings() (il
+  // doit être réappliqué à chaque resynchro, pas juste une fois ici).
 }
 
 function applyRemoteData(d,meta){
@@ -4769,7 +4792,11 @@ function applySettings(){
   ROOMS=S.settings.rooms||ROOMS;
   CLEANERS=S.settings.cleaners||CLEANERS;
   const logoEl=byId('appName');
-  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+(S.settings.name?' — '+S.settings.name:'');
+  // Le badge "Personnel" (voir applyPersonnelUIRestrictions) doit survivre à
+  // chaque resynchro — applySettings() est rappelée à chaque réception de
+  // données et écraserait sinon le badge à la première synchro venue.
+  const personnelBadge=currentRole==='personnel'?' <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">Personnel</span>':'';
+  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+(S.settings.name?' — '+S.settings.name:'')+personnelBadge;
   document.body.classList.toggle('no-dinner',!dinnerEnabled());
   document.body.classList.toggle('no-breakfast',!breakfastEnabled());
   document.body.classList.toggle('no-taxe-sejour',!taxeSejourEnabled());
@@ -6780,7 +6807,15 @@ function toggleGridZoom(){
   wrap.scrollLeft=ratioH*maxHAfter;
 }
 
+// Vues autorisées à un compte Personnel (voir applyPersonnelUIRestrictions) —
+// répété ici pour que même un appel direct à setView('year') (ex. valeur
+// restée dans le stockage local depuis avant l'invitation, ou appel depuis
+// la console du navigateur) ne puisse pas contourner la restriction : les
+// vues Semaine/Mois/Année affichent des chiffres qu'un compte Personnel ne
+// doit jamais voir.
+const PERSONNEL_ALLOWED_VIEWS=['grid','today'];
 function setView(v){
+  if(currentRole==='personnel'&&!PERSONNEL_ALLOWED_VIEWS.includes(v))v='grid';
   S.view=v;
   ['grid','today','week','month','year'].forEach(id=>{
     const w=byId(id+'Wrap');
