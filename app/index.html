@@ -2112,6 +2112,12 @@ const FIFTIN_FIREBASE_CONFIG={
   measurementId:"G-4PJLYEPW01",
 };
 let currentUid=null,currentUserEmail=null;
+// Rôle du compte connecté — 'owner' (propriétaire, accès complet) ou
+// 'personnel' (ex. femme de ménage, invité par un propriétaire — accès
+// limité en lecture seule, voir resolveAccountRole/connectFirestoreForUser).
+// ownerUid est le compte dont on affiche les données : égal à currentUid
+// pour un propriétaire, égal au compte qui l'a invité pour le personnel.
+let currentRole='owner',ownerUid=null;
 
 function loadFirebaseSDK(cb){
   if(typeof firebase!=='undefined'){cb();return;}
@@ -2152,9 +2158,11 @@ function bootFirebaseApp(){
       if(user){
         currentUid=user.uid;
         currentUserEmail=user.email;
-        byId('lockScreen').classList.remove('show');
-        init();
-        connectFirestoreForUser();
+        resolveAccountRole(user.uid).then(()=>{
+          byId('lockScreen').classList.remove('show');
+          init();
+          connectFirestoreForUser();
+        });
       }else{
         // Un compte vient de se déconnecter (ou aucun n'a jamais été
         // connecté) : on coupe l'écoute Firestore de l'ancien compte pour
@@ -2162,13 +2170,38 @@ function bootFirebaseApp(){
         // de l'appareil — sur un poste partagé, la personne suivante ne
         // doit jamais voir les données du compte précédent, même une seconde.
         if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
-        currentUid=null;currentUserEmail=null;
+        currentUid=null;currentUserEmail=null;currentRole='owner';ownerUid=null;
         localStorage.removeItem('ff2_data');
         localStorage.removeItem('ff2_settings');
         localStorage.removeItem('ff2_catalog');
         showLockScreen('signin');
       }
     });
+  });
+}
+
+// Détermine si le compte qui vient de se connecter est un propriétaire ou un
+// membre de l'équipe (« Personnel ») invité par un propriétaire. La présence
+// d'une fiche accountMembers/{uid} est la seule source de vérité — elle est
+// créée une seule fois, au moment où l'invitation est acceptée (voir
+// acceptInvite()), et n'est ensuite modifiable par personne (règles Firestore).
+function resolveAccountRole(uid){
+  return firebase.firestore().collection('accountMembers').doc(uid).get().then(snap=>{
+    if(snap.exists&&snap.data().ownerUid){
+      currentRole='personnel';
+      ownerUid=snap.data().ownerUid;
+    }else{
+      currentRole='owner';
+      ownerUid=uid;
+    }
+  }).catch(err=>{
+    // En cas de souci réseau/règles, on ne bloque jamais l'ouverture de
+    // l'app : on retombe sur 'owner' — si ce compte est en réalité un
+    // compte Personnel, connectFirestoreForUser() essaiera alors de lire
+    // accounts/{uid} (son propre compte, vide), jamais les données d'un
+    // autre compte : aucune fuite possible, seulement une grille vide.
+    console.error('Impossible de déterminer le rôle du compte',err);
+    currentRole='owner';ownerUid=uid;
   });
 }
 
@@ -2231,6 +2264,37 @@ function applyRemoteData(d,meta){
   if(bookingsFixed)pushToFirebase();
 }
 
+// Version restreinte d'applyRemoteData() pour un compte Personnel : reçoit
+// uniquement le sous-ensemble « opérationnel » des données (voir
+// pushSharedOpsMirror), jamais les chiffres, les réglages fiscaux ni les
+// transactions bancaires du propriétaire — ces champs ne sont d'ailleurs
+// même pas présents dans le document que Personnel a le droit de lire
+// (accounts/{ownerUid}/shared/ops), donc rien à filtrer ici : on part d'un
+// DEFAULT_SETTINGS neutre et on ne comble que le nom et les chambres.
+function applySharedOpsData(d,meta){
+  if(d.updated){
+    lastSyncDelayMs=Date.now()-new Date(d.updated).getTime();
+    lastReceiveAt=new Date().toLocaleTimeString('fr-FR');
+  }
+  S.bookings=d.bookings||[];
+  S.guests=d.guests||[];
+  S.events=d.events||[];
+  migrateEvents();
+  S.cleaning=d.cleaning||{};
+  migrateCleaning();
+  S.menus=d.menus||{};
+  S.extDiners=d.extDiners||{};
+  migrateExtDiners();
+  // Jamais reçus pour un compte Personnel — toujours vides, par sécurité
+  // autant que par cohérence (ces vues ne sont de toute façon pas accessibles).
+  S.transactions=[];
+  S.catalog=[];
+  S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),rooms:d.rooms||[],name:d.name||''};
+  applySettings();
+  renderGrid();
+  if(S.view==='today') renderToday();
+}
+
 let lastSyncDelayMs=null;
 let lastPayloadKB=null;
 let lastWriteMs=null;
@@ -2250,8 +2314,14 @@ function showSyncDebug(){
 let firestoreSettingsApplied=false;
 // Remplace l'ancien connectFirebase(cfg) : plus de config à passer (un seul
 // projet partagé, déjà initialisé dans bootFirebaseApp), juste le compte
-// actuellement connecté (currentUid). Chaque compte a son propre document
-// (accounts/{uid}) — jamais un document partagé entre tous comme avant.
+// actuellement connecté (currentUid) et son rôle (voir resolveAccountRole).
+// Un propriétaire lit/écrit son document complet (accounts/{uid}), protégé
+// par les règles Firestore (request.auth.uid == uid). Un compte Personnel ne
+// lit qu'un sous-document dédié (accounts/{ownerUid}/shared/ops) qui ne
+// contient jamais les chiffres, réglages fiscaux ni transactions bancaires —
+// cette séparation est appliquée par les règles Firestore elles-mêmes, pas
+// seulement par ce code : même une anomalie dans l'app ne peut pas faire
+// fuiter les données privées du propriétaire vers un compte Personnel.
 function connectFirestoreForUser(){
   try{
     db=firebase.firestore();
@@ -2267,16 +2337,31 @@ function connectFirestoreForUser(){
     setSyncPip('busy','Connexion…');
     // Évite d'empiler plusieurs listeners si rappelé (changement de compte).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+    const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
+    if(currentRole==='personnel'){
+      unsubSnapshot=sharedOpsRef().onSnapshot({includeMetadataChanges:true},snap=>{
+        if(snap.exists) applySharedOpsData(snap.data(),snap.metadata);
+        setSyncPip('ok','Synchronisé ✓'+delayTxt());
+      },err=>{
+        setSyncPip('err','Erreur sync');
+        console.error(err);
+      });
+      return;
+    }
     // Real-time listener
     unsubSnapshot=db.collection('accounts').doc(currentUid).onSnapshot({includeMetadataChanges:true},snap=>{
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
-      const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
-      setSyncPip('ok','Synchronisé ✓'+delayTxt);
+      setSyncPip('ok','Synchronisé ✓'+delayTxt());
     },err=>{
       setSyncPip('err','Erreur sync');
       console.error(err);
     });
   }catch(e){setSyncPip('err','Erreur Firebase');console.error(e);}
+}
+// Chemin du sous-document partagé avec l'équipe (voir plus haut). Un seul
+// point de définition pour ne jamais désynchroniser lecture et écriture.
+function sharedOpsRef(){
+  return db.collection('accounts').doc(ownerUid).collection('shared').doc('ops');
 }
 
 // Rafraîchissement forcé au retour au premier plan (écran d'accueil iOS/Android) :
@@ -2291,8 +2376,10 @@ function refreshFromServer(){
   if(now-lastVisRefresh<2000)return; // évite les doubles déclenchements
   lastVisRefresh=now;
   setSyncPip('busy','Actualisation…');
-  db.collection('accounts').doc(currentUid).get({source:'server'}).then(snap=>{
-    if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
+  const ref=currentRole==='personnel'?sharedOpsRef():db.collection('accounts').doc(currentUid);
+  const apply=currentRole==='personnel'?applySharedOpsData:applyRemoteData;
+  ref.get({source:'server'}).then(snap=>{
+    if(snap.exists) apply(snap.data(),snap.metadata);
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
   }).catch(err=>{
@@ -2308,6 +2395,12 @@ window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
   if(!db||!currentUid)return;
+  // Un compte Personnel est en lecture seule (v1) : aucune écriture possible,
+  // ni sur le document du propriétaire (interdit par les règles Firestore de
+  // toute façon) ni sur le sous-document partagé (qui n'est mis à jour QUE
+  // par le propriétaire, voir plus bas). On coupe court ici pour que ça ne
+  // dépende même pas des règles serveur en cas d'appel accidentel.
+  if(currentRole==='personnel')return;
   setSyncPip('busy','Envoi…');
   const t0=Date.now();
   const payload=JSON.stringify({
@@ -2323,10 +2416,29 @@ function pushToFirebase(){
     lastWriteMs=Date.now()-t0;
     console.log(`[sync] écriture confirmée par le serveur en ${lastWriteMs}ms`);
     setSyncPip('ok','Synchronisé ✓');
+    pushSharedOpsMirror();
   }).catch(err=>{
     console.error('[sync] échec envoi',err);
     setSyncPip('err','Erreur envoi');
   });
+}
+
+// Miroir « opérationnel » à l'usage exclusif des comptes Personnel (voir
+// connectFirestoreForUser) : seulement ce dont les vues Grille/Jour/Ménage/
+// Événements ont besoin. Volontairement exclu : chiffres, seuils fiscaux,
+// structures juridiques, transactions bancaires, catalogue tarifaire — ces
+// champs ne quittent jamais le document principal du propriétaire. Écrit
+// uniquement par le propriétaire (jamais par un compte Personnel, voir
+// pushToFirebase) juste après chaque synchro réussie de son propre document.
+function pushSharedOpsMirror(){
+  if(currentRole==='personnel')return;
+  const roomsPublic=(S.settings.rooms||[]).map(r=>({id:r.id,name:r.name,short:r.short,color:r.color,maxPersons:r.maxPersons,group:r.group}));
+  sharedOpsRef().set({
+    rooms:roomsPublic,
+    name:S.settings.name||'',
+    bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners,
+    updated:new Date().toISOString()
+  }).catch(err=>console.error('[sync] échec miroir équipe',err));
 }
 
 function setSyncPip(state,title){
