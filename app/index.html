@@ -1627,6 +1627,10 @@ const DEFAULT_SETTINGS={
     {id:'conciergerie',label:'Conciergerie',keywords:[],excluded:false},
     {id:'linge',label:'Linge / Pressing',keywords:[],excluded:false},
   ],
+  // Formule d'abonnement — purement déclaratif pour l'instant (pas encore relié à un
+  // vrai paiement) : 'essentiel' limite à une structure juridique, 'pro' est illimité.
+  // Voir Réglages → Compte pour changer de formule, et addStructure() pour la limite.
+  plan:'essentiel',
   // Structures juridiques : liste libre, une chambre/gîte est rattaché(e) à l'une d'elles (room.group).
   // Une seule structure générique par défaut — à renommer et dupliquer dans Réglages selon les besoins.
   structures:[{id:'struct1',name:'Structure 1'}],
@@ -4517,6 +4521,7 @@ function loadSettings(){
   if(!S.settings.chargeCategories||!S.settings.chargeCategories.length)S.settings.chargeCategories=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.chargeCategories));
   if(!S.settings.taxeSejourHistory||!S.settings.taxeSejourHistory.length)S.settings.taxeSejourHistory=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.taxeSejourHistory));
   if(!S.settings.contract)S.settings.contract=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.contract));
+  if(!S.settings.plan)S.settings.plan='essentiel';
   migrateCleaners();
   const ghostSrc=S.settings.sources.find(s=>s.id==='ghost');
   if(ghostSrc)ghostSrc.noRevenue=false;
@@ -4943,7 +4948,15 @@ function renderSettings(){
     <div class="fg"><label class="fl">Confirmez</label><input type="password" class="fi" id="newPasswordConfirm" placeholder="Confirmez le mot de passe" autocomplete="new-password"></div>
     <button class="btn-p" style="width:100%" onclick="changePassword()">Changer le mot de passe</button>
     <div id="accountMsg" style="font-size:12px;margin-top:8px"></div>
-    <button class="btn-s" style="width:100%;margin-top:14px" onclick="signOutUser()">Se déconnecter</button>`;
+    <button class="btn-s" style="width:100%;margin-top:14px" onclick="signOutUser()">Se déconnecter</button>
+    <div class="set-card-sub" style="margin-top:18px;padding-top:14px">
+      <div class="set-card-sub-title">Formule</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Le paiement en ligne n'est pas encore actif — ce réglage sert pour l'instant à essayer les deux formules.</div>
+      <select class="set-fi" onchange="setPlan(this.value)">
+        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 19 €/mois</option>
+        <option value="pro"${st.plan==='pro'?' selected':''}>Pro — 29 €/mois</option>
+      </select>
+    </div>`;
   h+=settingsPanel('compte','Compte',accountBody);
 
   // — Structures juridiques, chacune avec ses propres seuils —
@@ -4976,7 +4989,11 @@ function renderSettings(){
       </div>
     </div>`;
   });
-  structBody+=`<button class="set-add" onclick="addStructure()">+ Ajouter une structure</button>`;
+  if(st.plan==='pro'||structsForThr.length<1){
+    structBody+=`<button class="set-add" onclick="addStructure()">+ Ajouter une structure</button>`;
+  }else{
+    structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro (Réglages → Compte) pour en ajouter d'autres.</div>`;
+  }
   h+=settingsPanel('structures','Structures juridiques',structBody);
 
   // — Chambres / gîtes, avec tarif nuitée propre à chacun(e) —
@@ -5445,11 +5462,25 @@ function updateRoomTariffPrice(roomId,tid,pax,val){
 // Structures juridiques — CRUD
 function addStructure(){
   if(!S.settings.structures)S.settings.structures=[];
+  // Limite de la formule Essentiel (voir Réglages → Compte). Le bouton est déjà
+  // masqué côté interface dans ce cas — ce garde-fou évite juste un contournement
+  // trivial (ex. appel direct de la fonction depuis la console du navigateur).
+  if(S.settings.plan!=='pro'&&S.settings.structures.length>=1){
+    alert("La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro pour en ajouter d'autres.");
+    return;
+  }
   const n=S.settings.structures.length+1;
   const s={id:uid(),name:'Structure '+n};
   S.settings.structures.push(s);
   if(!S.settings.structureThresholds)S.settings.structureThresholds={};
   S.settings.structureThresholds[s.id]=[];
+  saveSettings();renderSettings();
+}
+// Réglages → Compte : changer de formule. Purement déclaratif tant que le
+// paiement en ligne n'est pas branché (voir DEFAULT_SETTINGS.plan) — sert à
+// essayer les deux formules en attendant.
+function setPlan(plan){
+  S.settings.plan=plan==='pro'?'pro':'essentiel';
   saveSettings();renderSettings();
 }
 function delStructure(id){
