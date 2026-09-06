@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fiftin">
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 /* ─── RESET ─────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -34,7 +34,12 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .app-icon{flex-shrink:0;opacity:.92;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.logo b{color:#fff;}
+.logo b{font-family:'Archivo',sans-serif;font-weight:700;font-size:15px;
+  letter-spacing:.04em;text-transform:uppercase;color:#fff;}
+/* Nom de l'établissement du client, à côté de "FIFTIN" : volontairement
+   plus fin et sans capitales pour contraster avec l'identité de marque,
+   qui doit rester la plus visible des deux. */
+.logo .tenant-name{font-weight:300;opacity:.85;}
 .hbtn{width:34px;height:34px;border:none;border-radius:50%;
   background:rgba(255,255,255,.1);color:var(--cream);cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:16px;
@@ -997,11 +1002,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   <button class="hbtn" id="exportBtn" title="Export / Import">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
   </button>
-  <!-- Masqué par défaut : Réglages (où se trouve normalement "Se déconnecter")
-       est caché pour un compte Staff — sans ce bouton dédié, révélé par
-       applyPersonnelUIRestrictions(), il n'y avait aucun moyen de se
-       déconnecter depuis ce compte. -->
-  <button class="hbtn" id="logoutBtn" onclick="signOutUser()" title="Se déconnecter" style="display:none">
+  <!-- Visible pour tous les rôles, tout à droite des icônes d'en-tête : pour
+       un compte Staff, Réglages (où se trouve normalement "Se déconnecter")
+       est caché, donc ce bouton dédié est le seul moyen de se déconnecter.
+       Pour le propriétaire, c'est un raccourci qui évite de rouvrir
+       Réglages → Compte juste pour ça. -->
+  <button class="hbtn" id="logoutBtn" onclick="signOutUser()" title="Se déconnecter">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
   </button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
@@ -1658,9 +1664,8 @@ const DEFAULT_SETTINGS={
     // comptables des vues Semaine/Mois/Année (ex. échange, compte personnel —
     // pas un vrai client payant).
     {id:'direct',      label:'Direct',      color:'#7ABF6A',colorOverride:false,noRevenue:false},
-    {id:'airbnb',      label:'Airbnb',      color:'#F1948A',colorOverride:false,noRevenue:false},
-    {id:'booking',     label:'Booking',     color:'#9FA8DA',colorOverride:false,noRevenue:false},
-    {id:'homexchange', label:'HomeExchange',color:'#E6C96A',colorOverride:false,noRevenue:true},
+    {id:'plateformes', label:'Plateformes', color:'#9FA8DA',colorOverride:false,noRevenue:false},
+    {id:'perso',       label:'Perso',       color:'#8B8B8B',colorOverride:true, noRevenue:true},
   ],
   // Champs du contrat de location généré depuis une résa (voir buildContractHTML).
   // Pré-remplis avec un exemple directement utilisable — pas des champs vides à
@@ -2315,7 +2320,7 @@ function applyPersonnelUIRestrictions(){
     const el=byId(id);
     if(el)el.style.display='none';
   });
-  byId('logoutBtn').style.display='';
+  // logoutBtn : visible pour tous les rôles par défaut (voir le header), rien à faire ici.
   ['week','month','year'].forEach(v=>{
     byId('vt-'+v)?.remove();
     byId('mn-'+v)?.remove();
@@ -4958,7 +4963,8 @@ function applySettings(){
   // sinon le badge à la première synchro venue.
   const roleBadgeLabel=currentRole==='personnel'?'Staff':'Propriétaire';
   const roleBadge=` <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">${roleBadgeLabel}</span>`;
-  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+(S.settings.name?' — '+S.settings.name:'')+roleBadge;
+  const tenantName=S.settings.name?` <span class="tenant-name">— ${S.settings.name}</span>`:'';
+  if(logoEl)logoEl.innerHTML='<b>Fiftin</b>'+tenantName+roleBadge;
   document.body.classList.toggle('no-dinner',!dinnerEnabled());
   document.body.classList.toggle('no-breakfast',!breakfastEnabled());
   document.body.classList.toggle('no-taxe-sejour',!taxeSejourEnabled());
@@ -5552,14 +5558,19 @@ function renderSettings(){
   // sans tarif nuitée (échange, personnel… — exclue des calculs comptables
   // Semaine/Mois/Année, voir getNightlyRate/getBookingRevForPeriod).
   let sourcesBody='';
-  const BUILTIN_SOURCES=['direct','airbnb','booking','homexchange'];
-  (st.sources||DEFAULT_SETTINGS.sources).forEach(s=>{
-    const isBuiltin=BUILTIN_SOURCES.includes(s.id);
+  const srcList=st.sources||DEFAULT_SETTINGS.sources;
+  // Aucune source "protégée" par son id — Direct/Plateformes/Perso ne sont que
+  // des valeurs de départ, supprimables comme n'importe quelle autre source
+  // ajoutée à la main. Seule règle : il en faut toujours au moins une (voir
+  // delSource) — le bouton est juste désactivé plutôt que caché pour que ce
+  // soit visible plutôt que silencieusement indisponible.
+  const canDelSrc=srcList.length>1;
+  srcList.forEach(s=>{
     sourcesBody+=`<div class="set-card">
       <div class="set-card-row">
         <input class="set-fi" style="flex:1" value="${s.label.replace(/"/g,'&quot;')}" placeholder="Nom" onblur="updateSource('${s.id}','label',this.value)">
         <input type="color" class="set-color" value="${s.color||'#888'}" oninput="updateSource('${s.id}','color',this.value)">
-        ${isBuiltin?'':`<button class="set-del" onclick="delSource('${s.id}')">×</button>`}
+        <button class="set-del" ${canDelSrc?'':'disabled style="opacity:.3"'} onclick="delSource('${s.id}')">×</button>
       </div>
       <div class="set-card-sub" style="display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-top:8px">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px">
@@ -5939,8 +5950,14 @@ function addSource(){
   saveSettings();renderSettings();renderSourceBtns();
 }
 function delSource(id){
-  S.settings.sources=(S.settings.sources||[]).filter(s=>s.id!==id);
-  saveSettings();renderSettings();renderSourceBtns();
+  const sources=S.settings.sources||DEFAULT_SETTINGS.sources;
+  // Le bouton est déjà désactivé dans ce cas (voir renderSettings), mais on
+  // ne fait confiance qu'à l'état des données, jamais qu'à l'UI — au moins
+  // une source doit toujours rester, sinon plus aucune résa n'a de source
+  // possible à choisir.
+  if(sources.length<=1){alert('Il doit toujours rester au moins une source de réservation.');return;}
+  S.settings.sources=sources.filter(s=>s.id!==id);
+  saveSettings();renderSettings();renderSourceBtns();renderSourceBtnsEv();
 }
 function updateSource(id,field,val){
   const sources=S.settings.sources||DEFAULT_SETTINGS.sources;
