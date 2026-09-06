@@ -585,6 +585,20 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .mfin-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mfin-detail{font-size:11px;color:#bbb;margin-top:2px;}
 
+/* ─── CODE D'ACCÈS ───────────────────────────────────────────
+   Écran plein cadre affiché avant toute chose (voir checkAccessGate) tant
+   que le code de cet appareil n'a pas été entré — au-dessus de tout le
+   reste (z-index supérieur aux modales). */
+#lockScreen{position:fixed;inset:0;background:var(--cream);z-index:5000;
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;text-align:center;}
+#lockScreen.show{display:flex;}
+.lock-logo{font-family:'Jost',sans-serif;font-size:26px;font-weight:500;margin-bottom:8px;}
+.lock-sub{font-size:13px;color:var(--gray);margin-bottom:22px;max-width:280px;line-height:1.5;}
+.lock-box{width:100%;max-width:280px;}
+.lock-box .fi{margin-bottom:10px;}
+.lock-err{color:var(--danger);font-size:12px;margin-top:10px;min-height:16px;}
+
 /* ─── MODALS ─────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
   display:flex;align-items:flex-end;justify-content:center;}
@@ -935,6 +949,22 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 </head>
 <body>
 
+<!-- ─── CODE D'ACCÈS ───────────────────────────────────────────
+     Recouvre tout le reste tant que checkAccessGate() ne l'a pas caché.
+     Protection légère de cet appareil/navigateur uniquement — la vraie
+     protection des données se règle côté Firebase (voir modal Synchro). --><div id="lockScreen">
+  <div class="lock-logo"><b>Fiftin</b></div>
+  <div class="lock-sub" id="lockSub">Entrez le code d'accès pour ouvrir le planning.</div>
+  <div class="lock-box">
+    <input type="password" class="fi" id="lockCode" placeholder="Code d'accès" autocomplete="current-password"
+      style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter'){(lockMode==='setup'?byId('lockCodeConfirm'):byId('lockSubmitBtn')).focus();}">
+    <input type="password" class="fi" id="lockCodeConfirm" placeholder="Confirmez le code" autocomplete="new-password"
+      style="text-align:center;font-size:16px;display:none" onkeydown="if(event.key==='Enter')submitLockCode()">
+    <button class="btn-p" style="width:100%" id="lockSubmitBtn" onclick="submitLockCode()" onkeydown="if(event.key==='Enter')submitLockCode()">Ouvrir</button>
+    <div class="lock-err" id="lockErr"></div>
+  </div>
+</div>
+
 <!-- ─── HEADER ─────────────────────────────────────────────── -->
 <header>
   <svg class="app-icon" width="32" height="32" viewBox="0 0 100 100" aria-hidden="true">
@@ -946,6 +976,9 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </svg>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
+  <button class="hbtn" onclick="lockNow()" title="Verrouiller">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+  </button>
   <button class="hbtn" onclick="openSettings()" title="Paramètres">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
   </button>
@@ -1486,6 +1519,22 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       → <a href="https://console.firebase.google.com" target="_blank" style="color:var(--earth)">console.firebase.google.com</a>
       — Créer un projet → Firestore Database → Ajouter une app Web → Copier la config
     </p>
+    <div style="background:#FFF6E5;border:1px solid #F0DCA0;border-radius:8px;padding:12px;margin-bottom:14px">
+      <div style="font-size:12px;font-weight:600;color:#8A6D1E;margin-bottom:6px">⚠️ Étape importante : sécuriser Firestore</div>
+      <p style="font-size:11.5px;line-height:1.6;color:#6B5A2A;margin-bottom:8px">
+        Par défaut, un projet Firebase tout neuf ("mode test") laisse la base accessible à qui a le lien pendant 30 jours, puis se bloque tout seul. Dans <b>Firestore Database → Règles</b>, remplacez le contenu par ceci pour restreindre l'accès à ce seul planning :
+      </p>
+      <pre style="font-size:10px;background:#2C2C2C;color:#E8E4DC;padding:8px;border-radius:6px;overflow-x:auto;white-space:pre;margin-bottom:8px">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /planning/data { allow read, write: if true; }
+    match /{document=**} { allow read, write: if false; }
+  }
+}</pre>
+      <p style="font-size:11px;color:#6B5A2A;line-height:1.5">
+        Limite honnête : sans vrai système de connexion (pas encore intégré), cette règle protège la base contre un usage détourné, mais pas contre quelqu'un qui aurait cette configuration en main. Ne partagez jamais ce JSON — gardez-le entre vous et la personne qui gère ce planning.
+      </p>
+    </div>
     <div class="macts">
       <button class="btn-s" onclick="closeM('modalSync')">Annuler</button>
       <button class="btn-p" onclick="saveFirebaseConfig()">Activer la sync</button>
@@ -4890,6 +4939,14 @@ function renderSettings(){
     </div>`;
   h+=settingsPanel('etablissement','Établissement',etabBody);
 
+  // — Sécurité : code d'accès de cet appareil —
+  const securityBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Code demandé à l'ouverture de l'outil sur cet appareil. Protection légère uniquement (voir « Synchronisation » pour la vraie protection des données via les règles Firestore) — propre à cet appareil, sans lien avec vos données.</div>
+    <div class="fg"><label class="fl">Nouveau code d'accès</label><input type="password" class="fi" id="newAccessCode" placeholder="4 caractères minimum" autocomplete="new-password"></div>
+    <div class="fg"><label class="fl">Confirmez</label><input type="password" class="fi" id="newAccessCodeConfirm" placeholder="Confirmez le code" autocomplete="new-password"></div>
+    <button class="btn-p" style="width:100%" onclick="updateAccessCode()">Mettre à jour le code d'accès</button>
+    <div id="accessCodeMsg" style="font-size:12px;margin-top:8px"></div>`;
+  h+=settingsPanel('securite','Sécurité',securityBody);
+
   // — Structures juridiques, chacune avec ses propres seuils —
   const structsForThr=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
   let structBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque chambre/gîte est rattaché(e) à l'une de ces structures (réglage dans "Locations" ci-dessous). Dans la vue Année, le total global est toujours affiché en premier, puis chaque structure est calculée indépendamment. Les seuils sont optionnels et propres à chaque structure — laissez-en zéro si non pertinent.</div>`;
@@ -6923,6 +6980,86 @@ function renderYear(){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  CODE D'ACCÈS — protection légère de cet appareil/navigateur
+// ═══════════════════════════════════════════════════════════════
+// Ce code protège seulement l'écran affiché sur CET appareil : il n'a
+// aucun effet sur la base de données elle-même — quelqu'un qui contourne
+// cet écran (ex. via les outils de développement) et connaît/devine la
+// configuration Firebase pourrait quand même lire/écrire Firestore si ses
+// règles de sécurité sont laissées ouvertes. La vraie protection des
+// données se règle côté Firebase (voir modal Synchronisation → règles
+// Firestore recommandées, et le README).
+//
+// Stocké dans localStorage (jamais dans S.settings/Firestore) pour rester
+// propre à cet appareil : changer ou oublier ce code n'affecte jamais les
+// données, et se règle en local. Seul le hash (SHA-256) est conservé,
+// jamais le code en clair. Une fois entré correctement, reste déverrouillé
+// pour l'onglet en cours (sessionStorage) — redemandé à la prochaine
+// ouverture du navigateur, ou tout de suite via le bouton cadenas.
+async function sha256Hex(text){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+let lockMode='enter'; // 'enter' (code déjà défini) | 'setup' (première ouverture)
+function showLockScreen(setup){
+  lockMode=setup?'setup':'enter';
+  byId('lockSub').textContent=setup
+    ?"Première ouverture sur cet appareil : choisissez un code d'accès pour protéger ce planning."
+    :"Entrez le code d'accès pour ouvrir le planning.";
+  byId('lockCodeConfirm').style.display=setup?'block':'none';
+  byId('lockCode').value='';byId('lockCodeConfirm').value='';
+  byId('lockErr').textContent='';
+  byId('lockScreen').classList.add('show');
+  setTimeout(()=>byId('lockCode').focus(),50);
+}
+async function submitLockCode(){
+  const code=byId('lockCode').value;
+  const errEl=byId('lockErr');
+  if(lockMode==='setup'){
+    const confirmCode=byId('lockCodeConfirm').value;
+    if(!code||code.length<4){errEl.textContent='4 caractères minimum.';return;}
+    if(code!==confirmCode){errEl.textContent='Les deux codes ne correspondent pas.';byId('lockCodeConfirm').value='';byId('lockCodeConfirm').focus();return;}
+    localStorage.setItem('ff2_accesscode_hash',await sha256Hex(code));
+    sessionStorage.setItem('ff2_unlocked','true');
+    unlockApp();
+  }else{
+    const stored=localStorage.getItem('ff2_accesscode_hash');
+    if(await sha256Hex(code)===stored){
+      sessionStorage.setItem('ff2_unlocked','true');
+      unlockApp();
+    }else{
+      errEl.textContent='Code incorrect.';
+      byId('lockCode').value='';byId('lockCode').focus();
+    }
+  }
+}
+function unlockApp(){
+  byId('lockScreen').classList.remove('show');
+  init();
+}
+function lockNow(){
+  sessionStorage.removeItem('ff2_unlocked');
+  location.reload();
+}
+function checkAccessGate(){
+  const hash=localStorage.getItem('ff2_accesscode_hash');
+  if(hash&&sessionStorage.getItem('ff2_unlocked')==='true')init();
+  else showLockScreen(!hash);
+}
+// Réglages → Sécurité : change le code sans redemander l'ancien (on est déjà
+// passé par l'écran de verrouillage pour arriver jusqu'ici).
+async function updateAccessCode(){
+  const code=byId('newAccessCode').value;
+  const confirmCode=byId('newAccessCodeConfirm').value;
+  const msgEl=byId('accessCodeMsg');
+  if(!code||code.length<4){msgEl.textContent='4 caractères minimum.';msgEl.style.color='var(--danger)';return;}
+  if(code!==confirmCode){msgEl.textContent='Les deux codes ne correspondent pas.';msgEl.style.color='var(--danger)';return;}
+  localStorage.setItem('ff2_accesscode_hash',await sha256Hex(code));
+  byId('newAccessCode').value='';byId('newAccessCodeConfirm').value='';
+  msgEl.textContent='✓ Code mis à jour.';msgEl.style.color='var(--green)';
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 function init(){
@@ -6968,7 +7105,7 @@ function init(){
   },3000);
 }
 
-init();
+checkAccessGate();
 </script>
 </body>
 </html>
