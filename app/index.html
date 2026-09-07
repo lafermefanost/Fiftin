@@ -545,15 +545,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mbk-name{flex:1;font-size:13px;font-weight:500;}
 .mbk-meta{font-size:11px;color:var(--gray);}
 .mbk-rev{font-size:12px;color:var(--green);font-weight:600;flex-shrink:0;}
-.src-breakdown{margin:8px 0 12px;display:flex;flex-direction:column;gap:5px;
-  padding-bottom:12px;border-bottom:1px solid var(--light);}
-.src-bk-row{display:flex;align-items:center;gap:8px;font-size:12px;}
-.src-bk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.src-bk-name{width:88px;font-weight:500;color:var(--dark);}
-.src-bk-pct{width:32px;font-size:11px;color:var(--gray);}
-.src-bk-bar-bg{flex:1;height:4px;background:var(--light);border-radius:2px;overflow:hidden;}
-.src-bk-bar-fill{height:100%;border-radius:2px;}
-.src-bk-rev{font-weight:600;color:var(--green);font-size:12px;min-width:60px;text-align:right;}
 
 /* ─── MONTH CHARGES ─────────────────────────────────────────── */
 .month-charges{background:#fff;border-radius:12px;padding:14px;border:1.5px solid var(--light);}
@@ -859,7 +850,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-tariff-row .set-fi-sm{width:100%;}
 .set-tariff-hd span{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);text-align:right;}
 .set-tariff-hd span:first-child{text-align:left;}
-.set-color{width:28px;height:28px;border:none;padding:2px;border-radius:6px;cursor:pointer;flex-shrink:0;background:#fff;}
+.set-color{width:28px;height:28px;border:none;padding:0;border-radius:50%;cursor:pointer;flex-shrink:0;background:#fff;overflow:hidden;}
+.set-color::-webkit-color-swatch-wrapper{padding:0;}
+.set-color::-webkit-color-swatch{border:none;border-radius:50%;}
+.set-color::-moz-color-swatch{border:none;border-radius:50%;}
 /* Chaque donnée modifiable des réglages = un bloc bien dissocié : cartouche
    beige pour le contenu, cartouche blanc pour chaque champ personnalisable. */
 .set-card{background:#F7F5F1;border-radius:10px;padding:12px;margin-bottom:10px;}
@@ -6977,28 +6971,13 @@ function renderMonth(){
   // (ex. un événement Airbnb sans nuitée) — sinon son CA disparaîtrait de la
   // liste tout en restant compté dans le total, cassant l'égalité recherchée.
   const srcActive=srcDef.filter(s=>srcMap[s.id]&&(srcMap[s.id].n>0||srcMap[s.id].rev>0));
-  const srcRevTotal=srcActive.reduce((s,x)=>s+srcMap[x.id].rev,0);
-  const maxRev=Math.max(1,...srcActive.map(s=>srcMap[s.id].rev));
 
   if(bks.length||srcActive.length){
     h+=`<div class="month-bklist yr-regl${monthBklistOpen?' open':''}" onclick="toggleMonthPanel('bklist')">
     <div class="mbk-title" style="cursor:pointer;margin-bottom:0;display:flex;justify-content:space-between;align-items:center">${bks.length} réservation${bks.length>1?'s':''}<span class="yr-regl-chev">▾</span></div>
     <div class="yr-regl-body" style="margin-top:10px">
     ${buildSourceCountDonut(srcActive,srcMap)}
-    <div class="src-breakdown">`;
-    srcActive.forEach(s=>{
-      const d=srcMap[s.id];
-      const pct=srcRevTotal>0?Math.round(d.rev/srcRevTotal*100):0;
-      const barW=Math.round(d.rev/maxRev*100);
-      h+=`<div class="src-bk-row">
-        <div class="src-bk-dot" style="background:${s.color}"></div>
-        <div class="src-bk-name">${s.label}</div>
-        <div class="src-bk-pct">${pct}%</div>
-        <div class="src-bk-bar-bg"><div class="src-bk-bar-fill" style="width:${barW}%;background:${s.color}"></div></div>
-        <div class="src-bk-rev">${d.rev>0?d.rev.toLocaleString('fr-FR')+' €':'—'}</div>
-      </div>`;
-    });
-    h+=`</div>`;
+    `;
     clientRows.forEach(row=>{
       const g=guest(row.gid);
       h+=`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
