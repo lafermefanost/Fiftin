@@ -360,8 +360,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-year-label{font-size:16px;font-weight:700;color:var(--dark);
   min-width:44px;text-align:center;}
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.rv-month-label{font-size:11px;font-weight:700;color:var(--gray);
+.rv-month-label{font-size:13px;font-weight:700;color:var(--gray);
   text-transform:uppercase;letter-spacing:.04em;text-align:center;}
+/* Mois en cours (voir isCurMonth dans monthBlock) : bulle verte plutôt que
+   le simple texte gris — repère visuel immédiat dans la grille des 12 mois. */
+.rv-month-label.rv-month-cur{background:var(--green);color:#fff;
+  border-radius:999px;padding:3px 12px;width:fit-content;margin:0 auto;}
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
 .rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
   text-align:center;text-transform:uppercase;}
@@ -3226,6 +3230,12 @@ function renderToday(){
   const isLeap=(year%4===0&&year%100!==0)||year%400===0;
   const daysInYear=isLeap?366:365;
   const DAY_NAMES_FULL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  // Repère du mois en cours (voir monthBlock) : seulement si l'année
+  // affichée est bien l'année réelle d'aujourd'hui, sinon aucun mois de
+  // l'année affichée n'est "en cours".
+  const todayIso=todayISO();
+  const todayY=parseInt(todayIso.slice(0,4),10);
+  const todayM=parseInt(todayIso.slice(5,7),10)-1;
   // Comme la Grille et les vues Mois/Année : on ne filtre pas les annulées ici,
   // elles restent visibles sur le calendrier (fondues via .rv-seg.canc) plutôt
   // que d'être masquées — même convention partout dans l'app.
@@ -3307,8 +3317,9 @@ function renderToday(){
       const anyDay=Math.min(Math.max(r*7-firstDow+1,1),dim);
       wknums+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
     }
+    const isCurMonth=year===todayY&&m===todayM;
     return`<div class="rv-month-block">
-      <div class="rv-month-label">${MON[m]}</div>
+      <div class="rv-month-label${isCurMonth?' rv-month-cur':''}">${MON[m]}</div>
       <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
       <div class="rv-monthgrid-wrap">
         <div class="rv-wknum-col">${wknums}</div>
@@ -3339,10 +3350,10 @@ function renderToday(){
   </div>
   <div class="yr-stats" style="margin-top:14px">
     <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
-    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   </div>`;
   byId('todayWrap').innerHTML=h;
