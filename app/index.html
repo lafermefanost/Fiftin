@@ -155,9 +155,6 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
   font-weight:500;text-align:center;min-width:22px;max-width:22px;}
 .pt td.c-day{font-size:11px;font-weight:500;text-align:center;
   min-width:22px;max-width:22px;padding:0;}
-.today-circle{width:20px;height:20px;border-radius:50%;
-  background:var(--green);color:var(--white);font-weight:700;
-  display:flex;align-items:center;justify-content:center;margin:auto;font-size:10px;}
 .ev-circle{width:20px;height:20px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;margin:auto;font-size:10px;font-weight:600;}
 /* Jour férié sans événement ce jour-là : même principe de pastille pleine
@@ -2916,9 +2913,7 @@ function renderGrid(){
     // événement — reste discret sans mélanger deux indications sur le même
     // cercle. Un événement personnel ce jour-là prend simplement le dessus,
     // comme n'importe quel autre jour : pas de combinaison des deux.
-    if(isToday){
-      dayTd.innerHTML=`<div class="today-circle">${date.getDate()}</div>`;
-    } else if(dayEvs.length){
+    if(dayEvs.length){
       const ec=dayEvs[0].color||'#A8C5A0';
       const lc=light(ec);
       const evTitles=dayEvs.map(ev=>ev.title).join(', ');
