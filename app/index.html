@@ -18,7 +18,7 @@ html,body{height:100%;overflow:hidden;}
 
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
-  --cream:#F5F0E8; --earth:#8B7355; --green:#3D5C35; --dark:#2C2C2C;
+  --cream:#F5F0E8; --earth:#8B7355; --green:#3D5C35; --green-deep:#2C4326; --dark:#2C2C2C;
   --gray:#6B6B6B; --light:#E8E4DC; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
   --shadow:0 2px 10px rgba(0,0,0,.14); --r:6px;
   --hdr:52px; --bar:40px;
@@ -606,7 +606,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
    — pour que l'écran de connexion porte déjà l'identité de l'appli avant
    même d'y entrer, plutôt qu'un simple formulaire neutre. */
-#lockScreen{position:fixed;inset:0;background:var(--green);z-index:5000;
+#lockScreen{position:fixed;inset:0;background:var(--green-deep);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
@@ -621,7 +621,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Le bouton .btn-p partagé est vert par défaut — invisible sur un fond
    maintenant vert lui aussi. Inversé ici pour rester le point le plus
    visible de l'écran. */
-#lockScreen .btn-p{background:#fff;color:var(--green);}
+#lockScreen .btn-p{background:#fff;color:var(--green-deep);}
 #lockScreen .btn-p:hover{filter:brightness(.96);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
