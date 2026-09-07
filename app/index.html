@@ -479,12 +479,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wday-chev{display:inline-block;transition:transform .15s;}
 .wday-card.collapsed .wday-chev{transform:rotate(-90deg);}
 .wday-card .tsec-panel{margin-bottom:10px;}
-/* Arrivées/Départs pleine largeur, comme Ménage/Menu/En séjour — plus de
-   colonnes côte à côte qui réduisaient chaque volet à la moitié du
-   container du jour. */
-.wday-cols{display:flex;flex-direction:column;min-width:0;}
+.wday-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;min-width:0;}
+.wday-cols .tsec-panel{margin-bottom:0;min-width:0;}
+.wday-cols .tsec-hd{padding:9px 10px;gap:6px;}
+.wday-cols .tsec-body{padding:8px 8px 4px;}
 .wday-cols .day-chip{margin-bottom:6px;}
-.wday-cols .day-chip:last-child{margin-bottom:0;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 .cleaner-btn{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
