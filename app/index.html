@@ -339,33 +339,29 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-/* Vue Location — calendrier annuel d'un seul logement, 1 bloc par mois : un
-   titre (comme les en-têtes de volet .tsec-hd ailleurs dans l'app) au-dessus
-   d'une ligne de groupes-semaines. Chaque groupe-semaine (voir monthRow) a
-   son numéro au-dessus et un séparateur avec le précédent ; une case
-   invisible en fin de ligne complète chaque mois à 31 "unités" de largeur
-   pour qu'une case fasse toujours la même largeur d'un mois à l'autre. */
-.rv-calendar{background:#fff;border-radius:14px;padding:14px 12px;
-  display:flex;flex-direction:column;gap:18px;}
-.rv-month-row{display:flex;flex-direction:column;gap:4px;}
-.rv-month-label{font-size:10px;font-weight:700;color:var(--gray);
-  text-transform:uppercase;letter-spacing:.04em;}
-.rv-month-weeks{display:flex;min-width:0;}
-.rv-week-grp{display:flex;flex-direction:column;gap:2px;min-width:0;}
-/* Séparateur entre deux semaines : un simple trait (pas de marge — les
-   cases restent collées, denses), sur un vrai lundi (voir weekNum dans
-   monthRow), pas "tous les 7 jours du mois" — un mois ne commence
-   quasiment jamais un lundi. Uniquement au-dessus de l'en-tête S1/S2/…,
-   pas sur toute la hauteur : ne descend pas au niveau des pastilles.  */
-.rv-week-grp:not(:first-child){padding-left:2px;}
-.rv-week-grp:not(:first-child) .rv-week-hd{border-left:1px solid rgba(0,0,0,.2);
-  margin-left:-2px;padding-left:2px;}
-.rv-week-hd{font-size:7px;font-weight:700;color:var(--gray);opacity:.6;
-  letter-spacing:.02em;line-height:1;}
-.rv-week-days{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
-  gap:1px;height:28px;}
-.rv-week-filler{visibility:hidden;}
-.rv-day-cell{position:relative;background:var(--light);border-radius:2px;overflow:hidden;cursor:pointer;}
+/* Vue Location — calendrier annuel d'un seul logement : grille de 12
+   mini-calendriers (3 par ligne, voir monthBlock), chacun avec ses vraies
+   semaines lundi→dimanche en lignes — le format calendrier habituel,
+   plutôt qu'une bande de 31 colonnes par mois. Tous les mois restent
+   visibles sans défiler ; le numéro de semaine ISO figure dans la marge
+   gauche de chaque mini-calendrier. */
+.rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:20px 14px;}
+.rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
+.rv-month-label{font-size:11px;font-weight:700;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.04em;text-align:center;}
+.rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
+.rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
+  text-align:center;text-transform:uppercase;}
+.rv-monthgrid-wrap{display:flex;gap:2px;}
+.rv-wknum-col{flex:none;width:14px;display:flex;flex-direction:column;gap:2px;}
+.rv-wknum{height:26px;display:flex;align-items:center;justify-content:center;
+  font-size:7px;color:var(--gray);opacity:.5;}
+.rv-month-grid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,1fr);
+  grid-auto-rows:26px;gap:2px;}
+.rv-day-cell{position:relative;background:var(--light);border-radius:4px;
+  overflow:hidden;cursor:pointer;}
+.rv-day-cell.rv-day-blank{background:transparent;cursor:default;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -373,19 +369,24 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-seg.opt{background-image:repeating-linear-gradient(
   45deg,transparent,transparent 3px,rgba(255,255,255,.25) 3px,rgba(255,255,255,.25) 6px);}
 .rv-seg.canc{opacity:.35;}
-/* Jour de semaine (L/M/M/J/V/S/D) + numéro du jour, superposés au segment
-   coloré (pointer-events:none pour ne pas gêner le clic sur le séjour en
-   dessous) — couleur claire/foncée déjà choisie en JS selon le fond (voir
-   light()) pour rester lisible quelle que soit la couleur du client/statut ;
-   gris discret sur une case vide. */
-.rv-day-txt{position:absolute;inset:0;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;pointer-events:none;color:var(--gray);}
-.rv-dow{font-size:8px;line-height:1;font-weight:700;opacity:.8;text-transform:uppercase;}
-.rv-num{font-size:9px;line-height:1.3;font-weight:600;}
+/* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
+   pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
+   choisie en JS selon le fond (voir light()) pour rester lisible quelle que
+   soit la couleur du client/statut ; gris discret sur une case vide. Pas de
+   lettre jour-de-semaine ici : elle est déjà donnée par la colonne, via
+   l'en-tête .rv-dow-hd, une seule fois par mini-calendrier. */
+.rv-num{position:absolute;inset:0;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:600;color:var(--gray);
+  pointer-events:none;}
+@media (max-width:520px){
+  /* 2 mois par ligne plutôt que 3 sur petit écran : les cases resteraient
+     sinon trop petites pour être lisibles/cliquables confortablement. */
+  .rv-calendar{grid-template-columns:repeat(2,1fr);gap:16px 12px;}
+}
 @media (max-width:420px){
-  .rv-week-days{height:24px;}
-  .rv-dow{font-size:7px;}
-  .rv-num{font-size:8px;}
+  .rv-month-grid{grid-auto-rows:24px;}
+  .rv-wknum{height:24px;}
+  .rv-num{font-size:10px;}
 }
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
    so switching views never shifts where the view's content starts. */
@@ -3229,16 +3230,20 @@ function renderToday(){
   const avgNightRevenue=totalNights>0?Math.round(annualRevenue/totalNights):0;
   const avgStayLength=stayLengths.length?stayLengths.reduce((a,b)=>a+b,0)/stayLengths.length:0;
 
-  // --- calendrier annuel : 1 ligne par mois, 1 segment coloré par séjour ---
-  // Mêmes conventions de couleur/statut que la Grille (source > paiement >
-  // client ; hachures = option ; opacité réduite = annulée) pour rester
-  // cohérent avec le reste de l'app, sans jamais afficher de nom de client.
-  const DOW_LETTERS=['D','L','M','M','J','V','S']; // getDay() 0=dim..6=sam
+  // --- calendrier annuel : grille de 12 mini-calendriers (3 par ligne),
+  // chacun avec ses vraies semaines (lundi→dimanche) en lignes — le format
+  // "mini-calendrier" habituel, plutôt qu'une bande de 31 colonnes par mois :
+  // cases plus grandes, semaines déjà séparées par construction, et les 12
+  // mois restent tous visibles sans défiler. Mêmes conventions de couleur/
+  // statut que la Grille (source > paiement > client ; hachures = option ;
+  // opacité réduite = annulée) pour rester cohérent, sans jamais afficher de
+  // nom de client.
+  const DOW_LETTERS_MON=['L','M','M','J','V','S','D']; // lundi→dimanche
   const dayCellHtml=(m,day)=>{
     const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dObj=new Date(year,m,day);
     const dow=dObj.getDay();
-    const wTitle=`${DAY_NAMES_FULL[dow]} ${day} ${MON[m].toLowerCase()} ${year} — semaine ${weekNum(dObj)}`;
+    const wTitle=`${DAY_NAMES_FULL[dow]} ${day} ${MON[m].toLowerCase()} ${year}`;
     const bk=roomBookings.find(b=>activeOn(b,ds));
     let seg='',numCol='';
     if(bk){
@@ -3259,37 +3264,35 @@ function renderToday(){
     // cases aussi petites.
     const emptyClick=bk?'':` onclick="openAddModal('${rm.id}','${ds}')"`;
     const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
-    return`<div class="rv-day-cell" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-day-txt"${numCol?` style="color:${numCol}"`:''}><span class="rv-dow">${DOW_LETTERS[dow]}</span><span class="rv-num">${day}</span></span></div>`;
+    return`<div class="rv-day-cell" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
   };
-  const monthRow=(m)=>{
+  const monthBlock=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
-    // Regroupe les jours du mois par semaine calendaire (coupure à chaque
-    // lundi, via weekNum() — pas "tous les 7 jours du mois", qui ne
-    // correspondrait à aucune semaine réelle dès que le mois ne commence
-    // pas un lundi). Chaque groupe porte son numéro de semaine au-dessus
-    // et un séparateur avec le groupe précédent.
-    const weeks=[];
-    for(let day=1;day<=dim;day++){
-      const wn=weekNum(new Date(year,m,day));
-      if(!weeks.length||weeks[weeks.length-1].wn!==wn)weeks.push({wn,days:[]});
-      weeks[weeks.length-1].days.push(day);
+    const firstDow=(new Date(year,m,1).getDay()+6)%7; // 0=lundi..6=dimanche
+    const totalCells=Math.ceil((firstDow+dim)/7)*7;
+    const rows=totalCells/7;
+    let gridCells='';
+    for(let i=0;i<totalCells;i++){
+      const day=i-firstDow+1;
+      gridCells+=(day<1||day>dim)?'<div class="rv-day-cell rv-day-blank"></div>':dayCellHtml(m,day);
     }
-    const weeksHtml=weeks.map(w=>`<div class="rv-week-grp" style="flex:${w.days.length} 1 0">
-      <div class="rv-week-hd">S${w.wn}</div>
-      <div class="rv-week-days">${w.days.map(day=>dayCellHtml(m,day)).join('')}</div>
-    </div>`).join('');
-    // Case invisible en fin de ligne pour les mois plus courts que 31 jours :
-    // garde exactement 31 "unités" de largeur sur chaque ligne, donc une
-    // case fait toujours la même largeur d'un mois à l'autre.
-    const fillerUnits=31-dim;
-    const fillerHtml=fillerUnits>0?`<div class="rv-week-grp rv-week-filler" style="flex:${fillerUnits} 1 0"></div>`:'';
-    return`<div class="rv-month-row">
+    // Numéro de semaine ISO dans la marge gauche, une fois par ligne.
+    let wknums='';
+    for(let r=0;r<rows;r++){
+      const anyDay=Math.min(Math.max(r*7-firstDow+1,1),dim);
+      wknums+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
+    }
+    return`<div class="rv-month-block">
       <div class="rv-month-label">${MON[m]}</div>
-      <div class="rv-month-weeks">${weeksHtml}${fillerHtml}</div>
+      <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
+      <div class="rv-monthgrid-wrap">
+        <div class="rv-wknum-col">${wknums}</div>
+        <div class="rv-month-grid">${gridCells}</div>
+      </div>
     </div>`;
   };
   let monthsHtml='';
-  for(let m=0;m<12;m++)monthsHtml+=monthRow(m);
+  for(let m=0;m<12;m++)monthsHtml+=monthBlock(m);
 
   let h=`<div class="today-inner">
   <div class="vnav">
