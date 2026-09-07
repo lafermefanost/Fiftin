@@ -346,7 +346,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    invisible en fin de ligne complète chaque mois à 31 "unités" de largeur
    pour qu'une case fasse toujours la même largeur d'un mois à l'autre. */
 .rv-calendar{background:#fff;border-radius:14px;padding:14px 12px;
-  display:flex;flex-direction:column;gap:14px;}
+  display:flex;flex-direction:column;gap:18px;}
 .rv-month-row{display:flex;flex-direction:column;gap:4px;}
 .rv-month-label{font-size:10px;font-weight:700;color:var(--gray);
   text-transform:uppercase;letter-spacing:.04em;}
@@ -355,15 +355,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Séparateur entre deux semaines : un simple trait (pas de marge — les
    cases restent collées, denses), sur un vrai lundi (voir weekNum dans
    monthRow), pas "tous les 7 jours du mois" — un mois ne commence
-   quasiment jamais un lundi. */
-.rv-week-grp:not(:first-child){border-left:1px solid rgba(0,0,0,.16);
-  padding-left:2px;}
+   quasiment jamais un lundi. Uniquement au-dessus de l'en-tête S1/S2/…,
+   pas sur toute la hauteur : ne descend pas au niveau des pastilles.  */
+.rv-week-grp:not(:first-child){padding-left:2px;}
+.rv-week-grp:not(:first-child) .rv-week-hd{border-left:1px solid rgba(0,0,0,.2);
+  margin-left:-2px;padding-left:2px;}
 .rv-week-hd{font-size:7px;font-weight:700;color:var(--gray);opacity:.6;
   letter-spacing:.02em;line-height:1;}
 .rv-week-days{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
   gap:1px;height:28px;}
 .rv-week-filler{visibility:hidden;}
-.rv-day-cell{position:relative;background:var(--light);border-radius:2px;overflow:hidden;}
+.rv-day-cell{position:relative;background:var(--light);border-radius:2px;overflow:hidden;cursor:pointer;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -378,11 +380,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    gris discret sur une case vide. */
 .rv-day-txt{position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;pointer-events:none;color:var(--gray);}
-.rv-dow{font-size:7px;line-height:1;opacity:.7;text-transform:uppercase;}
+.rv-dow{font-size:8px;line-height:1;font-weight:700;opacity:.8;text-transform:uppercase;}
 .rv-num{font-size:9px;line-height:1.3;font-weight:600;}
 @media (max-width:420px){
   .rv-week-days{height:24px;}
-  .rv-dow{font-size:6px;}
+  .rv-dow{font-size:7px;}
   .rv-num{font-size:8px;}
 }
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
@@ -3251,7 +3253,13 @@ function renderToday(){
       numCol=light(dispCol)?'#2C2C2C':'#fff';
       seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
     }
-    return`<div class="rv-day-cell" title="${wTitle}">${seg}<span class="rv-day-txt"${numCol?` style="color:${numCol}"`:''}><span class="rv-dow">${DOW_LETTERS[dow]}</span><span class="rv-num">${day}</span></span></div>`;
+    // Case libre : clic pour lancer directement une nouvelle réservation sur
+    // ce logement à cette date (comme "+ Résa" mais préremplie), plutôt que
+    // de reproduire ici la sélection glissée de la Grille — inadaptée à des
+    // cases aussi petites.
+    const emptyClick=bk?'':` onclick="openAddModal('${rm.id}','${ds}')"`;
+    const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
+    return`<div class="rv-day-cell" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-day-txt"${numCol?` style="color:${numCol}"`:''}><span class="rv-dow">${DOW_LETTERS[dow]}</span><span class="rv-num">${day}</span></span></div>`;
   };
   const monthRow=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
