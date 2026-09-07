@@ -362,6 +362,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-day-cell{position:relative;background:var(--light);border-radius:4px;
   overflow:hidden;cursor:pointer;}
 .rv-day-cell.rv-day-blank{background:transparent;cursor:default;}
+/* Sélection de plage pour créer une réservation — mêmes couleurs que la
+   Grille (.pt td.rc.sel-*), voir startOrExtendRange/renderRangeHighlight. */
+.rv-day-cell.sel-start{background:#D4EAD0 !important;outline:2px solid #3D5C35;outline-offset:-2px;}
+.rv-day-cell.sel-range{background:#E8F4E5 !important;}
+.rv-day-cell.sel-end{background:#D4EAD0 !important;outline:2px solid #5A8C54;outline-offset:-2px;}
+.rv-day-cell.sel-start.sel-end{outline:2px solid #3D5C35;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -3258,13 +3264,14 @@ function renderToday(){
       numCol=light(dispCol)?'#2C2C2C':'#fff';
       seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
     }
-    // Case libre : clic pour lancer directement une nouvelle réservation sur
-    // ce logement à cette date (comme "+ Résa" mais préremplie), plutôt que
-    // de reproduire ici la sélection glissée de la Grille — inadaptée à des
-    // cases aussi petites.
-    const emptyClick=bk?'':` onclick="openAddModal('${rm.id}','${ds}')"`;
+    // Case libre : même sélection de plage au clic que la Grille (1er clic =
+    // début, clics suivants étendent/ramènent la fin — voir
+    // startOrExtendRange) ; data-room/data-date pour que renderRangeHighlight
+    // retrouve la case. Case déjà réservée : clic → ouvre cette réservation
+    // (seg.onclick=openEditModal ci-dessus), jamais une sélection.
+    const emptyClick=bk?'':` onclick="startOrExtendRange('${rm.id}','${ds}')"`;
     const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
-    return`<div class="rv-day-cell" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    return`<div class="rv-day-cell" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
   };
   const monthBlock=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
@@ -4607,19 +4614,22 @@ function renderRangeHighlight(){
   const{roomId,start,end}=rangeSel;
   let cur=start;
   while(cur<=end){
-    const cell=document.querySelector(`td.rc[data-room="${roomId}"][data-date="${cur}"]`);
-    if(cell){
+    // Pas de tag imposé (ni "td.rc" ni ".rv-day-cell") : la Grille et la
+    // Vue Location portent chacune leurs propres cases avec les mêmes
+    // data-room/data-date, donc une même sélection en cours reste visible
+    // si on bascule de l'une à l'autre avant de confirmer/annuler.
+    document.querySelectorAll(`[data-room="${roomId}"][data-date="${cur}"]`).forEach(cell=>{
       if(cur===start&&cur===end) cell.classList.add('sel-start','sel-end');
       else if(cur===start) cell.classList.add('sel-start');
       else if(cur===end) cell.classList.add('sel-end');
       else cell.classList.add('sel-range');
-    }
+    });
     cur=addDays(cur,1);
   }
 }
 
 function clearHighlights(){
-  document.querySelectorAll('.rc.sel-start,.rc.sel-range,.rc.sel-end')
+  document.querySelectorAll('.sel-start,.sel-range,.sel-end')
     .forEach(el=>el.classList.remove('sel-start','sel-range','sel-end'));
 }
 
@@ -7268,8 +7278,9 @@ function ovClose(e,id){if(e.target.classList.contains('overlay'))closeM(id);}
 
 // Keyboard: Escape closes topmost modal
 document.addEventListener('click',e=>{
-  // Clear range selection if click is outside the grid
-  if(rangeSel&&!e.target.closest('#gridWrap')&&!e.target.closest('#rangeBar'))clearRangeSel();
+  // Clear range selection if click is outside the grid (or the Vue
+  // Location, qui a la même sélection de plage au clic — voir dayCellHtml)
+  if(rangeSel&&!e.target.closest('#gridWrap')&&!e.target.closest('#todayWrap')&&!e.target.closest('#rangeBar'))clearRangeSel();
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
