@@ -121,6 +121,12 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .pt tbody tr.r-today td.c-day,
 .pt tbody tr.r-today td.c-wk{background:#FFFBF3;}
 .pt tbody tr.r-wkstart td{border-top:2px solid var(--light);}
+/* Contour vert sur toute la ligne du jour, pour la repérer immédiatement
+   même au milieu d'une grille dense de blocs colorés — discret (juste un
+   filet), mais qui traverse toute la largeur du tableau, pas seulement les
+   colonnes de date. Après .r-wkstart dans la feuille de style pour gagner
+   sur son propre border-top si le jour tombe justement en début de semaine. */
+.pt tbody tr.r-today td{border-top:2px solid var(--green);border-bottom:2px solid var(--green);}
 .pt tbody tr.r-wkend > td{background:#E8E3DB !important;}
 .pt tbody tr.r-wkend td.c-dow,
 .pt tbody tr.r-wkend td.c-day,
