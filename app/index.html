@@ -6761,8 +6761,10 @@ function renderWeek(){
       ${wpanel('dep','↑','Départs',deps,b=>wMiniChip(b,null))}
     </div>`;
 
-    h+=`<div class="tsec-panel menage">
-      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}">${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span></div>
+    h+=`<div class="tsec-panel menage collapsed">
+      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+        ${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span><span class="tsec-chev">▾</span>
+      </div>
       <div class="tsec-body">
         <div class="cln-chips">`;
     CLEANERS.forEach(cl=>{
@@ -6787,8 +6789,10 @@ function renderWeek(){
     const dThCount=S.bookings
       .filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
       .reduce((sum,b)=>sum+(b.nbPersons||2),0);
-    h+=`<div class="tsec-panel menu">
-      <div class="tsec-hd${menuHas?' has-items':''}">${MEAL_ICON} Menu du jour<span class="tsec-count"><span>${dThCount} repas</span></span></div>
+    h+=`<div class="tsec-panel menu collapsed">
+      <div class="tsec-hd${menuHas?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+        ${MEAL_ICON} Menu du jour<span class="tsec-count"><span>${dThCount} repas</span></span><span class="tsec-chev">▾</span>
+      </div>
       <div class="tsec-body">
         <div class="fg"><label class="fl">Entrée</label><input class="fi" id="wm-entree-${ds}" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
         <div class="fg"><label class="fl">Plat</label><input class="fi" id="wm-plat-${ds}" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
