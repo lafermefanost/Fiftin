@@ -347,6 +347,18 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    gauche de chaque mini-calendrier. */
 .rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
   display:grid;grid-template-columns:repeat(3,1fr);gap:20px 14px;}
+/* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
+   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear.
+   grid-column:1/-1 pour occuper toute la largeur de la bulle blanche,
+   au-dessus de la grille des mois plutôt que dans une de ses colonnes. */
+.rv-year-nav{grid-column:1/-1;display:flex;align-items:center;
+  justify-content:center;gap:16px;margin-bottom:2px;}
+.rv-year-btn{background:none;border:1.5px solid var(--light);border-radius:8px;
+  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--dark);flex-shrink:0;}
+.rv-year-btn:active{filter:brightness(.96);}
+.rv-year-label{font-size:16px;font-weight:700;color:var(--dark);
+  min-width:44px;text-align:center;}
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
 .rv-month-label{font-size:11px;font-weight:700;color:var(--gray);
   text-transform:uppercase;letter-spacing:.04em;text-align:center;}
@@ -3192,6 +3204,14 @@ function chRoomView(n){
   roomViewIdx=(roomViewIdx+n+rooms.length)%rooms.length;
   renderToday();
 }
+// Année du calendrier annuel — S.year, la même variable globale que la vue
+// Année et le sélecteur d'année de la barre du haut (#yrLabel), qu'on garde
+// synchronisé pour que les deux contrôles restent cohérents entre eux.
+function chLocYear(d){
+  S.year+=d;
+  byId('yrLabel').textContent=S.year;
+  renderToday();
+}
 function renderToday(){
   const rooms=ROOMS;
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
@@ -3311,7 +3331,14 @@ function renderToday(){
     </div>
     <button class="vnav-btn" onclick="chRoomView(1)">${chevR}</button>
   </div>
-  <div class="rv-calendar">${monthsHtml}</div>
+  <div class="rv-calendar">
+    <div class="rv-year-nav">
+      <button class="rv-year-btn" onclick="chLocYear(-1)">${chevL}</button>
+      <span class="rv-year-label">${year}</span>
+      <button class="rv-year-btn" onclick="chLocYear(1)">${chevR}</button>
+    </div>
+    ${monthsHtml}
+  </div>
   <div class="yr-stats" style="margin-top:14px">
     <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
