@@ -339,6 +339,43 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+/* Vue Location — calendrier annuel d'un seul logement, 1 ligne par mois.
+   31 colonnes fixes sur chaque ligne (les mois plus courts laissent des
+   cases vides en fin de ligne) pour que le jour 15, par exemple, reste
+   toujours aligné verticalement d'un mois à l'autre — plus facile à lire
+   qu'une largeur de colonne qui varierait avec le nombre de jours du mois. */
+.rv-calendar{background:#fff;border-radius:14px;padding:14px 12px;
+  display:flex;flex-direction:column;gap:3px;}
+.rv-month-row{display:flex;align-items:center;gap:8px;}
+.rv-month-label{width:28px;flex:none;font-size:10px;font-weight:700;
+  color:var(--gray);text-transform:uppercase;letter-spacing:.03em;}
+.rv-month-days{flex:1;min-width:0;display:grid;grid-template-columns:repeat(31,1fr);
+  gap:1px;height:20px;}
+.rv-day-cell{position:relative;background:var(--light);border-radius:2px;overflow:hidden;}
+.rv-day-cell.rv-day-out{background:transparent;}
+/* Séparation entre semaines calendaires : un vrai lundi (voir isWeekStart
+   dans renderToday), pas "tous les 7 jours du mois" — un trait plus visible
+   qu'un simple gap pour scinder la ligne en semaines d'un coup d'œil, sans
+   pour autant rivaliser avec les couleurs des séjours. */
+.rv-day-cell.rv-week-start{box-shadow:1px 0 0 rgba(0,0,0,.14);}
+.rv-seg{position:absolute;inset:0;cursor:pointer;}
+.rv-seg.cin{border-radius:4px 0 0 4px;}
+.rv-seg.cout{border-radius:0 4px 4px 0;}
+.rv-seg.cin.cout{border-radius:4px;}
+.rv-seg.opt{background-image:repeating-linear-gradient(
+  45deg,transparent,transparent 3px,rgba(255,255,255,.25) 3px,rgba(255,255,255,.25) 6px);}
+.rv-seg.canc{opacity:.35;}
+/* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
+   pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
+   choisie en JS selon le fond (voir light()) pour rester lisible quelle que
+   soit la couleur du client/statut ; gris discret sur une case vide. */
+.rv-day-num{position:absolute;top:1px;left:2px;font-size:8px;line-height:1;
+  font-weight:600;color:var(--gray);pointer-events:none;opacity:.8;}
+@media (max-width:420px){
+  .rv-month-label{width:24px;font-size:9px;}
+  .rv-month-days{height:18px;}
+  .rv-day-num{font-size:7px;top:1px;left:1px;}
+}
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
    so switching views never shifts where the view's content starts. */
 .vnav{display:flex;align-items:center;justify-content:space-between;padding:4px 0;}
@@ -1027,7 +1064,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </div>
   <div class="vtabs">
     <button class="vtab on" id="vt-grid" onclick="setView('grid')">Grille</button>
-    <button class="vtab" id="vt-today" onclick="setView('today')">Jour</button>
+    <button class="vtab" id="vt-today" onclick="setView('today')">Location</button>
     <button class="vtab" id="vt-week" onclick="setView('week')">Semaine</button>
     <button class="vtab" id="vt-month" onclick="setView('month')">Mois</button>
     <button class="vtab" id="vt-year" onclick="setView('year')">Année</button>
@@ -1077,7 +1114,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>Grille
   </button>
   <button class="mbnav-btn" id="mn-today" onclick="setView('today')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Aujourd'hui
+    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Location
   </button>
   <button class="mbnav-btn" id="mn-week" onclick="setView('week')">
     <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r=".5" fill="currentColor"/><circle cx="3" cy="12" r=".5" fill="currentColor"/><circle cx="3" cy="18" r=".5" fill="currentColor"/></svg></span>Semaine
@@ -2344,7 +2381,7 @@ function applyPersonnelUIRestrictions(){
     if(el)el.style.display='none';
   });
   // logoutBtn : visible pour tous les rôles par défaut (voir le header), rien à faire ici.
-  ['week','month','year'].forEach(v=>{
+  ['today','week','month','year'].forEach(v=>{
     byId('vt-'+v)?.remove();
     byId('mn-'+v)?.remove();
   });
@@ -3122,175 +3159,127 @@ function extDinerStayCard(e,ds){
   </div>`;
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  VUE LOCATION — vue annuelle d'un seul logement à la fois (navigation
+//  chambre par chambre, comme Semaine/Mois/Année naviguent dans le temps),
+//  remplace l'ancienne vue Jour. But : voir d'un coup d'œil, pour UN
+//  logement, quelles périodes de l'année sont occupées ou libres — la
+//  question que ni la Grille (tous logements, dense) ni Année (chiffres
+//  agrégés) ne permettent de lire rapidement.
+// ═══════════════════════════════════════════════════════════════
+let roomViewIdx=0;
+function chRoomView(n){
+  const rooms=ROOMS;
+  if(!rooms.length)return;
+  roomViewIdx=(roomViewIdx+n+rooms.length)%rooms.length;
+  renderToday();
+}
 function renderToday(){
-  if(!S.todayDate)S.todayDate=todayISO();
-  const ds=S.todayDate;
-  const today=todayISO();
-  const isToday=ds===today;
-  const d=new Date(ds+'T00:00:00');
-  const tom=addDays(ds,1);
-  const isYesterday=ds===addDays(today,-1);
-  const isTomorrow=ds===addDays(today,1);
-  const relLabel=isToday?'Aujourd\'hui':isYesterday?'Hier':isTomorrow?'Demain':'';
-  const arrs=S.bookings.filter(b=>b.checkIn===ds);
-  const deps=S.bookings.filter(b=>b.checkOut===ds);
-  const stays=S.bookings.filter(b=>b.checkIn<ds&&b.checkOut>ds);
-  const tArrs=isToday?S.bookings.filter(b=>b.checkIn===tom):[];
-
+  const rooms=ROOMS;
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
   const chevR=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
-  const DAY_NAMES=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
-  const allTonight=[...arrs,...stays].filter(b=>b.dinnerNights&&b.dinnerNights[ds]);
-  const couverts=allTonight.reduce((s,b)=>s+(b.nbPersons||2),0)
-    +extDinersCount(ds);
+  if(!rooms.length){
+    byId('todayWrap').innerHTML=`<div class="today-inner"><div class="tsec-empty" style="padding:30px 10px">Aucune chambre ni gîte configuré — ajoutez-en un dans Réglages.</div></div>`;
+    return;
+  }
+  if(roomViewIdx>=rooms.length)roomViewIdx=0;
+  const rm=rooms[roomViewIdx];
+  const year=S.year;
+  const yStart=`${year}-01-01`;
+  const yEnd=`${year+1}-01-01`;
+  const isLeap=(year%4===0&&year%100!==0)||year%400===0;
+  const daysInYear=isLeap?366:365;
+  const DAY_NAMES_FULL=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
+  // Comme la Grille et les vues Mois/Année : on ne filtre pas les annulées ici,
+  // elles restent visibles sur le calendrier (fondues via .rv-seg.canc) plutôt
+  // que d'être masquées — même convention partout dans l'app.
+  const roomBookings=S.bookings.filter(b=>b.roomId===rm.id);
 
-  const miniChip=(b,timeLabel)=>{
-    const g=guest(b.guestId);const col=g?g.color:'#999';const rm=room(b.roomId);
-    const isPaid=b.payment==='paid';
-    const bSrc=getSource(b.source);
-    const barCol=bSrc.colorOverride?bSrc.color:isPaid?'#A0A0A0':col;
-    const sc=b.status==='opt'?' opt':b.status==='no'?' canc':'';
-    const dot=b.status==='opt'?'#FF9800':b.status==='no'?'#F44336':'#4CAF50';
-    const hasDin=b.dinnerNights&&b.dinnerNights[ds];
-    const thIcon=hasDin?`<span class="bth">${MEAL_ICON_SM}${b.nbPersons||''}</span>`:'';
-    return `<div class="day-chip${sc}" onclick="openEditModal('${b.id}')">
-      <div class="tbar" style="background:${barCol}"></div>
-      <div class="day-chip-content">
-        <span class="sdot" style="background:${dot}"></span>
-        <span class="bname">${g?g.name:'?'}</span>
-        <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${rm?rm.short:''}</span>
-        ${timeLabel?`<span class="btime">${timeLabel}</span>`:''}
-        ${thIcon}
-      </div>
+  // --- stats de l'année pour ce logement ---
+  let annualRevenue=0,totalNights=0;
+  const stayLengths=[];
+  roomBookings.forEach(bk=>{
+    annualRevenue+=getBookingRevForPeriod(bk,yStart,yEnd);
+    if(bk.extras){
+      Object.keys(bk.extras).forEach(eds=>{
+        if(eds>=yStart&&eds<yEnd)annualRevenue+=getExtrasDayTotal(bk,eds);
+      });
+    }
+    const oStart=bk.checkIn>yStart?bk.checkIn:yStart;
+    const oEnd=bk.checkOut<yEnd?bk.checkOut:yEnd;
+    const n=daysBetween(oStart,oEnd);
+    if(n>0)totalNights+=n;
+    if(bk.checkIn>=yStart&&bk.checkIn<yEnd){
+      stayLengths.push(Math.round((new Date(bk.checkOut)-new Date(bk.checkIn))/86400000));
+    }
+  });
+  const occRate=Math.round(totalNights/daysInYear*100);
+  const avgMonthlyRevenue=Math.round(annualRevenue/12);
+  const avgNightRevenue=totalNights>0?Math.round(annualRevenue/totalNights):0;
+  const avgStayLength=stayLengths.length?stayLengths.reduce((a,b)=>a+b,0)/stayLengths.length:0;
+
+  // --- calendrier annuel : 1 ligne par mois, 1 segment coloré par séjour ---
+  // Mêmes conventions de couleur/statut que la Grille (source > paiement >
+  // client ; hachures = option ; opacité réduite = annulée) pour rester
+  // cohérent avec le reste de l'app, sans jamais afficher de nom de client.
+  const monthRow=(m)=>{
+    const dim=new Date(year,m+1,0).getDate();
+    let cells='';
+    for(let day=1;day<=31;day++){
+      if(day>dim){cells+='<div class="rv-day-cell rv-day-out"></div>';continue;}
+      const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const dObj=new Date(year,m,day);
+      // Séparation visuelle entre semaines calendaires (vrai lundi, pas juste
+      // "tous les 7 jours du mois" — un mois ne commence quasiment jamais un
+      // lundi). Les cases sont trop petites pour afficher le numéro de
+      // semaine en clair sans nuire à la lisibilité : il reste consultable
+      // au survol (title), sur chaque case, comme la date complète.
+      const isWeekStart=dObj.getDay()===1;
+      const wTitle=`${DAY_NAMES_FULL[dObj.getDay()]} ${day} ${MON[m].toLowerCase()} ${year} — semaine ${weekNum(dObj)}`;
+      const bk=roomBookings.find(b=>activeOn(b,ds));
+      let seg='',numCol='';
+      if(bk){
+        const g=guest(bk.guestId);const col=g?g.color:'#999';
+        const isPaid=bk.payment==='paid';
+        const isPending=bk.payment==='pending';
+        const bSrc=getSource(bk.source);
+        const dispCol=bSrc.colorOverride?bSrc.color:isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
+        const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
+        const isCin=ds===bk.checkIn;
+        const isCout=addDays(ds,1)===bk.checkOut;
+        numCol=light(dispCol)?'#2C2C2C':'#fff';
+        seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
+      }
+      cells+=`<div class="rv-day-cell${isWeekStart?' rv-week-start':''}" title="${wTitle}">${seg}<span class="rv-day-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    }
+    return`<div class="rv-month-row">
+      <div class="rv-month-label">${MON3[m]}</div>
+      <div class="rv-month-days">${cells}</div>
     </div>`;
   };
-
-  const extDinersToday=(S.extDiners&&S.extDiners[ds])||[];
-
-  const inHouse=stays
-    .map(b=>({b,sub:`Départ le ${fmtDate(b.checkOut)}`}))
-    .concat(arrs.map(b=>({b,sub:b.arrivalTime?`Arrivée aujourd'hui · ${b.arrivalTime}`:`Arrivée aujourd'hui`})))
-    .sort((x,y)=>(guest(x.b.guestId)?.name||'').localeCompare(guest(y.b.guestId)?.name||''))
-    .concat(extDinersToday.map(e=>({ext:e})));
+  let monthsHtml='';
+  for(let m=0;m<12;m++)monthsHtml+=monthRow(m);
 
   let h=`<div class="today-inner">
   <div class="vnav">
-    <button class="vnav-btn" onclick="chDay(-1)">${chevL}</button>
+    <button class="vnav-btn" onclick="chRoomView(-1)">${chevL}</button>
     <div class="vnav-center">
-      <div class="vnav-rel">${relLabel||'&nbsp;'}</div>
-      <div class="vnav-title">${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()].toLowerCase()}</div>
+      <div class="vnav-rel">${rooms.length>1?(roomViewIdx+1)+' / '+rooms.length:'&nbsp;'}</div>
+      <div class="vnav-title">${rm.name}</div>
       <div class="vnav-sub">&nbsp;</div>
     </div>
-    <button class="vnav-btn" onclick="chDay(1)">${chevR}</button>
+    <button class="vnav-btn" onclick="chRoomView(1)">${chevR}</button>
   </div>
-  <div class="vnav-now-row">${!isToday?`<button class="vnav-now-btn" onclick="goTodayView()">Aujourd'hui</button>`:''}</div>
-  <div class="today-summary" style="grid-template-columns:repeat(${dinnerEnabled()?4:3},1fr)">
-    <div class="tsm-item"><div class="tsm-val">${arrs.length}</div><div class="tsm-lbl">Arrivées</div></div>
-    <div class="tsm-item"><div class="tsm-val">${deps.length}</div><div class="tsm-lbl">Départs</div></div>
-    <div class="tsm-item"><div class="tsm-val">${inHouse.length}</div><div class="tsm-lbl">En séjour</div></div>
-    ${dinnerEnabled()?`<div class="tsm-item"><div class="tsm-val">${couverts||'—'}</div><div class="tsm-lbl">Repas</div></div>`:''}
+  <div class="rv-calendar">${monthsHtml}</div>
+  <div class="yr-stats" style="margin-top:14px">
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
+  </div>
   </div>`;
-
-  const panel=(cls,icon,title,items,cardFn,footerHtml)=>{
-    const cnt=items.length;
-    let body=cnt?items.map(cardFn).join(''):`<div class="tsec-empty">Aucun</div>`;
-    return`<div class="tsec-panel ${cls}${cnt===0?' collapsed':''}">
-      <div class="tsec-hd${cnt>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
-        ${icon} ${title}<span class="tsec-count"><span>${cnt}</span></span><span class="tsec-chev">▾</span>
-      </div>
-      <div class="tsec-body">${body}${footerHtml||''}</div>
-    </div>`;
-  };
-  const evDayBadge=(dds,col)=>{
-    const dd=new Date(dds+'T00:00:00');
-    const lc=light(col);
-    return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
-      <div class="evdate-day">${dd.getDate()}</div>
-      <div class="evdate-mon">${MON3[dd.getMonth()]}</div>
-    </div>`;
-  };
-  const dayEvs=S.events.filter(ev=>ds>=ev.startDate&&ds<=ev.endDate);
-  // Jour férié : même volet Événements que les événements ajoutés à la main,
-  // en tête de liste (contexte du jour), en lecture seule.
-  const dayHolidayName=getHolidayName(ds);
-  if(dayHolidayName)dayEvs.unshift({id:'holiday-'+ds,title:dayHolidayName,startDate:ds,endDate:ds,isHoliday:true});
-  const evCard=ev=>{
-    const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
-    const isSingle=ev.startDate===ev.endDate;
-    const dateHtml=isSingle
-      ? evDayBadge(ev.startDate,col)
-      : `<div class="evdate-range">${evDayBadge(ev.startDate,col)}<span class="evdate-arrow">→</span>${evDayBadge(ev.endDate,col)}</div>`;
-    const timeStr=ev.startTime?(ev.endTime?`${ev.startTime} – ${ev.endTime}`:ev.startTime):'';
-    if(ev.isHoliday){
-      return`<div class="evcard evcard-holiday">
-        ${dateHtml}
-        <div class="evcard-info">
-          <div class="evcard-title">${ev.title}</div>
-          <div class="evcard-time">Jour férié</div>
-        </div>
-      </div>`;
-    }
-    return`<div class="evcard" onclick="openEventEdit('${ev.id}')">
-      ${dateHtml}
-      <div class="evcard-info">
-        <div class="evcard-title">${ev.title}</div>
-        ${timeStr?`<div class="evcard-time">${timeStr}</div>`:''}
-        ${ev.prixNet>0?`<div class="evcard-time">${ev.prixNet.toLocaleString('fr-FR')} € générés</div>`:''}
-      </div>
-    </div>`;
-  };
-  // Premier volet sous les carrés du résumé — même design/fonctionnement que
-  // les autres (Arrivées, Départs…) : toujours affiché (pas seulement quand il
-  // y a des événements), avec un ajout manuel possible directement dedans.
-  const evAddBtn=`<div class="tsec-add" onclick="event.stopPropagation();openEventEdit(null,'${ds}')">+ Ajouter un événement</div>`;
-  h+=panel('ev',EVENT_ICON,'Événements',dayEvs,evCard,evAddBtn);
-  h+=`<div class="wday-cols">
-    ${panel('arr','↓','Arrivées',arrs,b=>miniChip(b,b.arrivalTime||null))}
-    ${panel('dep','↑','Départs',deps,b=>miniChip(b,null))}
-  </div>`;
-  // Ménage — même volet (mêmes boutons femmes de ménage, mêmes champs heure/
-  // durée) que celui de la vue Semaine (voir renderWeek), pour ne pas avoir
-  // à y basculer juste pour cocher qui vient aujourd'hui.
-  const dayCleaners=S.cleaning[ds]||[];
-  h+=`<div class="tsec-panel menage">
-    <div class="tsec-hd${dayCleaners.length>0?' has-items':''}">${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span></div>
-    <div class="tsec-body">
-      <div class="cln-chips">${CLEANERS.map(cl=>{
-        const on=dayCleaners.some(c=>c.name===cl.name);
-        return`<button class="cleaner-btn${on?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${cl.name}')">${cl.name}</button>`;
-      }).join('')}</div>
-      ${dayCleaners.map(c=>`<div class="cln-detail-row">
-        <span class="cln-detail-name">${c.name}</span>
-        <input type="time" value="${c.time||''}" title="Heure de venue" onchange="setCleanerField('${ds}','${c.name}','time',this.value)">
-        <input type="number" min="0" step="0.5" placeholder="h" value="${c.hours!=null?c.hours:''}" title="Nombre d'heures" onchange="setCleanerField('${ds}','${c.name}','hours',this.value)">
-        <span class="cln-unit">h</span>
-      </div>`).join('')}
-    </div>
-  </div>`;
-  const dm=getMenu(ds);
-  const menuHas=!!(dm.entree||dm.plat||dm.dessert);
-  const thCount=S.bookings
-    .filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
-    .reduce((sum,b)=>sum+(b.nbPersons||2),0)
-    +extDinersCount(ds);
-  h+=`<div class="tsec-panel menu collapsed">
-    <div class="tsec-hd${menuHas?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
-      ${MEAL_ICON} Menu du jour<span class="tsec-count"><span>${thCount} repas</span></span><span class="tsec-chev">▾</span>
-    </div>
-    <div class="tsec-body">
-      <div class="fg"><label class="fl">Entrée</label><input class="fi" id="menu-entree" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
-      <div class="fg"><label class="fl">Plat</label><input class="fi" id="menu-plat" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
-      <div class="fg" style="margin-bottom:0"><label class="fl">Dessert</label><input class="fi" id="menu-dessert" placeholder="—" onchange="setMenuField('${ds}','dessert',this.value)"></div>
-    </div>
-  </div>`;
-  h+=panel('stay','●','En séjour',inHouse,item=>item.ext?extDinerStayCard(item.ext,ds):stayCard(item.b,ds,item.sub,true));
-  if(tArrs.length) h+=panel('tom','⏰','Demain',tArrs,b=>stayCard(b,ds,b.arrivalTime?`Demain ${b.arrivalTime}`:'Demain'));
-  h+='</div>';
   byId('todayWrap').innerHTML=h;
-  byId('menu-entree').value=dm.entree||'';
-  byId('menu-plat').value=dm.plat||'';
-  byId('menu-dessert').value=dm.dessert||'';
-  if(openExtrasId){const p=document.getElementById('xe-'+openExtrasId);if(p)p.style.display='block';}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6477,18 +6466,18 @@ function getBookingRevForPeriod(bk,pStart,pEnd){
   return n*getNightlyRate(bk)-getBreakfastDeduction(bk,pStart,pEnd)+getThRevenue(bk,pStart,pEnd);
 }
 
-function chDay(n){S.todayDate=addDays(S.todayDate||todayISO(),n);renderToday();}
-function goTodayView(){S.todayDate=todayISO();renderToday();}
-// Clic sur un jour dans la grille : direction la vue Jour, sur la section
-// Événements précisément (toujours dépliée, même sans événement, pour que le
-// "+ Ajouter un événement" soit visible tout de suite) plutôt que juste en
-// haut de la vue.
+// Clic sur un jour dans la grille : direction la vue Semaine (qui porte
+// maintenant le détail jour par jour — Arrivées/Départs/Ménage/Menu/En
+// séjour — depuis que la vue Jour est devenue la vue Location), ouverte
+// directement sur ce jour précis plutôt que juste en haut de la semaine.
 function goToDay(ds){
-  S.todayDate=ds;
-  setView('today');
+  S.wStart=getMondayOf(ds);
+  weekOpenDaysFor=S.wStart;
+  weekOpenDays=new Set([ds]);
+  setView('week');
   setTimeout(()=>{
-    const p=document.querySelector('.tsec-panel.ev');
-    if(p){p.classList.remove('collapsed');p.scrollIntoView({block:'start',behavior:'smooth'});}
+    const card=document.querySelector(`.wday-card[data-ds="${ds}"]`);
+    if(card)card.scrollIntoView({block:'start',behavior:'smooth'});
   },60);
 }
 
@@ -6660,7 +6649,7 @@ function renderWeek(){
     const isToday=ds===today;
     const dayCleaners=S.cleaning[ds]||[];
     const dayOpen=weekOpenDays.has(ds);
-    h+=`<div class="wday-card${isToday?' wday-today':''}${dayOpen?'':' collapsed'}">`;
+    h+=`<div class="wday-card${isToday?' wday-today':''}${dayOpen?'':' collapsed'}" data-ds="${ds}">`;
     h+=`<div class="wday-head" onclick="toggleWeekDay('${ds}')">
       <div class="wday-name">${isToday?'Aujourd\'hui — ':''}${DAY_NAMES[d.getDay()]}</div>
       <div class="wday-date">${d.getDate()} ${MON[d.getMonth()]}<span class="wday-chev">▾</span></div>
@@ -7192,9 +7181,10 @@ function toggleGridZoom(){
 // répété ici pour que même un appel direct à setView('year') (ex. valeur
 // restée dans le stockage local depuis avant l'invitation, ou appel depuis
 // la console du navigateur) ne puisse pas contourner la restriction : les
-// vues Semaine/Mois/Année affichent des chiffres qu'un compte Personnel ne
-// doit jamais voir.
-const PERSONNEL_ALLOWED_VIEWS=['grid','today'];
+// vues Semaine/Mois/Année/Location affichent des chiffres qu'un compte
+// Personnel ne doit jamais voir (Location depuis qu'elle a remplacé la vue
+// Jour par un calendrier annuel avec CA/taux d'occupation par logement).
+const PERSONNEL_ALLOWED_VIEWS=['grid'];
 function setView(v){
   if(currentRole==='personnel'&&!PERSONNEL_ALLOWED_VIEWS.includes(v))v='grid';
   S.view=v;
@@ -7206,7 +7196,7 @@ function setView(v){
   });
   const zb=byId('gridZoomBtn');
   if(zb)zb.style.display=v==='grid'?'flex':'none';
-  if(v==='today'){if(!S.todayDate)S.todayDate=todayISO();renderToday();}
+  if(v==='today')renderToday();
   if(v==='week')renderWeek();
   if(v==='month')renderMonth();
   if(v==='year')renderYear();
