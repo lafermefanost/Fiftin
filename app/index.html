@@ -339,25 +339,30 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-/* Vue Location — calendrier annuel d'un seul logement, 1 ligne par mois.
-   31 colonnes fixes sur chaque ligne (les mois plus courts laissent des
-   cases vides en fin de ligne) pour que le jour 15, par exemple, reste
-   toujours aligné verticalement d'un mois à l'autre — plus facile à lire
-   qu'une largeur de colonne qui varierait avec le nombre de jours du mois. */
+/* Vue Location — calendrier annuel d'un seul logement, 1 bloc par mois : un
+   titre (comme les en-têtes de volet .tsec-hd ailleurs dans l'app) au-dessus
+   d'une ligne de groupes-semaines. Chaque groupe-semaine (voir monthRow) a
+   son numéro au-dessus et un séparateur avec le précédent ; une case
+   invisible en fin de ligne complète chaque mois à 31 "unités" de largeur
+   pour qu'une case fasse toujours la même largeur d'un mois à l'autre. */
 .rv-calendar{background:#fff;border-radius:14px;padding:14px 12px;
-  display:flex;flex-direction:column;gap:3px;}
-.rv-month-row{display:flex;align-items:center;gap:8px;}
-.rv-month-label{width:28px;flex:none;font-size:10px;font-weight:700;
-  color:var(--gray);text-transform:uppercase;letter-spacing:.03em;}
-.rv-month-days{flex:1;min-width:0;display:grid;grid-template-columns:repeat(31,1fr);
-  gap:1px;height:20px;}
+  display:flex;flex-direction:column;gap:14px;}
+.rv-month-row{display:flex;flex-direction:column;gap:4px;}
+.rv-month-label{font-size:10px;font-weight:700;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.04em;}
+.rv-month-weeks{display:flex;min-width:0;}
+.rv-week-grp{display:flex;flex-direction:column;gap:2px;min-width:0;}
+/* Séparateur entre deux semaines : marge + trait, un vrai lundi (voir
+   weekNum dans monthRow), pas "tous les 7 jours du mois" — un mois ne
+   commence quasiment jamais un lundi. */
+.rv-week-grp:not(:first-child){margin-left:7px;padding-left:7px;
+  border-left:1px solid rgba(0,0,0,.12);}
+.rv-week-hd{font-size:7px;font-weight:700;color:var(--gray);opacity:.6;
+  letter-spacing:.02em;line-height:1;}
+.rv-week-days{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;
+  gap:1px;height:24px;}
+.rv-week-filler{visibility:hidden;}
 .rv-day-cell{position:relative;background:var(--light);border-radius:2px;overflow:hidden;}
-.rv-day-cell.rv-day-out{background:transparent;}
-/* Séparation entre semaines calendaires : un vrai lundi (voir isWeekStart
-   dans renderToday), pas "tous les 7 jours du mois" — un trait plus visible
-   qu'un simple gap pour scinder la ligne en semaines d'un coup d'œil, sans
-   pour autant rivaliser avec les couleurs des séjours. */
-.rv-day-cell.rv-week-start{box-shadow:1px 0 0 rgba(0,0,0,.14);}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -365,16 +370,19 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-seg.opt{background-image:repeating-linear-gradient(
   45deg,transparent,transparent 3px,rgba(255,255,255,.25) 3px,rgba(255,255,255,.25) 6px);}
 .rv-seg.canc{opacity:.35;}
-/* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
-   pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
-   choisie en JS selon le fond (voir light()) pour rester lisible quelle que
-   soit la couleur du client/statut ; gris discret sur une case vide. */
-.rv-day-num{position:absolute;top:1px;left:2px;font-size:8px;line-height:1;
-  font-weight:600;color:var(--gray);pointer-events:none;opacity:.8;}
+/* Jour de semaine (L/M/M/J/V/S/D) + numéro du jour, superposés au segment
+   coloré (pointer-events:none pour ne pas gêner le clic sur le séjour en
+   dessous) — couleur claire/foncée déjà choisie en JS selon le fond (voir
+   light()) pour rester lisible quelle que soit la couleur du client/statut ;
+   gris discret sur une case vide. */
+.rv-day-txt{position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;pointer-events:none;color:var(--gray);}
+.rv-dow{font-size:6px;line-height:1;opacity:.7;text-transform:uppercase;}
+.rv-num{font-size:8px;line-height:1.3;font-weight:600;}
 @media (max-width:420px){
-  .rv-month-label{width:24px;font-size:9px;}
-  .rv-month-days{height:18px;}
-  .rv-day-num{font-size:7px;top:1px;left:1px;}
+  .rv-week-days{height:21px;}
+  .rv-dow{font-size:5px;}
+  .rv-num{font-size:7px;}
 }
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
    so switching views never shifts where the view's content starts. */
@@ -3222,39 +3230,53 @@ function renderToday(){
   // Mêmes conventions de couleur/statut que la Grille (source > paiement >
   // client ; hachures = option ; opacité réduite = annulée) pour rester
   // cohérent avec le reste de l'app, sans jamais afficher de nom de client.
+  const DOW_LETTERS=['D','L','M','M','J','V','S']; // getDay() 0=dim..6=sam
+  const dayCellHtml=(m,day)=>{
+    const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dObj=new Date(year,m,day);
+    const dow=dObj.getDay();
+    const wTitle=`${DAY_NAMES_FULL[dow]} ${day} ${MON[m].toLowerCase()} ${year} — semaine ${weekNum(dObj)}`;
+    const bk=roomBookings.find(b=>activeOn(b,ds));
+    let seg='',numCol='';
+    if(bk){
+      const g=guest(bk.guestId);const col=g?g.color:'#999';
+      const isPaid=bk.payment==='paid';
+      const isPending=bk.payment==='pending';
+      const bSrc=getSource(bk.source);
+      const dispCol=bSrc.colorOverride?bSrc.color:isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
+      const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
+      const isCin=ds===bk.checkIn;
+      const isCout=addDays(ds,1)===bk.checkOut;
+      numCol=light(dispCol)?'#2C2C2C':'#fff';
+      seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
+    }
+    return`<div class="rv-day-cell" title="${wTitle}">${seg}<span class="rv-day-txt"${numCol?` style="color:${numCol}"`:''}><span class="rv-dow">${DOW_LETTERS[dow]}</span><span class="rv-num">${day}</span></span></div>`;
+  };
   const monthRow=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
-    let cells='';
-    for(let day=1;day<=31;day++){
-      if(day>dim){cells+='<div class="rv-day-cell rv-day-out"></div>';continue;}
-      const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      const dObj=new Date(year,m,day);
-      // Séparation visuelle entre semaines calendaires (vrai lundi, pas juste
-      // "tous les 7 jours du mois" — un mois ne commence quasiment jamais un
-      // lundi). Les cases sont trop petites pour afficher le numéro de
-      // semaine en clair sans nuire à la lisibilité : il reste consultable
-      // au survol (title), sur chaque case, comme la date complète.
-      const isWeekStart=dObj.getDay()===1;
-      const wTitle=`${DAY_NAMES_FULL[dObj.getDay()]} ${day} ${MON[m].toLowerCase()} ${year} — semaine ${weekNum(dObj)}`;
-      const bk=roomBookings.find(b=>activeOn(b,ds));
-      let seg='',numCol='';
-      if(bk){
-        const g=guest(bk.guestId);const col=g?g.color:'#999';
-        const isPaid=bk.payment==='paid';
-        const isPending=bk.payment==='pending';
-        const bSrc=getSource(bk.source);
-        const dispCol=bSrc.colorOverride?bSrc.color:isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
-        const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
-        const isCin=ds===bk.checkIn;
-        const isCout=addDays(ds,1)===bk.checkOut;
-        numCol=light(dispCol)?'#2C2C2C':'#fff';
-        seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
-      }
-      cells+=`<div class="rv-day-cell${isWeekStart?' rv-week-start':''}" title="${wTitle}">${seg}<span class="rv-day-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    // Regroupe les jours du mois par semaine calendaire (coupure à chaque
+    // lundi, via weekNum() — pas "tous les 7 jours du mois", qui ne
+    // correspondrait à aucune semaine réelle dès que le mois ne commence
+    // pas un lundi). Chaque groupe porte son numéro de semaine au-dessus
+    // et un séparateur avec le groupe précédent.
+    const weeks=[];
+    for(let day=1;day<=dim;day++){
+      const wn=weekNum(new Date(year,m,day));
+      if(!weeks.length||weeks[weeks.length-1].wn!==wn)weeks.push({wn,days:[]});
+      weeks[weeks.length-1].days.push(day);
     }
+    const weeksHtml=weeks.map(w=>`<div class="rv-week-grp" style="flex:${w.days.length} 1 0">
+      <div class="rv-week-hd">S${w.wn}</div>
+      <div class="rv-week-days">${w.days.map(day=>dayCellHtml(m,day)).join('')}</div>
+    </div>`).join('');
+    // Case invisible en fin de ligne pour les mois plus courts que 31 jours :
+    // garde exactement 31 "unités" de largeur sur chaque ligne, donc une
+    // case fait toujours la même largeur d'un mois à l'autre.
+    const fillerUnits=31-dim;
+    const fillerHtml=fillerUnits>0?`<div class="rv-week-grp rv-week-filler" style="flex:${fillerUnits} 1 0"></div>`:'';
     return`<div class="rv-month-row">
-      <div class="rv-month-label">${MON3[m]}</div>
-      <div class="rv-month-days">${cells}</div>
+      <div class="rv-month-label">${MON[m]}</div>
+      <div class="rv-month-weeks">${weeksHtml}${fillerHtml}</div>
     </div>`;
   };
   let monthsHtml='';
