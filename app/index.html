@@ -346,7 +346,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    visibles sans défiler ; le numéro de semaine ISO figure dans la marge
    gauche de chaque mini-calendrier. */
 .rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
-  display:grid;grid-template-columns:repeat(3,1fr);gap:20px 14px;}
+  display:grid;grid-template-columns:repeat(2,1fr);gap:20px 16px;}
 /* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
    d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear.
    grid-column:1/-1 pour occuper toute la largeur de la bulle blanche,
@@ -397,9 +397,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   justify-content:center;font-size:11px;font-weight:600;color:var(--gray);
   pointer-events:none;}
 @media (max-width:520px){
-  /* 2 mois par ligne plutôt que 3 sur petit écran : les cases resteraient
-     sinon trop petites pour être lisibles/cliquables confortablement. */
-  .rv-calendar{grid-template-columns:repeat(2,1fr);gap:16px 12px;}
+  .rv-calendar{gap:16px 12px;}
 }
 @media (max-width:420px){
   .rv-month-grid{grid-auto-rows:24px;}
