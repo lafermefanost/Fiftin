@@ -33,15 +33,20 @@
      géométriques nets (le bleu clair et le rouille de la palette), qui
      reprennent le vocabulaire rond/plein du logo (le point du "1", le
      galbe du "5"). .inner passe au-dessus via z-index. */
-  .cover{position:relative; background:var(--sauge-deep); color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden;}
+  /* Base lumineuse : le hero passe en crème, les aplats bleu clair/rouille
+     restent comme touches ponctuelles plutôt que comme fond dominant. Le
+     logo (blanc + orange) a besoin d'un fond sombre pour rester lisible,
+     d'où le chip bleu marine derrière — sa propre "zone complète colorée",
+     à l'échelle d'un badge plutôt que de toute la section. */
+  .cover{position:relative; background:var(--cream); color:var(--ink); border-bottom:none; padding:110px 32px 0; --section-bg:var(--cream); overflow:hidden;}
   .cover::before{content:"";position:absolute;top:70px;right:-120px;width:440px;height:440px;border-radius:50%;background:var(--sauge-light);z-index:0;}
   .cover::after{content:"";position:absolute;bottom:60px;left:-70px;width:170px;height:170px;border-radius:50%;background:var(--rust);z-index:0;}
   .cover>.inner{position:relative;z-index:1;}
   .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px;}
-  .mark{flex:none; display:flex; align-items:center; justify-content:center;}
+  .mark{flex:none; display:flex; align-items:center; justify-content:center; background:var(--sauge-deep); padding:14px 16px; border-radius:16px;}
   .cover h1{font-family:'Fraunces',serif; font-weight:600; font-size:clamp(40px,7vw,76px); line-height:1.02; margin:0 0 24px; letter-spacing:-0.02em;}
   .cover h1 em{font-style:italic; font-weight:500; color:var(--rust);}
-  .cover p{font-size:19px; line-height:1.6; color:rgba(245,240,229,0.82); max-width:560px; margin:0;}
+  .cover p{font-size:19px; line-height:1.6; color:rgba(46,43,34,0.75); max-width:560px; margin:0;}
 
   /* le téléphone bleed hors de la section couverture — la coupure franche
      se fait à la frontière même entre la couverture et la section suivante
@@ -226,7 +231,7 @@
   <div class="inner">
     <div class="logo">
       <div class="mark"><img src="assets/logo-fiftin.png" width="102" height="81" alt="Fiftin"></div>
-      <a href="/app/" style="margin-left:auto;font-size:14px;font-weight:600;color:var(--cream);opacity:.78;text-decoration:none;">Se connecter</a>
+      <a href="/app/" style="margin-left:auto;font-size:14px;font-weight:600;color:var(--ink);opacity:.75;text-decoration:none;">Se connecter</a>
     </div>
     <h1>Reprenez<br>vos <em>15 %</em>.</h1>
     <p>Le planning des chambres d'hôtes et des gîtes qui vous rend vos réservations, vos clients, et votre rentabilité.</p>
@@ -302,7 +307,7 @@
 </section>
 
 <!-- PREUVE -->
-<section class="dark">
+<section>
   <div class="inner">
     <div class="kicker">Pourquoi nous</div>
     <p class="quote">Fiftin n'a pas été conçu dans un bureau d'études.<br>Il est né dans une maison d'hôtes de sept chambres et un gîte, <em>parce qu'aucun outil du marché ne faisait le travail.</em></p>
@@ -370,7 +375,7 @@
 </section>
 
 <!-- VIE REELLE -->
-<section class="dark">
+<section>
   <div class="inner">
     <div class="kicker">La vraie vie d'une maison</div>
     <h2>Votre planning ne contient pas<br><em>que des clients.</em></h2>

@@ -663,28 +663,29 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    tout le reste (z-index supérieur aux modales). Vrai contrôle d'accès
    cette fois (Firebase Authentication + règles Firestore par compte),
    plus le code d'appareil provisoire d'avant. */
-/* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
-   — pour que l'écran de connexion porte déjà l'identité de l'appli avant
-   même d'y entrer, plutôt qu'un simple formulaire neutre. */
-#lockScreen{position:fixed;inset:0;overflow:hidden;background:var(--green-deep);z-index:5000;
+/* Base lumineuse (crème) plutôt qu'un aplat vert/bleu plein écran — les
+   cercles bleu clair/rouille restent comme touches ponctuelles. Le logo
+   (blanc + orange) a besoin d'un fond sombre pour rester lisible, d'où
+   le chip bleu marine autour — sa propre petite zone colorée. */
+#lockScreen{position:fixed;inset:0;overflow:hidden;background:var(--cream);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
 #lockScreen::before{content:"";position:absolute;top:-160px;right:-120px;width:420px;height:420px;border-radius:50%;background:var(--green-light);z-index:0;}
 #lockScreen::after{content:"";position:absolute;bottom:-70px;left:-70px;width:200px;height:200px;border-radius:50%;background:var(--rust);z-index:0;}
 #lockScreen>*{position:relative;z-index:1;}
-.lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;}
+.lock-logo-chip{display:inline-flex;background:var(--green-deep);padding:16px 18px;border-radius:18px;margin-bottom:18px;}
+.lock-logo-chip img{display:block;}
+.lock-sub{font-size:13px;color:rgba(44,44,44,.72);margin-bottom:22px;max-width:280px;line-height:1.5;}
 .lock-box{width:100%;max-width:280px;}
 .lock-box .fi{margin-bottom:10px;}
-.lock-err{color:#FFB4A8;font-size:12px;margin-top:10px;min-height:16px;}
-.lock-switch{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:16px;}
-.lock-switch a{color:#fff;font-weight:600;cursor:pointer;text-decoration:underline;}
-.lock-forgot{font-size:12px;color:rgba(255,255,255,.7);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
-/* Le bouton .btn-p partagé est vert par défaut — invisible sur un fond
-   maintenant vert lui aussi. Inversé ici pour rester le point le plus
-   visible de l'écran. */
-#lockScreen .btn-p{background:#fff;color:var(--green-deep);}
-#lockScreen .btn-p:hover{filter:brightness(.96);}
+.lock-err{color:#C0392B;font-size:12px;margin-top:10px;min-height:16px;}
+.lock-switch{font-size:12.5px;color:rgba(44,44,44,.68);margin-top:16px;}
+.lock-switch a{color:var(--green);font-weight:600;cursor:pointer;text-decoration:underline;}
+.lock-forgot{font-size:12px;color:rgba(44,44,44,.68);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
+/* Le bouton .btn-p partagé (bleu marine/blanc) est déjà bien visible sur
+   ce fond crème — plus besoin de l'inverser comme sur l'ancien fond vert. */
+#lockScreen .btn-p:hover{filter:brightness(1.1);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;
@@ -1048,7 +1049,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
      ses propres données (Firestore : accounts/{uid}, protégé par des
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
-  <img src="../assets/logo-fiftin.png" width="164" height="130" alt="Fiftin" style="margin-bottom:18px">
+  <div class="lock-logo-chip"><img src="../assets/logo-fiftin.png" width="164" height="130" alt="Fiftin"></div>
   <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
     <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
