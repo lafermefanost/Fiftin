@@ -582,10 +582,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #monthWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .month-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-.mstat-card{background:#fff;border-radius:12px;padding:14px 14px 12px;
+.mstat-card{background:#fff;border-radius:16px;padding:14px 14px 12px;
   border:1.5px solid var(--light);text-align:center;}
 .mstat-card.mstat-rev{background:var(--green);border-color:var(--green);}
-.mstat-val{font-size:26px;font-weight:600;color:var(--green);line-height:1.1;}
+.mstat-val{font-size:28px;font-weight:800;color:var(--green);line-height:1.1;letter-spacing:-0.02em;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
 .mstat-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mstat-card.mstat-rev .mstat-sub{color:rgba(255,255,255,.75);}
@@ -671,8 +671,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
-#lockScreen::before{content:"";position:absolute;top:-160px;right:-120px;width:420px;height:420px;border-radius:50%;background:var(--green-light);z-index:0;}
-#lockScreen::after{content:"";position:absolute;bottom:-70px;left:-70px;width:200px;height:200px;border-radius:50%;background:var(--rust);z-index:0;}
 #lockScreen>*{position:relative;z-index:1;}
 .lock-logo-chip{display:inline-flex;background:var(--green-deep);padding:16px 18px;border-radius:18px;margin-bottom:18px;}
 .lock-logo-chip img{display:block;}
