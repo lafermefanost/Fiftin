@@ -1503,6 +1503,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
           <input type="date" class="fi" id="evEnd" onchange="renderModalExtrasEv()">
         </div>
       </div>
+      <div class="fg" id="evRecurWrap">
+        <label class="fl">Récurrence</label>
+        <select class="fi" id="evRecur" onchange="renderEvRecurUntil()">
+          <option value="none">Aucune</option>
+          <option value="weekly">Chaque semaine</option>
+          <option value="monthly">Chaque mois</option>
+          <option value="yearly">Chaque année</option>
+        </select>
+      </div>
+      <div class="fg" id="evRecurUntilFg" style="display:none">
+        <label class="fl">Jusqu'au</label>
+        <input type="date" class="fi" id="evRecurUntil" onchange="renderEvRecurUntil()">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px" id="evRecurCount"></div>
+      </div>
       <div class="frow">
         <div class="fg">
           <label class="fl">Heure d'arrivée <span style="font-weight:400;color:var(--gray)">(optionnel)</span></label>
@@ -2099,6 +2113,16 @@ function weekNum(date){
 
 function addDays(ds,n){
   const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return iso(d);
+}
+// Pour la récurrence d'événements (voir saveEvent) — mêmes limites que
+// n'importe quel calendrier : setMonth/setFullYear peuvent faire déborder
+// sur le mois suivant quand le jour d'origine n'existe pas dans le mois
+// cible (ex. 31 janvier + 1 mois → 3 mars, pas 28/29 février).
+function addMonths(ds,n){
+  const d=new Date(ds+'T00:00:00');d.setMonth(d.getMonth()+n);return iso(d);
+}
+function addYears(ds,n){
+  const d=new Date(ds+'T00:00:00');d.setFullYear(d.getFullYear()+n);return iso(d);
 }
 
 function fmtDate(s){const[y,m,d]=s.split('-');return`${d}/${m}/${y}`;}
@@ -4386,6 +4410,15 @@ function openEventEdit(id,prefillDate){
   byId('evNotes').value=ev?ev.notes||'':'';
   byId('evDelBtn').style.display=ev?'block':'none';
 
+  // Récurrence : uniquement à la création — modifier la règle d'une série
+  // déjà créée (décaler/arrêter les occurrences futures) n'est pas géré,
+  // pour éviter les cas ambigus ; chaque occurrence reste éditable/
+  // supprimable individuellement comme un événement normal.
+  byId('evRecurWrap').style.display=ev?'none':'block';
+  byId('evRecur').value='none';
+  byId('evRecurUntil').value='';
+  byId('evRecurUntilFg').style.display='none';
+
   // Client — même principe que le modal réservation, mais optionnel : un
   // événement purement opérationnel (fermeture, travaux…) n'a pas de client.
   evSelGid=ev?ev.guestId||null:null;evNewGMode=false;evGSearchTerm='';evGChanging=false;
@@ -4401,6 +4434,41 @@ function openEventEdit(id,prefillDate){
 
   closeM('modalEvents');byId('modalEventEdit').style.display='flex';
   lockdownModalForPersonnelViewing('modalEventEdit');
+}
+
+// Affiche/masque le champ "Jusqu'au" selon la fréquence choisie, propose une
+// date de fin par défaut raisonnable (11 semaines / 11 mois / 4 ans après le
+// début — soit ~12 occurrences), et prévisualise le nombre d'occurrences
+// avant même d'enregistrer, pour éviter les créations massives par erreur.
+function renderEvRecurUntil(){
+  const freq=byId('evRecur').value;
+  const fg=byId('evRecurUntilFg');
+  const start=byId('evStart').value||todayISO();
+  if(freq==='none'){fg.style.display='none';byId('evRecurCount').textContent='';return;}
+  fg.style.display='block';
+  const untilEl=byId('evRecurUntil');
+  if(!untilEl.value){
+    untilEl.value=freq==='weekly'?addDays(start,7*11):freq==='monthly'?addMonths(start,11):addYears(start,4);
+  }
+  const n=recurrenceDates(start,freq,untilEl.value).length;
+  byId('evRecurCount').textContent=`${n} occurrence${n>1?'s':''} seront créées.`;
+}
+// Dates de départ de chaque occurrence (dont la première, `start` lui-même),
+// espacées selon `freq`, jusqu'à et y compris `until` — plafonné pour éviter
+// toute création massive par erreur (2 ans de weekly, 5 ans de monthly,
+// 20 ans de yearly : largement au-delà d'un usage réaliste).
+function recurrenceDates(start,freq,until){
+  if(freq==='none'||!until)return[start];
+  const caps={weekly:104,monthly:60,yearly:20};
+  const step=freq==='weekly'?(ds=>addDays(ds,7)):freq==='monthly'?(ds=>addMonths(ds,1)):(ds=>addYears(ds,1));
+  const dates=[start];
+  let cur=start;
+  while(dates.length<(caps[freq]||60)){
+    cur=step(cur);
+    if(cur>until)break;
+    dates.push(cur);
+  }
+  return dates;
 }
 
 function saveEvent(){
@@ -4435,7 +4503,20 @@ function saveEvent(){
     const i=S.events.findIndex(e=>e.id===editEvid);
     if(i!==-1)S.events[i]={...S.events[i],...data};
   }else{
-    S.events.push({id:uid(),...data,extras:{}});
+    const freq=byId('evRecur').value;
+    const until=byId('evRecurUntil').value;
+    if(freq!=='none'&&until){
+      // Chaque occurrence garde la même durée (en jours) que l'originale —
+      // seules les dates de début/fin sont décalées, tout le reste (titre,
+      // client, couleur, paiement…) est identique sur toute la série.
+      const dur=daysBetween(sd,ed);
+      const recurrenceId=uid();
+      recurrenceDates(sd,freq,until).forEach(s=>{
+        S.events.push({id:uid(),...data,startDate:s,endDate:addDays(s,dur),recurrenceId,extras:{}});
+      });
+    }else{
+      S.events.push({id:uid(),...data,extras:{}});
+    }
   }
   persist();closeM('modalEventEdit');renderGrid();
   if(S.view==='today')renderToday();
@@ -4445,7 +4526,15 @@ function saveEvent(){
 
 function delEvent(){
   if(!editEvid)return;
-  S.events=S.events.filter(e=>e.id!==editEvid);
+  const ev=S.events.find(e=>e.id===editEvid);
+  // Occurrence d'une série récurrente : proposer de supprimer aussi les
+  // occurrences futures plutôt que seulement celle-ci (comportement standard
+  // d'un agenda). Annuler = ne supprime que cette occurrence.
+  if(ev&&ev.recurrenceId&&confirm('Cet événement fait partie d\'une série récurrente.\n\nOK — supprimer aussi toutes les occurrences futures.\nAnnuler — supprimer seulement celle-ci.')){
+    S.events=S.events.filter(e=>!(e.recurrenceId===ev.recurrenceId&&e.startDate>=ev.startDate));
+  }else{
+    S.events=S.events.filter(e=>e.id!==editEvid);
+  }
   persist();closeM('modalEventEdit');renderGrid();
   if(S.view==='today')renderToday();
   if(S.view==='week')renderWeek();
