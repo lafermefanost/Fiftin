@@ -2855,10 +2855,13 @@ function renderGridHeader(){
   const thTh=tr.querySelector('.th-th');
   tr.querySelectorAll('th.th-room').forEach(el=>el.remove());
   const frag=document.createDocumentFragment();
-  ROOMS.forEach(r=>{
+  ROOMS.forEach((r,idx)=>{
     const th=document.createElement('th');
     th.className='th-room';
+    th.style.cursor='pointer';
+    th.title='Voir ce logement en vue Location';
     th.innerHTML=`<span class="th-room-full">${r.name}</span><span class="th-room-short">${r.short}</span>`;
+    th.addEventListener('click',()=>{roomViewIdx=idx;setView('today');});
     frag.appendChild(th);
   });
   tr.insertBefore(frag,thTh);
