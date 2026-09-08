@@ -18,7 +18,7 @@ html,body{height:100%;overflow:hidden;}
 
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
-  --cream:#F5F0E8; --earth:#F27649; --green:#28559E; --green-deep:#1D3D72; --green-light:#B5D0FF; --dark:#2C2C2C;
+  --cream:#F5F0E8; --earth:#F27649; --green:#28559E; --green-deep:#1D3D72; --green-light:#B5D0FF; --rust:#D63F09; --dark:#2C2C2C;
   --gray:#6B6B6B; --light:#E8E4DC; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
   --shadow:0 2px 10px rgba(0,0,0,.14); --r:6px;
   --hdr:52px; --bar:40px;
@@ -29,7 +29,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
   display:flex;flex-direction:column;}
 
 /* ─── HEADER ─────────────────────────────────────────────── */
-header{height:var(--hdr);background:linear-gradient(180deg, rgba(181,208,255,.22), transparent), var(--green);color:var(--cream);
+header{height:var(--hdr);background:var(--green);border-bottom:3px solid var(--rust);color:var(--cream);
   display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:100;}
 .app-icon{flex-shrink:0;opacity:.92;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
@@ -62,6 +62,7 @@ header{height:var(--hdr);background:linear-gradient(180deg, rgba(181,208,255,.22
   font-size:12px;font-weight:500;cursor:pointer;}
 .tbtn-today{background:var(--green);color:var(--white);margin-left:auto;}
 .tbtn-add{background:#F27649;color:var(--white);}
+.tbtn-add:hover{background:var(--rust);}
 .vtabs{display:flex;gap:4px;}
 .vtab{padding:4px 12px;border:1px solid var(--light);background:var(--white);
   border-radius:20px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--gray);}
@@ -126,7 +127,7 @@ header{height:var(--hdr);background:linear-gradient(180deg, rgba(181,208,255,.22
    filet), mais qui traverse toute la largeur du tableau, pas seulement les
    colonnes de date. Après .r-wkstart dans la feuille de style pour gagner
    sur son propre border-top si le jour tombe justement en début de semaine. */
-.pt tbody tr.r-today td{border-top:2px solid var(--green);border-bottom:2px solid var(--green);}
+.pt tbody tr.r-today td{border-top:2px solid var(--rust);border-bottom:2px solid var(--rust);}
 .pt tbody tr.r-wkend > td{background:#E8E3DB !important;}
 .pt tbody tr.r-wkend td.c-dow,
 .pt tbody tr.r-wkend td.c-day,
@@ -203,7 +204,7 @@ header{height:var(--hdr);background:linear-gradient(180deg, rgba(181,208,255,.22
 .rbtn-ok{padding:6px 16px;background:var(--green);color:#fff;border:none;
   border-radius:20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;}
-.rbtn-ok:hover{background:#4A7040;}
+.rbtn-ok:hover{background:var(--rust);}
 .rbtn-cancel{width:26px;height:26px;border:none;background:rgba(255,255,255,.15);
   color:var(--cream);border-radius:50%;cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;}
@@ -665,10 +666,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
    — pour que l'écran de connexion porte déjà l'identité de l'appli avant
    même d'y entrer, plutôt qu'un simple formulaire neutre. */
-#lockScreen{position:fixed;inset:0;background:radial-gradient(ellipse 900px 600px at 50% -10%, rgba(181,208,255,.4), transparent 68%), var(--green-deep);z-index:5000;
+#lockScreen{position:fixed;inset:0;overflow:hidden;background:var(--green-deep);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
+#lockScreen::before{content:"";position:absolute;top:-160px;right:-120px;width:420px;height:420px;border-radius:50%;background:var(--green-light);z-index:0;}
+#lockScreen::after{content:"";position:absolute;bottom:-70px;left:-70px;width:200px;height:200px;border-radius:50%;background:var(--rust);z-index:0;}
+#lockScreen>*{position:relative;z-index:1;}
 .lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;}
 .lock-box{width:100%;max-width:280px;}
 .lock-box .fi{margin-bottom:10px;}
