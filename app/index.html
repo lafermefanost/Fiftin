@@ -1644,6 +1644,61 @@ const MON = ['Janvier','Février','Mars','Avril','Mai','Juin',
              'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 const MON3 = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
+// ═══════════════════════════════════════════════════════════════
+//  CALENDRIER FISCAL — échéances françaises pour un exercice calé sur
+//  l'année civile (le cas de très loin le plus courant en chambres
+//  d'hôtes/gîtes). `types` cible la ou les structures concernées (voir
+//  updateStructureType) ; `types:null` = échéance générale, affichée
+//  quel que soit le type de structure. `cond` = ne s'applique que sous
+//  condition (détaillée dans la description) ; `approx` = date exacte
+//  variable d'une année/zone à l'autre, celle indiquée est indicative.
+//  Sources (dates 2026, exercice clos le 31/12/2025) : impots.gouv.fr,
+//  formulaires 2572 (solde IS), 2031/2033/2035 (résultat), et délais
+//  légaux d'approbation (6 mois) / dépôt au greffe (1 mois, 2 en ligne)
+//  du code de commerce — à recouper avec votre expert-comptable, ces
+//  délais dépendent aussi de la date de clôture réelle de l'exercice.
+const FISCAL_CALENDAR=[
+  {m:3, d:15,title:'1ᵉʳ acompte d\'IS',                  desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
+  {m:3, d:31,title:'Option régime fiscal (IR)',          desc:'Notifier avant fin mars si changement IR/IS souhaité pour l\'exercice en cours (option valable 5 ans)', color:'#E07828', types:['sasu']},
+  {m:5, d:15,title:'Solde de l\'impôt sur les sociétés',  desc:'Formulaire 2572, télépaiement obligatoire — régularise l\'IS dû sur l\'exercice clos après déduction des acomptes déjà versés', color:'#C0392B', types:['sasu']},
+  {m:5, d:20,title:'Déclaration de résultat professionnel', desc:'Formulaire 2031 (BIC, EI) ou 2035 (BNC) — bilan de l\'activité en régime réel, télétransmission EDI (+15 jours vs dépôt papier)', color:'#3D5C35', types:['ei_reel','lmnp_reel']},
+  {m:6, d:5, title:'Déclaration de revenus (IR)',        desc:'Date limite en ligne — variable selon votre département, début-fin juin : vérifier sur impots.gouv.fr. Inclut vos revenus micro-BIC (LMNP, auto-entrepreneur) et, pour un président de SASU, sa rémunération', color:'#3D5C35', approx:true, types:null},
+  {m:6, d:15,title:'2ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
+  {m:6, d:15,title:'Acompte CFE',                        desc:'Si cotisation N-1 ≥ 3 000 € — règlement de 50 % de l\'acompte prévisionnel', color:'#B57A7A', cond:true, types:null},
+  {m:6, d:30,title:'Déclaration d\'occupation (GMBI)',   desc:'Mise à jour foncière obligatoire si changement d\'occupant ou d\'usage du bien', color:'#7A8CB5', types:null},
+  {m:6, d:30,title:'Approbation des comptes (PV d\'AG)', desc:'Assemblée générale ordinaire d\'approbation des comptes annuels — dans les 6 mois suivant la clôture de l\'exercice, sous peine de sanctions', color:'#E07828', types:['sasu']},
+  {m:8, d:31,title:'Dépôt des comptes annuels (bilan)',  desc:'Au greffe (guichet unique INPI), après approbation en AG — 1 mois en dépôt papier (31 juillet), 2 mois en dépôt électronique', color:'#9E7A5C', types:['sasu']},
+  {m:9, d:15,title:'3ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
+  {m:9, d:15,title:'Solde IR / acompte',                 desc:'Versement d\'un acompte ou solde d\'impôt sur le revenu selon situation fiscale', color:'#E07828', cond:true, types:null},
+  {m:10,d:15,title:'Paiement taxe foncière',             desc:'Règlement pour chaque bien possédé — mi-octobre (prélèvement/paiement en ligne : quelques jours de plus)', color:'#9E7A5C', approx:true, types:null},
+  {m:11,d:1, title:'Avis de CFE disponibles',            desc:'Mise en ligne des avis de cotisation foncière — vérifier le montant par établissement', color:'#7A8800', types:null},
+  {m:11,d:15,title:'Paiement taxe d\'habitation (résidences secondaires)', desc:'Concerne les logements loués qui ne sont pas votre résidence principale — mi-novembre (paiement en ligne : quelques jours de plus)', color:'#6B8A9E', approx:true, cond:true, types:null},
+  {m:12,d:15,title:'4ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
+  {m:12,d:15,title:'Paiement CFE',                       desc:'Règlement de la CFE pour chaque établissement/structure', color:'#B57A7A', types:null},
+];
+// Types de structure reconnus par le calendrier fiscal (voir Réglages →
+// Structures juridiques). Une structure sans type assigné ('autre' ou
+// vide) ne masque ni ne fait apparaître d'échéance spécifique.
+const STRUCTURE_TYPES=[
+  {id:'sasu',      label:'SASU / SAS'},
+  {id:'ei_reel',   label:'EI (régime réel)'},
+  {id:'ei_micro',  label:'EI micro-entreprise'},
+  {id:'lmnp_reel', label:'LMNP (régime réel)'},
+  {id:'lmnp_micro',label:'LMNP micro-BIC'},
+];
+// Échéances effectivement pertinentes compte tenu des structures configurées
+// (Réglages → Structures juridiques) : les échéances générales (types:null)
+// sont toujours incluses ; les échéances propres à un statut ne sont
+// filtrées que si au moins une structure a un type assigné — pour ne pas
+// faire disparaître d'échéances utiles chez les comptes existants qui
+// n'ont jamais renseigné ce champ.
+function relevantFiscalCalendar(){
+  const structs=(S.settings.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const userTypes=new Set(structs.map(s=>s.type).filter(Boolean));
+  if(!userTypes.size)return FISCAL_CALENDAR;
+  return FISCAL_CALENDAR.filter(f=>!f.types||f.types.some(t=>userTypes.has(t)));
+}
+
 // Pictogramme repas (fourchette + couteau), épuré comme les autres icônes du planning
 const MEAL_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
 const MEAL_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;flex-shrink:0"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
@@ -2113,6 +2168,26 @@ function getHolidayPseudoEvents(){
     });
   });
   return list;
+}
+// Même principe que getHolidayPseudoEvents, pour les échéances du calendrier
+// fiscal (voir FISCAL_CALENDAR/relevantFiscalCalendar) : lecture seule,
+// jamais dans S.events, pour qu'elles apparaissent aussi dans la Grille, la
+// vue Semaine et la liste des Événements — pas seulement dans le panneau
+// dédié de la vue Année.
+function getFiscalPseudoEvents(){
+  const y=new Date().getFullYear();
+  const list=[];
+  const items=relevantFiscalCalendar();
+  [y,y+1].forEach(year=>{
+    items.forEach((f,i)=>{
+      const ds=`${year}-${p(f.m)}-${p(f.d)}`;
+      list.push({id:'fiscal-'+year+'-'+i,title:f.title,startDate:ds,endDate:ds,isFiscal:true,color:f.color});
+    });
+  });
+  return list;
+}
+function getFiscalName(ds){
+  return getFiscalPseudoEvents().find(f=>f.startDate===ds)?.title||null;
 }
 
 function light(hex){
@@ -2917,11 +2992,15 @@ function renderGrid(){
     dayTd.addEventListener('click',e=>{e.stopPropagation();openDayEvent(ds);});
     const dayEvs=S.events.filter(ev=>ds>=ev.startDate&&ds<=ev.endDate);
     const holidayName=getHolidayName(ds);
+    const fiscalEv=dayEvs.length?null:getFiscalPseudoEvents().find(f=>f.startDate===ds);
     // Jour férié : une pastille pleine comme un événement, mais toujours
     // dans la même couleur neutre (var(--gray)) plutôt qu'une couleur par
     // événement — reste discret sans mélanger deux indications sur le même
     // cercle. Un événement personnel ce jour-là prend simplement le dessus,
-    // comme n'importe quel autre jour : pas de combinaison des deux.
+    // comme n'importe quel autre jour : pas de combinaison des deux. Une
+    // échéance fiscale suit le même principe (une pastille, en lecture
+    // seule), avec la couleur propre à l'échéance plutôt que le gris neutre
+    // des jours fériés — pour la distinguer au premier coup d'œil.
     if(dayEvs.length){
       const ec=dayEvs[0].color||'#A8C5A0';
       const lc=light(ec);
@@ -2929,6 +3008,8 @@ function renderGrid(){
       dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:${lc?'#2C2C2C':'#fff'}" title="${evTitles}">${date.getDate()}</div>`;
     } else if(holidayName){
       dayTd.innerHTML=`<div class="holiday-daynum" title="${holidayName}">${date.getDate()}</div>`;
+    } else if(fiscalEv){
+      dayTd.innerHTML=`<div class="holiday-daynum" style="background:${fiscalEv.color}" title="${fiscalEv.title}">${date.getDate()}</div>`;
     } else {
       dayTd.innerHTML=date.getDate();
     }
@@ -4190,12 +4271,14 @@ function openEventsModal(){
 
 function renderEvList(term){
   term=(term||'').trim().toLowerCase();
-  // Les jours fériés ont une vraie existence dans cette liste (pas juste un
-  // repère dans la grille), à côté des événements ajoutés à la main.
-  let sorted=[...S.events,...getHolidayPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  // Les jours fériés — et, de la même façon, les échéances du calendrier
+  // fiscal — ont une vraie existence dans cette liste (pas juste un repère
+  // dans la grille ou le panneau dédié de la vue Année), à côté des
+  // événements ajoutés à la main.
+  let sorted=[...S.events,...getHolidayPseudoEvents(),...getFiscalPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
   if(term){
     sorted=sorted.filter(ev=>{
-      if(ev.isHoliday)return ev.title.toLowerCase().includes(term);
+      if(ev.isHoliday||ev.isFiscal)return ev.title.toLowerCase().includes(term);
       const g=ev.guestId?guest(ev.guestId):null;
       return ev.title.toLowerCase().includes(term)||(g&&g.name.toLowerCase().includes(term));
     });
@@ -4238,7 +4321,7 @@ function renderEvList(term){
   let html=groups.map(g=>{
     const isPast=!term&&g.key<todayKey;
     const cardsHtml=g.events.map(ev=>{
-      const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
+      const col=ev.isHoliday?'#6B6B6B':ev.isFiscal?ev.color:(ev.color||'#A8C5A0');
       const isSingle=ev.startDate===ev.endDate;
       const dateHtml=isSingle
         ? badge(ev.startDate,col)
@@ -4250,6 +4333,15 @@ function renderEvList(term){
           <div class="evcard-info">
             <div class="evcard-title">${ev.title}</div>
             <div class="evcard-time">Jour férié</div>
+          </div>
+        </div>`;
+      }
+      if(ev.isFiscal){
+        return`<div class="evcard evcard-holiday">
+          ${dateHtml}
+          <div class="evcard-info">
+            <div class="evcard-title">${ev.title}</div>
+            <div class="evcard-time">Échéance fiscale</div>
           </div>
         </div>`;
       }
@@ -5582,7 +5674,7 @@ function renderSettings(){
 
   // — Structures juridiques, chacune avec ses propres seuils —
   const structsForThr=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
-  let structBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque chambre/gîte est rattaché(e) à l'une de ces structures (réglage dans "Locations" ci-dessous). Dans la vue Année, le total global est toujours affiché en premier, puis chaque structure est calculée indépendamment. Les seuils sont optionnels et propres à chaque structure — laissez-en zéro si non pertinent.</div>`;
+  let structBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque chambre/gîte est rattaché(e) à l'une de ces structures (réglage dans "Locations" ci-dessous). Dans la vue Année, le total global est toujours affiché en premier, puis chaque structure est calculée indépendamment. Les seuils sont optionnels et propres à chaque structure — laissez-en zéro si non pertinent. Le type détermine les échéances affichées dans le Calendrier fiscal (vue Année).</div>`;
   structsForThr.forEach(s=>{
     const thr=(st.structureThresholds&&st.structureThresholds[s.id])||[];
     const canDelS=structsForThr.length>1;
@@ -5590,6 +5682,13 @@ function renderSettings(){
       <div class="set-card-top">
         <input class="set-fi" value="${s.name.replace(/"/g,'&quot;')}" placeholder="Nom de la structure" onblur="updateStructureName('${s.id}',this.value)">
         <button class="set-del" ${canDelS?'':'disabled style="opacity:.3"'} onclick="delStructure('${s.id}')">×</button>
+      </div>
+      <div class="set-card-row" style="margin-bottom:10px">
+        <label class="fl" style="margin:0;flex-shrink:0">Type</label>
+        <select class="set-fi" style="flex:1" onchange="updateStructureType('${s.id}',this.value)">
+          <option value="">— Non précisé —</option>
+          ${STRUCTURE_TYPES.map(t=>`<option value="${t.id}"${s.type===t.id?' selected':''}>${t.label}</option>`).join('')}
+        </select>
       </div>
       <div class="set-card-sub" style="margin-top:0;padding-top:10px">
         <div class="set-card-sub-title">Seuils</div>`;
@@ -6169,6 +6268,13 @@ function updateStructureName(id,name){
   saveSettings();
   if(S.view==='year')renderYear();
 }
+function updateStructureType(id,type){
+  const s=(S.settings.structures||[]).find(x=>x.id===id);
+  if(!s)return;
+  s.type=type||null;
+  saveSettings();
+  if(S.view==='year')renderYear();
+}
 function addStructureThreshold(sid){
   if(!S.settings.structureThresholds)S.settings.structureThresholds={};
   if(!S.settings.structureThresholds[sid])S.settings.structureThresholds[sid]=[];
@@ -6691,7 +6797,7 @@ function renderWeek(){
     </div>`;
   };
   const evCard=ev=>{
-    const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
+    const col=ev.isHoliday?'#6B6B6B':ev.isFiscal?ev.color:(ev.color||'#A8C5A0');
     const isSingle=ev.startDate===ev.endDate;
     const dateHtml=isSingle
       ? evDayBadge(ev.startDate,col)
@@ -6703,6 +6809,15 @@ function renderWeek(){
         <div class="evcard-info">
           <div class="evcard-title">${ev.title}</div>
           <div class="evcard-time">Jour férié</div>
+        </div>
+      </div>`;
+    }
+    if(ev.isFiscal){
+      return`<div class="evcard evcard-holiday">
+        ${dateHtml}
+        <div class="evcard-info">
+          <div class="evcard-title">${ev.title}</div>
+          <div class="evcard-time">Échéance fiscale</div>
         </div>
       </div>`;
     }
@@ -6724,6 +6839,8 @@ function renderWeek(){
     const dds=addDays(S.wStart,i);
     const hn=getHolidayName(dds);
     if(hn)weekEvs.unshift({id:'holiday-'+dds,title:hn,startDate:dds,endDate:dds,isHoliday:true});
+    const fn=getFiscalPseudoEvents().find(f=>f.startDate===dds);
+    if(fn)weekEvs.unshift(fn);
   }
   const weekPrefillDate=(today>=S.wStart&&today<wEnd)?today:S.wStart;
   const weekEvAddBtn=`<div class="tsec-add" onclick="event.stopPropagation();openEventEdit(null,'${weekPrefillDate}')">+ Ajouter un événement</div>`;
@@ -7653,20 +7770,10 @@ function renderYear(){
     </div>
   </div>`;
 
-  // Fiscal calendar
-  const MABR=['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-  const FISCAL=[
-    {m:3, d:31,title:'Option régime fiscal SASU',         desc:'Notifier avant fin mars si changement IR/IS souhaité pour l\'exercice en cours',      color:'#E07828'},
-    {m:6, d:5, title:'Déclaration IR + LMNP réel',        desc:'Date limite en ligne — variable selon votre zone/département, début-fin juin : vérifier sur impots.gouv.fr', color:'#3D5C35', approx:true},
-    {m:6, d:15,title:'Acompte CFE',                       desc:'Si cotisation N-1 ≥ 3 000 € — règlement de 50 % de l\'acompte prévisionnel',          color:'#B57A7A', cond:true},
-    {m:6, d:30,title:'Déclaration d\'occupation (GMBI)',  desc:'Mise à jour foncière obligatoire si changement d\'occupant ou d\'usage du bien',       color:'#7A8CB5'},
-    {m:9, d:15,title:'Solde IR / acompte',                desc:'Versement d\'un acompte ou solde d\'impôt sur le revenu selon situation fiscale',       color:'#E07828', cond:true},
-    {m:10,d:15,title:'Paiement taxe foncière',            desc:'Règlement pour chaque bien possédé — mi-octobre (prélèvement/paiement en ligne : quelques jours de plus)', color:'#9E7A5C', approx:true},
-    {m:11,d:1, title:'Avis de CFE disponibles',           desc:'Mise en ligne des avis de cotisation foncière — vérifier le montant par établissement',color:'#7A8800'},
-    {m:11,d:15,title:'Paiement taxe d\'habitation (résidences secondaires)', desc:'Concerne les logements loués qui ne sont pas votre résidence principale — mi-novembre (paiement en ligne : quelques jours de plus)', color:'#6B8A9E', approx:true, cond:true},
-    {m:12,d:15,title:'Paiement CFE',                      desc:'Règlement de la CFE pour chaque établissement/structure',                              color:'#B57A7A'},
-  ];
-  const fiscalItems=FISCAL.map(f=>{
+  // Calendrier fiscal — voir FISCAL_CALENDAR / relevantFiscalCalendar()
+  // (défini en haut du fichier, réutilisé aussi par les pseudo-événements
+  // de la Grille/Semaine/liste Événements — voir getFiscalPseudoEvents).
+  const fiscalItems=relevantFiscalCalendar().map(f=>{
     const ds=`${year}-${p(f.m)}-${p(f.d)}`;
     const diff=daysBetween(today,ds);
     const isPast=ds<today;
@@ -7681,7 +7788,7 @@ function renderYear(){
     return`<div class="yr-fiscal-item${isPast?' past':''}${isSoon?' soon':''}" style="border-left-color:${f.color}">
       <div class="yr-fiscal-stamp" style="background:${stampColor}">
         <div class="yr-fiscal-day">${f.d}</div>
-        <div class="yr-fiscal-mon">${MABR[f.m]}</div>
+        <div class="yr-fiscal-mon">${MON3[f.m-1]}</div>
       </div>
       <div class="yr-fiscal-body">
         <div class="yr-fiscal-title">${badge}${f.title}${tag}</div>
