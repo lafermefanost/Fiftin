@@ -835,7 +835,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    de couverts de la grille, les badges repas, et le panneau "Menu du jour". */
 body.no-dinner .pt td.c-th,body.no-dinner .pt thead th.th-th,
 body.no-dinner .bth,body.no-dinner .dinner-badge,
-body.no-dinner .tsec-panel.menu{display:none;}
+body.no-dinner .tsec-panel.menu,body.no-dinner .fg-th-notes{display:none;}
 
 /* Interrupteur "taxe de séjour" (réglages → Taxe de séjour) : masque la case
    à cocher dans le modal de réservation pour les établissements qui n'ont pas
@@ -876,9 +876,13 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .evmonth-group.collapsed .evmonth-chev{transform:rotate(-90deg);}
 .evmonth-group.collapsed .evmonth-body{display:none;}
 .evcard{display:flex;align-items:center;gap:12px;padding:10px 0;
-  border-bottom:1px solid var(--light);cursor:pointer;transition:opacity .15s;}
+  border-bottom:1px solid var(--light);cursor:pointer;transition:opacity .15s,background-color .4s;
+  border-radius:8px;}
 .evcard:last-child{border-bottom:none;}
 .evcard:hover{opacity:.75;}
+/* Repère bref sur la carte visée en arrivant depuis le clic sur un jour de
+   la grille (voir openDayEvent) — s'efface tout seul après coup. */
+.evcard.evcard-flash{background-color:rgba(61,92,53,.14);}
 /* Jour férié dans la liste : pas un vrai événement à éditer/supprimer, donc
    pas de survol interactif (le calcul reste en lecture seule). */
 .evcard.evcard-holiday{cursor:default;}
@@ -1413,6 +1417,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
         <label class="fl">Notes</label>
         <input type="text" class="fi" id="geNotes" placeholder="Préférences, infos utiles…">
       </div>
+    </div>
+    <div class="fg fg-th-notes">
+      <label class="fl">Allergies / préférences table d'hôtes</label>
+      <input type="text" class="fi" id="geThNotes" placeholder="Ex. allergie aux fruits de mer, végétarien…">
     </div>
     <div class="fg">
       <label class="fl">Appréciation <span style="font-weight:400;color:var(--gray)">(pour savoir si on reprend ce client)</span></label>
@@ -2903,7 +2911,7 @@ function renderGrid(){
     const dayTd=document.createElement('td');
     dayTd.className='c-day';
     dayTd.style.cursor='pointer';
-    dayTd.addEventListener('click',e=>{e.stopPropagation();goToDay(ds);});
+    dayTd.addEventListener('click',e=>{e.stopPropagation();openDayEvent(ds);});
     const dayEvs=S.events.filter(ev=>ds>=ev.startDate&&ds<=ev.endDate);
     const holidayName=getHolidayName(ds);
     // Jour férié : une pastille pleine comme un événement, mais toujours
@@ -4084,6 +4092,7 @@ function openGuestEdit(id){
   byId('geAddress').value=g?g.address||'':'';
   byId('gePrice').value=g?g.price||'':'';
   byId('geNotes').value=g?g.notes||'':'';
+  byId('geThNotes').value=g?g.thNotes||'':'';
   geRating=g?g.rating||null:null;
   renderGeRating();
   byId('gDelBtn').style.display=g?'block':'none';
@@ -4148,7 +4157,7 @@ function saveGuest(){
   const data={name:nm,color:byId('geColor').value,phone:byId('gePhone').value,
     email:byId('geEmail').value,address:byId('geAddress').value,
     price:parseFloat(byId('gePrice').value)||0,
-    notes:byId('geNotes').value,rating:geRating};
+    notes:byId('geNotes').value,thNotes:byId('geThNotes').value,rating:geRating};
   if(editGid){
     const i=S.guests.findIndex(g=>g.id===editGid);
     if(i!==-1)S.guests[i]={...S.guests[i],...data};
@@ -4241,7 +4250,7 @@ function renderEvList(term){
           </div>
         </div>`;
       }
-      return`<div class="evcard" onclick="openEventEdit('${ev.id}')">
+      return`<div class="evcard" data-evid="${ev.id}" onclick="openEventEdit('${ev.id}')">
         ${dateHtml}
         <div class="evcard-info">
           <div class="evcard-title">${ev.title}</div>
@@ -4726,6 +4735,7 @@ function renderTHBody(ds){
       <div style="width:10px;height:36px;border-radius:3px;background:${col};flex-shrink:0"></div>
       <div style="flex:1">
         <div style="font-weight:500;font-size:13px">${g?g.name:'?'}</div>
+        ${g&&g.thNotes?`<div style="font-size:11px;color:var(--earth);font-weight:600;margin-top:1px">${g.thNotes}</div>`:''}
         <div style="font-size:11px;color:var(--gray)">${rm?rm.name:''} · ${b.nbPersons||2} pers.</div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
@@ -4746,6 +4756,7 @@ function renderTHBody(ds){
       <div style="width:10px;height:36px;border-radius:3px;background:${eg?eg.color:'#999'};flex-shrink:0"></div>
       <div style="flex:1">
         <div style="font-weight:500;font-size:13px">${eg?eg.name:(e.name||'?')}</div>
+        ${eg&&eg.thNotes?`<div style="font-size:11px;color:var(--earth);font-weight:600;margin-top:1px">${eg.thNotes}</div>`:''}
         <div style="font-size:11px;color:var(--gray)">Personne extérieure${e.count>1?' · '+e.count+' pers.':''}</div>
       </div>
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0">
@@ -6545,18 +6556,25 @@ function getBookingRevForPeriod(bk,pStart,pEnd){
   return n*getNightlyRate(bk)-getBreakfastDeduction(bk,pStart,pEnd)+getThRevenue(bk,pStart,pEnd);
 }
 
-// Clic sur un jour dans la grille : direction la vue Semaine (qui porte
-// maintenant le détail jour par jour — Arrivées/Départs/Ménage/Menu/En
-// séjour — depuis que la vue Jour est devenue la vue Location), ouverte
-// directement sur ce jour précis plutôt que juste en haut de la semaine.
-function goToDay(ds){
-  S.wStart=getMondayOf(ds);
-  weekOpenDaysFor=S.wStart;
-  weekOpenDays=new Set([ds]);
-  setView('week');
+// Clic sur un jour dans la grille : direction l'événement de cette
+// journée — création s'il n'y en a pas encore, sinon ouverture de la
+// liste des événements avec sa carte mise en évidence. Remplace l'ancien
+// renvoi vers la vue Semaine, qui ne portait plus la création d'événement.
+function openDayEvent(ds){
+  const dayEvs=S.events.filter(ev=>ds>=ev.startDate&&ds<=ev.endDate);
+  if(!dayEvs.length){
+    openEventEdit(null,ds);
+    return;
+  }
+  openEventsModal();
   setTimeout(()=>{
-    const card=document.querySelector(`.wday-card[data-ds="${ds}"]`);
-    if(card)card.scrollIntoView({block:'start',behavior:'smooth'});
+    const card=document.querySelector(`.evcard[data-evid="${dayEvs[0].id}"]`);
+    if(!card)return;
+    const group=card.closest('.evmonth-group');
+    if(group)group.classList.remove('collapsed');
+    card.scrollIntoView({block:'center',behavior:'smooth'});
+    card.classList.add('evcard-flash');
+    setTimeout(()=>card.classList.remove('evcard-flash'),1200);
   },60);
 }
 
