@@ -6776,8 +6776,8 @@ function renderWeek(){
     };
 
     h+=`<div class="wday-cols">
-      ${wpanel('arr','↓','Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
       ${wpanel('dep','↑','Départs',deps,b=>wMiniChip(b,null))}
+      ${wpanel('arr','↓','Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
     </div>`;
 
     h+=`<div class="tsec-panel menage collapsed">
