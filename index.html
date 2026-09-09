@@ -58,6 +58,15 @@
   .dark p.big, .dark p.small{color:rgba(239,238,233,0.84);}
   .dark .kicker{color:var(--terracotta-soft);}
 
+  /* troisieme respiration de la palette : une bande bleu pale entre le creme
+     et le marine, pour que #B8CAD9 soit une vraie couleur de section — pas
+     juste une bordure qu'on ne remarque pas. */
+  .pale{background:#B8CAD9; color:var(--ink); --section-bg:#B8CAD9;}
+  .pale .kicker{color:#181E40;}
+  .pale .mod, .pale .mod-visual, .pale .mod-hero{background:#EFEEE9;}
+  .pale .cmp-pill.yes{background:#EFEEE9; color:#181E40;}
+  .pale .cmp-pill.no{background:rgba(24,30,64,0.08); color:rgba(24,30,64,0.5);}
+
   /* modules */
   .mods{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-top:36px;}
   .mod{background:#fff; border:1px solid var(--line); border-radius:18px; padding:26px;}
@@ -344,7 +353,7 @@
 </section>
 
 <!-- MOBILE -->
-<section>
+<section class="pale">
   <div class="inner">
     <div class="kicker">Là où vous êtes</div>
     <h2>Dans votre poche,<br><em>entre deux chambres.</em></h2>
@@ -373,7 +382,7 @@
 </section>
 
 <!-- DIFFERENCE -->
-<section>
+<section class="pale">
   <div class="inner">
     <div class="kicker">Ce qui nous distingue</div>
     <h2>Les autres savent remplir<br>des chambres. <em>Pas piloter une exploitation française.</em></h2>
@@ -399,7 +408,7 @@
 </section>
 
 <!-- SECURITE -->
-<section>
+<section class="pale">
   <div class="inner">
     <div class="kicker">Sécurité et propriété</div>
     <h2>Le logiciel est à nous.<br>Vos données sont <em>à vous</em>.</h2>
