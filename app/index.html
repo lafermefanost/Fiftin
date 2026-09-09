@@ -678,7 +678,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
 .lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;}
-.lock-box{width:100%;max-width:280px;}
+/* Cartouche vert moyen — même traitement que les cartouches chiffrées de
+   l'appli (mstat-rev, mfin-card) : le module de connexion porte l'identité
+   de l'appli au lieu de flotter en champs blancs nus sur le fond vert foncé. */
+.lock-box{width:100%;max-width:280px;background:var(--green);border-radius:20px;padding:24px 20px 20px;}
 .lock-box .fi{margin-bottom:10px;}
 .lock-err{color:#FFB4A8;font-size:12px;margin-top:10px;min-height:16px;}
 .lock-switch{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:16px;}
@@ -1060,7 +1063,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
      ses propres données (Firestore : accounts/{uid}, protégé par des
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
-  <img src="../assets/logo-fiftin.png" width="164" height="130" alt="Fiftin" style="margin-bottom:18px">
+  <img src="../assets/logo-fiftin-mark.png" width="131" height="102" alt="Fiftin" style="margin-bottom:18px">
   <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
     <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
