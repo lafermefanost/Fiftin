@@ -1605,6 +1605,50 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   </div>
 </div>
 
+<!-- ─── AJOUT MANUEL D'UNE CHARGE (vue Mois → Charges réelles) ────────────
+     Pour ce qu'un import CSV ne couvre pas : une charge connue par un
+     document qu'on ne peut pas parser automatiquement (PDF, relevé d'un
+     prestataire type SumUp…) ou une dépense ponctuelle sans relevé du tout.
+     Un seul écran, 4 champs, pas de logique de catégorisation automatique
+     (l'utilisateur choisit la catégorie lui-même) — même modèle de donnée
+     qu'une ligne importée (S.transactions, direction 'Debit'), juste avec
+     manual:true pour la distinguer si besoin plus tard. ─────────────────-->
+<div class="overlay" id="modalChargeAdd" style="display:none" onclick="ovClose(event,'modalChargeAdd')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Ajouter une charge</div>
+      <button class="mclose" onclick="closeM('modalChargeAdd')">✕</button>
+    </div>
+    <div class="msec">
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Date</label>
+          <input type="date" class="fi" id="mchaDate">
+        </div>
+        <div class="fg">
+          <label class="fl">Montant</label>
+          <div style="position:relative;">
+            <input type="number" class="fi" id="mchaAmount" placeholder="0" min="0" step="0.01" style="padding-right:26px;">
+            <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--gray);pointer-events:none;">€</span>
+          </div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">Catégorie</label>
+        <select class="fi" id="mchaCategory"></select>
+      </div>
+      <div class="fg">
+        <label class="fl">Libellé <span style="font-weight:400;color:var(--gray)">(optionnel)</span></label>
+        <input type="text" class="fi" id="mchaLabel" placeholder="Ex. Frais SumUp septembre">
+      </div>
+    </div>
+    <div class="macts">
+      <button class="btn-s" onclick="closeM('modalChargeAdd')">Annuler</button>
+      <button class="btn-p" onclick="saveManualCharge()">Ajouter</button>
+    </div>
+  </div>
+</div>
+
 <!-- ─── TABLE D'HÔTES MODAL ─────────────────────────────────────────────── -->
 <div class="overlay" id="modalTH" style="display:none" onclick="ovClose(event,'modalTH')">
   <div class="modal">
@@ -5659,6 +5703,35 @@ function toggleChargeCategoryExcluded(id){
   saveSettings();renderSettings();renderMonth();
 }
 
+// Ajout manuel d'une charge — pour ce qu'un import CSV ne couvre pas (un
+// document en PDF, un relevé qu'on ne veut pas importer ligne à ligne, une
+// dépense sans relevé du tout). Même modèle qu'une ligne importée, saisie
+// à la main : la structure (gid) est fixée par le bouton "+ Ajouter" cliqué,
+// pas modifiable dans le formulaire, pour rester aussi simple qu'un import.
+let manualChargeGid=null;
+function openChargeAdd(gid){
+  manualChargeGid=gid;
+  byId('mchaDate').value=todayISO();
+  byId('mchaAmount').value='';
+  byId('mchaLabel').value='';
+  const cats=S.settings.chargeCategories||[];
+  byId('mchaCategory').innerHTML=`<option value="">Non catégorisé</option>`+
+    cats.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  byId('modalChargeAdd').style.display='flex';
+  setTimeout(()=>byId('mchaAmount').focus(),50);
+}
+function saveManualCharge(){
+  const date=byId('mchaDate').value;
+  const amount=parseFloat(String(byId('mchaAmount').value).replace(',','.'))||0;
+  if(!date||amount<=0){alert('Indique une date et un montant.');return;}
+  const label=byId('mchaLabel').value.trim();
+  const categoryId=byId('mchaCategory').value;
+  S.transactions.push({id:uid(),date,amount,direction:'Debit',counterparty:label||'Charge manuelle',description:'',type:'',categoryId,group:manualChargeGid||'sasu',manual:true});
+  persist();
+  closeM('modalChargeAdd');
+  if(S.view==='month')renderMonth();
+}
+
 // ═══════════════════════════════════════════════════════════════
 //  SETTINGS UI
 // ═══════════════════════════════════════════════════════════════
@@ -7360,9 +7433,10 @@ function renderMonth(){
     });
     h+=`<div class="mch-group-hd">
       <span class="mch-group-name">${label}</span>
-      <div>
+      <div style="display:flex;gap:6px">
         <input type="file" id="bankCsvInput-${gid}" accept=".csv" style="display:none" onchange="handleBankFileChange(this,'${gid}')" onclick="event.stopPropagation()">
         <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();byId('bankCsvInput-${gid}').click()">Importer CSV</button>
+        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
       </div>
     </div>`;
     if(!catRows.length){
@@ -7391,6 +7465,7 @@ function renderMonth(){
               <option value="">Non catégorisé</option>
               ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
             </select>
+            <button class="mch-del" onclick="event.stopPropagation();deleteTransaction('${t.id}')" title="Supprimer">×</button>
           </div>`;
         });
       }
@@ -7550,7 +7625,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings'];
+  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd'];
   for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
 });
 
