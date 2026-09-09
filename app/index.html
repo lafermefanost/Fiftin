@@ -52,7 +52,7 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .hbtn:hover{background:rgba(255,255,255,.2);}
 .sync-pip{width:8px;height:8px;border-radius:50%;background:#666;flex-shrink:0;}
 .sync-pip.ok{background:#4CAF50;}
-.sync-pip.busy{background:#FF9800;animation:blink 1s infinite;}
+.sync-pip.busy{background:var(--lavender);animation:blink 1s infinite;}
 .sync-pip.err{background:var(--danger);}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.3;}}
 
@@ -655,13 +655,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-subtotal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);padding:4px 0 0;}
 /* Financial cards row */
 .month-fin{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.mfin-card{background:#fff;border-radius:12px;padding:14px 14px 12px;border:1.5px solid var(--light);}
-.mfin-val{font-size:26px;font-weight:600;line-height:1.1;}
-.mfin-val.charges{color:var(--earth);}
-.mfin-val.pos{color:var(--green);}
-.mfin-val.neg{color:#E8963A;}
-.mfin-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
-.mfin-detail{font-size:11px;color:#bbb;margin-top:2px;}
+.mfin-card{background:var(--green);border-radius:12px;padding:14px 14px 12px;border:1.5px solid var(--green);}
+.mfin-val{font-size:26px;font-weight:600;line-height:1.1;color:#fff;}
+.mfin-sub{font-size:10px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
+.mfin-detail{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;}
+/* Marge négative : cartouche en rouge d'alerte plutôt qu'en vert — un
+   déficit reste un vrai signal à distinguer d'un résultat positif, pas
+   seulement une nuance de la même couleur "tout va bien". */
+.mfin-card.mfin-danger{background:var(--danger);border-color:var(--danger);}
 
 /* ─── CONNEXION / INSCRIPTION ─────────────────────────────────
    Écran plein cadre affiché avant toute chose (voir bootFirebaseApp /
@@ -738,7 +739,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gcontact-btn:hover{filter:brightness(.88);}
 .gcontact-btn.wa{background:#25D366;}
 .gcontact-btn.sms{background:#5B8AF0;}
-.gcontact-btn.mail{background:#E8963A;}
+.gcontact-btn.mail{background:var(--lavender);color:var(--green-deep);}
 .gsel-card{display:flex;align-items:stretch;background:#fff;border-radius:8px;
   border:1.5px solid var(--light);overflow:hidden;margin-top:6px;}
 .gsel-bar{width:5px;flex-shrink:0;}
@@ -973,8 +974,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
 .yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
-.yr-gauge.yr-gauge-warn .yr-gauge-lbl{color:#E07828;}
-.yr-gauge.yr-gauge-danger .yr-gauge-lbl{color:#E07828;}
+/* Fond lavande pâle + texte sombre plutôt que du lavande plein (illisible en
+   petit texte sur la carte blanche) — la barre de la jauge elle-même
+   (fillColor, plus bas) passe, elle, en lavande plein. */
+.yr-gauge.yr-gauge-warn .yr-gauge-lbl,
+.yr-gauge.yr-gauge-danger .yr-gauge-lbl{color:var(--green-deep);background:var(--lavender-bg);
+  padding:1px 7px;border-radius:9px;margin:-1px 0;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
 .yr-chart{display:flex;gap:3px;align-items:flex-end;height:96px;margin-bottom:6px;}
@@ -3106,7 +3111,7 @@ function renderGrid(){
         const isCout=addDays(ds,1)===bk.checkOut;
         // Status classes
         const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
-        const dot=bk.status==='opt'?'#FF9800':bk.status==='no'?'#F44336':'#4CAF50';
+        const dot=bk.status==='opt'?'#B2BBDA':bk.status==='no'?'#F44336':'#4CAF50';
 
         const isPaid=bk.payment==='paid';
         const isPending=bk.payment==='pending';
@@ -7279,12 +7284,12 @@ function renderMonth(){
     const margeClass=marge>=0?'pos':'neg';
     h+=`<div class="month-fin">
       <div class="mfin-card">
-        <div class="mfin-val charges">${Math.round(totalCh).toLocaleString('fr-FR')} €</div>
+        <div class="mfin-val">${Math.round(totalCh).toLocaleString('fr-FR')} €</div>
         <div class="mfin-sub">charges / mois</div>
         <div class="mfin-detail">relevé bancaire</div>
       </div>
-      <div class="mfin-card">
-        <div class="mfin-val ${margeClass}">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</div>
+      <div class="mfin-card${margeClass==='neg'?' mfin-danger':''}">
+        <div class="mfin-val">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</div>
         <div class="mfin-sub">marge nette</div>
         <div class="mfin-detail">${totalRev>0?(marge>=0?'bénéfice estimé':'déficit estimé'):'revenus non renseignés'}</div>
       </div>
@@ -7703,7 +7708,7 @@ function renderYear(){
     const lbl=label||'Nuits plateformes';
     const pct=Math.min(100,nights/limit*100);
     const cls=pct>=100?'yr-gauge-danger':pct>=80?'yr-gauge-warn':'';
-    const fillColor=cls?'#E07828':'#2D3F2F';
+    const fillColor=cls?'#B2BBDA':'#2D3F2F';
     return`<div class="yr-gauge${cls?' '+cls:''}">
       <div class="yr-gauge-top">
         <span class="yr-gauge-lbl">${lbl}${cls==='yr-gauge-danger'?' ⚠️':cls==='yr-gauge-warn'?' ⚡':''}</span>
@@ -7723,7 +7728,7 @@ function renderYear(){
     const projPct=Math.min(100,projCA/threshold*100);
     const realPct=Math.min(100,realCA/threshold*100);
     const cls=projPct>=100?'yr-gauge-danger':projPct>=80?'yr-gauge-warn':'';
-    const fillColor=cls?'#E07828':color;
+    const fillColor=cls?'#B2BBDA':color;
     return`<div class="yr-gauge${cls?' '+cls:''}">
       <div class="yr-gauge-top">
         <span class="yr-gauge-lbl">${label}${cls==='yr-gauge-danger'?' ⚠️':cls==='yr-gauge-warn'?' ⚡':''}</span>
@@ -7955,7 +7960,7 @@ function renderYear(){
     const isUrgent=!isPast&&diff<=7;
     let badge='';
     if(isUrgent) badge=`<span class="yr-fiscal-badge" style="background:#C0392B">J-${diff}</span>`;
-    else if(isSoon) badge=`<span class="yr-fiscal-badge" style="background:#E07828">J-${diff}</span>`;
+    else if(isSoon) badge=`<span class="yr-fiscal-badge" style="background:#1D2820">J-${diff}</span>`;
     const stampColor=isPast?'#BFBAB4':f.color;
     const tag=(f.approx?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> ≈</span>':'')
              +(f.cond?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> si applicable</span>':'');
