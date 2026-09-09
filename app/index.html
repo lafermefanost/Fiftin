@@ -18,8 +18,11 @@ html,body{height:100%;overflow:hidden;}
 
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
-  --cream:#F5F0E8; --earth:#8B7355; --green:#3D5C35; --green-deep:#2C4326; --dark:#2C2C2C;
-  --gray:#6B6B6B; --light:#E8E4DC; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
+  /* Direction artistique "essai" : bleu marine / periwinkle / bleu pale / vert-jaune fluo (ponctuel) / creme.
+     --danger et --pending-red restent volontairement inchanges : ce sont des couleurs
+     semantiques (alerte/paiement en attente), pas la palette de marque. */
+  --cream:#EFEEE9; --earth:#B8CAD9; --green:#808ABF; --green-deep:#181E40; --dark:#181E40;
+  --gray:rgba(24,30,64,.62); --light:#B8CAD9; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
   --shadow:0 2px 10px rgba(0,0,0,.14); --r:6px;
   --hdr:52px; --bar:40px;
 }
@@ -61,7 +64,7 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 .tbtn{padding:5px 14px;border:none;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:500;cursor:pointer;}
 .tbtn-today{background:var(--green);color:var(--white);margin-left:auto;}
-.tbtn-add{background:#E07828;color:var(--white);}
+.tbtn-add{background:#E6F28D;color:#181E40;font-weight:600;}
 .vtabs{display:flex;gap:4px;}
 .vtab{padding:4px 12px;border:1px solid var(--light);background:var(--white);
   border-radius:20px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--gray);}
@@ -115,11 +118,11 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 
 /* Body row base */
 .pt tbody tr{background:var(--white);}
-.pt tbody tr:hover td{background:#FAFAF7 !important;}
-.pt tbody tr.r-today{background:#FFFBF3;}
+.pt tbody tr:hover td{background:#EFEEE9 !important;}
+.pt tbody tr.r-today{background:rgba(184,202,217,.25);}
 .pt tbody tr.r-today td.c-dow,
 .pt tbody tr.r-today td.c-day,
-.pt tbody tr.r-today td.c-wk{background:#FFFBF3;}
+.pt tbody tr.r-today td.c-wk{background:rgba(184,202,217,.25);}
 .pt tbody tr.r-wkstart td{border-top:2px solid var(--light);}
 /* Contour vert sur toute la ligne du jour, pour la repérer immédiatement
    même au milieu d'une grille dense de blocs colorés — discret (juste un
@@ -127,13 +130,13 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
    colonnes de date. Après .r-wkstart dans la feuille de style pour gagner
    sur son propre border-top si le jour tombe justement en début de semaine. */
 .pt tbody tr.r-today td{border-top:2px solid var(--green);border-bottom:2px solid var(--green);}
-.pt tbody tr.r-wkend > td{background:#E8E3DB !important;}
+.pt tbody tr.r-wkend > td{background:rgba(184,202,217,.35) !important;}
 .pt tbody tr.r-wkend td.c-dow,
 .pt tbody tr.r-wkend td.c-day,
-.pt tbody tr.r-wkend td.c-wk{background:#DDD8CF !important;}
-.pt tbody tr.r-wkend td.c-dow{color:#5C5248 !important;font-weight:700;}
-.pt tbody tr.r-wkend td.c-day{color:#5C5248 !important;font-weight:700;}
-.pt tbody tr.r-wkend:hover > td{background:#DCD7CE !important;}
+.pt tbody tr.r-wkend td.c-wk{background:rgba(184,202,217,.3) !important;}
+.pt tbody tr.r-wkend td.c-dow{color:#181E40 !important;font-weight:700;}
+.pt tbody tr.r-wkend td.c-day{color:#181E40 !important;font-weight:700;}
+.pt tbody tr.r-wkend:hover > td{background:rgba(184,202,217,.4) !important;}
 
 /* Month separator row */
 .pt tr.r-msep > td{background:var(--dark) !important;height:22px;
@@ -145,13 +148,13 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
   display:flex;align-items:center;padding-left:8px;
   white-space:nowrap;pointer-events:none;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
-  letter-spacing:.18em;text-transform:uppercase;color:#F0EBE0;}
+  letter-spacing:.18em;text-transform:uppercase;color:#EFEEE9;}
 
 /* Date cells */
-.pt td{border-right:1px solid #EDECE8;border-bottom:1px solid #EDECE8;
+.pt td{border-right:1px solid #EFEEE9;border-bottom:1px solid #EFEEE9;
   height:27px;vertical-align:middle;padding:0 3px;}
 
-.pt td.c-dow{font-size:9px;text-transform:uppercase;color:#9B9080;
+.pt td.c-dow{font-size:9px;text-transform:uppercase;color:rgba(24,30,64,.45);
   font-weight:500;text-align:center;min-width:22px;max-width:22px;}
 .pt td.c-day{font-size:11px;font-weight:500;text-align:center;
   min-width:22px;max-width:22px;padding:0;}
@@ -164,7 +167,7 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
   background:var(--gray);color:var(--white);
   display:flex;align-items:center;justify-content:center;margin:auto;
   font-size:10px;font-weight:600;}
-.pt td.c-wk{font-size:9px;color:#B0A898;text-align:center;
+.pt td.c-wk{font-size:9px;color:rgba(24,30,64,.5);text-align:center;
   min-width:24px;max-width:24px;background:var(--cream);}
 
 /* Month label row */
@@ -173,10 +176,10 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
   letter-spacing:.06em;text-transform:uppercase;}
 
 /* ─── RANGE SELECTION ───────────────────────────────────────── */
-.pt td.rc.sel-start{background:#D4EAD0 !important;outline:2px solid #3D5C35;outline-offset:-2px;}
-.pt td.rc.sel-range{background:#E8F4E5 !important;}
-.pt td.rc.sel-end{background:#D4EAD0 !important;outline:2px solid #5A8C54;outline-offset:-2px;}
-.pt td.rc.sel-start.sel-end{outline:2px solid #3D5C35;}
+.pt td.rc.sel-start{background:#B8CAD9 !important;outline:2px solid #808ABF;outline-offset:-2px;}
+.pt td.rc.sel-range{background:rgba(128,138,191,.18) !important;}
+.pt td.rc.sel-end{background:#B8CAD9 !important;outline:2px solid #181E40;outline-offset:-2px;}
+.pt td.rc.sel-start.sel-end{outline:2px solid #808ABF;}
 
 #rangeBar{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
   background:var(--dark);color:var(--cream);border-radius:30px;
@@ -186,24 +189,24 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 #rangeBar.show{display:flex;}
 
 #swapBar{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);
-  background:#1A3A28;color:var(--cream);border-radius:30px;
+  background:#181E40;color:var(--cream);border-radius:30px;
   padding:10px 18px;display:none;align-items:center;gap:10px;
   box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:500;white-space:nowrap;
   font-size:13px;}
 #swapBar.show{display:flex;}
 @media(max-width:599px){#swapBar{bottom:62px;font-size:12px;padding:8px 12px;gap:7px;}}
 .swap-arrow{font-size:16px;opacity:.7;}
-.rbtn-swap{padding:6px 16px;background:#4A8C60;color:#fff;border:none;
+.rbtn-swap{padding:6px 16px;background:#808ABF;color:#fff;border:none;
   border-radius:20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;}
-.rbtn-swap:hover{background:#3A7050;}
+.rbtn-swap:hover{background:#181E40;}
 @media(max-width:599px){#rangeBar{bottom:62px;font-size:12px;padding:8px 14px;gap:8px;}}
 #rangeLabel{font-weight:500;}
-#rangeLabel b{color:#9DC89A;}
+#rangeLabel b{color:#808ABF;}
 .rbtn-ok{padding:6px 16px;background:var(--green);color:#fff;border:none;
   border-radius:20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;}
-.rbtn-ok:hover{background:#4A7040;}
+.rbtn-ok:hover{background:#181E40;}
 .rbtn-cancel{width:26px;height:26px;border:none;background:rgba(255,255,255,.15);
   color:var(--cream);border-radius:50%;cursor:pointer;font-size:14px;
   display:flex;align-items:center;justify-content:center;}
@@ -211,8 +214,8 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
 /* ─── ROOM CELLS ─────────────────────────────────────────────── */
 .pt td.rc{cursor:pointer;padding:1px 1px;min-width:88px;max-width:108px;
   overflow:hidden;position:relative;}
-.pt td.rc.empty:hover{background:#F0EDE7 !important;}
-.pt td.rc.dover{background:rgba(61,92,53,.15) !important;}
+.pt td.rc.empty:hover{background:#EFEEE9 !important;}
+.pt td.rc.dover{background:rgba(128,138,191,.15) !important;}
 
 /* Compte Staff (lecture seule) : ce que la personne ne peut pas modifier ne
    doit pas non plus réagir au survol — sinon ça laisse croire qu'un clic va
@@ -296,18 +299,18 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* ─── TABLE D'HÔTES ─────────────────────────────────────────── */
 .pt td.c-th{min-width:42px;max-width:42px;text-align:center;cursor:default;}
 .th-val{font-size:12px;font-weight:700;color:var(--green);letter-spacing:-.02em;}
-.th-zero{font-size:10px;color:#D8D2C8;}
-.th-clickable{font-size:14px;color:#9DC89A;font-weight:300;}
+.th-zero{font-size:10px;color:rgba(24,30,64,.35);}
+.th-clickable{font-size:14px;color:#808ABF;font-weight:300;}
 .bth{font-size:9px;flex-shrink:0;opacity:.85;display:inline-flex;align-items:center;gap:2px;}
 .th-toggle{display:flex;align-items:center;gap:8px;}
 .th-toggle input[type=checkbox]{width:16px;height:16px;cursor:pointer;accent-color:var(--green);}
 .free-room-btn{padding:5px 12px;margin:3px 3px 0 0;border:1.5px solid #6B9E60;
   background:#fff;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:500;color:#2E5C28;cursor:pointer;}
-.free-room-btn:hover{background:#E8E3DB;}
+.free-room-btn:hover{background:rgba(184,202,217,.35);}
 .btn-swap{padding:7px 14px;border:none;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:600;background:var(--green);color:#fff;cursor:pointer;}
-.btn-swap:hover{background:#2e4728;}
+.btn-swap:hover{background:#181E40;}
 
 /* ─── MÉNAGE & ÉVÉNEMENT ─────────────────────────────────────── */
 .pt td.c-menage{min-width:110px;max-width:170px;font-size:10px;text-align:center;}
@@ -328,7 +331,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border:1.5px solid var(--light);cursor:pointer;font-size:11px;font-weight:500;
   background:var(--white);color:var(--gray);transition:all .15s;user-select:none;}
 .dn-chip input[type=checkbox]{display:none;}
-.dn-chip.checked{background:#E8E3DB;border-color:#8C8078;color:#3D2E26;}
+.dn-chip.checked{background:rgba(184,202,217,.35);border-color:#808ABF;color:#181E40;}
 .dn-chip .dn-icon{display:none;}
 .dn-chip.checked .dn-icon{display:inline-flex;align-items:center;}
 
@@ -383,10 +386,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-day-cell.rv-day-blank{background:transparent;cursor:default;}
 /* Sélection de plage pour créer une réservation — mêmes couleurs que la
    Grille (.pt td.rc.sel-*), voir startOrExtendRange/renderRangeHighlight. */
-.rv-day-cell.sel-start{background:#D4EAD0 !important;outline:2px solid #3D5C35;outline-offset:-2px;}
-.rv-day-cell.sel-range{background:#E8F4E5 !important;}
-.rv-day-cell.sel-end{background:#D4EAD0 !important;outline:2px solid #5A8C54;outline-offset:-2px;}
-.rv-day-cell.sel-start.sel-end{outline:2px solid #3D5C35;}
+.rv-day-cell.sel-start{background:#B8CAD9 !important;outline:2px solid #808ABF;outline-offset:-2px;}
+.rv-day-cell.sel-range{background:rgba(128,138,191,.18) !important;}
+.rv-day-cell.sel-end{background:#B8CAD9 !important;outline:2px solid #181E40;outline-offset:-2px;}
+.rv-day-cell.sel-start.sel-end{outline:2px solid #808ABF;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -441,7 +444,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsec-empty{font-size:12px;color:var(--gray);padding:8px 6px 4px;text-align:center;}
 .tsec-add{font-size:12px;color:var(--green);font-weight:600;text-align:center;
   padding:9px 6px;margin-top:4px;border:1.5px dashed var(--light);border-radius:8px;cursor:pointer;}
-.tsec-add:hover{border-color:var(--green);background:#F7FAF6;}
+.tsec-add:hover{border-color:var(--green);background:#EFEEE9;}
 .tev-panel{display:flex;flex-direction:column;gap:6px;}
 .tsec-panel.menu .tsec-body{padding:12px 10px 4px;}
 .tev-card{display:flex;flex-direction:column;background:#fff;border-radius:10px;
@@ -455,15 +458,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:7px 12px;width:100%;transition:all .15s;}
 .tev-add-btn:hover{border-color:var(--green);color:var(--green);}
 .tcard-total{display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px;background:#D8D3CD;border-top:none;font-size:13px;cursor:pointer;}
-.tcard-total:active{background:#C2BDB6;}
-.tcard-total-lbl{color:#6E6860;}
+  padding:10px 12px;background:rgba(184,202,217,.3);border-top:none;font-size:13px;cursor:pointer;}
+.tcard-total:active{background:rgba(184,202,217,.45);}
+.tcard-total-lbl{color:rgba(24,30,64,.65);}
 .tcard-total-right{display:flex;align-items:center;gap:6px;}
-.tcard-total-val{font-weight:700;color:#6E6860;font-size:15px;}
-.tcard-total-chev{font-size:11px;color:#6E6860;transition:transform .2s;}
-.tcard-total-detail{background:#E4E0D9;padding:4px 14px 10px;}
-.ttd-line{display:flex;justify-content:space-between;font-size:12px;color:#6E6860;padding:3px 0;}
-.ttd-sep{border-top:1px solid rgba(0,0,0,.15);margin-top:5px;padding-top:7px!important;color:#6E6860!important;font-weight:700;font-size:13px!important;}
+.tcard-total-val{font-weight:700;color:rgba(24,30,64,.65);font-size:15px;}
+.tcard-total-chev{font-size:11px;color:rgba(24,30,64,.65);transition:transform .2s;}
+.tcard-total-detail{background:rgba(184,202,217,.2);padding:4px 14px 10px;}
+.ttd-line{display:flex;justify-content:space-between;font-size:12px;color:rgba(24,30,64,.65);padding:3px 0;}
+.ttd-sep{border-top:1px solid rgba(0,0,0,.15);margin-top:5px;padding-top:7px!important;color:rgba(24,30,64,.65)!important;font-weight:700;font-size:13px!important;}
 .ttd-subline{padding-left:12px!important;font-size:11px!important;font-weight:600;opacity:.9;}
 .ttd-subitem{padding-left:24px!important;font-size:10.5px!important;opacity:.7;}
 .ttd-subitem span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -472,7 +475,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tbar{width:5px;flex-shrink:0;align-self:stretch;}
 .tcard-content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tcard-header{display:flex;align-items:center;gap:0;padding:0;cursor:pointer;}
-.tcard-header:active{background:#F5F0E8;}
+.tcard-header:active{background:#EFEEE9;}
 .tcard-header-inner{flex:1;display:flex;align-items:center;gap:10px;padding:13px 14px;}
 .tinfo{flex:1;}
 .tname{font-weight:700;font-size:15px;color:var(--dark);}
@@ -483,7 +486,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .t-empty-icon{font-size:44px;margin-bottom:10px;}
 /* Extras chips */
 .tcard-extbtn{display:flex;align-items:center;gap:8px;padding:7px 12px;
-  cursor:pointer;border-top:1px solid var(--light);background:#FAFAF8;transition:background .15s;}
+  cursor:pointer;border-top:1px solid var(--light);background:#EFEEE9;transition:background .15s;}
 .tcard-extbtn:hover{background:var(--light);}
 .extbtn-label{font-size:11px;color:var(--gray);font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
 .extbtn-total{font-size:12px;color:var(--green);font-weight:700;margin-left:auto;}
@@ -495,14 +498,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   letter-spacing:.05em;font-weight:600;}
 .catalog-link{font-size:10px;color:var(--gray);text-decoration:underline;
   cursor:pointer;background:none;border:none;padding:0;font-family:'Jost',sans-serif;}
-.extras-cat{font-size:10px;color:#B0A898;margin:5px 0 3px;font-style:italic;}
+.extras-cat{font-size:10px;color:rgba(24,30,64,.5);margin:5px 0 3px;font-style:italic;}
 .extras-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:2px;}
 .xchip{display:inline-flex;align-items:center;gap:3px;padding:5px 9px;
   border:1.5px solid var(--light);border-radius:16px;cursor:pointer;
   font-size:11px;font-weight:500;background:#fff;color:var(--dark);
   transition:all .15s;user-select:none;font-family:'Jost',sans-serif;}
 .xchip:hover{border-color:#bbb;}
-.xchip.on{background:#E8E3DB;border-color:var(--green);color:#3D5C35;}
+.xchip.on{background:rgba(184,202,217,.35);border-color:var(--green);color:#808ABF;}
 .xchip-qty{background:var(--green);color:#fff;border-radius:10px;
   padding:1px 6px;font-size:10px;font-weight:700;margin-left:2px;}
 .xchip-price{font-size:10px;opacity:.5;margin-left:2px;}
@@ -529,7 +532,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
 .wsm-lbl{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wsm-sub{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;}
-.wsm-total{background:#3D5C35;border-radius:12px;padding:16px 10px 14px;
+.wsm-total{background:#808ABF;border-radius:12px;padding:16px 10px 14px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
 .wsm-total .wsm-val{font-size:30px;}
 .wsm-total .wsm-lbl{font-size:11px;}
@@ -623,8 +626,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-label{flex:1;border:none;background:transparent;font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);outline:none;min-width:0;}
 .mch-amount{width:80px;border:none;background:transparent;font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);text-align:right;outline:none;}
 .mch-period{padding:3px 9px;border-radius:10px;border:1.5px solid var(--light);font-family:'Jost',sans-serif;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all .15s;}
-.mch-period.annual{background:#F5F0E8;color:var(--earth);border-color:var(--earth);}
-.mch-period.monthly{background:#F0F5EE;color:var(--green);border-color:var(--green);}
+.mch-period.annual{background:#EFEEE9;color:var(--earth);border-color:var(--earth);}
+.mch-period.monthly{background:#EFEEE9;color:var(--green);border-color:var(--green);}
 .mch-del{width:26px;height:26px;border:none;background:none;cursor:pointer;color:#ccc;font-size:15px;display:flex;align-items:center;justify-content:center;border-radius:4px;flex-shrink:0;}
 .mch-del:hover{color:#e44;background:#FFF0F0;}
 .mch-add{background:none;border:1.5px dashed var(--light);border-radius:8px;font-family:'Jost',sans-serif;font-size:12px;color:var(--gray);cursor:pointer;padding:7px 12px;width:100%;margin-top:8px;transition:all .15s;}
@@ -758,7 +761,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .warn{color:var(--danger);font-size:11px;margin-bottom:4px;}
 
 /* ─── MODAL SECTIONS ─────────────────────────────────────────── */
-.msec{display:flex;flex-direction:column;gap:10px;background:#F8F6F2;border-radius:10px;
+.msec{display:flex;flex-direction:column;gap:10px;background:#EFEEE9;border-radius:10px;
   padding:12px 14px;border:1px solid var(--light);margin-bottom:8px;}
 .msec-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;
   text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
@@ -800,7 +803,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .glist-sep:first-child{padding-top:0;}
 .gline{display:flex;align-items:center;gap:10px;padding:9px 0;
   border-bottom:1px solid var(--light);cursor:pointer;}
-.gline:hover{background:#FAFAF7;}
+.gline:hover{background:#EFEEE9;}
 .cswatch{width:30px;height:30px;border-radius:50%;border:2px solid rgba(0,0,0,.1);flex-shrink:0;}
 .gline-info{flex:1;}
 .gline-name{font-weight:500;font-size:13px;}
@@ -811,7 +814,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   background:#fff;font-size:19px;cursor:pointer;display:flex;align-items:center;justify-content:center;
   filter:grayscale(1);opacity:.5;transition:filter .15s,opacity .15s,border-color .15s;}
 .rating-chip:hover{border-color:#bbb;opacity:.8;}
-.rating-chip.on{filter:grayscale(0);opacity:1;border-color:var(--green);background:#F7FAF6;}
+.rating-chip.on{filter:grayscale(0);opacity:1;border-color:var(--green);background:#EFEEE9;}
 
 /* Mobile bottom nav */
 .mbnav{display:none;height:54px;background:var(--white);
@@ -820,7 +823,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Jost',sans-serif;font-size:9px;color:var(--gray);cursor:pointer;
   letter-spacing:.03em;text-transform:uppercase;}
-.mbnav-btn.on{color:var(--green);background:#E8E3DB;border-radius:10px;}
+.mbnav-btn.on{color:var(--green);background:rgba(184,202,217,.35);border-radius:10px;}
 .mbnav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
 
 @media(max-width:599px){
@@ -856,7 +859,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    mois de la grille principale (.msep-label) plutôt qu'un bandeau épais — et
    cliquable pour replier/déplier le mois (fermé par défaut pour les mois
    antérieurs au mois en cours). */
-.evmonth-sep{background:var(--dark);color:#F0EBE0;font-family:'Jost',sans-serif;
+.evmonth-sep{background:var(--dark);color:#EFEEE9;font-family:'Jost',sans-serif;
   font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
   padding:4px 18px;margin:14px -18px 0;
   display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -882,7 +885,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .evcard:hover{opacity:.75;}
 /* Repère bref sur la carte visée en arrivant depuis le clic sur un jour de
    la grille (voir openDayEvent) — s'efface tout seul après coup. */
-.evcard.evcard-flash{background-color:rgba(61,92,53,.14);}
+.evcard.evcard-flash{background-color:rgba(128,138,191,.14);}
 /* Jour férié dans la liste : pas un vrai événement à éditer/supprimer, donc
    pas de survol interactif (le calcul reste en lecture seule). */
 .evcard.evcard-holiday{cursor:default;}
@@ -927,7 +930,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-color::-moz-color-swatch{border:none;border-radius:50%;}
 /* Chaque donnée modifiable des réglages = un bloc bien dissocié : cartouche
    beige pour le contenu, cartouche blanc pour chaque champ personnalisable. */
-.set-card{background:#F7F5F1;border-radius:10px;padding:12px;margin-bottom:10px;}
+.set-card{background:#EFEEE9;border-radius:10px;padding:12px;margin-bottom:10px;}
 .set-card:last-of-type{margin-bottom:0;}
 .set-card.set-card-new{background:transparent;border:1.5px dashed var(--light);}
 .set-card-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
@@ -943,7 +946,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .sc-field .set-fi-sm{padding:5px 0;text-align:left;width:32px;background:transparent;}
 .sc-field .sc-unit{font-size:11px;color:var(--gray);flex-shrink:0;}
 .sc-field select{width:100%;padding:7px 8px;background:#fff;}
-.set-card-sub{padding-top:10px;margin-top:10px;border-top:1px solid #E8E4DC;}
+.set-card-sub{padding-top:10px;margin-top:10px;border-top:1px solid #B8CAD9;}
 .set-card-sub-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);margin-bottom:6px;}
 .set-card-sub .set-tariff-row,.set-card-sub .set-tariff-hd,.set-card .set-tariff-row,.set-card .set-tariff-hd{background:transparent;}
 .set-card .mch-row{border-bottom:none;padding:3px 0;}
@@ -976,18 +979,18 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-bar-val{font-size:9px;font-weight:600;color:var(--dark);text-align:center;white-space:nowrap;margin-bottom:2px;}
 .yr-bar-stack{display:flex;flex-direction:column;width:100%;}
 .yr-bar-seg{width:100%;}
-.yr-bar-sasu{background:#3D5C35;border-radius:2px 2px 0 0;}
-.yr-bar-lmnp{background:#8B9D86;}
+.yr-bar-sasu{background:#808ABF;border-radius:2px 2px 0 0;}
+.yr-bar-lmnp{background:#B8CAD9;}
 .yr-bar-lmnp:first-child{border-radius:2px 2px 0 0;}
 .yr-bar-mon{font-size:8px;color:var(--gray);text-transform:uppercase;letter-spacing:.03em;width:100%;text-align:center;padding-top:2px;}
-.yr-bar-col.yr-cur .yr-bar-sasu{background:#5A8C4A;}
-.yr-bar-col.yr-cur .yr-bar-lmnp{background:#AEBFA9;}
+.yr-bar-col.yr-cur .yr-bar-sasu{background:#181E40;}
+.yr-bar-col.yr-cur .yr-bar-lmnp{background:#181E40;}
 .yr-chart-nodata{font-size:12px;color:var(--gray);text-align:center;padding:16px 0;}
 .yr-fiscal{display:flex;flex-direction:column;gap:8px;}
 .yr-fiscal-item{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;
   padding:10px 12px;border:1.5px solid var(--light);border-left-width:4px;transition:opacity .15s;}
 .yr-fiscal-item.past{opacity:.4;}
-.yr-fiscal-item.soon{background:#FFFAF5;}
+.yr-fiscal-item.soon{background:rgba(184,202,217,.25);}
 .yr-fiscal-stamp{width:40px;min-width:40px;border-radius:7px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;padding:5px 2px;text-align:center;align-self:stretch;}
 .yr-fiscal-day{font-size:18px;font-weight:700;color:#fff;line-height:1.1;}
@@ -1007,7 +1010,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-regl-item:last-child{border-bottom:none;}
 
 /* ─── GUEST HISTORY ────────────────────────────────────────── */
-.geh-wrap{background:#F8F6F2;border-radius:10px;padding:12px 14px;border:1px solid var(--light);margin-bottom:8px;}
+.geh-wrap{background:#EFEEE9;border-radius:10px;padding:12px 14px;border:1px solid var(--light);margin-bottom:8px;}
 .geh-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
 .geh-sum{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .geh-sum-chip{background:#fff;border:1px solid var(--light);border-radius:14px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--dark);}
@@ -1024,11 +1027,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .contract-doc{font-family:'Jost',sans-serif;font-size:13px;line-height:1.65;color:#222;padding:8px 4px 12px;}
 .contract-doc h1{font-size:20px;text-align:center;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--dark);}
 .contract-rule{width:64px;height:2px;background:var(--green);margin:0 auto 28px;}
-.contract-meta{background:#F7F5F1;border-radius:8px;padding:16px 18px;margin-bottom:28px;}
+.contract-meta{background:#EFEEE9;border-radius:8px;padding:16px 18px;margin-bottom:28px;}
 .contract-meta p{margin:0 0 10px;}
 .contract-meta p:last-child{margin-bottom:0;}
 .contract-doc h2{font-size:12px;font-weight:700;margin:24px 0 8px;padding-bottom:6px;
-  text-transform:uppercase;letter-spacing:.05em;color:var(--green);border-bottom:1px solid #E8E4DC;}
+  text-transform:uppercase;letter-spacing:.05em;color:var(--green);border-bottom:1px solid #B8CAD9;}
 .contract-doc p{margin:0 0 8px;}
 .contract-sign-row{display:flex;justify-content:space-between;gap:32px;margin-top:56px;}
 .contract-sign{flex:1;text-align:center;border-top:1px solid #999;padding-top:8px;font-size:11px;color:#555;}
@@ -1238,7 +1241,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       <div class="warn" id="conflictWarn" style="display:none">
         ⚠️ Cette chambre est déjà prise sur ces dates
       </div>
-      <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:8px;padding:10px 12px;"></div>
+      <div id="freeRoomPicker" style="display:none;background:rgba(184,202,217,.15);border-radius:8px;padding:10px 12px;"></div>
       <div id="bContractSec" style="display:none;margin-top:14px">
         <button type="button" class="btn-p" style="width:100%" onclick="openContractPreview(editBid)">Générer le contrat de location</button>
       </div>
@@ -1758,7 +1761,7 @@ const MEAL_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" 
 // Palette "maison" des graphiques (revenus par structure en vue Année, camembert
 // des charges en vue Mois) — tons terre/vert cohérents avec le reste de
 // l'appli plutôt qu'une palette générique.
-const STRUCTURE_COLORS=['#3D5C35','#8B9D86','#B5A07A','#7A8CB5','#B57A8C','#8CB57A'];
+const STRUCTURE_COLORS=['#808ABF','#181E40','#B8CAD9','rgba(128,138,191,.55)','rgba(24,30,64,.7)','rgba(184,202,217,.7)'];
 // Même pictogramme que le bouton "Événements" du header — au trait, pas d'emoji.
 const EVENT_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
 // Pictogramme petit-déjeuner (tasse), même famille visuelle que les autres icônes du planning
@@ -1854,7 +1857,7 @@ const DEFAULT_SETTINGS={
   // ou 'nights' (nuits via plateformes vs limite). Un seul exemple par défaut (franchise de TVA,
   // seuil légal identique pour tous), purement informatif/déclaratif — à ajuster ou supprimer.
   structureThresholds:{
-    struct1:[{id:'th-tva',type:'revenue',label:'Franchise TVA',amount:85000,color:'#E07828'}],
+    struct1:[{id:'th-tva',type:'revenue',label:'Franchise TVA',amount:85000,color:'#B8CAD9'}],
   },
   sources:[
     // colorOverride : si activé, la couleur de la source prend le dessus sur
@@ -2909,7 +2912,7 @@ byId('exportBtn').onclick=()=>{
   const menu=document.createElement('div');
   menu.style.cssText='position:fixed;top:52px;right:10px;background:var(--white);border:1px solid var(--light);border-radius:8px;box-shadow:var(--shadow);z-index:999;overflow:hidden;';
   menu.innerHTML=`
-    <div onclick="doExport();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;hover:background:#f5f0e8">⬇ Exporter JSON</div>
+    <div onclick="doExport();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;hover:background:#EFEEE9">⬇ Exporter JSON</div>
     <div onclick="byId('importFile').click();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;border-top:1px solid var(--light)">⬆ Importer JSON</div>
   `;
   document.body.appendChild(menu);
@@ -3068,7 +3071,7 @@ function renderGrid(){
       const ec=dayEvs[0].color||'#A8C5A0';
       const lc=light(ec);
       const evTitles=dayEvs.map(ev=>ev.title).join(', ');
-      dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:${lc?'#2C2C2C':'#fff'}" title="${evTitles}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:${lc?'#181E40':'#fff'}" title="${evTitles}">${date.getDate()}</div>`;
     } else if(holidayName){
       dayTd.innerHTML=`<div class="holiday-daynum" title="${holidayName}">${date.getDate()}</div>`;
     } else if(fiscalEv){
@@ -3195,8 +3198,8 @@ function renderGrid(){
     // Un événement personnel ce jour-là prend le dessus sur le tag du jour
     // férié, à l'identique de la pastille du numéro de jour — pas de mélange.
     let evTdHtml=evs.length?evs.map(ev=>{
-      const lc=light(ev.color||'#E8E4DC');
-      return`<span class="etag" style="background:${ev.color||'#E8E4DC'};color:${lc?'#2C2C2C':'#FFF'}">${ev.title}</span>`;
+      const lc=light(ev.color||'#B8CAD9');
+      return`<span class="etag" style="background:${ev.color||'#B8CAD9'};color:${lc?'#181E40':'#FFF'}">${ev.title}</span>`;
     }).join(' '):(holidayName?`<span class="holiday-tag">${holidayName}</span>`:'');
     evTd.innerHTML=evTdHtml;
     tr.appendChild(evTd);
@@ -3329,7 +3332,7 @@ function extDinerStayCard(e,ds){
   const xd=getExtDinerExtrasTotal(e);
   const extLabel=xd>0?`<span class="extbtn-total">${xd.toLocaleString('fr-FR')} €</span>`:`<span class="extbtn-add">+</span>`;
   return`<div class="tcard">
-    <div class="tbar" style="background:${eg?eg.color:'#B5A07A'}"></div>
+    <div class="tbar" style="background:${eg?eg.color:'#B8CAD9'}"></div>
     <div class="tcard-content">
       <div class="tcard-header"${eg?` onclick="openGuestEdit('${eg.id}')"`:''}>
         <div class="tcard-header-inner">
@@ -3443,7 +3446,7 @@ function renderToday(){
       const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
       const isCin=ds===bk.checkIn;
       const isCout=addDays(ds,1)===bk.checkOut;
-      numCol=light(dispCol)?'#2C2C2C':'#fff';
+      numCol=light(dispCol)?'#181E40':'#fff';
       seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
     }
     // Case libre : même sélection de plage au clic que la Grille (1er clic =
@@ -3610,13 +3613,13 @@ function openContractPreview(bkId){
 const CONTRACT_DOC_CSS=`
   body{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.65;color:#222;margin:0;background:#fff;}
   .contract-doc{padding:8px 4px 12px;}
-  .contract-doc h1{font-size:20px;text-align:center;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:#2C2C2C;}
-  .contract-rule{width:64px;height:2px;background:#3D5C35;margin:0 auto 28px;}
+  .contract-doc h1{font-size:20px;text-align:center;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:#181E40;}
+  .contract-rule{width:64px;height:2px;background:#808ABF;margin:0 auto 28px;}
   .contract-meta{background:#F7F5F1;border-radius:8px;padding:16px 18px;margin-bottom:28px;}
   .contract-meta p{margin:0 0 10px;}
   .contract-meta p:last-child{margin-bottom:0;}
   .contract-doc h2{font-size:12px;font-weight:700;margin:24px 0 8px;padding-bottom:6px;
-    text-transform:uppercase;letter-spacing:.05em;color:#3D5C35;border-bottom:1px solid #E8E4DC;}
+    text-transform:uppercase;letter-spacing:.05em;color:#808ABF;border-bottom:1px solid #B8CAD9;}
   .contract-doc p{margin:0 0 8px;}
   .contract-sign-row{display:flex;justify-content:space-between;gap:32px;margin-top:56px;}
   .contract-sign{flex:1;text-align:center;border-top:1px solid #999;padding-top:8px;font-size:11px;color:#555;}
@@ -3659,16 +3662,16 @@ function buildContractPdfBlob(bk){
     y+=gapAfter||0;
   };
   const c=buildContractBlocks(bk);
-  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor('#2C2C2C');
+  doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor('#181E40');
   doc.text(c.title.toUpperCase(),pageW/2,y,{align:'center'});
   y+=3;
-  doc.setDrawColor('#3D5C35');doc.setLineWidth(.6);
+  doc.setDrawColor('#808ABF');doc.setLineWidth(.6);
   doc.line(pageW/2-16,y,pageW/2+16,y);
   y+=16;
   c.intro.forEach((t,i)=>para(t,11,'normal',i===c.intro.length-1?12:6));
   c.articles.forEach(a=>{
     ensureRoom(20);
-    para(a.h.toUpperCase(),11,'bold',3,'#3D5C35');
+    para(a.h.toUpperCase(),11,'bold',3,'#808ABF');
     para(a.p,11,'normal',10);
   });
   para(c.closing,11,'normal',32);
@@ -4013,7 +4016,7 @@ function doModalSwap(){
   if(S.view==='week')renderWeek();
   if(S.view==='month')renderMonth();
   const names=conflicts.map(cb=>guest(cb.guestId)?.name||'?').join(', ');
-  flash('⇄ Interverti avec '+names,'#3D5C35');
+  flash('⇄ Interverti avec '+names,'#808ABF');
 }
 
 function saveBooking(){
@@ -4277,7 +4280,7 @@ function renderGeHistory(id){
     const rev=getStayTotal(b);
     const isPast=b.checkOut<=today;
     const isOngoing=b.checkIn<today&&b.checkOut>today;
-    const col=isOngoing?'var(--green)':isPast?'#C0B9B0':'#3D5C35';
+    const col=isOngoing?'var(--green)':isPast?'rgba(24,30,64,.3)':'#808ABF';
     const src=getSource(b.source);
     return`<div class="geh-row">
       <div class="geh-dot" style="background:${col}"></div>
@@ -4352,7 +4355,7 @@ function renderEvList(term){
   const badge=(ds,col)=>{
     const d=new Date(ds+'T00:00:00');
     const lc=light(col);
-    return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+    return`<div class="evdate-badge" style="background:${col};color:${lc?'#181E40':'#fff'}">
       <div class="evdate-day">${d.getDate()}</div>
       <div class="evdate-mon">${MON3[d.getMonth()]}</div>
     </div>`;
@@ -5174,7 +5177,7 @@ function onDrop(newRid,_ds){
   if(conflicts.length===0){
     S.bookings[i]={...bk,roomId:newRid};
     persist();renderGrid();dragBid=null;
-    flash('✓ '+room(newRid)?.name,'#3D5C35');
+    flash('✓ '+room(newRid)?.name,'#808ABF');
     return;
   }
 
@@ -5192,7 +5195,7 @@ function onDrop(newRid,_ds){
     });
     persist();renderGrid();dragBid=null;
     const names=conflicts.map(cb=>guest(cb.guestId)?.name||'?').join(', ');
-    flash('⇄ '+names+' → '+room(origRid)?.name,'#3D5C35');
+    flash('⇄ '+names+' → '+room(origRid)?.name,'#808ABF');
   } else {
     // Freed room also has conflicts — show a quick room picker
     const free=freeRooms(bk.checkIn,bk.checkOut,dragBid);
@@ -5319,11 +5322,11 @@ function migrateStructures(){
     S.settings.structureThresholds={};
     S.settings.structures.forEach(s=>{
       if(s.id==='sasu'){
-        S.settings.structureThresholds.sasu=[{id:uid(),type:'revenue',label:'Franchise TVA',amount:th.tva||91900,color:'#E07828'}];
+        S.settings.structureThresholds.sasu=[{id:uid(),type:'revenue',label:'Franchise TVA',amount:th.tva||91900,color:'#B8CAD9'}];
       } else if(s.id==='lmnp'){
         S.settings.structureThresholds.lmnp=[
-          {id:uid(),type:'revenue',label:'Seuil LMP',amount:th.lmnp||23000,color:'#E07828'},
-          {id:uid(),type:'nights',label:'Nuits plateformes',amount:th.platformNights||120,color:'#3D5C35'},
+          {id:uid(),type:'revenue',label:'Seuil LMP',amount:th.lmnp||23000,color:'#B8CAD9'},
+          {id:uid(),type:'nights',label:'Nuits plateformes',amount:th.platformNights||120,color:'#808ABF'},
         ];
       }
     });
@@ -5587,7 +5590,7 @@ function buildChargesDonut(breakdown){
     const restTotal=raw.slice(MAX_SLICES-1).reduce((s,[,v])=>s+v,0);
     raw=[...shown,['Autres',restTotal]];
   }
-  const entries=raw.map(([label,val],i)=>({label,val,color:label==='Autres'?'#C7C2B8':STRUCTURE_COLORS[i%STRUCTURE_COLORS.length]}));
+  const entries=raw.map(([label,val],i)=>({label,val,color:label==='Autres'?'rgba(24,30,64,.28)':STRUCTURE_COLORS[i%STRUCTURE_COLORS.length]}));
   const{pathsHTML,segs,total,size}=buildDonutSlices(entries);
   const legendHTML=segs.map(s=>`<div class="mch-pie-row">
     <span class="mch-pie-dot" style="background:${s.color}"></span>
@@ -5616,7 +5619,7 @@ function buildSourceCountDonut(srcActive,srcMap){
   if(raw.length>MAX_SLICES){
     const shown=raw.slice(0,MAX_SLICES-1);
     const restTotal=raw.slice(MAX_SLICES-1).reduce((s,e)=>s+e.val,0);
-    raw=[...shown,{label:'Autres',val:restTotal,color:'#C7C2B8'}];
+    raw=[...shown,{label:'Autres',val:restTotal,color:'rgba(24,30,64,.28)'}];
   }
   const{pathsHTML,segs,total,size}=buildDonutSlices(raw);
   const legendHTML=segs.map(s=>`<div class="mch-pie-row">
@@ -5800,7 +5803,7 @@ function renderSettings(){
 
   // — Compte : identifiants Firebase et déconnexion —
   const accountBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Vos données sont liées à ce compte et ne sont visibles que par vous, où que vous vous connectiez.</div>
-    <div class="fg"><label class="fl">Connecté en tant que</label><div class="fi" style="background:var(--bg2,#f4f4f4);display:flex;align-items:center;">${currentUserEmail||'—'}</div></div>
+    <div class="fg"><label class="fl">Connecté en tant que</label><div class="fi" style="background:var(--bg2,#EFEEE9);display:flex;align-items:center;">${currentUserEmail||'—'}</div></div>
     <div class="fg"><label class="fl">Nouveau mot de passe</label><input type="password" class="fi" id="newPassword" placeholder="6 caractères minimum" autocomplete="new-password"></div>
     <div class="fg"><label class="fl">Confirmez</label><input type="password" class="fi" id="newPasswordConfirm" placeholder="Confirmez le mot de passe" autocomplete="new-password"></div>
     <button class="btn-p" style="width:100%" onclick="changePassword()">Changer le mot de passe</button>
@@ -6443,7 +6446,7 @@ function updateStructureType(id,type){
 function addStructureThreshold(sid){
   if(!S.settings.structureThresholds)S.settings.structureThresholds={};
   if(!S.settings.structureThresholds[sid])S.settings.structureThresholds[sid]=[];
-  S.settings.structureThresholds[sid].push({id:uid(),type:'revenue',label:'Nouveau seuil',amount:0,color:'#E07828'});
+  S.settings.structureThresholds[sid].push({id:uid(),type:'revenue',label:'Nouveau seuil',amount:0,color:'#B8CAD9'});
   saveSettings();renderSettings();
 }
 function delStructureThreshold(sid,tid){
@@ -6456,7 +6459,7 @@ function updateStructureThreshold(sid,tid,field,val){
   const t=arr&&arr.find(x=>x.id===tid);
   if(!t)return;
   t[field]=val;
-  if(field==='type')t.color=val==='nights'?'#3D5C35':'#E07828';
+  if(field==='type')t.color=val==='nights'?'#808ABF':'#B8CAD9';
   saveSettings();
   if(field==='type')renderSettings();
 }
@@ -6956,7 +6959,7 @@ function renderWeek(){
   const evDayBadge=(dds,col)=>{
     const dd=new Date(dds+'T00:00:00');
     const lc=light(col);
-    return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+    return`<div class="evdate-badge" style="background:${col};color:${lc?'#181E40':'#fff'}">
       <div class="evdate-day">${dd.getDate()}</div>
       <div class="evdate-mon">${MON3[dd.getMonth()]}</div>
     </div>`;
@@ -7460,7 +7463,7 @@ function renderMonth(){
       </div>`;
       if(bankExpandedCat===key){
         (txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).forEach(t=>{
-          h+=`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
+          h+=`<div class="mch-row" style="padding-left:10px;background:#EFEEE9" onclick="event.stopPropagation()">
             <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
             <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
             <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
@@ -7696,7 +7699,7 @@ function renderYear(){
     const lbl=label||'Nuits plateformes';
     const pct=Math.min(100,nights/limit*100);
     const cls=pct>=100?'yr-gauge-danger':pct>=80?'yr-gauge-warn':'';
-    const fillColor=cls?'#E07828':'#3D5C35';
+    const fillColor=cls?'#E07828':'#808ABF';
     return`<div class="yr-gauge${cls?' '+cls:''}">
       <div class="yr-gauge-top">
         <span class="yr-gauge-lbl">${lbl}${cls==='yr-gauge-danger'?' ⚠️':cls==='yr-gauge-warn'?' ⚡':''}</span>
@@ -7741,7 +7744,7 @@ function renderYear(){
     const nightsThr=(thresholdConfigs||[]).filter(t=>t.type==='nights');
     const showPlatform=nightsThr.length>0;
     const platLimit=nightsThr[0]?.amount||120;
-    const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#E07828',t.label)).join('')
+    const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#B8CAD9',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
     const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
           <div class="mstat-val">${st.platNights}</div>
