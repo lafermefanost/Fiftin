@@ -38,6 +38,12 @@ header{height:var(--hdr);background:var(--green);color:var(--cream);
    applySettings) : Fiftin s'efface derrière le pictogramme, place normale
    pour un outil en marque blanche vis-à-vis du client final. */
 .logo b{font-weight:600;color:#fff;}
+.role-badge{font-size:11px;font-weight:600;background:rgba(255,255,255,.18);
+  padding:2px 8px;border-radius:10px;margin-left:6px;}
+/* Sur mobile, la bar du header est déjà serrée (nom d'établissement +
+   icônes) — le badge Staff/Propriétaire est un confort, pas une info dont
+   on a besoin en permanence sous les yeux, donc il cède la place en premier. */
+@media(max-width:599px){.role-badge{display:none;}}
 .hbtn{width:34px;height:34px;border:none;border-radius:50%;
   background:rgba(255,255,255,.1);color:var(--cream);cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:16px;
@@ -5381,7 +5387,7 @@ function applySettings(){
   // applySettings() est rappelée à chaque réception de données et écraserait
   // sinon le badge à la première synchro venue.
   const roleBadgeLabel=currentRole==='personnel'?'Staff':'Propriétaire';
-  const roleBadge=` <span style="font-size:11px;font-weight:600;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;margin-left:6px;">${roleBadgeLabel}</span>`;
+  const roleBadge=` <span class="role-badge">${roleBadgeLabel}</span>`;
   // Le pictogramme (à côté, voir .app-icon) suffit à identifier Fiftin — dans
   // l'appli elle-même, l'espace du titre revient entièrement au nom de
   // l'établissement du client, qui est ce qui l'identifie lui, pas nous.
