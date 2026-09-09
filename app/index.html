@@ -1619,18 +1619,13 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       <div class="mtitle">Ajouter une charge</div>
       <button class="mclose" onclick="closeM('modalChargeAdd')">✕</button>
     </div>
+    <div style="font-size:12px;color:var(--gray);margin:-10px 0 16px" id="mchaMonthInfo"></div>
     <div class="msec">
-      <div class="frow">
-        <div class="fg">
-          <label class="fl">Date</label>
-          <input type="date" class="fi" id="mchaDate">
-        </div>
-        <div class="fg">
-          <label class="fl">Montant</label>
-          <div style="position:relative;">
-            <input type="number" class="fi" id="mchaAmount" placeholder="0" min="0" step="0.01" style="padding-right:26px;">
-            <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--gray);pointer-events:none;">€</span>
-          </div>
+      <div class="fg">
+        <label class="fl">Montant</label>
+        <div style="position:relative;">
+          <input type="number" class="fi" id="mchaAmount" placeholder="0" min="0" step="0.01" style="padding-right:26px;">
+          <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--gray);pointer-events:none;">€</span>
         </div>
       </div>
       <div class="fg">
@@ -1639,7 +1634,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       </div>
       <div class="fg">
         <label class="fl">Libellé <span style="font-weight:400;color:var(--gray)">(optionnel)</span></label>
-        <input type="text" class="fi" id="mchaLabel" placeholder="Ex. Frais SumUp septembre">
+        <input type="text" class="fi" id="mchaLabel" placeholder="Ex. Frais SumUp">
       </div>
     </div>
     <div class="macts">
@@ -5706,12 +5701,19 @@ function toggleChargeCategoryExcluded(id){
 // Ajout manuel d'une charge — pour ce qu'un import CSV ne couvre pas (un
 // document en PDF, un relevé qu'on ne veut pas importer ligne à ligne, une
 // dépense sans relevé du tout). Même modèle qu'une ligne importée, saisie
-// à la main : la structure (gid) est fixée par le bouton "+ Ajouter" cliqué,
-// pas modifiable dans le formulaire, pour rester aussi simple qu'un import.
-let manualChargeGid=null;
+// à la main : la structure (gid) est fixée par le bouton "+ Ajouter" cliqué.
+// Pas de champ date : la charge est délibérément rattachée au mois affiché
+// en vue Mois (S.mYear/S.mMonth) au moment du clic, jamais à la date du
+// jour — sinon une saisie faite après le 1er du mois pendant qu'on regarde
+// un mois passé (ex. le relevé d'août consulté début septembre) irait se
+// glisser dans le mauvais mois sans qu'on s'en rende compte.
+let manualChargeGid=null,manualChargeMonth=null;
 function openChargeAdd(gid){
   manualChargeGid=gid;
-  byId('mchaDate').value=todayISO();
+  manualChargeMonth={y:S.mYear,m:S.mMonth};
+  const st=(S.settings?.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const structLabel=st.find(s=>s.id===gid)?.name||'';
+  byId('mchaMonthInfo').textContent=`Ajoutée à ${MONTH_NAMES[S.mMonth]} ${S.mYear} — ${structLabel}`;
   byId('mchaAmount').value='';
   byId('mchaLabel').value='';
   const cats=S.settings.chargeCategories||[];
@@ -5721,9 +5723,10 @@ function openChargeAdd(gid){
   setTimeout(()=>byId('mchaAmount').focus(),50);
 }
 function saveManualCharge(){
-  const date=byId('mchaDate').value;
   const amount=parseFloat(String(byId('mchaAmount').value).replace(',','.'))||0;
-  if(!date||amount<=0){alert('Indique une date et un montant.');return;}
+  if(amount<=0){alert('Indique un montant.');return;}
+  const{y,m}=manualChargeMonth;
+  const date=`${y}-${p(m+1)}-01`;
   const label=byId('mchaLabel').value.trim();
   const categoryId=byId('mchaCategory').value;
   S.transactions.push({id:uid(),date,amount,direction:'Debit',counterparty:label||'Charge manuelle',description:'',type:'',categoryId,group:manualChargeGid||'sasu',manual:true});
