@@ -40,16 +40,10 @@
   /* le téléphone bleed hors de la section couverture — la coupure franche
      se fait à la frontière même entre la couverture et la section suivante
      (voir .cover{overflow:hidden; padding-bottom:0}), pas par un fondu. */
-  .hero-phone-wrap{margin:60px auto -180px; max-width:340px; display:flex; justify-content:center; position:relative;}
-  /* Plaque vert moyen entre le téléphone et le fond vert foncé de la
-     couverture — une surface intermédiaire plutôt qu'un simple à-plat,
-     dans l'esprit "le vert moyen alterne avec le vert foncé". */
-  .hero-phone-wrap::before{content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
-    width:376px; height:520px; background:var(--sauge); border-radius:40px; z-index:0;}
-  .hero-phone-wrap .phone2{width:320px; position:relative; z-index:1;}
-  @media (max-width:640px){ .hero-phone-wrap{margin:44px auto -138px; max-width:240px;}
-    .hero-phone-wrap::before{width:268px; height:372px; top:0; border-radius:30px;}
-    .hero-phone-wrap .phone2{width:228px;} }
+  .hero-phone-wrap{margin:20px auto -283px; max-width:760px; display:flex; justify-content:center; position:relative;}
+  .hero-phone-wrap .hero-shot{width:760px; max-width:100%; height:auto; display:block; position:relative; z-index:1;}
+  @media (max-width:640px){ .hero-phone-wrap{margin:10px auto -149px; max-width:400px;}
+    .hero-phone-wrap .hero-shot{width:400px;} }
 
   /* stat block */
   .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; margin:36px 0 8px;}
@@ -150,7 +144,7 @@
     object-fit:cover; border-radius:26px; display:block;}
   /* le téléphone est tronqué par le bas — coupure franche (overflow:hidden, pas de fondu) */
   .phone-stage{position:relative; overflow:hidden; height:368px;}
-  .phone-stage .phone2, .hero-phone-wrap .phone2, .phone-crop-side .phone2{will-change:transform;}
+  .phone-stage .phone2, .hero-phone-wrap .hero-shot, .phone-crop-side .phone2{will-change:transform;}
 
   /* deuxième façon de couper un écran, pour alterner avec le crop du bas :
      le téléphone est tronqué sur son bord extérieur (hors champ), le texte
@@ -199,7 +193,7 @@
     <h1>Fiftin,<br>reprenez vos <em>15 %</em>.</h1>
     <p>Le planning des chambres d'hôtes et des gîtes qui vous rend vos réservations, vos clients, et votre rentabilité.</p>
   </div>
-  <div class="hero-phone-wrap"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Vue du jour"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div>
+  <div class="hero-phone-wrap"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div>
 </section>
 
 <!-- BENEFICES -->
@@ -469,7 +463,7 @@
 <script>
 (function(){
   if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  var els = Array.prototype.slice.call(document.querySelectorAll('.phone-stage .phone, .hero-phone-wrap .phone'));
+  var els = Array.prototype.slice.call(document.querySelectorAll('.phone-stage .phone2, .hero-phone-wrap .hero-shot'));
   if (!els.length) return;
   var ticking = false;
   function update(){
