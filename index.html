@@ -136,13 +136,13 @@
      sur du vert (foncé réservé à l'entrée/la sortie de la page). */
   .mods-visual{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px; margin-top:36px;}
   .mod-visual{background:var(--sauge); color:var(--cream); border:none; border-radius:18px; overflow:hidden;
-    height:600px; padding:26px 26px 0; display:flex; flex-direction:column; align-items:center;}
+    height:720px; padding:26px 26px 0; display:flex; flex-direction:column; align-items:center;}
   .mod-visual .mv-text{width:100%;}
   .mod-visual h3{font-family:'Jost',sans-serif; font-size:19px; font-weight:600; margin:0 0 6px; color:var(--cream);}
   .mod-visual .claim{font-family:'Fraunces',serif; font-style:italic; font-size:15px; color:var(--terracotta-soft); margin:0 0 12px;}
   .mod-visual p{font-size:14px; line-height:1.55; color:rgba(245,240,229,0.82); margin:0;}
   .mod-visual .mv-shot{width:100%; flex:1; min-height:0; display:flex; justify-content:center; align-items:flex-end; margin-top:22px;}
-  @media (max-width:640px){ .mod-visual{height:560px; padding:20px 20px 0;} }
+  @media (max-width:640px){ .mod-visual{height:640px; padding:20px 20px 0;} }
 
   /* views */
   .views{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-top:32px;}
@@ -200,6 +200,17 @@
      hidden, pas de fondu), même repère que le hero. */
   .phone-stage{position:relative; overflow:hidden; height:383px;}
   .phone-stage .phone2, .hero-phone-wrap .hero-shot, .phone-crop-side .phone2{will-change:transform;}
+  /* Les 4 cartes .mod-visual ont leur téléphone plus grand que partout
+     ailleurs sur la page — recalculé pour la même coupure (juste sous la
+     barre des vues) à cette taille. Optique : le mockup lui-même penche
+     à droite dans son propre cadre (à l'inverse du hero, qui penchait à
+     gauche) — recentré en le décalant vers la gauche. */
+  .mod-visual .phone2{width:320px;}
+  .mod-visual .phone-stage{height:471px; transform:translateX(-7%);}
+  @media (max-width:640px){
+    .mod-visual .phone2{width:280px;}
+    .mod-visual .phone-stage{height:412px;}
+  }
 
   /* deuxième façon de couper un écran, pour alterner avec le crop du bas :
      le téléphone est tronqué sur son bord extérieur (hors champ), le texte
