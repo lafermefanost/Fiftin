@@ -54,7 +54,7 @@
   /* le téléphone bleed hors de la section couverture — la coupure franche
      se fait à la frontière même entre la couverture et la section suivante
      (voir .cover{overflow:hidden; padding-bottom:0}), pas par un fondu. */
-  .hero-phone-wrap{margin:0 auto -164px; max-width:850px; display:flex; justify-content:center; position:relative;}
+  .hero-phone-wrap{margin:0 auto -329px; max-width:850px; display:flex; justify-content:center; position:relative;}
   /* Le téléphone n'est pas centré dans son propre cadre (le poids visuel
      penche à gauche — bcp de marge vide à droite, voir le recadrage) : un
      centrage géométrique pur le fait paraître décalé à gauche. Recentré
@@ -66,13 +66,13 @@
      ce translateX (le téléphone n'était donc jamais vraiment recentré,
      seul le décalage vertical du parallax survivait). Séparer les deux
      éléments règle le conflit : chacun son transform, plus d'écrasement. */
-  .hero-shot-offset{transform:translateX(8%);}
+  .hero-shot-offset{transform:translateX(11%);}
   .hero-phone-wrap .hero-shot{width:850px; max-width:100%; height:auto; display:block; position:relative; z-index:1;}
   /* Sur mobile, la section garde son padding latéral (32px, voir la règle
      "section" plus bas) pour le texte — mais le téléphone, lui, déborde
      jusqu'au bord de l'écran (marges négatives égales au padding) pour
      rester bien grand malgré la largeur réduite de l'écran. */
-  @media (max-width:640px){ .hero-phone-wrap{margin:6px -32px -19.3vw; max-width:none;}
+  @media (max-width:640px){ .hero-phone-wrap{margin:6px -32px -38.7vw; max-width:none;}
     .hero-phone-wrap .hero-shot{width:100%;} }
 
   /* stat block */
@@ -183,10 +183,12 @@
   /* --- captures en situation : mockup fourni (assets/phone-mockup.png),
      cadre + écran déjà réunis dans une seule image — plus besoin de
      superposer une capture sur un cadre séparé comme avant. */
-  .phone2{width:198px; flex:none; position:relative;}
+  .phone2{width:260px; flex:none; position:relative;}
   .phone2 img{display:block; width:100%; height:auto;}
-  /* le téléphone est tronqué par le bas — coupure franche (overflow:hidden, pas de fondu) */
-  .phone-stage{position:relative; overflow:hidden; height:368px;}
+  /* le téléphone est tronqué par le bas, juste sous la barre des vues
+     (Grille/Location/Semaine/Mois/Année) — coupure franche (overflow:
+     hidden, pas de fondu), même repère que le hero. */
+  .phone-stage{position:relative; overflow:hidden; height:383px;}
   .phone-stage .phone2, .hero-phone-wrap .hero-shot, .phone-crop-side .phone2{will-change:transform;}
 
   /* deuxième façon de couper un écran, pour alterner avec le crop du bas :
@@ -208,7 +210,7 @@
   .shot-row{display:flex; gap:34px; flex-wrap:wrap; justify-content:center; margin-top:44px;}
   .shot-cap{font-size:12px; letter-spacing:.02em; color:rgba(46,43,34,0.5); text-align:center; margin:14px 0 0; font-weight:700;}
   .dark .shot-cap{color:rgba(245,240,229,0.55);}
-  @media (max-width:640px){ .phone2{width:172px;} .phone-stage{height:318px;} }
+  @media (max-width:640px){ .phone2{width:220px;} .phone-stage{height:324px;} }
 
   .quote{font-family:'Jost',sans-serif; font-size:clamp(22px,3.2vw,32px); line-height:1.35; font-weight:400; max-width:720px; margin:0;}
   .quote em{font-style:italic; color:var(--terracotta-soft);}
@@ -315,7 +317,7 @@
           <p class="claim">« Votre année entière, sur un écran — et le temps de dire oui au téléphone. »</p>
           <p>Une grille en barres colorées où chaque séjour se lit d'un coup d'œil, détection automatique des doubles réservations. Client, dates, chambre, table d'hôtes : quinze secondes, pendant que le voyageur est encore en ligne.</p>
         </div>
-        <div class="mv-shot"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — La grille"></div></div>
+        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — La grille"></div></div></div>
     </div>
 
     <div class="mods-visual">
