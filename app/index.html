@@ -397,6 +397,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-day-cell.sel-range{background:#E8F4E5 !important;}
 .rv-day-cell.sel-end{background:#D4EAD0 !important;outline:2px solid #5A8C54;outline-offset:-2px;}
 .rv-day-cell.sel-start.sel-end{outline:2px solid #354B38;}
+/* Repère du jour du jour lui-même (voir goToday) — léger contour vert,
+   distinct des contours de sélection ci-dessus qui sont plus appuyés. */
+.rv-day-cell.rv-day-today{outline:1.5px solid var(--green);outline-offset:-1.5px;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
@@ -552,6 +555,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
 .tsm-lbl{font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wday-card{background:#fff;border-radius:12px;padding:12px 14px;}
+/* Même repère que .rv-day-today (voir goToday) — léger contour vert sur
+   la carte du jour même, pour la retrouver d'un coup d'œil dans la liste. */
+.wday-card.wday-today{outline:1.5px solid var(--green);outline-offset:-1.5px;}
 .wday-head{display:flex;justify-content:space-between;align-items:baseline;
   background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .wday-card.collapsed .wday-head{margin:-12px -14px -12px;border-radius:10px;}
@@ -3490,7 +3496,8 @@ function renderToday(){
     // (seg.onclick=openEditModal ci-dessus), jamais une sélection.
     const emptyClick=bk?'':` onclick="startOrExtendRange('${rm.id}','${ds}')"`;
     const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
-    return`<div class="rv-day-cell" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    const isToday=ds===todayIso;
+    return`<div class="rv-day-cell${isToday?' rv-day-today':''}" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
   };
   const monthBlock=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
@@ -7645,13 +7652,38 @@ function thisYear(){
   renderYear();
 }
 
+// "Aujourd'hui" ramène sur aujourd'hui SANS changer de vue — chaque vue a
+// son propre repère du jour même (voir .rv-day-today / .wday-today /
+// #row-today), pas un unique renvoi vers la Grille comme avant.
 function goToday(){
   S.year=new Date().getFullYear();
   byId('yrLabel').textContent=S.year;
-  if(S.view!=='grid'){setView('grid');return;}
-  // Ensure this year is rendered
-  renderGrid();
-  setTimeout(()=>byId('row-today')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+  const todayIso=todayISO();
+  if(S.view==='grid'){
+    renderGrid();
+    setTimeout(()=>byId('row-today')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+    return;
+  }
+  if(S.view==='today'){
+    renderToday();
+    setTimeout(()=>document.querySelector('.rv-day-today')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+    return;
+  }
+  if(S.view==='week'){
+    S.wStart=getMondayOf(todayIso);
+    renderWeek();
+    setTimeout(()=>document.querySelector('.wday-today')?.scrollIntoView({behavior:'smooth',block:'center'}),80);
+    return;
+  }
+  if(S.view==='month'){
+    thisMonth();
+    return;
+  }
+  if(S.view==='year'){
+    renderYear();
+    return;
+  }
+  setView('grid');
 }
 
 // ═══════════════════════════════════════════════════════════════
