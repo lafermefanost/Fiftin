@@ -54,13 +54,20 @@
   /* le téléphone bleed hors de la section couverture — la coupure franche
      se fait à la frontière même entre la couverture et la section suivante
      (voir .cover{overflow:hidden; padding-bottom:0}), pas par un fondu. */
-  .hero-phone-wrap{margin:0 auto -290px; max-width:1500px; display:flex; justify-content:center; position:relative;}
+  .hero-phone-wrap{margin:0 auto -164px; max-width:850px; display:flex; justify-content:center; position:relative;}
   /* Le téléphone n'est pas centré dans son propre cadre (le poids visuel
      penche à gauche — bcp de marge vide à droite, voir le recadrage) : un
      centrage géométrique pur le fait paraître décalé à gauche. Recentré
      optiquement en le décalant vers la droite, dans la marge vide déjà
-     là — translateX en %, donc valable à toutes les tailles d'écran. */
-  .hero-phone-wrap .hero-shot{width:1500px; max-width:100%; height:auto; display:block; position:relative; z-index:1; transform:translateX(8%);}
+     là — translateX en %, donc valable à toutes les tailles d'écran.
+     Posé sur un wrapper dédié (.hero-shot-offset), PAS sur .hero-shot :
+     le script de parallax plus bas écrit directement el.style.transform
+     sur .hero-shot à chaque scroll, ce qui écrasait purement et simplement
+     ce translateX (le téléphone n'était donc jamais vraiment recentré,
+     seul le décalage vertical du parallax survivait). Séparer les deux
+     éléments règle le conflit : chacun son transform, plus d'écrasement. */
+  .hero-shot-offset{transform:translateX(8%);}
+  .hero-phone-wrap .hero-shot{width:850px; max-width:100%; height:auto; display:block; position:relative; z-index:1;}
   /* Sur mobile, la section garde son padding latéral (32px, voir la règle
      "section" plus bas) pour le texte — mais le téléphone, lui, déborde
      jusqu'au bord de l'écran (marges négatives égales au padding) pour
@@ -173,16 +180,11 @@
 
 
 
-  /* --- captures en situation : vrai mockup fourni (mockup-phone.png) ---
-     Cadre en image plutôt que redessiné en CSS : la capture (.p2-shot) est
-     posée en dessous, cadrée sur la zone d'écran réelle du fichier (mesurée
-     sur le PNG : x 84–1426 / y 88–2871 d'un canevas 1534×2984, soit environ
-     5,5%/3% de marge et 87,5%/93,5% de large/haut) ; le cadre (.p2-frame)
-     par-dessus, cadre + encoche déjà inclus dans son opacité. */
+  /* --- captures en situation : mockup fourni (assets/phone-mockup.png),
+     cadre + écran déjà réunis dans une seule image — plus besoin de
+     superposer une capture sur un cadre séparé comme avant. */
   .phone2{width:198px; flex:none; position:relative;}
-  .phone2 .p2-frame{display:block; width:100%; height:auto; position:relative; z-index:1;}
-  .phone2 .p2-shot{position:absolute; z-index:0; left:5.5%; top:2.95%; width:87.4%; height:93.3%;
-    object-fit:cover; border-radius:26px; display:block;}
+  .phone2 img{display:block; width:100%; height:auto;}
   /* le téléphone est tronqué par le bas — coupure franche (overflow:hidden, pas de fondu) */
   .phone-stage{position:relative; overflow:hidden; height:368px;}
   .phone-stage .phone2, .hero-phone-wrap .hero-shot, .phone-crop-side .phone2{will-change:transform;}
@@ -242,7 +244,7 @@
     <h1>Reprenez vos <em>15&nbsp;%</em>,<br>avec Fiftin.</h1>
     <p>Le planning chambres d'hôtes et gîtes conçu pour vous rendre votre temps, votre autonomie et votre rentabilité.</p>
   </div>
-  <div class="hero-phone-wrap"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div>
+  <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div></div>
 </section>
 
 <!-- PROPRIETE DU CLIENT -->
@@ -313,7 +315,7 @@
           <p class="claim">« Votre année entière, sur un écran — et le temps de dire oui au téléphone. »</p>
           <p>Une grille en barres colorées où chaque séjour se lit d'un coup d'œil, détection automatique des doubles réservations. Client, dates, chambre, table d'hôtes : quinze secondes, pendant que le voyageur est encore en ligne.</p>
         </div>
-        <div class="mv-shot"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — La grille"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div>
+        <div class="mv-shot"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — La grille"></div></div>
     </div>
 
     <div class="mods-visual">
@@ -323,7 +325,7 @@
           <p class="claim">« Vos habitués sont à vous. »</p>
           <p>L'historique complet de chaque client, ses préférences, ses séjours passés, ses coordonnées. De quoi le reconnaître, le rappeler et le fidéliser — sans passer par personne.</p>
         </div>
-        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Fiche client"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div>
+        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — Fiche client"></div></div></div>
       </div>
       <div class="mod-visual">
         <div class="mv-text">
@@ -331,7 +333,7 @@
           <p class="claim">« Sachez-le avant votre comptable. »</p>
           <p>CA réalisé, projections mensuelles et annuelles, seuil de franchise TVA suivi en direct, statuts SASU et LMNP distingués, charges importées du relevé bancaire, marge par chambre et par gîte.</p>
         </div>
-        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Année"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div>
+        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — Année"></div></div></div>
       </div>
       <div class="mod-visual">
         <div class="mv-text">
@@ -339,7 +341,7 @@
           <p class="claim">« Rien ne se perd en route. »</p>
           <p>Table d'hôtes, boissons, options du petit-déjeuner : chaque extra se note d'un geste au moment où il se passe. Au départ, le séjour est complet.</p>
         </div>
-        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Consommations"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div>
+        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — Consommations"></div></div></div>
       </div>
     </div>
   </div>
@@ -363,7 +365,7 @@
     <p class="small">Aucune installation compliquée. Aucun logiciel à mettre à jour.</p>
 
     <div class="shot-row">
-      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — La grille, lisible au pouce"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">La grille, lisible au pouce</p></div>
+      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — La grille, lisible au pouce"></div></div></div><p class="shot-cap">La grille, lisible au pouce</p></div>
     </div>
   </div>
 </section>
@@ -375,7 +377,7 @@
     <h2>Votre planning ne contient pas<br><em>que des clients.</em></h2>
     <p class="big">Travaux entre deux saisons, plombier, piscine, l'anniversaire qu'on ne déplace pas. Ça pèse sur vos disponibilités comme une réservation — et ça vit aujourd'hui ailleurs, dans un autre agenda.</p>
     <div class="shot-split">
-      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Vos événements, à côté des séjours"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Vos événements, à côté des séjours</p></div>
+      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — Vos événements, à côté des séjours"></div></div></div><p class="shot-cap">Vos événements, à côté des séjours</p></div>
       <div class="txt"><p class="big" style="margin:0;">Repas de famille, interventions, anniversaires : tout au même endroit que les réservations.</p></div>
     </div>
 
