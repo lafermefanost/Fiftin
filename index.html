@@ -126,31 +126,23 @@
   .mod.mod-sauge p{color:rgba(245,240,229,0.82);}
   .mod.mod-lav{background:var(--lavender-bg); border-color:transparent;}
 
-  /* pour le visuel le plus important d'une section : l'appareil occupe
-     quasi toute la largeur du bloc, au lieu de la taille standard des
-     cartes — réservé aux captures qui portent vraiment la démonstration.
-     Fond vert moyen : toute mise en situation téléphone vit sur du vert
-     (foncé réservé à l'entrée/la sortie de la page, moyen partout ailleurs). */
-  .mod-hero{background:var(--sauge); color:var(--cream); border:none; border-radius:18px; padding:32px; margin-top:36px;
-    display:flex; flex-direction:column; align-items:center;}
-  .mod-hero .mv-text{width:100%; max-width:640px; text-align:center; margin-bottom:28px;}
-  .mod-hero h3{font-family:'Jost',sans-serif; font-size:24px; font-weight:600; margin:0 0 8px; color:var(--cream);}
-  .mod-hero .claim{font-family:'Fraunces',serif; font-style:italic; font-size:17px; color:var(--terracotta-soft); margin:0 0 14px;}
-  .mod-hero p{font-size:15.5px; line-height:1.6; color:rgba(245,240,229,0.82); margin:0;}
-  .mod-hero .mv-shot{width:100%; display:flex; justify-content:center;}
-  @media (max-width:640px){ .mod-hero{padding:20px;} .mod-hero h3{font-size:20px;} }
-
-  /* variante grille de features — chaque point est illustré par sa propre
-     capture (téléphone ou tablette), pas par une rangée d'écrans détachée
-     du texte. Même fond vert moyen que .mod-hero, pour la même raison. */
+  /* Les 4 mises en situation (planning, fichier client, comptabilité,
+     consommations) sont désormais un seul jeu de cartes, toutes de même
+     taille (hauteur fixe) — le planning n'a plus de traitement "hero" à
+     part. Le téléphone est collé au bord bas de la carte (pas de padding
+     sous .mv-shot, .mod-visual passe overflow:hidden) : il a l'air
+     intégré dans le cartouche, coupé par lui plutôt que posé dedans avec
+     une marge. Fond vert moyen : toute mise en situation téléphone vit
+     sur du vert (foncé réservé à l'entrée/la sortie de la page). */
   .mods-visual{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px; margin-top:36px;}
-  .mod-visual{background:var(--sauge); color:var(--cream); border:none; border-radius:18px; padding:26px;
-    display:flex; flex-direction:column; align-items:center;}
+  .mod-visual{background:var(--sauge); color:var(--cream); border:none; border-radius:18px; overflow:hidden;
+    height:600px; padding:26px 26px 0; display:flex; flex-direction:column; align-items:center;}
   .mod-visual .mv-text{width:100%;}
   .mod-visual h3{font-family:'Jost',sans-serif; font-size:19px; font-weight:600; margin:0 0 6px; color:var(--cream);}
   .mod-visual .claim{font-family:'Fraunces',serif; font-style:italic; font-size:15px; color:var(--terracotta-soft); margin:0 0 12px;}
   .mod-visual p{font-size:14px; line-height:1.55; color:rgba(245,240,229,0.82); margin:0;}
-  .mod-visual .mv-shot{display:flex; justify-content:center; margin-top:22px;}
+  .mod-visual .mv-shot{width:100%; flex:1; min-height:0; display:flex; justify-content:center; align-items:flex-end; margin-top:22px;}
+  @media (max-width:640px){ .mod-visual{height:560px; padding:20px 20px 0;} }
 
   /* views */
   .views{display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:16px; margin-top:32px;}
@@ -217,7 +209,7 @@
   .phone-crop-side.crop-right .phone2{margin-left:0;}
   @media (max-width:640px){ .phone-crop-side{width:124px;} .phone-crop-side.crop-left .phone2{margin-left:-48px;} }
 
-  /* toute mise en situation téléphone (hors .mod-hero/.mod-visual, déjà en
+  /* toute mise en situation téléphone (hors .mod-visual, déjà en
      carte) repose sur un fond vert moyen — jamais posée nue sur le fond
      crème ou directement sur le vert foncé d'une section .dark. */
   .phone-card{background:var(--sauge); border-radius:18px; padding:22px; display:inline-flex; justify-content:center;}
@@ -331,16 +323,15 @@
       </div>
     </div>
 
-    <div class="mod-hero">
-      <div class="mv-text">
+    <div class="mods-visual">
+      <div class="mod-visual">
+        <div class="mv-text">
           <h3>Le planning &amp; la réservation</h3>
           <p class="claim">« Votre année entière, sur un écran — et le temps de dire oui au téléphone. »</p>
           <p>Une grille en barres colorées où chaque séjour se lit d'un coup d'œil, détection automatique des doubles réservations. Client, dates, chambre, table d'hôtes : quinze secondes, pendant que le voyageur est encore en ligne.</p>
         </div>
         <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/phone-mockup.png" alt="Fiftin — La grille"></div></div></div>
-    </div>
-
-    <div class="mods-visual">
+      </div>
       <div class="mod-visual">
         <div class="mv-text">
           <h3>Le fichier client</h3>
