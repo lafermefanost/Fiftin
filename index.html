@@ -93,9 +93,9 @@
   .mod-hero .mv-shot{width:100%; display:flex; justify-content:center;}
   @media (max-width:640px){ .mod-hero{padding:20px;} .mod-hero h3{font-size:20px;} }
 
-  /* variante "La réponse" — chaque point est illustré par sa propre capture
-     (téléphone ou tablette), pas par une rangée d'écrans détachée du texte.
-     Même fond vert moyen que .mod-hero, pour la même raison. */
+  /* variante grille de features — chaque point est illustré par sa propre
+     capture (téléphone ou tablette), pas par une rangée d'écrans détachée
+     du texte. Même fond vert moyen que .mod-hero, pour la même raison. */
   .mods-visual{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:22px; margin-top:36px;}
   .mod-visual{background:var(--sauge); color:var(--cream); border:none; border-radius:18px; padding:26px;
     display:flex; flex-direction:column; align-items:center;}
@@ -214,93 +214,34 @@
       <a href="/app/" style="margin-left:auto;font-size:14px;font-weight:600;color:var(--cream);opacity:.78;text-decoration:none;">Se connecter</a>
     </div>
     <h1>Fiftin,<br>reprenez vos <em>15 %</em>.</h1>
-    <p>Le planning des chambres d'hôtes et des gîtes qui vous rend vos réservations, vos clients, et votre rentabilité.</p>
+    <p>Le planning des chambres d'hôtes et des gîtes qui vous rend votre temps, votre autonomie et votre sérénité.</p>
   </div>
   <div class="hero-phone-wrap"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div>
 </section>
 
-<!-- BENEFICES -->
+<!-- CE QUE CA CHANGE -->
 <section>
   <div class="inner">
     <div class="kicker">Ce que ça change, concrètement</div>
-    <h2>Trois gains,<br><em>pas trente fonctionnalités</em>.</h2>
+    <h2>Un seul outil de la réservation au bilan,<br><em>3 bénéfices immédiats</em>.</h2>
+    <p class="big">Fiftin ne vous demande pas de quitter les plateformes ou votre comptable, il vous rend seulement le contrôle.</p>
     <div class="mods">
+      <div class="mod">
+        <h3>Temps</h3>
+        <p class="claim">« Du temps pour l'accueil, pas pour la gestion. »</p>
+        <p>Une réservation se saisit entre le ménage et la cuisine, en quelques secondes. Les chiffres clés de votre activité se calculent sans vous.</p>
+      </div>
       <div class="mod">
         <h3>Autonomie</h3>
         <p class="claim">« Le pilier, c'est vous. »</p>
-        <p>Réservations, clients, chiffres : tout vit ici — pas chez les plateformes, pas dans le tableur du comptable.</p>
+        <p>Réservations, clients, évènements, chiffres : tout vit ici — pas chez les plateformes, pas dans le tableur du comptable, pas sur un bout de papier.</p>
       </div>
       <div class="mod">
-        <h3>Temps</h3>
-        <p class="claim">« Le temps sert à l'accueil, pas à la gestion. »</p>
-        <p>Une réservation se saisit n'importe où, en quelques secondes. Les chiffres clés se calculent seuls, en continu.</p>
-      </div>
-      <div class="mod">
-        <h3>Visibilité</h3>
-        <p class="claim">« Le recul, pas seulement le nez dans le guidon. »</p>
-        <p>Le nez dans le ménage et les repas, on perd la vue d'ensemble. Fiftin rend le recul : projections mensuelles et annuelles.</p>
+        <h3>Sérénité</h3>
+        <p class="claim">« Plus de recul, sortez le nez du guidon. »</p>
+        <p>Le nez dans le ménage et les repas, on perd la vue d'ensemble. Fiftin rend le recul : projections mensuelles et annuelles. Moins de surprises, plus de sérénité.</p>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- PROPRIETE DU CLIENT -->
-<section class="dark">
-  <div class="inner">
-    <div class="kicker">Premier constat</div>
-    <h2>Sur Booking ou Airbnb, ce client<br>n'est pas le vôtre. <em>Ici, si.</em></h2>
-    <p class="big">Une réservation plateforme, c'est un séjour anonyme — leur fichier, pas le vôtre. Une réservation en direct, c'est un client : nom, email, préférences, historique. De quoi le reconnaître et le faire revenir <strong>sans repayer la commission</strong>.</p>
-    <div class="shot-split">
-      <div><div class="phone-card"><div class="phone-crop-side crop-left"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Fiche client complète"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Fiche client complète</p></div>
-      <div class="txt"><p class="big" style="margin:0;">Coordonnées, couleur, appréciation, historique des séjours. Un fichier qui grossit à chaque passage — et qui reste le vôtre.</p></div>
-    </div>
-
-    <div class="stat-row" style="margin-top:38px;">
-      <div class="stat">
-        <div class="n">15,5 %</div>
-        <div class="l">La commission hôte appliquée par Airbnb depuis octobre 2026.</div>
-      </div>
-      <div class="stat">
-        <div class="n">15–18 %</div>
-        <div class="l">La fourchette pratiquée par Booking.com selon les conditions.</div>
-      </div>
-      <div class="stat">
-        <div class="n">0 %</div>
-        <div class="l">Ce que vous payez sur une réservation prise en direct.</div>
-      </div>
-    </div>
-    <p class="quote" style="margin-top:44px;">Reprendre vos 15 %,<br><em>c'est d'abord reprendre vos clients.</em></p>
-  </div>
-</section>
-
-<!-- PROBLEME 2 -->
-<section>
-  <div class="inner">
-    <div class="kicker">Deuxième constat</div>
-    <h2>Vous découvrez votre rentabilité<br><em>en avril. Chez le comptable.</em></h2>
-    <div class="shot-split">
-      <div class="txt"><p class="big" style="margin:0;">Combien vous a rapporté la chambre 3 cette saison ? À quelle distance du seuil de TVA êtes-vous ? Ces réponses existent — elles arrivent juste trop tard.</p></div>
-      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Vue Année, chiffres complets"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Vue Année — tous vos chiffres</p></div>
-    </div>
-    <p class="quote" style="margin-top:32px;">Vos chiffres n'ont pas à attendre avril.<br><em style="color:var(--terracotta);">Chez vous, ils sont à vous — en continu.</em></p>
-  </div>
-</section>
-
-<!-- PREUVE -->
-<section class="dark">
-  <div class="inner">
-    <div class="kicker">Pourquoi nous</div>
-    <p class="quote">Fiftin n'a pas été conçu dans un bureau d'études.<br>Il est né dans une maison d'hôtes de sept chambres et un gîte, <em>parce qu'aucun outil du marché ne faisait le travail.</em></p>
-    <p class="big" style="margin-top:38px;">Nous sommes César et Marine. Repris l'activité familiale après un virage — le droit, la publicité — loin de l'accueil. On a d'abord mal compris les plateformes, laissé filer une bonne part de notre marge sans la voir partir. Fiftin, c'est cet apprentissage-là.</p>
-  </div>
-</section>
-
-<!-- SOLUTION -->
-<section>
-  <div class="inner">
-    <div class="kicker">La réponse</div>
-    <h2>Un seul outil,<br>de la réservation <em>au bilan</em>.</h2>
-    <p class="big">Fiftin ne vous demande pas de quitter les plateformes. Il vous rend le contrôle.</p>
 
     <div class="mod-hero">
       <div class="mv-text">
@@ -337,6 +278,59 @@
         <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Consommations"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- PROPRIETE DU CLIENT -->
+<section class="dark">
+  <div class="inner">
+    <div class="kicker">Premier constat</div>
+    <h2>Sur Booking ou Airbnb, ce client<br>n'est pas le vôtre. <em>Ici, si.</em></h2>
+    <p class="big">Une réservation sur plateforme, c'est un séjour anonyme : leurs clients, leurs informations. Une réservation en direct, c'est un client : nom, email, préférences, historique. De quoi créer une relation de confiance propice à la fidélisation, <strong>sans commission</strong>.</p>
+    <div class="shot-split">
+      <div><div class="phone-card"><div class="phone-crop-side crop-left"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Fiche client complète"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Fiche client complète</p></div>
+      <div class="txt"><p class="big" style="margin:0;">Un fichier client qui évolue en permanence.</p></div>
+    </div>
+
+    <p class="quote" style="margin-top:44px;">Reprendre vos 15 %,<br><em>c'est d'abord reprendre vos clients.</em></p>
+  </div>
+</section>
+
+<!-- PROBLEME 2 -->
+<section>
+  <div class="inner">
+    <div class="kicker">Deuxième constat</div>
+    <h2>Vous découvrez votre rentabilité<br><em>en avril. Chez le comptable.</em></h2>
+    <div class="shot-split">
+      <div class="txt"><p class="big" style="margin:0;">Les plateformes le savent très bien : la visibilité, c'est la clé du succès. Combien vous ont coûté les commissions cette année ? Êtes-vous rentable sur ce gîte ? À quelle distance du seuil de TVA êtes-vous ? Quelles sont les charges qui pèsent le plus ? Ces réponses arrivent souvent trop tard pour ajuster.</p></div>
+      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Vue Année, chiffres complets"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Vue Année — tous vos chiffres</p></div>
+    </div>
+    <p class="quote" style="margin-top:32px;">Vos chiffres n'ont pas à attendre avril.<br><em style="color:var(--terracotta);">Chez vous, ils sont à vous — en continu.</em></p>
+
+    <div class="kicker" style="margin-top:40px;">Le saviez-vous ?</div>
+    <div class="stat-row" style="margin:0;">
+      <div class="stat">
+        <div class="n">15,5 %</div>
+        <div class="l">La commission unique hôte appliquée par Airbnb — 18,6 % TTC — depuis octobre 2026.</div>
+      </div>
+      <div class="stat">
+        <div class="n">15–18 %</div>
+        <div class="l">La fourchette pratiquée par Booking.com selon les conditions.</div>
+      </div>
+      <div class="stat">
+        <div class="n">0 %</div>
+        <div class="l">Ce que vous payez sur une réservation prise en direct.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PREUVE -->
+<section class="dark">
+  <div class="inner">
+    <div class="kicker">Pourquoi nous</div>
+    <p class="quote">Fiftin n'a pas été conçu dans un bureau d'études.<br>Il est né dans une maison d'hôtes familiale de cinq chambres et un gîte, <em>parce qu'aucun outil du marché ne faisait le travail.</em></p>
+    <p class="big" style="margin-top:38px;">Nous sommes Marine &amp; César, anciens juriste et designer graphique en quête d'indépendance et de belles valeurs humaines. D'abord séduits par les promesses des plateformes, nous avons en fait laissé filer une bonne part de notre marge sans en prendre conscience. Fiftin, c'est cet apprentissage-là.</p>
   </div>
 </section>
 
