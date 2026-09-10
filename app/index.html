@@ -720,11 +720,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
      Sur mobile, 100vh se cale sur la hauteur "grand format", celle où la
      barre d'adresse est réduite — pas sur ce qui est réellement visible
      quand elle est affichée. Le bas du modal se retrouve alors caché
-     sous elle (perçu comme "tronqué en bas", jamais vu en émulateur
-     desktop qui n'a pas de barre dynamique). dvh suit la hauteur
-     réellement visible en direct ; vh en repli pour les navigateurs qui
-     ne le supportent pas encore. */
-  height:100vh; height:100dvh;}
+     sous elle (perçu comme "tronqué en bas"). dvh est censé suivre en
+     direct la zone réellement visible, mais reste ici en repli seulement :
+     testé sur iPhone (Safari), le trou persiste identique avec dvh — ce
+     Safari-là ne le recalcule visiblement pas comme attendu pour un
+     élément fixed. --vvh (voir script, tout en bas du fichier) vient de
+     window.visualViewport, mis à jour en JS à chaque resize/scroll de la
+     zone visible : plus fiable en pratique que de compter sur le moteur
+     CSS seul. */
+  height:100vh; height:100dvh; height:var(--vvh, 100dvh);}
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
 .modal{background:var(--white);border-radius:0;width:100%;
@@ -1758,6 +1762,26 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+//  HAUTEUR RÉELLEMENT VISIBLE (barre d'adresse dynamique de Safari iOS)
+// ═══════════════════════════════════════════════════════════════
+// .overlay (voir CSS, plein écran des modaux sur mobile) utilise --vvh en
+// priorité sur 100dvh : sur Safari iOS testé, dvh n'a pas suivi la zone
+// réellement visible quand la barre d'adresse est affichée (le bas du
+// modal restait cachée dessous). window.visualViewport.height donne
+// cette valeur de façon fiable ; on la pousse nous-mêmes dans une custom
+// property à chaque changement plutôt que de compter sur le moteur CSS.
+function syncViewportHeight(){
+  const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  document.documentElement.style.setProperty('--vvh',h+'px');
+}
+syncViewportHeight();
+if(window.visualViewport){
+  visualViewport.addEventListener('resize',syncViewportHeight);
+  visualViewport.addEventListener('scroll',syncViewportHeight);
+}
+window.addEventListener('orientationchange',syncViewportHeight);
+
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════
