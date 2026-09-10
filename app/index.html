@@ -709,7 +709,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
 .modal{background:var(--white);border-radius:16px 16px 0 0;width:100%;
-  max-width:460px;max-height:92vh;overflow-y:auto;overflow-x:hidden;padding:20px 18px;}
+  max-width:460px;max-height:92vh;overflow-y:auto;overflow-x:hidden;padding:20px 18px;
+  /* Bug connu de Safari iOS : un élément qui combine overflow:auto/scroll ET
+     border-radius ne respecte plus son arrondi dès qu'il passe sur son
+     propre calque GPU (ce que déclenche justement le backdrop-filter de
+     .overlay juste au-dessus) — un coin carré "fantôme" reste visible
+     derrière le bandeau coloré. Le masque force Safari à re-clipper
+     correctement ; inoffensif ailleurs (dégradé blanc plein = pas de perte
+     d'opacité réelle), donc pas besoin de le limiter à Safari seul. */
+  -webkit-mask-image:-webkit-radial-gradient(white,black);}
 @media(min-width:600px){.modal{border-radius:12px;max-height:88vh;}}
 
 /* Bandeau haut de tous les modaux, en vert moyen — déborde jusqu'aux bords
