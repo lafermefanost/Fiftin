@@ -705,10 +705,18 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   max-width:460px;max-height:92vh;overflow-y:auto;overflow-x:hidden;padding:20px 18px;}
 @media(min-width:600px){.modal{border-radius:12px;max-height:88vh;}}
 
-.mhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
-.mtitle{font-family:'Jost',sans-serif;font-size:21px;font-weight:500;}
-.mclose{width:30px;height:30px;border:none;background:var(--light);border-radius:50%;
-  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--gray);}
+/* Bandeau haut de tous les modaux, en vert moyen — déborde jusqu'aux bords
+   du .modal (marges négatives = son padding) pour épouser exactement ses
+   coins arrondis (16px mobile / 12px desktop, voir .modal ci-dessus). */
+.mhead{display:flex;align-items:center;justify-content:space-between;
+  background:var(--green);color:var(--cream);
+  margin:-20px -18px 18px;padding:14px 18px;border-radius:16px 16px 0 0;}
+@media(min-width:600px){.mhead{border-radius:12px 12px 0 0;}}
+.mtitle{font-family:'Jost',sans-serif;font-size:21px;font-weight:500;color:var(--cream);}
+.mclose{width:30px;height:30px;border:none;background:rgba(255,255,255,.15);border-radius:50%;
+  cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--cream);
+  transition:background .15s;flex-shrink:0;}
+.mclose:hover{background:rgba(255,255,255,.25);}
 
 .fg{margin-bottom:14px;}
 .fl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
@@ -763,6 +771,10 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .btn-p{flex:1;padding:11px;background:var(--green);color:var(--white);border:none;
   border-radius:8px;font-family:'Jost',sans-serif;font-size:13px;font-weight:500;cursor:pointer;}
 .btn-p:disabled{background:#aaa;cursor:not-allowed;}
+/* Jaune d'accent réservé au geste qui ajoute réellement un enregistrement
+   (réservation, client, événement, charge) — pas à "Enregistrer" quand il
+   s'agit d'un export, d'un mot de passe ou d'un lien d'invitation. */
+.btn-p.btn-add{background:var(--yellow);color:var(--green-deep);}
 .btn-s{padding:11px 14px;background:var(--light);color:var(--dark);border:none;
   border-radius:8px;font-family:'Jost',sans-serif;font-size:13px;cursor:pointer;}
 .btn-d{padding:11px 14px;background:transparent;color:var(--danger);
@@ -1358,7 +1370,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div class="macts">
       <button class="btn-d" id="bDelBtn" onclick="delBooking()" style="display:none">Supprimer</button>
       <button class="btn-s" onclick="closeM('modalBooking')">Annuler</button>
-      <button class="btn-p" id="bSaveBtn" onclick="saveBooking()">Enregistrer</button>
+      <button class="btn-p btn-add" id="bSaveBtn" onclick="saveBooking()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1385,7 +1397,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       <div class="mtitle">Clients</div>
       <button class="mclose" onclick="closeM('modalGuests')">✕</button>
     </div>
-    <button class="btn-p" onclick="openGuestEdit(null)" style="width:100%;margin-bottom:12px">
+    <button class="btn-p btn-add" onclick="openGuestEdit(null)" style="width:100%;margin-bottom:12px">
       + Nouveau client
     </button>
     <input class="fi" id="gListSearch" placeholder="Rechercher un client…" autocomplete="off"
@@ -1452,7 +1464,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div class="macts">
       <button class="btn-d" id="gDelBtn" onclick="delGuest()">Supprimer</button>
       <button class="btn-s" onclick="closeM('modalGuestEdit')">Annuler</button>
-      <button class="btn-p" onclick="saveGuest()">Enregistrer</button>
+      <button class="btn-p btn-add" onclick="saveGuest()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1464,7 +1476,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       <div class="mtitle">Événements</div>
       <button class="mclose" onclick="closeM('modalEvents')">✕</button>
     </div>
-    <button class="btn-p" onclick="openEventEdit(null)" style="width:100%;margin-bottom:14px">
+    <button class="btn-p btn-add" onclick="openEventEdit(null)" style="width:100%;margin-bottom:14px">
       + Nouvel événement
     </button>
     <input class="fi" id="evListSearch" placeholder="Rechercher un événement…" autocomplete="off"
@@ -1618,7 +1630,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div class="macts">
       <button class="btn-d" id="evDelBtn" onclick="delEvent()">Supprimer</button>
       <button class="btn-s" onclick="closeM('modalEventEdit')">Annuler</button>
-      <button class="btn-p" onclick="saveEvent()">Enregistrer</button>
+      <button class="btn-p btn-add" onclick="saveEvent()">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -1657,7 +1669,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     </div>
     <div class="macts">
       <button class="btn-s" onclick="closeM('modalChargeAdd')">Annuler</button>
-      <button class="btn-p" onclick="saveManualCharge()">Ajouter</button>
+      <button class="btn-p btn-add" onclick="saveManualCharge()">Ajouter</button>
     </div>
   </div>
 </div>
