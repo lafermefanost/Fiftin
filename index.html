@@ -33,15 +33,19 @@
   p.small{font-size:15px; line-height:1.6; color:rgba(46,43,34,0.72); margin:0;}
 
   /* cover */
-  .cover{background:var(--sauge-deep); color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden;}
+  .cover{background:var(--sauge-deep); color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; position:relative;}
   .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
-  .nav-menu{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-  .nav-pill{display:inline-block; padding:8px 16px; border-radius:99px; font-size:13px; font-weight:600;
+  /* Détaché du fil du logo, posé dans le coin haut-droit de la section
+     plutôt qu'aligné sur la hauteur du mark — .cover est déjà la référence
+     de positionnement (position:relative ci-dessus). */
+  .nav-menu{position:absolute; top:22px; right:32px; z-index:5;
+    display:flex; align-items:center; justify-content:flex-end; gap:6px; flex-wrap:wrap; max-width:calc(100% - 64px);}
+  .nav-pill{display:inline-block; padding:6px 13px; border-radius:99px; font-size:12px; font-weight:600;
     text-decoration:none; white-space:nowrap; transition:filter .15s;}
   .nav-pill:hover{filter:brightness(1.08);}
   .nav-pill.primary{background:var(--yellow); color:var(--sauge-deep);}
   .nav-pill.ghost{background:rgba(245,240,229,.1); color:var(--cream); border:1px solid rgba(245,240,229,.28);}
-  @media (max-width:640px){ .nav-pill{padding:7px 13px; font-size:12.5px;} }
+  @media (max-width:640px){ .nav-menu{top:16px; right:16px; max-width:calc(100% - 32px);} .nav-pill{padding:5px 11px; font-size:11px;} }
   .mark{flex:none; display:flex; align-items:center; justify-content:center;}
   .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(40px,7vw,76px); line-height:1.02; margin:0 0 24px; letter-spacing:-0.02em;}
   .cover h1 em{font-style:italic; font-weight:500; color:var(--terracotta-soft);}
@@ -218,14 +222,14 @@
 
 <!-- COVER -->
 <section class="cover">
+  <nav class="nav-menu">
+    <a class="nav-pill ghost" href="mailto:support@fiftin.fr">Support technique</a>
+    <a class="nav-pill ghost" href="/app/">Se connecter</a>
+    <a class="nav-pill primary" href="/app/?signup=1">Créer un compte</a>
+  </nav>
   <div class="inner">
     <div class="logo">
       <div class="mark"><img src="assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>
-      <nav class="nav-menu">
-        <a class="nav-pill ghost" href="mailto:support@fiftin.fr">Support technique</a>
-        <a class="nav-pill ghost" href="/app/">Se connecter</a>
-        <a class="nav-pill primary" href="/app/?signup=1">Créer un compte</a>
-      </nav>
     </div>
     <h1>Fiftin,<br>reprenez vos <em>15 %</em>.</h1>
     <p>Le planning des chambres d'hôtes et des gîtes qui vous rend votre temps, votre autonomie et votre sérénité.</p>
