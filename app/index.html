@@ -710,16 +710,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    coin à arrondir). Le format "carte" centrée avec marge n'existe qu'à
    partir de 600px (voir les media queries ci-dessous), où il y a la place
    pour respirer autour. */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:1000;
+.overlay{position:fixed;top:0;left:0;right:0;bottom:auto;background:rgba(0,0,0,.68);z-index:1000;
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   display:flex;align-items:stretch;justify-content:center;
-  /* Sur mobile, 100% (via inset:0) se cale sur la hauteur "grand format" du
-     navigateur, celle où la barre d'adresse est réduite — pas sur ce qui
-     est réellement visible quand elle est affichée. Le bas du modal se
-     retrouve alors caché sous elle (perçu comme "tronqué en bas", jamais
-     vu en émulateur desktop qui n'a pas de barre dynamique). dvh suit la
-     hauteur réellement visible en direct ; vh en repli pour les
-     navigateurs qui ne le supportent pas encore. */
+  /* 'bottom' est explicitement 'auto' (pas inset:0, qui remet top ET bottom
+     à 0) : la hauteur est fixée UNIQUEMENT par la propriété height
+     ci-dessous, sans dépendre de la résolution "top+bottom+height tous
+     fixés = sur-contraint" — ambiguë en pratique selon les navigateurs.
+     Sur mobile, 100vh se cale sur la hauteur "grand format", celle où la
+     barre d'adresse est réduite — pas sur ce qui est réellement visible
+     quand elle est affichée. Le bas du modal se retrouve alors caché
+     sous elle (perçu comme "tronqué en bas", jamais vu en émulateur
+     desktop qui n'a pas de barre dynamique). dvh suit la hauteur
+     réellement visible en direct ; vh en repli pour les navigateurs qui
+     ne le supportent pas encore. */
   height:100vh; height:100dvh;}
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
