@@ -712,7 +712,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    pour respirer autour. */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:1000;
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  display:flex;align-items:stretch;justify-content:center;}
+  display:flex;align-items:stretch;justify-content:center;
+  /* Sur mobile, 100% (via inset:0) se cale sur la hauteur "grand format" du
+     navigateur, celle où la barre d'adresse est réduite — pas sur ce qui
+     est réellement visible quand elle est affichée. Le bas du modal se
+     retrouve alors caché sous elle (perçu comme "tronqué en bas", jamais
+     vu en émulateur desktop qui n'a pas de barre dynamique). dvh suit la
+     hauteur réellement visible en direct ; vh en repli pour les
+     navigateurs qui ne le supportent pas encore. */
+  height:100vh; height:100dvh;}
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
 .modal{background:var(--white);border-radius:0;width:100%;
