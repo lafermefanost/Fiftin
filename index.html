@@ -34,7 +34,14 @@
 
   /* cover */
   .cover{background:var(--sauge-deep); color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden;}
-  .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px;}
+  .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
+  .nav-menu{margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+  .nav-pill{display:inline-block; padding:8px 16px; border-radius:99px; font-size:13px; font-weight:600;
+    text-decoration:none; white-space:nowrap; transition:filter .15s;}
+  .nav-pill:hover{filter:brightness(1.08);}
+  .nav-pill.primary{background:var(--yellow); color:var(--sauge-deep);}
+  .nav-pill.ghost{background:rgba(245,240,229,.1); color:var(--cream); border:1px solid rgba(245,240,229,.28);}
+  @media (max-width:640px){ .nav-pill{padding:7px 13px; font-size:12.5px;} }
   .mark{flex:none; display:flex; align-items:center; justify-content:center;}
   .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(40px,7vw,76px); line-height:1.02; margin:0 0 24px; letter-spacing:-0.02em;}
   .cover h1 em{font-style:italic; font-weight:500; color:var(--terracotta-soft);}
@@ -214,7 +221,11 @@
   <div class="inner">
     <div class="logo">
       <div class="mark"><img src="assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>
-      <a href="/app/" style="margin-left:auto;font-size:14px;font-weight:600;color:var(--yellow);text-decoration:none;">Se connecter</a>
+      <nav class="nav-menu">
+        <a class="nav-pill ghost" href="mailto:support@fiftin.fr">Support technique</a>
+        <a class="nav-pill ghost" href="/app/">Se connecter</a>
+        <a class="nav-pill primary" href="/app/?signup=1">Créer un compte</a>
+      </nav>
     </div>
     <h1>Fiftin,<br>reprenez vos <em>15 %</em>.</h1>
     <p>Le planning des chambres d'hôtes et des gîtes qui vous rend votre temps, votre autonomie et votre sérénité.</p>

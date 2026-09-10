@@ -2452,9 +2452,15 @@ function loadFirebaseSDK(cb){
 // connectée, ou l'utiliser pour se connecter à un compte existant, ne change
 // jamais rien.
 const pendingInviteId=new URLSearchParams(location.search).get('invite');
+// Lien "Créer un compte" de la landing (/app/?signup=1) : ouvre directement
+// le formulaire d'inscription plutôt que la connexion, sans changer le
+// fonctionnement normal d'accès à l'app (le paramètre est ignoré une fois
+// passé au form — pas de bascule si on revient en arrière avec le bouton
+// "Connectez-vous").
+const wantsSignup=new URLSearchParams(location.search).get('signup')==='1';
 let signupInProgress=false;
 function bootFirebaseApp(){
-  showLockScreen(pendingInviteId?'signup':'signin');
+  showLockScreen((pendingInviteId||wantsSignup)?'signup':'signin');
   loadFirebaseSDK(()=>{
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     // Doit être fait ICI, avant toute autre opération Firestore — y compris
