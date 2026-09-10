@@ -703,20 +703,29 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #lockScreen .btn-p:hover{filter:brightness(.96);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
+/* Sur mobile, le modal occupe tout l'écran (plus de cartouche flottante à
+   moitié vide autour) : .overlay étire son enfant sur toute la hauteur
+   (align-items:stretch) au lieu de le coller en bas, et .modal perd sa
+   largeur/hauteur plafonnées ainsi que son arrondi (plein écran = pas de
+   coin à arrondir). Le format "carte" centrée avec marge n'existe qu'à
+   partir de 600px (voir les media queries ci-dessous), où il y a la place
+   pour respirer autour. */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.68);z-index:1000;
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
-  display:flex;align-items:flex-end;justify-content:center;}
+  display:flex;align-items:stretch;justify-content:center;}
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
-.modal{background:var(--white);border-radius:16px 16px 0 0;width:100%;
-  max-width:460px;max-height:92vh;overflow-y:auto;overflow-x:hidden;padding:20px 18px;
+.modal{background:var(--white);border-radius:0;width:100%;
+  height:100%;overflow-y:auto;overflow-x:hidden;padding:20px 18px;
   /* Bug connu de Safari iOS : un élément qui combine overflow:auto/scroll ET
      border-radius ne respecte plus son arrondi dès qu'il passe sur son
      propre calque GPU (ce que déclenche justement le backdrop-filter de
      .overlay juste au-dessus) — un coin carré "fantôme" reste visible
      derrière le bandeau coloré. Le masque force Safari à re-clipper
      correctement ; inoffensif ailleurs (dégradé blanc plein = pas de perte
-     d'opacité réelle), donc pas besoin de le limiter à Safari seul. */
+     d'opacité réelle), donc pas besoin de le limiter à Safari seul. Sans
+     objet en plein écran (border-radius:0) mais reste inoffensif, et utile
+     dès que le format carte revient à 600px. */
   -webkit-mask-image:-webkit-radial-gradient(white,black);}
 
 /* Réglages : contenu trop long/imbriqué (accordéons) pour que le masque
@@ -728,14 +737,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    calque de défilement. */
 .modal.modal-noscroll{overflow:hidden;display:flex;flex-direction:column;}
 .modal-scrollarea{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;}
-@media(min-width:600px){.modal{border-radius:12px;max-height:88vh;}}
+@media(min-width:600px){.modal{border-radius:12px;height:auto;max-width:460px;max-height:88vh;}}
 
 /* Bandeau haut de tous les modaux, en vert moyen — déborde jusqu'aux bords
    du .modal (marges négatives = son padding) pour épouser exactement ses
-   coins arrondis (16px mobile / 12px desktop, voir .modal ci-dessus). */
+   coins arrondis (aucun en plein écran mobile, 12px à partir de 600px,
+   voir .modal ci-dessus). */
 .mhead{display:flex;align-items:center;justify-content:space-between;
   background:var(--green);color:var(--cream);
-  margin:-20px -18px 18px;padding:14px 18px;border-radius:16px 16px 0 0;}
+  margin:-20px -18px 18px;padding:14px 18px;border-radius:0;}
 @media(min-width:600px){.mhead{border-radius:12px 12px 0 0;}}
 .mtitle{font-family:'Jost',sans-serif;font-size:21px;font-weight:500;color:var(--cream);
   display:flex;align-items:center;gap:9px;}
@@ -1719,7 +1729,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 
 <!-- ─── SETTINGS MODAL ─────────────────────────────────────────────── -->
 <div class="overlay" id="modalSettings" style="display:none" onclick="ovClose(event,'modalSettings')">
-  <div class="modal modal-noscroll" style="max-height:85vh;">
+  <div class="modal modal-noscroll">
     <div class="mhead">
       <div class="mtitle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Paramètres</div>
       <button class="mclose" onclick="closeM('modalSettings')">✕</button>
