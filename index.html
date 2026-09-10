@@ -79,6 +79,14 @@
   .dark p.big, .dark p.small{color:rgba(245,240,229,0.84);}
   .dark .kicker{color:var(--terracotta-soft);}
 
+  /* Vert moyen — même famille que .dark (texte crème, kicker lavande) mais
+     un ton plus clair, pour qu'une section ne se fonde pas dans le hero
+     ou une autre section .dark directement au-dessus/en-dessous. */
+  .mid{background:var(--sauge); color:var(--cream); --section-bg:var(--sauge);}
+  .mid h2{color:var(--cream);}
+  .mid p.big, .mid p.small{color:rgba(245,240,229,0.88);}
+  .mid .kicker{color:var(--terracotta-soft);}
+
   /* modules */
   .mods{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-top:36px;}
   .mod{background:#fff; border:1px solid var(--line); border-radius:18px; padding:26px;}
@@ -238,15 +246,12 @@
 </section>
 
 <!-- PROPRIETE DU CLIENT -->
-<section class="dark">
+<section class="mid">
   <div class="inner">
     <div class="kicker">Premier constat</div>
     <h2>Sur Booking ou Airbnb, ce client<br>n'est pas le vôtre. <em>Ici, si.</em></h2>
     <p class="big">Une réservation sur plateforme, c'est un séjour anonyme : leurs clients, leurs informations. Une réservation en direct, c'est un client : nom, email, préférences, historique. De quoi créer une relation de confiance propice à la fidélisation, <strong>sans commission</strong>.</p>
-    <div class="shot-split">
-      <div><div class="phone-card"><div class="phone-crop-side crop-left"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Fiche client complète"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Fiche client complète</p></div>
-      <div class="txt"><p class="big" style="margin:0;">Un fichier client qui évolue en permanence.</p></div>
-    </div>
+    <p class="big">Un fichier client qui évolue en permanence.</p>
 
     <p class="quote" style="margin-top:44px;">Reprendre vos 15 %,<br><em>c'est d'abord reprendre vos clients.</em></p>
   </div>
@@ -257,10 +262,7 @@
   <div class="inner">
     <div class="kicker">Deuxième constat</div>
     <h2>Vous découvrez votre rentabilité<br><em>en avril. Chez le comptable.</em></h2>
-    <div class="shot-split">
-      <div class="txt"><p class="big" style="margin:0;">Les plateformes le savent très bien : la visibilité, c'est la clé du succès. Combien vous ont coûté les commissions cette année ? Êtes-vous rentable sur ce gîte ? À quelle distance du seuil de TVA êtes-vous ? Quelles sont les charges qui pèsent le plus ? Ces réponses arrivent souvent trop tard pour ajuster.</p></div>
-      <div><div class="phone-card"><div class="phone-stage"><div class="phone2"><img class="p2-shot" src="assets/phone-screenshot.png" alt="Fiftin — Vue Année, chiffres complets"><img class="p2-frame" src="mockup-phone.png" alt=""></div></div></div><p class="shot-cap">Vue Année — tous vos chiffres</p></div>
-    </div>
+    <p class="big">Les plateformes le savent très bien : la visibilité, c'est la clé du succès. Combien vous ont coûté les commissions cette année ? Êtes-vous rentable sur ce gîte ? À quelle distance du seuil de TVA êtes-vous ? Quelles sont les charges qui pèsent le plus ? Ces réponses arrivent souvent trop tard pour ajuster.</p>
     <p class="quote" style="margin-top:32px;">Vos chiffres n'ont pas à attendre avril.<br><em style="color:var(--terracotta);">Chez vous, ils sont à vous — en continu.</em></p>
 
     <div class="kicker" style="margin-top:40px;">Le saviez-vous ?</div>
