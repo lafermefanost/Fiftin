@@ -51,10 +51,14 @@
   .cover h1 em{font-style:italic; font-weight:500; color:var(--terracotta-soft);}
   .cover p{font-size:22px; line-height:1.5; font-weight:500; color:rgba(245,240,229,0.94); max-width:580px; margin:0; letter-spacing:-0.005em;}
 
-  /* le téléphone bleed hors de la section couverture — la coupure franche
-     se fait à la frontière même entre la couverture et la section suivante
-     (voir .cover{overflow:hidden; padding-bottom:0}), pas par un fondu. */
-  .hero-phone-wrap{margin:0 auto -329px; max-width:850px; display:flex; justify-content:center; position:relative;}
+  /* Sur ordinateur : texte à gauche, téléphone à droite, dans un cadre
+     fixe (largeur+hauteur, overflow:hidden) — plus de débordement dans la
+     section suivante, inutile côte à côte avec le texte. Sur mobile :
+     empilé, texte d'abord (voir .hero-flex plus bas), puis le téléphone
+     qui déborde et se coupe sur la section suivante comme avant. */
+  .hero-flex{display:flex; flex-direction:column; align-items:center;}
+  .hero-phone-wrap{width:600px; height:742px; overflow:hidden; position:relative; flex:none;}
+  .hero-phone-wrap .hero-shot{width:480px; max-width:none; height:auto; display:block; position:relative; z-index:1;}
   /* Le téléphone n'est pas centré dans son propre cadre (le poids visuel
      penche à gauche — bcp de marge vide à droite, voir le recadrage) : un
      centrage géométrique pur le fait paraître décalé à gauche. Recentré
@@ -65,15 +69,29 @@
      sur .hero-shot à chaque scroll, ce qui écrasait purement et simplement
      ce translateX (le téléphone n'était donc jamais vraiment recentré,
      seul le décalage vertical du parallax survivait). Séparer les deux
-     éléments règle le conflit : chacun son transform, plus d'écrasement. */
-  .hero-shot-offset{transform:translateX(11%);}
-  .hero-phone-wrap .hero-shot{width:850px; max-width:100%; height:auto; display:block; position:relative; z-index:1;}
-  /* Sur mobile, la section garde son padding latéral (32px, voir la règle
-     "section" plus bas) pour le texte — mais le téléphone, lui, déborde
-     jusqu'au bord de l'écran (marges négatives égales au padding) pour
-     rester bien grand malgré la largeur réduite de l'écran. */
-  @media (max-width:640px){ .hero-phone-wrap{margin:6px -32px -38.7vw; max-width:none;}
-    .hero-phone-wrap .hero-shot{width:100%;} }
+     éléments règle le conflit : chacun son transform, plus d'écrasement.
+     Le cadre (600px) est plus large que l'image (480px) pour laisser la
+     place à ce décalage sans jamais rogner le bord droit du téléphone. */
+  .hero-shot-offset{position:absolute; left:60px; top:0; transform:translateX(11%);}
+  /* Seuil choisi pour qu'il y ait toujours la place des deux colonnes à
+     largeur fixe (520 + 56 + 600 = 1176px) plus le padding de section
+     (32px de chaque côté) sans jamais rogner le texte — en dessous, on
+     reste sur l'empilé mobile, y compris sur tablette/petit écran de
+     laptop, plutôt qu'un côte-à-côte qui déborderait. */
+  @media(min-width:1240px){
+    .hero-flex{flex-direction:row; align-items:center; justify-content:center; gap:56px; max-width:1240px; margin:0 auto;}
+    .hero-flex .inner{max-width:520px; margin:0;}
+  }
+  /* En dessous de 1240px (mobile ET tablette/petit laptop), la section
+     garde son padding latéral (32px, voir la règle "section" plus bas)
+     pour le texte — mais le téléphone, lui, déborde jusqu'au bord de
+     l'écran (marges négatives égales au padding) pour rester bien grand,
+     et se coupe sur la section suivante plutôt que dans un cadre fixe. */
+  @media (max-width:1239px){
+    .hero-phone-wrap{width:auto; height:auto; overflow:visible; margin:6px -32px -38.7vw;}
+    .hero-phone-wrap .hero-shot{width:100%; max-width:none;}
+    .hero-shot-offset{position:relative; left:0;}
+  }
 
   /* stat block */
   .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:18px; margin:36px 0 8px;}
@@ -239,14 +257,16 @@
     <a class="nav-pill ghost" href="/app/">Se connecter</a>
     <a class="nav-pill primary" href="/app/?signup=1">Créer un compte</a>
   </nav>
-  <div class="inner">
-    <div class="logo">
-      <div class="mark"><img src="assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>
+  <div class="hero-flex">
+    <div class="inner">
+      <div class="logo">
+        <div class="mark"><img src="assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>
+      </div>
+      <h1>Reprenez vos <em>15&nbsp;%</em>,<br>avec Fiftin.</h1>
+      <p>Le planning chambres d'hôtes et gîtes conçu pour vous rendre votre temps, votre autonomie et votre rentabilité.</p>
     </div>
-    <h1>Reprenez vos <em>15&nbsp;%</em>,<br>avec Fiftin.</h1>
-    <p>Le planning chambres d'hôtes et gîtes conçu pour vous rendre votre temps, votre autonomie et votre rentabilité.</p>
+    <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div></div>
   </div>
-  <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="assets/ecran_hero.png" alt="Fiftin — Vue du jour"></div></div>
 </section>
 
 <!-- PROPRIETE DU CLIENT -->
