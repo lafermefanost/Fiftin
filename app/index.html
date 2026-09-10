@@ -3167,7 +3167,7 @@ function renderGrid(){
           div.innerHTML=`<span class="bcont-init">${g?g.name.charAt(0):'·'}</span>`+thIcon;
         }
 
-        div.addEventListener('click',e=>{e.stopPropagation();openEditModal(bk.id);});
+        div.addEventListener('click',e=>{e.stopPropagation();openEditModal(bk.id,ds);});
         div.addEventListener('dragstart',e=>onDragStart(e,bk.id));
         div.addEventListener('mouseenter',e=>showTip(e,bk));
         div.addEventListener('mouseleave',hideTip);
@@ -3183,7 +3183,7 @@ function renderGrid(){
           d2.className='co-half';
           d2.style.background=c;
           d2.dataset.id=co.id;
-          d2.addEventListener('click',e=>{e.stopPropagation();openEditModal(co.id);});
+          d2.addEventListener('click',e=>{e.stopPropagation();openEditModal(co.id,ds);});
           cell.appendChild(d2);
         }
         cell.addEventListener('click',()=>startOrExtendRange(r.id,ds));
@@ -3340,7 +3340,7 @@ function stayCard(b,ds,sub,showTotal=false){
     return`<div class="tcard">
       <div class="tbar" style="background:${col}"></div>
       <div class="tcard-content">
-        <div class="tcard-header" onclick="openEditModal('${b.id}')">
+        <div class="tcard-header" onclick="openEditModal('${b.id}','${ds}')">
           <div class="tcard-header-inner">
             <div class="tinfo"><div class="tname">${g?g.name:'?'}</div>
               <div class="tdetail">${sub}${b.notes?' — '+b.notes:''}</div></div>
@@ -3804,7 +3804,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('modalBooking').style.display='flex';
 }
 
-function openEditModal(id){
+function openEditModal(id,clickedDay){
   const b=S.bookings.find(x=>x.id===id);
   if(!b)return;
   editBid=id;selGid=b.guestId;newGMode=false;gSearchTerm='';gChanging=false;
@@ -3841,7 +3841,12 @@ function openEditModal(id){
   const autoP=nights*getNightlyRate(b)-getBreakfastDeduction(b,b.checkIn,b.checkOut)+getThRevenue(b,b.checkIn,b.checkOut)+getExtrasTotal(b);
   byId('prixNetHint').textContent=autoP>0?`(auto : ${autoP.toLocaleString('fr-FR')} €)`:'';
   refreshBExtrasTotal(b);
-  modalExtrasDay=null;
+  // Le jour cliqué dans la grille (ou la vue jour/semaine) présélectionne
+  // l'onglet Consommations correspondant — plutôt que de retomber sur
+  // aujourd'hui ou le premier jour du séjour, sans rapport avec ce qu'on
+  // vient de regarder. Si le jour n'appartient pas au séjour (ou n'a pas
+  // été fourni), renderModalExtras() retombe sur son ancien comportement.
+  modalExtrasDay=clickedDay||null;
   renderModalExtras();
   renderGPicker();
   renderBreakfastList();
@@ -7075,7 +7080,7 @@ function renderWeek(){
     </div>`;
     h+=`<div class="wday-body">`;
     const wMiniChip=(b,timeLabel)=>{const g=guest(b.guestId);const rm=room(b.roomId);
-      return`<div class="day-chip" onclick="openEditModal('${b.id}')">
+      return`<div class="day-chip" onclick="openEditModal('${b.id}','${ds}')">
         <div class="tbar" style="background:${g?g.color:'#999'}"></div>
         <div class="day-chip-content">
           <span class="bname">${g?g.name:'?'}</span>
