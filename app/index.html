@@ -1782,6 +1782,34 @@ if(window.visualViewport){
 }
 window.addEventListener('orientationchange',syncViewportHeight);
 
+// ─── DEBUG TEMPORAIRE ───────────────────────────────────────────
+// Trois correctifs CSS/JS successifs (vh, dvh, visualViewport) n'ont
+// rien changé au bug de modal tronqué signalé sur iPhone : on arrête de
+// deviner et on affiche les vrais chiffres à l'écran pendant qu'un
+// modal est ouvert, pour voir ce qui cloche réellement. À RETIRER une
+// fois le diagnostic fait.
+(function(){
+  const badge=document.createElement('div');
+  badge.style.cssText='position:fixed;left:8px;bottom:8px;z-index:99999;'+
+    'background:#000;color:#0f0;font:11px/1.4 monospace;padding:6px 8px;'+
+    'border-radius:6px;white-space:pre;pointer-events:none;opacity:.92;display:none;';
+  document.body.appendChild(badge);
+  setInterval(function(){
+    const ov=Array.prototype.slice.call(document.querySelectorAll('.overlay'))
+      .find(function(o){return getComputedStyle(o).display==='flex';});
+    if(!ov){badge.style.display='none';return;}
+    const modal=ov.querySelector('.modal');
+    const rOv=ov.getBoundingClientRect(), rM=modal?modal.getBoundingClientRect():null;
+    badge.style.display='block';
+    badge.textContent=
+      'innerH='+window.innerHeight+' vv='+(window.visualViewport?Math.round(window.visualViewport.height):'—')+
+      ' vvh='+getComputedStyle(document.documentElement).getPropertyValue('--vvh')+'\n'+
+      'ovH='+getComputedStyle(ov).height+' ovTop='+Math.round(rOv.top)+' ovBot='+Math.round(rOv.bottom)+'\n'+
+      (rM?('modH='+getComputedStyle(modal).height+' modTop='+Math.round(rM.top)+' modBot='+Math.round(rM.bottom)):'no .modal')+'\n'+
+      'scrollY='+window.scrollY+' dpr='+window.devicePixelRatio;
+  },300);
+})();
+
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════
