@@ -718,6 +718,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
      correctement ; inoffensif ailleurs (dégradé blanc plein = pas de perte
      d'opacité réelle), donc pas besoin de le limiter à Safari seul. */
   -webkit-mask-image:-webkit-radial-gradient(white,black);}
+
+/* Réglages : contenu trop long/imbriqué (accordéons) pour que le masque
+   seul suffise sur iOS — toujours le même bug (voir ci-dessus), encore
+   visible là spécifiquement. Parade plus radicale et plus fiable : séparer
+   le cadre qui porte le rayon (.modal, ne défile plus lui-même) du
+   contenu qui défile (.modal-scrollarea) — Safari n'a alors plus jamais à
+   rogner un bord arrondi sur l'élément qui vient de passer sur son propre
+   calque de défilement. */
+.modal.modal-noscroll{overflow:hidden;display:flex;flex-direction:column;}
+.modal-scrollarea{overflow-y:auto;-webkit-overflow-scrolling:touch;flex:1;min-height:0;}
 @media(min-width:600px){.modal{border-radius:12px;max-height:88vh;}}
 
 /* Bandeau haut de tous les modaux, en vert moyen — déborde jusqu'aux bords
@@ -1707,12 +1717,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 
 <!-- ─── SETTINGS MODAL ─────────────────────────────────────────────── -->
 <div class="overlay" id="modalSettings" style="display:none" onclick="ovClose(event,'modalSettings')">
-  <div class="modal" style="max-height:85vh;overflow-y:auto;">
+  <div class="modal modal-noscroll" style="max-height:85vh;">
     <div class="mhead">
       <div class="mtitle">Paramètres</div>
       <button class="mclose" onclick="closeM('modalSettings')">✕</button>
     </div>
-    <div id="settingsBody"></div>
+    <div class="modal-scrollarea"><div id="settingsBody"></div></div>
   </div>
 </div>
 
