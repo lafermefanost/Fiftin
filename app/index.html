@@ -587,7 +587,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    réutilisées telles quelles) puis le menu du jour en une ligne, avant le
    bouton qui ouvre le modal Table d'hôtes pour tout modifier. */
 .thsum-people{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
-.thsum-menu{font-size:13px;color:var(--dark);margin-bottom:10px;line-height:1.4;}
+.thsum-menu-row{display:flex;gap:8px;margin-bottom:10px;}
+.thsum-menu-input{flex:1;min-width:0;border:none;border-bottom:1px solid var(--light);background:transparent;
+  font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);padding:4px 2px;outline:none;}
+.thsum-menu-input::placeholder{color:var(--gray);}
+.thsum-menu-input:focus{border-bottom-color:var(--green);}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
    menageGroup dans renderWeek) — séparateur discret entre deux structures,
@@ -7491,9 +7495,18 @@ function renderWeek(){
           <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${p.sub}</span>
         </div>
       </div>`).join('')}</div>`:'<div class="tsec-empty">Aucun couvert ce soir</div>';
-    const thMenuHTML=menuHas
-      ?`<div class="thsum-menu">${[dm.entree,dm.plat,dm.dessert].filter(Boolean).map(s=>s.replace(/</g,'&lt;')).join(' · ')}</div>`
-      :'<div class="tsec-empty">Aucun menu renseigné</div>';
+    // Le menu reste modifiable ici, sans passer par le modal — juste des
+    // champs discrets (pas de libellé au-dessus, un simple soulignement) au
+    // lieu des .fg/.fl/.fi pleine largeur d'avant, pour ne pas reprendre
+    // toute la place que prenait "Menu du jour". setMenuField ne redessine
+    // rien de son côté (juste persist()) : pas de risque de perdre le
+    // volet ouvert ni la saisie en cours en tapant ici.
+    const escAttr=s=>(s||'').replace(/"/g,'&quot;');
+    const thMenuHTML=`<div class="thsum-menu-row">
+      <input class="thsum-menu-input" placeholder="Entrée" value="${escAttr(dm.entree)}" onchange="setMenuField('${ds}','entree',this.value)">
+      <input class="thsum-menu-input" placeholder="Plat" value="${escAttr(dm.plat)}" onchange="setMenuField('${ds}','plat',this.value)">
+      <input class="thsum-menu-input" placeholder="Dessert" value="${escAttr(dm.dessert)}" onchange="setMenuField('${ds}','dessert',this.value)">
+    </div>`;
     h+=`<div class="tsec-panel th${thCollapsed?' collapsed':''}">
       <div class="tsec-hd${thHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','th',true)">
         ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal} couvert${thTotal>1?'s':''}</span></span><span class="tsec-chev">▾</span>
