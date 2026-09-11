@@ -592,11 +592,19 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .extras-day-tab.on{background:var(--green);color:#fff;border-color:var(--green);}
 .cln-detail-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
 .cln-detail-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.cln-detail-row input[type=number]{
-  flex:none;padding:5px 6px;border:1px solid var(--light);border-radius:6px;
-  font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);background:var(--white);outline:none;
-  width:46px;text-align:center;}
-.cln-unit{font-size:11px;color:var(--gray);flex:none;}
+/* Durée d'un ménage par boutons +/− plutôt qu'un champ à taper (voir
+   adjustCleanerHours) — nom sur sa propre ligne, compteurs + coût sur la
+   suivante : plus de place pour les boutons, sans faire déborder la ligne
+   sur mobile. */
+.cln-detail-row-hm{flex-direction:column;align-items:stretch;gap:6px;}
+.cln-hm-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.cln-stepper{display:flex;align-items:center;gap:6px;background:#F7F5F1;border-radius:8px;padding:3px 5px;}
+.cln-step{width:26px;height:26px;flex:none;border:1px solid var(--light);border-radius:6px;background:#fff;
+  font-family:'Jost',sans-serif;font-size:16px;line-height:1;color:var(--dark);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;padding:0;}
+.cln-step:active{background:var(--green);color:#fff;border-color:var(--green);}
+.cln-hm-val{font-size:12px;font-weight:600;color:var(--dark);min-width:40px;text-align:center;}
+.cln-cost{margin-left:auto;font-size:12px;font-weight:600;color:var(--green);white-space:nowrap;}
 
 /* ─── MONTH VIEW ─────────────────────────────────────────────── */
 #monthWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
@@ -5449,14 +5457,23 @@ function toggleCleaner(ds,name,group){
   if(S.view==='today')renderToday();
   else renderWeek();
 }
-function setCleanerField(ds,name,field,val,group){
+// Durée d'un ménage par boutons +/− (voir menageGroup dans renderWeek) :
+// deltaMin en minutes, +60/−60 pour les boutons "heure", +15/−15 pour les
+// boutons "minute" (quart d'heure). Raisonne sur le total en minutes plutôt
+// que sur heures/minutes séparées : un +15 qui fait passer de 45 à 60
+// minutes se traduit alors tout seul par +1h/0min à l'affichage (dérivé du
+// total à chaque rendu, voir totalMin/wh/mm), pas besoin de gérer la
+// retenue à la main. Jamais négatif (Math.max(0,…)).
+function adjustCleanerHours(ds,name,group,deltaMin){
   const list=S.cleaning[ds]||[];
   const g=group||defaultStructureId();
   const c=list.find(x=>x.name===name&&(x.group||defaultStructureId())===g);
   if(!c)return;
-  c[field]=field==='hours'?(val===''?null:parseFloat(val)||0):val;
+  const curMin=Math.round((c.hours||0)*60);
+  c.hours=Math.max(0,curMin+deltaMin)/60;
   persist();
-  if(S.view==='month')renderMonth();
+  if(S.view==='today')renderToday();
+  else renderWeek();
 }
 
 function getMenu(ds){
@@ -7367,10 +7384,33 @@ function renderWeek(){
         // bouge la molette des heures sur iOS — voir le repli hasPendingWrites
         // dans applyRemoteData, qui limite déjà la casse mais ne change rien
         // au fait que ce champ n'apportait pas grand-chose).
-        hh+=`<div class="cln-detail-row">
+        // Durée par boutons +/− (heures entières, minutes par quart d'heure)
+        // plutôt qu'un champ à taper : plus rapide au doigt, et surtout ça
+        // élimine complètement la classe de bugs des champs natifs (heure/
+        // nombre) qui déclenchaient 'change' à des moments imprévisibles sur
+        // iOS. La durée reste stockée en heures décimales (c.hours, ex. 1.25)
+        // — inchangé pour tout le reste du code (coût, totaux Année…) — seule
+        // la saisie change ; adjustCleanerHours raisonne en minutes totales et
+        // la répartition heures/minutes affichée n'est qu'un calcul d'affichage.
+        const totalMin=Math.round((c.hours||0)*60);
+        const wh=Math.floor(totalMin/60), mm=totalMin%60;
+        const rate=CLEANERS.find(cl=>cl.name===c.name)?.rate??15;
+        const cost=(c.hours||0)*rate;
+        hh+=`<div class="cln-detail-row cln-detail-row-hm">
           <span class="cln-detail-name">${c.name}</span>
-          <input type="number" min="0" step="0.5" placeholder="h" value="${c.hours!=null?c.hours:''}" title="Nombre d'heures" onchange="setCleanerField('${ds}','${c.name}','hours',this.value${groupId?`,'${groupId}'`:''})">
-          <span class="cln-unit">h</span>
+          <div class="cln-hm-row">
+            <div class="cln-stepper">
+              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${c.name}','${groupId||''}',-60)">−</button>
+              <span class="cln-hm-val">${wh} h</span>
+              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${c.name}','${groupId||''}',60)">+</button>
+            </div>
+            <div class="cln-stepper">
+              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${c.name}','${groupId||''}',-15)">−</button>
+              <span class="cln-hm-val">${mm} min</span>
+              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${c.name}','${groupId||''}',15)">+</button>
+            </div>
+            <span class="cln-cost">${cost.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
+          </div>
         </div>`;
       });
       return hh;
