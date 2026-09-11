@@ -580,6 +580,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    border-radius:12px), pas un badge pilule comme .tsec-count. */
 .dep-arr-num{background:var(--light);color:var(--dark);font-size:16px;font-weight:700;
   border-radius:12px;padding:3px 12px;flex:none;}
+/* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
+   gris neutre sinon, quand le chiffre est à 0. */
+.dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
@@ -7375,7 +7378,7 @@ function renderWeek(){
       // une bulle à droite (space-between) — plus de "Aucun" non plus,
       // "DÉPARTS ⓪" dit déjà la même chose.
       const depArrCol=(label,items,renderFn)=>`<div class="dep-arr-col">
-        <div class="dep-arr-count"><span class="dep-arr-label">${label}</span><span class="dep-arr-num">${items.length}</span></div>
+        <div class="dep-arr-count"><span class="dep-arr-label">${label}</span><span class="dep-arr-num${items.length?' has-val':''}">${items.length}</span></div>
         ${items.length?items.map(renderFn).join(''):''}
       </div>`;
       h+=`<div class="tsec-panel deparr">
