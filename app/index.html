@@ -2776,10 +2776,25 @@ function applyRemoteData(d,meta){
   // <input type=time> sur iOS déclenche déjà 'change' dès qu'on bouge la
   // molette des heures, bien avant que les minutes soient réglées — le
   // re-render qui suivait détruisait alors le champ/le picker natif en
-  // pleine saisie, perçu comme "le volet se ferme tout seul"). On n'agit
-  // ici que sur une confirmation serveur ou un changement venu d'ailleurs
-  // (autre appareil, compte Personnel).
+  // pleine saisie, perçu comme "le volet se ferme tout seul").
   if(meta&&meta.hasPendingWrites)return;
+  // Deuxième filet, pour l'écho ENTRE-TEMPS CONFIRMÉ (hasPendingWrites
+  // redevenu false) de cette même écriture — arrive un peu plus tard, mais
+  // reste le même contenu que celui qu'on a nous-mêmes envoyé (voir
+  // lastSentPayloadKey dans pushToFirebase). Sans ce filet, ce
+  // second aller-retour — retardé, donc pouvant atterrir pendant qu'un
+  // champ qu'on vient déjà de modifier une seconde fois (ex. vidé juste
+  // après avoir tapé un nombre) est toujours affiché — écrasait ce
+  // changement plus récent avec l'ancienne valeur confirmée, perçu comme
+  // "l'appli a buggé et est revenue à l'ancien nombre d'heures". Seul un
+  // contenu réellement DIFFÉRENT (autre appareil, compte Personnel) doit
+  // déclencher la suite.
+  const incomingKey=stableStringify({
+    bookings:d.bookings||[], guests:d.guests||[], events:d.events||[], cleaning:d.cleaning||{},
+    menus:d.menus||{}, extDiners:d.extDiners||{}, transactions:d.transactions||[],
+    catalog:d.catalog||[], settings:d.settings||{}
+  });
+  if(incomingKey===lastSentPayloadKey)return;
   S.bookings=d.bookings||[];
   const bookingsFixed=migrateHomeExchangePrix();
   S.guests=d.guests||[];
@@ -2872,6 +2887,29 @@ let lastPayloadKB=null;
 let lastWriteMs=null;
 let lastReceiveAt=null;
 let unsubSnapshot=null;
+// Dernier contenu (hors timestamp 'updated') qu'on a nous-même envoyé à
+// Firebase — voir pushToFirebase/stableStringify. Comparé à chaque snapshot
+// reçu dans applyRemoteData/applySharedOpsData : si identique, ce n'est que
+// l'écho de notre propre écriture qui finit par revenir confirmée (pas
+// seulement "pending", voir ce cas déjà traité séparément) — la réappliquer
+// et re-render ne changerait rien à l'affichage, seulement au risque de
+// détruire un champ en cours de saisie (ex. un <input type=number> vidé
+// juste avant que cet écho, retardé, ne revienne — perçu comme "l'appli a
+// buggé et est revenue à l'ancienne valeur").
+let lastSentPayloadKey=null;
+// Stringify à clés triées récursivement (objets seulement, pas les
+// tableaux, dont l'ordre compte) : Firestore ne garantit pas de renvoyer les
+// champs d'un document dans le même ordre qu'à l'écriture, donc une
+// comparaison JSON.stringify brute donnerait parfois un faux "différent"
+// pour un contenu strictement identique.
+function stableStringify(obj){
+  return JSON.stringify(obj,(k,v)=>{
+    if(v&&typeof v==='object'&&!Array.isArray(v)){
+      return Object.keys(v).sort().reduce((acc,key)=>{acc[key]=v[key];return acc;},{});
+    }
+    return v;
+  });
+}
 // Dernière erreur de synchro rencontrée (voir onErr dans
 // connectFirestoreForUser) — jamais effacée automatiquement même après une
 // reprise réussie, pour qu'on puisse toujours voir ce qui a coincé au tout
@@ -3002,10 +3040,15 @@ function pushToFirebase(){
   if(currentRole==='personnel')return;
   setSyncPip('busy','Envoi…');
   const t0=Date.now();
-  const payload=JSON.stringify({
+  const payloadObj={
     bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners, transactions:S.transactions,
     catalog:S.catalog, settings:S.settings
-  });
+  };
+  const payload=JSON.stringify(payloadObj);
+  // Mémorisé AVANT l'envoi (pas dans le .then) : c'est le contenu qu'on
+  // envoie qui sert de référence, pas une confirmation qui pourrait arriver
+  // après qu'un autre write ait déjà démarré entretemps.
+  lastSentPayloadKey=stableStringify(payloadObj);
   lastPayloadKB=Math.round(payload.length/1024);
   console.log(`[sync] envoi… (${lastPayloadKB} Ko)`);
   db.collection('accounts').doc(currentUid).set({
