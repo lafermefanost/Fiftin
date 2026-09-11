@@ -554,19 +554,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:flex;flex-direction:column;align-items:center;text-align:center;}
 .tsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
 .tsm-lbl{font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
-/* Module jour entier en vert foncé uni (en-tête + corps, même couleur) —
-   avant, un en-tête vert moyen posé sur un corps blanc ajoutait une boîte
-   de plus à distinguer par-dessus les volets déjà imbriqués dedans ("poupée
-   russe"). Les volets à l'intérieur (Départs & arrivées, Ménage, Menu du
-   jour, En séjour — voir .tsec-panel) restent blancs : ce sont eux qui
-   doivent maintenant se détacher, sur un fond uni plutôt que sur un fond
-   déjà découpé en deux couleurs. */
-.wday-card{background:var(--green-deep);border-radius:12px;padding:12px 14px;}
-/* Même repère que .rv-day-today (voir goToday) — léger contour sur la
-   carte du jour même, pour la retrouver d'un coup d'œil dans la liste. */
+.wday-card{background:#fff;border-radius:12px;padding:12px 14px;}
+/* Même repère que .rv-day-today (voir goToday) — léger contour vert sur
+   la carte du jour même, pour la retrouver d'un coup d'œil dans la liste. */
 .wday-card.wday-today{outline:1.5px solid var(--green);outline-offset:-1.5px;}
 .wday-head{display:flex;justify-content:space-between;align-items:baseline;
-  background:var(--green-deep);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
+  background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .wday-card.collapsed .wday-head{margin:-12px -14px -12px;border-radius:10px;}
 .wday-card.collapsed .wday-body{display:none;}
 .wday-name{font-weight:600;font-size:12px;color:#fff;letter-spacing:.03em;text-transform:uppercase;}
