@@ -585,7 +585,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .extras-day-tab:hover{border-color:#aaa;color:var(--dark);}
 .extras-day-tab.on{background:var(--green);color:#fff;border-color:var(--green);}
 .cln-detail-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
-.cln-detail-name{font-size:12px;font-weight:600;flex:1;min-width:0;}
+.cln-detail-name{font-size:12px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .cln-detail-row input[type=time],.cln-detail-row input[type=number]{
   flex:none;padding:5px 6px;border:1px solid var(--light);border-radius:6px;
   font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);background:var(--white);outline:none;}
@@ -5330,6 +5330,13 @@ function flash(msg,bg){
 // ═══════════════════════════════════════════════════════════════
 // Écrasée par applySettings() dès l'initialisation — vide comme DEFAULT_SETTINGS.cleaners.
 let CLEANERS=[];
+// Structure par défaut pour toute donnée qui devrait être rattachée à une
+// structure mais ne l'est pas explicitement (transaction bancaire sans
+// t.group, ménage sans c.group…) — toujours la 1re structure réellement
+// configurée (liste libre, voir S.settings.structures), jamais un id figé
+// d'avant la généralisation à N structures. Utilisée par
+// variableChargesForMonth, toggleCleaner/setCleanerField et renderYear.
+function defaultStructureId(){return S.settings.structures&&S.settings.structures.length?S.settings.structures[0].id:DEFAULT_SETTINGS.structures[0].id;}
 const CLEAN_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M20 4 11 13"/><path d="M11 13 5 21h10z"/><line x1="7.5" y1="18" x2="12.5" y2="18"/></svg>';
 
 // Migrate old format S.cleaning[ds]=name (string) → array of {name,hours,time}
@@ -5341,11 +5348,21 @@ function migrateCleaning(){
   });
 }
 
-function toggleCleaner(ds,name){
+// group : structure choisie (voir renderWeek → une barre Ménage par
+// structure dès qu'il y en a plus d'une). Une même personne peut ainsi
+// apparaître deux fois le même jour, une entrée par structure — indexé sur
+// (name,group), pas sur name seul, sinon cocher/modifier dans la barre de
+// la structure B modifierait par erreur l'entrée de la structure A.
+// Compte à une seule structure : group vaut toujours undefined ici (une
+// seule barre, appelée sans 3e argument), comportement inchangé d'avant ce
+// réglage — la 1re structure configurée sert alors de repli des deux côtés
+// de la comparaison, donc une entrée sans .group matche toujours.
+function toggleCleaner(ds,name,group){
   const list=S.cleaning[ds]||[];
-  const idx=list.findIndex(c=>c.name===name);
+  const g=group||defaultStructureId();
+  const idx=list.findIndex(c=>c.name===name&&(c.group||defaultStructureId())===g);
   if(idx>=0) list.splice(idx,1);
-  else list.push({name,hours:null,time:null});
+  else list.push(group?{name,hours:null,time:null,group}:{name,hours:null,time:null});
   S.cleaning[ds]=list;
   persist();
   // Le volet Ménage existe aussi bien en vue Jour qu'en vue Semaine — on
@@ -5354,9 +5371,10 @@ function toggleCleaner(ds,name){
   if(S.view==='today')renderToday();
   else renderWeek();
 }
-function setCleanerField(ds,name,field,val){
+function setCleanerField(ds,name,field,val,group){
   const list=S.cleaning[ds]||[];
-  const c=list.find(x=>x.name===name);
+  const g=group||defaultStructureId();
+  const c=list.find(x=>x.name===name&&(x.group||defaultStructureId())===g);
   if(!c)return;
   c[field]=field==='hours'?(val===''?null:parseFloat(val)||0):val;
   persist();
@@ -5789,17 +5807,14 @@ function variableChargesForMonth(mStart,mEndExact,group){
   // "Non catégorisé" n'est jamais une charge de l'entreprise tant qu'elle n'a pas
   // été affectée à une vraie catégorie — exclue du total par défaut.
   byCat['']={label:'Non catégorisé',total:0,excluded:true,count:0};
-  // Groupe par défaut d'une transaction sans t.group explicite : la 1re structure
-  // configurée (liste libre, voir S.settings.structures) — pas le littéral figé
-  // 'sasu' d'avant la généralisation à N structures, qui ne correspond plus à
-  // aucun id réel dès que la structure par défaut a été renommée/recréée.
-  // Sinon ces transactions non taguées disparaissaient silencieusement de
-  // toute répartition filtrée par structure.
-  const defGroup=(S.settings.structures&&S.settings.structures.length?S.settings.structures[0].id:DEFAULT_SETTINGS.structures[0].id);
   let total=0;
   monthTransactions(mStart,mEndExact).forEach(t=>{
     if(t.direction!=='Debit')return;
-    if(group&&(t.group||defGroup)!==group)return;
+    // t.group||defaultStructureId() : une transaction sans structure explicite
+    // retombe sur la 1re structure configurée (pas un littéral figé 'sasu'
+    // d'avant la généralisation à N structures), sinon elle disparaîtrait
+    // silencieusement de toute répartition filtrée par structure.
+    if(group&&(t.group||defaultStructureId())!==group)return;
     const cid=t.categoryId||'';
     if(!byCat[cid])byCat[cid]={label:'Non catégorisé',total:0,excluded:true,count:0};
     byCat[cid].total+=t.amount;
@@ -7036,6 +7051,9 @@ function renderWeek(){
   const sundayDate=new Date(addDays(S.wStart,6)+'T00:00:00');
   const wn=weekNum(mondayDate);
   const fmtD=d=>d.getDate()+' '+MON[d.getMonth()].toLowerCase();
+  // Pour le sélecteur de structure du volet Ménage ci-dessous — masqué s'il
+  // n'y a qu'une seule structure (rien à choisir, voir cln-detail-row).
+  const structsForClean=(S.settings.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
 
   let totalNights=0,periodRevTotal=0,totalExtras=0,totalRepas=0,repasRevenueFromBookings=0;
   S.bookings.forEach(bk=>{
@@ -7216,28 +7234,41 @@ function renderWeek(){
       ${wpanel('arr','↓','Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
     </div>`;
 
-    h+=`<div class="tsec-panel menage collapsed">
-      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
-        ${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span><span class="tsec-chev">▾</span>
-      </div>
-      <div class="tsec-body">
-        <div class="cln-chips">`;
-    CLEANERS.forEach(cl=>{
-      const name=cl.name;
-      const on=dayCleaners.some(c=>c.name===name);
-      h+=`<button class="cleaner-btn${on?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}')">${name}</button>`;
-    });
-    h+=`</div>`;
-    dayCleaners.forEach(c=>{
-      h+=`<div class="cln-detail-row">
-        <span class="cln-detail-name">${c.name}</span>
-        <input type="time" value="${c.time||''}" title="Heure de venue" onchange="setCleanerField('${ds}','${c.name}','time',this.value)">
-        <input type="number" min="0" step="0.5" placeholder="h" value="${c.hours!=null?c.hours:''}" title="Nombre d'heures" onchange="setCleanerField('${ds}','${c.name}','hours',this.value)">
-        <span class="cln-unit">h</span>
+    // Une barre Ménage par structure dès qu'il y en a plus d'une — un ménage
+    // n'a de sens que pour UNE structure à la fois (une intervention
+    // donnée), pas une répartition au prorata devinée après coup (voir
+    // structCleaningCost dans renderYear, qui somme par groupe). Compte à
+    // une seule structure : une seule barre, sans rien à choisir, comme
+    // avant ce réglage.
+    const menagePanel=(groupId,titleSuffix)=>{
+      const cleaners=groupId==null?dayCleaners:dayCleaners.filter(c=>(c.group||structsForClean[0].id)===groupId);
+      let hh=`<div class="tsec-panel menage collapsed">
+        <div class="tsec-hd${cleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+          ${CLEAN_ICON} Ménage${titleSuffix?` — ${titleSuffix}`:''}<span class="tsec-count"><span>${cleaners.length}</span></span><span class="tsec-chev">▾</span>
+        </div>
+        <div class="tsec-body">
+          <div class="cln-chips">`;
+      CLEANERS.forEach(cl=>{
+        const name=cl.name;
+        const on=cleaners.some(c=>c.name===name);
+        hh+=`<button class="cleaner-btn${on?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>`;
+      });
+      hh+=`</div>`;
+      cleaners.forEach(c=>{
+        hh+=`<div class="cln-detail-row">
+          <span class="cln-detail-name">${c.name}</span>
+          <input type="time" value="${c.time||''}" title="Heure de venue" onchange="setCleanerField('${ds}','${c.name}','time',this.value${groupId?`,'${groupId}'`:''})">
+          <input type="number" min="0" step="0.5" placeholder="h" value="${c.hours!=null?c.hours:''}" title="Nombre d'heures" onchange="setCleanerField('${ds}','${c.name}','hours',this.value${groupId?`,'${groupId}'`:''})">
+          <span class="cln-unit">h</span>
+        </div>`;
+      });
+      hh+=`</div>
       </div>`;
-    });
-    h+=`</div>
-    </div>`;
+      return hh;
+    };
+    h+=structsForClean.length>1
+      ? structsForClean.map(s=>menagePanel(s.id,s.name)).join('')
+      : menagePanel(null,'');
 
     const dm=getMenu(ds);
     const menuHas=!!(dm.entree||dm.plat||dm.dessert);
@@ -7970,6 +8001,29 @@ function renderYear(){
     return srcDef.filter(s=>!s.noRevenue&&bySrc[s.id]>0).map(s=>({label:s.label,val:bySrc[s.id],color:s.color}));
   }
 
+  // Coût du ménage de l'année pour UNE SEULE structure — voir le sélecteur de
+  // structure ajouté à chaque intervention (vue Semaine → volet Ménage,
+  // cln-group-sel). Une intervention sans structure choisie (ancienne saisie
+  // d'avant ce réglage, ou compte à une seule structure où le sélecteur est
+  // masqué) est rattachée par défaut à la 1re structure configurée — jamais
+  // perdue ni devinée au prorata entre plusieurs structures.
+  function structCleaningCost(gid){
+    if(!CLEANERS.length)return 0;
+    let total=0;
+    const nDaysYear=daysBetween(yStart,yEnd);
+    for(let i=0;i<nDaysYear;i++){
+      const ds=addDays(yStart,i);
+      (S.cleaning[ds]||[]).forEach(c=>{
+        const hours=c.hours||0;
+        if(hours<=0)return;
+        if((c.group||structs[0].id)!==gid)return;
+        const rate=CLEANERS.find(cl=>cl.name===c.name)?.rate??15;
+        total+=hours*rate;
+      });
+    }
+    return total;
+  }
+
   // thresholdConfigs : liste libre de seuils pour cette structure, de type 'revenue' (jauge
   // CA réalisé/projeté vs montant) ou 'nights' (jauge nuits plateformes vs limite). 0, 1 ou N.
   function groupCard(gid,name,thresholdConfigs,color){
@@ -7996,6 +8050,8 @@ function renderYear(){
     Object.values(chargesBreakdown).filter(v=>v.count>0&&!v.excluded).forEach(v=>{
       chargesEntries[v.label]=(chargesEntries[v.label]||0)+v.total;
     });
+    const cleanCost=structCleaningCost(gid);
+    if(cleanCost>0)chargesEntries['Ménage']=(chargesEntries['Ménage']||0)+cleanCost;
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
     const sourceEntries=structSourceBreakdown(gid);
     const subSection=(title,inner)=>`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--light)">
@@ -8028,9 +8084,9 @@ function renderYear(){
       ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
       ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
       ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
-          <span>Total annuel (relevé bancaire)</span>
+          <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
           <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
-        </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge bancaire rattachée à cette structure</div>')}
+        </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>')}
     </div>`;
   }
 
@@ -8095,32 +8151,11 @@ function renderYear(){
     </div>
   </div>`:'';
 
-  // Ménage : saisi jour par jour (vue Semaine → volet Ménage) sans lien avec
-  // une chambre ni une structure précise dans le modèle de données actuel —
-  // impossible à répartir honnêtement entre les cartouches de structure
-  // ci-dessus (qui, eux, ne montrent que les charges bancaires réellement
-  // taguées par structure via variableChargesForMonth(...,gid)). Affiché à
-  // part, pour tout le compte, plutôt que deviné/réparti au prorata.
-  let yearCleanCostTotal=0;
-  if(CLEANERS.length){
-    const nDaysYear=daysBetween(yStart,yEnd);
-    for(let i=0;i<nDaysYear;i++){
-      const ds=addDays(yStart,i);
-      (S.cleaning[ds]||[]).forEach(c=>{
-        const hours=c.hours||0;
-        if(hours<=0)return;
-        const rate=CLEANERS.find(cl=>cl.name===c.name)?.rate??15;
-        yearCleanCostTotal+=hours*rate;
-      });
-    }
-  }
-  const yearMenageHTML=yearCleanCostTotal>0?`<div class="yr-section">
-    <div class="yr-section-title">Ménage — toutes structures</div>
-    <div class="mch-total-row" style="margin-top:0">
-      <span>Total annuel</span>
-      <span class="mch-total-val">${Math.round(yearCleanCostTotal).toLocaleString('fr-FR')} € / an</span>
-    </div>
-  </div>`:'';
+  // Le ménage a désormais sa propre structure choisie à la saisie (vue
+  // Semaine → volet Ménage, cln-group-sel) et rejoint directement la
+  // "Répartition des charges" de CETTE structure (voir structCleaningCost,
+  // utilisé dans groupCard ci-dessus) — plus de bloc "toutes structures" à
+  // part ici, le ménage n'est plus jamais orphelin.
 
   // Regulatory — les seuils affichés viennent des seuils réellement configurés
   // (n'importe quelle structure, retrouvés par mot-clé dans leur libellé plutôt
@@ -8197,7 +8232,6 @@ function renderYear(){
     ${globalHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
-    ${yearMenageHTML}
     ${fiscalHTML}
     ${reglHTML}
   </div>`;
