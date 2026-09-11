@@ -2769,6 +2769,18 @@ function applyRemoteData(d,meta){
     const src=meta&&meta.fromCache?'cache locale':(meta&&meta.hasPendingWrites?'écriture locale en attente':'serveur');
     console.log(`[sync] données reçues (${src}), écrites à ${d.updated}, délai=${Math.round(delayMs/1000)}s`);
   }
+  // Écho de notre PROPRE écriture pas encore confirmée par le serveur
+  // (hasPendingWrites) : S contient déjà exactement ces données puisqu'on
+  // les y a mises nous-mêmes avant d'appeler persist()/pushToFirebase — les
+  // réappliquer et re-render ne changerait rien à l'affichage, seulement au
+  // prix de reconstruire toute la vue en plein milieu d'une saisie (ex. un
+  // <input type=time> sur iOS déclenche déjà 'change' dès qu'on bouge la
+  // molette des heures, bien avant que les minutes soient réglées — le
+  // re-render qui suivait détruisait alors le champ/le picker natif en
+  // pleine saisie, perçu comme "le volet se ferme tout seul"). On n'agit
+  // ici que sur une confirmation serveur ou un changement venu d'ailleurs
+  // (autre appareil, compte Personnel).
+  if(meta&&meta.hasPendingWrites)return;
   S.bookings=d.bookings||[];
   const bookingsFixed=migrateHomeExchangePrix();
   S.guests=d.guests||[];
@@ -2828,6 +2840,12 @@ function applySharedOpsData(d,meta){
     lastSyncDelayMs=Date.now()-new Date(d.updated).getTime();
     lastReceiveAt=new Date().toLocaleTimeString('fr-FR');
   }
+  // Écho de notre propre écriture, pas encore confirmée par le serveur — voir
+  // le même repli dans applyRemoteData (compte Propriétaire). Un compte
+  // Personnel peut lui aussi modifier le Ménage : sans ça, le champ heure/
+  // durée qu'il est en train de remplir se ferait détruire par ce re-render
+  // en plein milieu de la saisie.
+  if(meta&&meta.hasPendingWrites)return;
   S.bookings=d.bookings||[];
   S.guests=d.guests||[];
   S.events=d.events||[];
