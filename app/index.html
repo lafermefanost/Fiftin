@@ -1894,6 +1894,18 @@ let settingsPanelOpen={};
 let teamMembers=[];
 let weekOpenDays=new Set();
 let weekOpenDaysFor=null;
+// État ouvert/fermé des volets à l'intérieur d'un jour (Départs, Arrivées,
+// Ménage, Menu du jour, En séjour) — sans ça, ces volets retombent à leur
+// état par défaut à CHAQUE rendu de la vue Semaine, y compris ceux
+// déclenchés par la synchro temps réel après la modification d'un simple
+// champ (voir applyRemoteData → renderWeek), refermant un volet que
+// l'utilisateur venait d'ouvrir. Clé "ds:cls" (ex. "2026-01-05:menage") →
+// booléen collapsed, mémorisé seulement une fois basculé manuellement (voir
+// panelCollapsed/toggleTsecPanel) ; par défaut absent de la Map, on retombe
+// sur l'état calculé habituel (vide → replié, etc.). Réinitialisé avec
+// weekOpenDays au changement de semaine — volontairement pas persistant
+// au-delà.
+let weekPanelState=new Map();
 
 const DEFAULT_PRICES={solo:100, double:125, th:25, bf:5};
 // Prix par défaut d'une chambre selon sa capacité : 100€ pour 1 pers, 125€ à partir de 2.
@@ -7051,6 +7063,19 @@ function toggleWeekDay(ds){
   renderWeek();
 }
 
+// État replié/déplié d'un volet à l'intérieur d'un jour — voir weekPanelState.
+// Pas encore basculé manuellement (absent de la Map) : on retombe sur
+// defaultCollapsed (le calcul habituel, ex. replié si vide).
+function panelCollapsed(ds,cls,defaultCollapsed){
+  const key=ds+':'+cls;
+  return weekPanelState.has(key)?weekPanelState.get(key):defaultCollapsed;
+}
+function toggleTsecPanel(ds,cls,defaultCollapsed){
+  const key=ds+':'+cls;
+  weekPanelState.set(key,!panelCollapsed(ds,cls,defaultCollapsed));
+  renderWeek();
+}
+
 function renderWeek(){
   if(!S.wStart) S.wStart=getMondayOf(todayISO());
   const today=todayISO();
@@ -7063,6 +7088,7 @@ function renderWeek(){
     weekOpenDaysFor=S.wStart;
     weekOpenDays=new Set();
     if(today>=S.wStart&&today<wEnd) weekOpenDays.add(today);
+    weekPanelState=new Map();
   }
   const mondayDate=new Date(S.wStart+'T00:00:00');
   const sundayDate=new Date(addDays(S.wStart,6)+'T00:00:00');
@@ -7198,8 +7224,11 @@ function renderWeek(){
   }
   const weekPrefillDate=(today>=S.wStart&&today<wEnd)?today:S.wStart;
   const weekEvAddBtn=`<div class="tsec-add" onclick="event.stopPropagation();openEventEdit(null,'${weekPrefillDate}')">+ Ajouter un événement</div>`;
-  h+=`<div class="tsec-panel ev collapsed">
-    <div class="tsec-hd${weekEvs.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+  // "week" en guise de ds : ce volet n'est pas par jour (voir panelCollapsed/
+  // toggleTsecPanel plus bas, réutilisés tels quels avec une clé fixe).
+  const weekEvCollapsed=panelCollapsed('week','ev',true);
+  h+=`<div class="tsec-panel ev${weekEvCollapsed?' collapsed':''}">
+    <div class="tsec-hd${weekEvs.length>0?' has-items':''}" onclick="toggleTsecPanel('week','ev',true)">
       ${EVENT_ICON} Événements<span class="tsec-count"><span>${weekEvs.length}</span></span><span class="tsec-chev">▾</span>
     </div>
     <div class="tsec-body">${weekEvs.length?weekEvs.map(evCard).join(''):'<div class="tsec-empty">Aucun</div>'}${weekEvAddBtn}</div>
@@ -7238,8 +7267,9 @@ function renderWeek(){
     const wpanel=(cls,icon,title,items,renderFn)=>{
       const cnt=items.length;
       const body=cnt?items.map(renderFn).join(''):`<div class="tsec-empty">Aucun</div>`;
-      return`<div class="tsec-panel ${cls}${cnt===0?' collapsed':''}">
-        <div class="tsec-hd${cnt>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+      const collapsed=panelCollapsed(ds,cls,cnt===0);
+      return`<div class="tsec-panel ${cls}${collapsed?' collapsed':''}">
+        <div class="tsec-hd${cnt>0?' has-items':''}" onclick="toggleTsecPanel('${ds}','${cls}',${cnt===0})">
           ${icon} ${title}<span class="tsec-count"><span>${cnt}</span></span><span class="tsec-chev">▾</span>
         </div>
         <div class="tsec-body">${body}</div>
@@ -7284,8 +7314,9 @@ function renderWeek(){
     const menageBodyHTML=structsForClean.length>1
       ? structsForClean.map((s,i)=>`<div${i>0?' class="cln-group"':''}>${menageGroup(s.id,s.name)}</div>`).join('')
       : menageGroup(null,'');
-    h+=`<div class="tsec-panel menage collapsed">
-      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+    const menageCollapsed=panelCollapsed(ds,'menage',true);
+    h+=`<div class="tsec-panel menage${menageCollapsed?' collapsed':''}">
+      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}" onclick="toggleTsecPanel('${ds}','menage',true)">
         ${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span><span class="tsec-chev">▾</span>
       </div>
       <div class="tsec-body">${menageBodyHTML}</div>
@@ -7296,8 +7327,9 @@ function renderWeek(){
     const dThCount=S.bookings
       .filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
       .reduce((sum,b)=>sum+(b.nbPersons||2),0);
-    h+=`<div class="tsec-panel menu collapsed">
-      <div class="tsec-hd${menuHas?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+    const menuCollapsed=panelCollapsed(ds,'menu',true);
+    h+=`<div class="tsec-panel menu${menuCollapsed?' collapsed':''}">
+      <div class="tsec-hd${menuHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','menu',true)">
         ${MEAL_ICON} Menu du jour<span class="tsec-count"><span>${dThCount} repas</span></span><span class="tsec-chev">▾</span>
       </div>
       <div class="tsec-body">
