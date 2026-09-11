@@ -573,6 +573,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wday-cols .tsec-body{padding:8px 8px 4px;}
 .wday-cols .day-chip{margin-bottom:6px;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
+/* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
+   menageGroup dans renderWeek) — séparateur discret entre deux structures,
+   pas une carte à part comme .tsec-panel (ça resterait UN seul onglet). */
+.cln-group-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--gray);margin-bottom:6px;}
+.cln-group{margin-top:14px;padding-top:12px;border-top:1px solid var(--light);}
 .cleaner-btn{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
@@ -6268,12 +6274,23 @@ function renderSettings(){
   h+=settingsPanel('sources','Sources de réservation',sourcesBody);
 
   // — Équipe ménage —
+  // Structure associée : filtre les chips proposées dans chaque sous-groupe
+  // du volet Ménage (vue Semaine/Jour) pour ne montrer que le personnel
+  // réellement affecté à cette structure, plutôt que tout le monde partout.
+  // "Toutes les structures" (valeur vide) = montrée dans chaque sous-groupe,
+  // utile pour quelqu'un qui intervient sur les deux. Masqué s'il n'y a
+  // qu'une seule structure : rien à filtrer.
   let menageBody='';
   (st.cleaners||[]).forEach((c,i)=>{
+    const groupSelHTML=structsForThr.length>1?`<select class="set-fi-sm" style="width:auto;max-width:120px;flex:none" title="Structure" onchange="updateCleanerField(${i},'group',this.value)">
+      <option value=""${!c.group?' selected':''}>Toutes structures</option>
+      ${structsForThr.map(s=>`<option value="${s.id}"${c.group===s.id?' selected':''}>${s.name.replace(/</g,'&lt;')}</option>`).join('')}
+    </select>`:'';
     menageBody+=`<div class="set-card set-card-row">
       <input class="set-fi" style="flex:1" value="${c.name.replace(/"/g,'&quot;')}" placeholder="Prénom" onblur="updateCleanerField(${i},'name',this.value)">
       <input type="number" class="set-fi-sm" style="width:50px" min="0" step="0.5" value="${c.rate!=null?c.rate:15}" onblur="updateCleanerField(${i},'rate',this.value)">
       <span style="font-size:11px;color:var(--gray)">€/h</span>
+      ${groupSelHTML}
       <button class="set-del" onclick="delCleaner(${i})">×</button>
     </div>`;
   });
@@ -7234,21 +7251,21 @@ function renderWeek(){
       ${wpanel('arr','↓','Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
     </div>`;
 
-    // Une barre Ménage par structure dès qu'il y en a plus d'une — un ménage
-    // n'a de sens que pour UNE structure à la fois (une intervention
-    // donnée), pas une répartition au prorata devinée après coup (voir
-    // structCleaningCost dans renderYear, qui somme par groupe). Compte à
-    // une seule structure : une seule barre, sans rien à choisir, comme
-    // avant ce réglage.
-    const menagePanel=(groupId,titleSuffix)=>{
+    // Un seul onglet "Ménage" par jour (pas un par structure) — à
+    // l'intérieur, un sous-groupe par structure dès qu'il y en a plus d'une,
+    // chacun avec ses propres chips de personnel et ses propres lignes
+    // heure/durée. Un ménage reste rattaché à UNE structure à la fois (voir
+    // structCleaningCost dans renderYear, qui somme par groupe) — c'est la
+    // présentation qui change, pas le modèle de données ni le calcul.
+    const menageGroup=(groupId,titleSuffix)=>{
       const cleaners=groupId==null?dayCleaners:dayCleaners.filter(c=>(c.group||structsForClean[0].id)===groupId);
-      let hh=`<div class="tsec-panel menage collapsed">
-        <div class="tsec-hd${cleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
-          ${CLEAN_ICON} Ménage${titleSuffix?` — ${titleSuffix}`:''}<span class="tsec-count"><span>${cleaners.length}</span></span><span class="tsec-chev">▾</span>
-        </div>
-        <div class="tsec-body">
-          <div class="cln-chips">`;
-      CLEANERS.forEach(cl=>{
+      let hh=titleSuffix?`<div class="cln-group-name">${titleSuffix.replace(/</g,'&lt;')}</div>`:'';
+      hh+=`<div class="cln-chips">`;
+      // Chips filtrées à la structure de ce sous-groupe : ne propose que le
+      // personnel qui lui est associé (réglages → Équipe ménage), plus celui
+      // sans structure assignée ("Toutes structures", visible partout). Sans
+      // effet à structure unique (groupId===null) : personne à filtrer.
+      CLEANERS.filter(cl=>groupId==null||!cl.group||cl.group===groupId).forEach(cl=>{
         const name=cl.name;
         const on=cleaners.some(c=>c.name===name);
         hh+=`<button class="cleaner-btn${on?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>`;
@@ -7262,13 +7279,17 @@ function renderWeek(){
           <span class="cln-unit">h</span>
         </div>`;
       });
-      hh+=`</div>
-      </div>`;
       return hh;
     };
-    h+=structsForClean.length>1
-      ? structsForClean.map(s=>menagePanel(s.id,s.name)).join('')
-      : menagePanel(null,'');
+    const menageBodyHTML=structsForClean.length>1
+      ? structsForClean.map((s,i)=>`<div${i>0?' class="cln-group"':''}>${menageGroup(s.id,s.name)}</div>`).join('')
+      : menageGroup(null,'');
+    h+=`<div class="tsec-panel menage collapsed">
+      <div class="tsec-hd${dayCleaners.length>0?' has-items':''}" onclick="this.closest('.tsec-panel').classList.toggle('collapsed')">
+        ${CLEAN_ICON} Ménage<span class="tsec-count"><span>${dayCleaners.length}</span></span><span class="tsec-chev">▾</span>
+      </div>
+      <div class="tsec-body">${menageBodyHTML}</div>
+    </div>`;
 
     const dm=getMenu(ds);
     const menuHas=!!(dm.entree||dm.plat||dm.dessert);
