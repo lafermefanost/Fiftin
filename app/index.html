@@ -573,16 +573,22 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0;}
 .dep-arr-col{min-width:0;}
 .dep-arr-col:first-child{border-right:1px solid var(--light);padding-right:10px;}
-.dep-arr-count{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;}
+.dep-arr-count{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-bottom:8px;}
 .dep-arr-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);}
 /* Même arrondi que les cartouches de l'appli (.wday-card/.mstat-card :
-   border-radius:12px), pas un badge pilule comme .tsec-count. */
+   border-radius:12px), pas un badge pilule comme .tsec-count. Placé à
+   gauche du libellé (accolé), plus à droite façon space-between. */
 .dep-arr-num{background:var(--light);color:var(--dark);font-size:16px;font-weight:700;
   border-radius:12px;padding:3px 12px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
 .dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
+.day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
+.day-chip-main .day-chip-content{padding-bottom:4px;}
+/* Total du séjour, affiché seulement sous les chips de départ (voir
+   wMiniChip/showTotal) pour faciliter la facturation au départ du client. */
+.bstay-total{font-size:11px;font-weight:700;color:var(--green-deep);padding:0 12px 8px;margin-top:-4px;}
 /* Résumé Table d'hôtes (voir renderWeek, tsec-panel.th) — qui mange (chips
    réutilisées telles quelles) puis le menu du jour en une ligne, avant le
    bouton qui ouvre le modal Table d'hôtes pour tout modifier. */
@@ -7356,13 +7362,16 @@ function renderWeek(){
       <div class="wday-date">${d.getDate()} ${MON[d.getMonth()]}<span class="wday-chev">▾</span></div>
     </div>`;
     h+=`<div class="wday-body">`;
-    const wMiniChip=(b,timeLabel)=>{const g=guest(b.guestId);const rm=room(b.roomId);
+    const wMiniChip=(b,timeLabel,showTotal)=>{const g=guest(b.guestId);const rm=room(b.roomId);
       return`<div class="day-chip" onclick="openEditModal('${b.id}','${ds}')">
         <div class="tbar" style="background:${g?g.color:'#999'}"></div>
-        <div class="day-chip-content">
-          <span class="bname">${g?g.name:'?'}</span>
-          <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${rm?rm.short:''}</span>
-          ${timeLabel?`<span class="btime">${timeLabel}</span>`:''}
+        <div class="day-chip-main">
+          <div class="day-chip-content">
+            <span class="bname">${g?g.name:'?'}</span>
+            <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${rm?rm.short:''}</span>
+            ${timeLabel?`<span class="btime">${timeLabel}</span>`:''}
+          </div>
+          ${showTotal?`<div class="bstay-total">${getStayTotal(b).toLocaleString('fr-FR')} €</div>`:''}
         </div>
       </div>`;};
     const wpanel=(cls,icon,title,items,renderFn)=>{
@@ -7390,13 +7399,13 @@ function renderWeek(){
       // une bulle à droite (space-between) — plus de "Aucun" non plus,
       // "DÉPARTS ⓪" dit déjà la même chose.
       const depArrCol=(label,items,renderFn)=>`<div class="dep-arr-col">
-        <div class="dep-arr-count"><span class="dep-arr-label">${label}</span><span class="dep-arr-num${items.length?' has-val':''}">${items.length}</span></div>
+        <div class="dep-arr-count"><span class="dep-arr-num${items.length?' has-val':''}">${items.length}</span><span class="dep-arr-label">${label}</span></div>
         ${items.length?items.map(renderFn).join(''):''}
       </div>`;
       h+=`<div class="tsec-panel deparr">
         <div class="tsec-body">
           <div class="dep-arr-cols">
-            ${depArrCol('Départs',deps,b=>wMiniChip(b,null))}
+            ${depArrCol('Départs',deps,b=>wMiniChip(b,null,true))}
             ${depArrCol('Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
           </div>
         </div>
