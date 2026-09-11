@@ -576,8 +576,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-col:first-child{border-right:1px solid var(--light);padding-right:10px;}
 .dep-arr-count{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:8px;}
 .dep-arr-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);}
-.dep-arr-bubble{background:var(--green);color:#fff;font-size:14px;font-weight:700;min-width:25px;height:25px;
-  border-radius:13px;padding:0 7px;display:flex;align-items:center;justify-content:center;flex:none;}
+.dep-arr-num{color:var(--dark);font-size:14px;font-weight:700;flex:none;}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
@@ -7373,7 +7372,7 @@ function renderWeek(){
       // une bulle à droite (space-between) — plus de "Aucun" non plus,
       // "DÉPARTS ⓪" dit déjà la même chose.
       const depArrCol=(label,items,renderFn)=>`<div class="dep-arr-col">
-        <div class="dep-arr-count"><span class="dep-arr-label">${label}</span><span class="dep-arr-bubble">${items.length}</span></div>
+        <div class="dep-arr-count"><span class="dep-arr-label">${label}</span><span class="dep-arr-num">${items.length}</span></div>
         ${items.length?items.map(renderFn).join(''):''}
       </div>`;
       h+=`<div class="tsec-panel deparr">
