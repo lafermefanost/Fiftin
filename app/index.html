@@ -574,8 +574,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0;}
 .dep-arr-col{min-width:0;}
 .dep-arr-col:first-child{border-right:1px solid var(--light);padding-right:10px;}
-.dep-arr-col-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-  color:var(--gray);margin-bottom:6px;}
+.dep-arr-count{font-size:20px;font-weight:700;color:var(--dark);margin-bottom:6px;
+  display:flex;align-items:center;gap:5px;}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
@@ -7367,15 +7367,19 @@ function renderWeek(){
     // affiché en permanence). La dualité gauche/droite reste visible via
     // les deux colonnes internes.
     {
-      const depArrCol=(icon,title,items,renderFn)=>`<div class="dep-arr-col">
-        <div class="dep-arr-col-title">${icon} ${title} (${items.length})</div>
-        ${items.length?items.map(renderFn).join(''):'<div class="tsec-empty">Aucun</div>'}
+      // Le nombre est l'info qui doit sauter aux yeux — plus de titre texte
+      // "Départs"/"Arrivées" (redondant avec la position gauche/droite et la
+      // flèche), juste la flèche + un grand chiffre. Plus de "Aucun" non
+      // plus : "↑ 0" dit déjà la même chose, sans ligne en plus.
+      const depArrCol=(icon,items,renderFn)=>`<div class="dep-arr-col">
+        <div class="dep-arr-count">${icon} ${items.length}</div>
+        ${items.length?items.map(renderFn).join(''):''}
       </div>`;
       h+=`<div class="tsec-panel deparr">
         <div class="tsec-body">
           <div class="dep-arr-cols">
-            ${depArrCol('↑','Départs',deps,b=>wMiniChip(b,null))}
-            ${depArrCol('↓','Arrivées',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
+            ${depArrCol('↑',deps,b=>wMiniChip(b,null))}
+            ${depArrCol('↓',arrs,b=>wMiniChip(b,b.arrivalTime||null))}
           </div>
         </div>
       </div>`;
