@@ -5720,6 +5720,38 @@ function buildChargesDonut(breakdown){
     </div>
   </div>`;
 }
+// Camembert de répartition du CA par source (vue Année, une fois par
+// structure) — couleur propre à chaque source (celle configurée dans
+// Réglages → Sources), pas la palette générique des charges, pour rester
+// cohérent avec les pastilles de source utilisées ailleurs dans l'appli.
+// `entries` déjà résolues en {label,val,color} par l'appelant (voir
+// structSourceBreakdown dans renderYear), pas de calcul de CA ici.
+function buildSourceRevDonut(entries){
+  const MAX_SLICES=6;
+  let raw=entries.filter(e=>e.val>0).sort((a,b)=>b.val-a.val);
+  if(!raw.length)return'';
+  if(raw.length>MAX_SLICES){
+    const shown=raw.slice(0,MAX_SLICES-1);
+    const restTotal=raw.slice(MAX_SLICES-1).reduce((s,e)=>s+e.val,0);
+    raw=[...shown,{label:'Autres',val:restTotal,color:'#C7C2B8'}];
+  }
+  const{pathsHTML,segs,total,size}=buildDonutSlices(raw);
+  const legendHTML=segs.map(s=>`<div class="mch-pie-row">
+    <span class="mch-pie-dot" style="background:${s.color}"></span>
+    <span class="mch-pie-label">${s.label.replace(/</g,'&lt;')}</span>
+    <span class="mch-pie-pct">${Math.round(s.frac*100)}%</span>
+    <span class="mch-pie-val">${Math.round(s.val).toLocaleString('fr-FR')} €</span>
+  </div>`).join('');
+  return`<div class="mch-pie-block">
+    <div class="mch-pie-svgwrap" style="width:${size}px;height:${size}px">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${pathsHTML}</svg>
+    </div>
+    <div class="mch-pie-legend-col">
+      <div class="mch-pie-total-line">${Math.round(total).toLocaleString('fr-FR')} € au total</div>
+      <div class="mch-pie-legend">${legendHTML}</div>
+    </div>
+  </div>`;
+}
 // Même camembert, mais pour la proportion de RÉSERVATIONS (pas de CA) entre
 // les sources — vue Mois, section "X réservations". Couleur propre à chaque
 // source (déjà utilisée pour les points/barres de la répartition juste en
@@ -5757,10 +5789,17 @@ function variableChargesForMonth(mStart,mEndExact,group){
   // "Non catégorisé" n'est jamais une charge de l'entreprise tant qu'elle n'a pas
   // été affectée à une vraie catégorie — exclue du total par défaut.
   byCat['']={label:'Non catégorisé',total:0,excluded:true,count:0};
+  // Groupe par défaut d'une transaction sans t.group explicite : la 1re structure
+  // configurée (liste libre, voir S.settings.structures) — pas le littéral figé
+  // 'sasu' d'avant la généralisation à N structures, qui ne correspond plus à
+  // aucun id réel dès que la structure par défaut a été renommée/recréée.
+  // Sinon ces transactions non taguées disparaissaient silencieusement de
+  // toute répartition filtrée par structure.
+  const defGroup=(S.settings.structures&&S.settings.structures.length?S.settings.structures[0].id:DEFAULT_SETTINGS.structures[0].id);
   let total=0;
   monthTransactions(mStart,mEndExact).forEach(t=>{
     if(t.direction!=='Debit')return;
-    if(group&&(t.group||'sasu')!==group)return;
+    if(group&&(t.group||defGroup)!==group)return;
     const cid=t.categoryId||'';
     if(!byCat[cid])byCat[cid]={label:'Non catégorisé',total:0,excluded:true,count:0};
     byCat[cid].total+=t.amount;
@@ -7791,6 +7830,10 @@ function renderYear(){
   const structs=(S.settings?.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
   const structThr=S.settings?.structureThresholds||DEFAULT_SETTINGS.structureThresholds;
   const structColor=i=>STRUCTURE_COLORS[i%STRUCTURE_COLORS.length];
+  // Remontés plus haut (utilisés à la fois par l'ancien graphe combiné et par
+  // le graphe propre à chaque structure dans groupCard ci-dessous).
+  const curMon=today.slice(0,7);
+  const BAR_H=58;
 
   function getGroupRooms(g){return ROOMS.filter(r=>(r.group||structs[0].id)===g);}
 
@@ -7873,9 +7916,63 @@ function renderYear(){
     </div>`;
   }
 
+  // Revenus par mois d'UNE SEULE structure (échelle propre à ses propres
+  // données — pas celle, partagée, de l'ancien graphe combiné — pour qu'une
+  // petite structure ne paraisse pas écrasée par une plus grosse). Une seule
+  // couleur (celle attribuée à cette structure), pas d'empilement puisqu'il
+  // n'y a qu'une série.
+  function structMonthlyChart(gid,color){
+    const rooms=getGroupRooms(gid);
+    const roomIds=new Set(rooms.map(r=>r.id));
+    const vals=Array.from({length:12},(_,m)=>{
+      const mStart=`${year}-${p(m+1)}-01`;
+      const mEnd=m===11?`${year+1}-01-01`:`${year}-${p(m+2)}-01`;
+      const v=S.bookings.filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<mEnd&&bk.checkOut>mStart)
+        .reduce((s2,bk)=>s2+getBookingRevForPeriod(bk,mStart,mEnd),0);
+      return{m,mStart,v};
+    });
+    const maxV=Math.max(1,...vals.map(x=>x.v));
+    if(maxV<=1)return`<div class="yr-chart-nodata">Aucune donnée de revenu pour ${year}</div>`;
+    const fmtCompact=v=>v>=1000?(v/1000).toFixed(1).replace('.',',')+'k':String(Math.round(v));
+    return`<div class="yr-chart">
+      ${vals.map(({m,mStart,v})=>{
+        const isCur=mStart.slice(0,7)===curMon;
+        const px=Math.round(v/maxV*BAR_H);
+        return`<div class="yr-bar-col${isCur?' yr-cur':''}">
+          <div class="yr-bar-area">
+            ${v>0?`<div class="yr-bar-val">${fmtCompact(v)}</div>`:''}
+            ${px>0?`<div class="yr-bar-stack"><div class="yr-bar-seg" style="height:${px}px;background:${color};border-radius:2px 2px 0 0"></div></div>`:''}
+          </div>
+          <div class="yr-bar-mon">${MON[m].slice(0,1)}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  // Répartition du CA de l'année par source, pour UNE SEULE structure — les
+  // réservations de cette structure uniquement (via ses chambres), sources
+  // sans CA (échange, perso…) exclues comme partout ailleurs dans l'appli.
+  // Simplification assumée par rapport à la vue Mois (qui inclut aussi
+  // extras/événements/personnes extérieures jour par jour) : ici seul le CA
+  // des réservations elles-mêmes est compté, pour rester lisible à l'échelle
+  // d'une année sans reproduire toute la logique jour par jour de la vue Mois.
+  function structSourceBreakdown(gid){
+    const rooms=getGroupRooms(gid);
+    const roomIds=new Set(rooms.map(r=>r.id));
+    const bks=S.bookings.filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<yEnd&&bk.checkOut>yStart);
+    const srcDef=S.settings.sources||DEFAULT_SETTINGS.sources;
+    const bySrc={};
+    bks.forEach(bk=>{
+      if(isSourceNoRevenue(bk.source))return;
+      const key=srcDef.find(s=>s.id===bk.source)?bk.source:'direct';
+      bySrc[key]=(bySrc[key]||0)+getBookingRevForPeriod(bk,yStart,yEnd);
+    });
+    return srcDef.filter(s=>!s.noRevenue&&bySrc[s.id]>0).map(s=>({label:s.label,val:bySrc[s.id],color:s.color}));
+  }
+
   // thresholdConfigs : liste libre de seuils pour cette structure, de type 'revenue' (jauge
   // CA réalisé/projeté vs montant) ou 'nights' (jauge nuits plateformes vs limite). 0, 1 ou N.
-  function groupCard(gid,name,thresholdConfigs){
+  function groupCard(gid,name,thresholdConfigs,color){
     const st=groupStats(gid);
     const revenueThr=(thresholdConfigs||[]).filter(t=>t.type==='revenue');
     const nightsThr=(thresholdConfigs||[]).filter(t=>t.type==='nights');
@@ -7888,6 +7985,23 @@ function renderYear(){
           <div class="mstat-sub">nuits plateformes</div>
           <div class="mstat-detail">/ ${platLimit} autorisées</div>
         </div>`:'';
+    // Trois sous-sections propres à CETTE structure — c'est tout l'objet de la
+    // séparation demandée : chaque structure porte ses propres seuils
+    // (gaugesHTML ci-dessus, déjà en place), son propre graphe de revenus par
+    // mois, sa propre répartition par source et ses propres charges bancaires
+    // (via le group=gid de variableChargesForMonth), plutôt que ces trois
+    // dernières mélangées dans des sections globales en bas de page.
+    const chargesBreakdown=variableChargesForMonth(yStart,yEnd,gid).byCat;
+    const chargesEntries={};
+    Object.values(chargesBreakdown).filter(v=>v.count>0&&!v.excluded).forEach(v=>{
+      chargesEntries[v.label]=(chargesEntries[v.label]||0)+v.total;
+    });
+    const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
+    const sourceEntries=structSourceBreakdown(gid);
+    const subSection=(title,inner)=>`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--light)">
+      <div class="yr-section-title">${title}</div>
+      ${inner}
+    </div>`;
     return`<div class="yr-group">
       <div class="yr-group-hd">
         <div class="yr-group-name">${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
@@ -7911,10 +8025,16 @@ function renderYear(){
         ${platStatHTML}
       </div>
       ${gaugesHTML}
+      ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
+      ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+      ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
+          <span>Total annuel (relevé bancaire)</span>
+          <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
+        </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge bancaire rattachée à cette structure</div>')}
     </div>`;
   }
 
-  const structureCardsHTML=structs.map(s=>groupCard(s.id,s.name,structThr[s.id]||[])).join('');
+  const structureCardsHTML=structs.map((s,i)=>groupCard(s.id,s.name,structThr[s.id]||[],structColor(i))).join('');
 
   // Vue d'ensemble : addition de toutes les structures (occupation = moyenne pondérée par capacité)
   function globalCard(){
@@ -7958,61 +8078,16 @@ function renderYear(){
   }
   const globalHTML=globalCard();
 
-  // Monthly chart — une série empilée par structure, couleur attribuée par position dans la liste
-  const monthRevs=Array.from({length:12},(_,m)=>{
-    const mStart=`${year}-${p(m+1)}-01`;
-    const mEnd=m===11?`${year+1}-01-01`:`${year}-${p(m+2)}-01`;
-    const rev={};
-    structs.forEach(s=>{
-      const rooms=getGroupRooms(s.id);
-      const roomIds=new Set(rooms.map(r=>r.id));
-      rev[s.id]=S.bookings
-        .filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<mEnd&&bk.checkOut>mStart)
-        .reduce((s2,bk)=>s2+getBookingRevForPeriod(bk,mStart,mEnd),0);
-    });
-    const total=structs.reduce((s2,s)=>s2+rev[s.id],0);
-    return{m,mStart,rev,total};
-  });
-  const maxRev=Math.max(1,...monthRevs.map(x=>x.total));
-  const curMon=today.slice(0,7);
-  // Total taxe de séjour de l'année — même prorata que le CA par mois ci-dessus,
+  // Total taxe de séjour de l'année — même prorata que le CA par mois,
   // mais volontairement calculé et affiché à part (jamais dans le CA).
   const yearStart=`${year}-01-01`,yearEndExclusive=`${year+1}-01-01`;
   const taxeSejourYearTotal=S.bookings
     .filter(bk=>bk.checkIn<yearEndExclusive&&bk.checkOut>yearStart)
     .reduce((s,bk)=>s+getTaxeSejourForPeriod(bk,yearStart,yearEndExclusive),0);
 
-  const BAR_H=58;
-  const hasRevData=maxRev>1;
-  const chartHTML=`<div class="yr-section">
-    <div class="yr-section-title">Revenus par mois</div>
-    ${hasRevData?`<div class="yr-chart">
-      ${monthRevs.map(({m,mStart,rev,total})=>{
-        const isCur=mStart.slice(0,7)===curMon;
-        const fmtCompact=v=>v>=1000?(v/1000).toFixed(1).replace('.',',')+'k':String(Math.round(v));
-        // 1re structure de la liste au bas de la pile (comme avant pour Chambres d'hôtes/SASU),
-        // les suivantes empilées au-dessus, dans l'ordre inverse de la liste.
-        const segs=structs.map((s,i)=>({px:Math.round((rev[s.id]||0)/maxRev*BAR_H),color:structColor(i)})).filter(x=>x.px>0).reverse();
-        return`<div class="yr-bar-col${isCur?' yr-cur':''}">
-          <div class="yr-bar-area">
-            ${total>0?`<div class="yr-bar-val">${fmtCompact(total)}</div>`:''}
-            ${segs.length?`<div class="yr-bar-stack">
-              ${segs.map((seg,i)=>`<div class="yr-bar-seg" style="height:${seg.px}px;background:${seg.color}${i===0?';border-radius:2px 2px 0 0':''}"></div>`).join('')}
-            </div>`:''}
-          </div>
-          <div class="yr-bar-mon">${MON[m].slice(0,1)}</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="yr-chart-legend">
-      ${structs.map((s,i)=>`<span><span class="yr-legend-dot" style="background:${structColor(i)}"></span>${s.name.replace(/</g,'&lt;')}</span>`).join('')}
-    </div>`:`<div class="yr-chart-nodata">Aucune donnée de revenu pour ${year}<br><span style="font-size:11px">Vérifiez que vos réservations ont un tarif configuré</span></div>`}
-  </div>`;
-
   // Taxe de séjour de l'année — catégorie à part (sa propre carte, pas une
-  // ligne ajoutée dans la carte du graphe de revenus), placée sous Revenus
-  // par mois. Masquée si la collecte est désactivée dans les réglages.
-  // Toujours exclue du CA (voir monthRevs ci-dessus, via getBookingRevForPeriod).
+  // ligne ajoutée dans une carte de structure), affichée une seule fois pour
+  // le compte entier. Masquée si la collecte est désactivée dans les réglages.
   const taxeSejourYearHTML=taxeSejourEnabled()?`<div class="yr-section">
     <div class="yr-section-title">Taxe de séjour</div>
     <div class="mocc-taxe" style="margin-top:0;padding-top:0;border-top:none">
@@ -8020,11 +8095,12 @@ function renderYear(){
     </div>
   </div>`:'';
 
-  // Répartition des charges de l'année — même camembert que la vue Mois
-  // (section "Charges réelles"), mais agrégé sur les 12 mois : Ménage (saisi
-  // jour par jour, vue Semaine → volet Ménage) + toutes les catégories de
-  // charges bancaires, toutes structures confondues (variableChargesForMonth
-  // sans filtre de groupe additionne déjà tous les comptes importés).
+  // Ménage : saisi jour par jour (vue Semaine → volet Ménage) sans lien avec
+  // une chambre ni une structure précise dans le modèle de données actuel —
+  // impossible à répartir honnêtement entre les cartouches de structure
+  // ci-dessus (qui, eux, ne montrent que les charges bancaires réellement
+  // taguées par structure via variableChargesForMonth(...,gid)). Affiché à
+  // part, pour tout le compte, plutôt que deviné/réparti au prorata.
   let yearCleanCostTotal=0;
   if(CLEANERS.length){
     const nDaysYear=daysBetween(yStart,yEnd);
@@ -8038,20 +8114,12 @@ function renderYear(){
       });
     }
   }
-  const yearChargesBC=variableChargesForMonth(yStart,yEnd);
-  const yearChargeBreakdown={};
-  if(yearCleanCostTotal>0)yearChargeBreakdown['Ménage']=yearCleanCostTotal;
-  Object.values(yearChargesBC.byCat).filter(v=>v.count>0&&!v.excluded).forEach(v=>{
-    yearChargeBreakdown[v.label]=(yearChargeBreakdown[v.label]||0)+v.total;
-  });
-  const yearChargesGrandTotal=yearChargesBC.total+yearCleanCostTotal;
-  const yearChargesDonutHTML=Object.keys(yearChargeBreakdown).length?`<div class="yr-section">
-    <div class="yr-section-title">Répartition des charges — année</div>
+  const yearMenageHTML=yearCleanCostTotal>0?`<div class="yr-section">
+    <div class="yr-section-title">Ménage — toutes structures</div>
     <div class="mch-total-row" style="margin-top:0">
-      <span>Total annuel (banque + ménage)</span>
-      <span class="mch-total-val">${Math.round(yearChargesGrandTotal).toLocaleString('fr-FR')} € / an</span>
+      <span>Total annuel</span>
+      <span class="mch-total-val">${Math.round(yearCleanCostTotal).toLocaleString('fr-FR')} € / an</span>
     </div>
-    ${buildChargesDonut(yearChargeBreakdown)}
   </div>`:'';
 
   // Regulatory — les seuils affichés viennent des seuils réellement configurés
@@ -8128,9 +8196,8 @@ function renderYear(){
     <div class="vnav-now-row">${year!==todayYear?`<button class="vnav-now-btn" onclick="thisYear()">Cette année</button>`:''}</div>
     ${globalHTML}
     ${structureCardsHTML}
-    ${chartHTML}
     ${taxeSejourYearHTML}
-    ${yearChargesDonutHTML}
+    ${yearMenageHTML}
     ${fiscalHTML}
     ${reglHTML}
   </div>`;
