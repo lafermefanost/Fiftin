@@ -566,13 +566,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wday-chev{display:inline-block;transition:transform .15s;}
 .wday-card.collapsed .wday-chev{transform:rotate(-90deg);}
 .wday-card .tsec-panel{margin-bottom:10px;}
-/* Volet Départs & arrivées fusionné (voir renderWeek) — deux colonnes
-   internes plutôt que deux .tsec-panel séparés : la dualité gauche/droite
-   reste lisible (séparateur vertical discret), sans doubler l'en-tête/
-   l'ombre/la boîte. */
-.dep-arr-cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-width:0;}
+/* Volet Départs & arrivées fusionné (voir renderWeek) — Départs au-dessus
+   d'Arrivées (au lieu de deux colonnes côte à côte) plutôt que deux
+   .tsec-panel séparés : la dualité reste lisible (séparateur horizontal
+   discret), sans doubler l'en-tête/l'ombre/la boîte. */
+.dep-arr-cols{display:flex;flex-direction:column;gap:14px;min-width:0;}
 .dep-arr-col{min-width:0;}
-.dep-arr-col:first-child{border-right:1px solid var(--light);padding-right:10px;}
+.dep-arr-col:not(:last-child){border-bottom:1px solid var(--light);padding-bottom:12px;}
 .dep-arr-count{display:flex;align-items:center;justify-content:flex-start;gap:8px;margin-bottom:8px;}
 .dep-arr-label{font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);}
 /* Même arrondi que les cartouches de l'appli (.wday-card/.mstat-card :
@@ -586,9 +586,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 .day-chip-main .day-chip-content{padding-bottom:4px;}
-/* Total du séjour, affiché seulement sous les chips de départ (voir
-   wMiniChip/showTotal) pour faciliter la facturation au départ du client. */
-.bstay-total{font-size:11px;font-weight:700;color:var(--green-deep);padding:0 12px 8px;margin-top:-4px;}
+/* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
+   pour facturer le client à son départ — même traitement que la ligne
+   "Total séjour" du volet En séjour (.tcard-total dans stayCard) : libellé
+   à gauche, montant en gras à droite, fond distinct. Pas de repli/détail
+   ici, juste le total. */
+.dep-total-line{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 12px;background:#D8D3CD;font-size:12px;color:#6E6860;}
+.dep-total-line span:last-child{font-weight:700;font-size:13px;}
 /* Résumé Table d'hôtes (voir renderWeek, tsec-panel.th) — qui mange (chips
    réutilisées telles quelles) puis le menu du jour en une ligne, avant le
    bouton qui ouvre le modal Table d'hôtes pour tout modifier. */
@@ -7371,7 +7376,7 @@ function renderWeek(){
             <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${rm?rm.short:''}</span>
             ${timeLabel?`<span class="btime">${timeLabel}</span>`:''}
           </div>
-          ${showTotal?`<div class="bstay-total">${getStayTotal(b).toLocaleString('fr-FR')} €</div>`:''}
+          ${showTotal?`<div class="dep-total-line"><span>Total séjour</span><span>${getStayTotal(b).toLocaleString('fr-FR')} €</span></div>`:''}
         </div>
       </div>`;};
     const wpanel=(cls,icon,title,items,renderFn)=>{
