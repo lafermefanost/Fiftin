@@ -456,7 +456,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:9px 6px;margin-top:4px;border:1.5px dashed var(--light);border-radius:8px;cursor:pointer;}
 .tsec-add:hover{border-color:var(--green);background:#F7FAF6;}
 .tev-panel{display:flex;flex-direction:column;gap:6px;}
-.tsec-panel.menu .tsec-body{padding:12px 10px 4px;}
 .tev-card{display:flex;flex-direction:column;background:#fff;border-radius:10px;
   padding:10px 12px;border:1.5px solid var(--light);border-left-width:4px;
   cursor:pointer;transition:opacity .15s;}
@@ -584,6 +583,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    gris neutre sinon, quand le chiffre est à 0. */
 .dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
+/* Résumé Table d'hôtes (voir renderWeek, tsec-panel.th) — qui mange (chips
+   réutilisées telles quelles) puis le menu du jour en une ligne, avant le
+   bouton qui ouvre le modal Table d'hôtes pour tout modifier. */
+.thsum-people{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+.thsum-menu{font-size:13px;color:var(--dark);margin-bottom:10px;line-height:1.4;}
 .cln-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
    menageGroup dans renderWeek) — séparateur discret entre deux structures,
@@ -939,7 +943,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    de couverts de la grille, les badges repas, et le panneau "Menu du jour". */
 body.no-dinner .pt td.c-th,body.no-dinner .pt thead th.th-th,
 body.no-dinner .bth,body.no-dinner .dinner-badge,
-body.no-dinner .tsec-panel.menu,body.no-dinner .fg-th-notes{display:none;}
+body.no-dinner .tsec-panel.th,body.no-dinner .fg-th-notes{display:none;}
 
 /* Interrupteur "taxe de séjour" (réglages → Taxe de séjour) : masque la case
    à cocher dans le modal de réservation pour les établissements qui n'ont pas
@@ -7459,20 +7463,45 @@ function renderWeek(){
       <div class="tsec-body">${menageBodyHTML}</div>
     </div>`;
 
+    // "Table d'hôtes" — remplace l'ancien "Menu du jour" (champs à taper
+    // directement dans la vue Semaine) par un petit résumé en lecture seule
+    // de ce que contient déjà le modal Table d'hôtes (openTHModal) : qui
+    // mange, le menu du jour, et un bouton pour l'ouvrir et tout modifier
+    // au même endroit plutôt qu'en double à deux endroits différents.
     const dm=getMenu(ds);
     const menuHas=!!(dm.entree||dm.plat||dm.dessert);
-    const dThCount=S.bookings
-      .filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
-      .reduce((sum,b)=>sum+(b.nbPersons||2),0);
-    const menuCollapsed=panelCollapsed(ds,'menu',true);
-    h+=`<div class="tsec-panel menu${menuCollapsed?' collapsed':''}">
-      <div class="tsec-hd${menuHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','menu',true)">
-        ${MEAL_ICON} Menu du jour<span class="tsec-count"><span>${dThCount} repas</span></span><span class="tsec-chev">▾</span>
+    const thExtList=((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false);
+    const thPeople=[
+      ...S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds]).map(b=>{
+        const g=guest(b.guestId), rm=room(b.roomId);
+        return{name:g?g.name:'?',color:g?g.color:'#999',sub:rm?rm.short:'',n:b.nbPersons||2};
+      }),
+      ...thExtList.map(e=>{
+        const eg=guest(e.guestId);
+        return{name:eg?eg.name:(e.name||'?'),color:eg?eg.color:'#999',sub:'Ext.',n:e.count||1};
+      })
+    ];
+    const thTotal=thPeople.reduce((s,p)=>s+p.n,0);
+    const thHas=thTotal>0||menuHas;
+    const thCollapsed=panelCollapsed(ds,'th',true);
+    const thPeopleHTML=thPeople.length?`<div class="thsum-people">${thPeople.map(p=>`<div class="day-chip">
+        <div class="tbar" style="background:${p.color}"></div>
+        <div class="day-chip-content">
+          <span class="bname">${p.name}</span>
+          <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${p.sub}</span>
+        </div>
+      </div>`).join('')}</div>`:'<div class="tsec-empty">Aucun couvert ce soir</div>';
+    const thMenuHTML=menuHas
+      ?`<div class="thsum-menu">${[dm.entree,dm.plat,dm.dessert].filter(Boolean).map(s=>s.replace(/</g,'&lt;')).join(' · ')}</div>`
+      :'<div class="tsec-empty">Aucun menu renseigné</div>';
+    h+=`<div class="tsec-panel th${thCollapsed?' collapsed':''}">
+      <div class="tsec-hd${thHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','th',true)">
+        ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal} couvert${thTotal>1?'s':''}</span></span><span class="tsec-chev">▾</span>
       </div>
       <div class="tsec-body">
-        <div class="fg"><label class="fl">Entrée</label><input class="fi" id="wm-entree-${ds}" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
-        <div class="fg"><label class="fl">Plat</label><input class="fi" id="wm-plat-${ds}" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
-        <div class="fg" style="margin-bottom:0"><label class="fl">Dessert</label><input class="fi" id="wm-dessert-${ds}" placeholder="—" onchange="setMenuField('${ds}','dessert',this.value)"></div>
+        ${thPeopleHTML}
+        ${thMenuHTML}
+        <div class="tsec-add" onclick="openTHModal('${ds}')">✎ Modifier la table de ce soir</div>
       </div>
     </div>`;
 
@@ -7482,13 +7511,6 @@ function renderWeek(){
   }
   h+='</div>';
   byId('weekWrap').innerHTML=h;
-  for(let i=0;i<7;i++){
-    const ds=addDays(S.wStart,i);
-    const dm=getMenu(ds);
-    byId('wm-entree-'+ds).value=dm.entree||'';
-    byId('wm-plat-'+ds).value=dm.plat||'';
-    byId('wm-dessert-'+ds).value=dm.dessert||'';
-  }
   if(openExtrasId){const p=document.getElementById('xe-'+openExtrasId);if(p)p.style.display='block';}
 }
 
