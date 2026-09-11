@@ -468,19 +468,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:12px;color:var(--gray);cursor:pointer;
   padding:7px 12px;width:100%;transition:all .15s;}
 .tev-add-btn:hover{border-color:var(--green);color:var(--green);}
-.tcard-total{display:flex;align-items:center;justify-content:space-between;
-  padding:10px 12px;background:#D8D3CD;border-top:none;font-size:13px;cursor:pointer;}
-.tcard-total:active{background:#C2BDB6;}
-.tcard-total-lbl{color:#6E6860;}
-.tcard-total-right{display:flex;align-items:center;gap:6px;}
-.tcard-total-val{font-weight:700;color:#6E6860;font-size:15px;}
-.tcard-total-chev{font-size:11px;color:#6E6860;transition:transform .2s;}
-.tcard-total-detail{background:#E4E0D9;padding:4px 14px 10px;}
-.ttd-line{display:flex;justify-content:space-between;font-size:12px;color:#6E6860;padding:3px 0;}
-.ttd-sep{border-top:1px solid rgba(0,0,0,.15);margin-top:5px;padding-top:7px!important;color:#6E6860!important;font-weight:700;font-size:13px!important;}
-.ttd-subline{padding-left:12px!important;font-size:11px!important;font-weight:600;opacity:.9;}
-.ttd-subitem{padding-left:24px!important;font-size:10.5px!important;opacity:.7;}
-.ttd-subitem span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .tcard{background:var(--white);border-radius:10px;display:flex;flex-direction:row;
   box-shadow:0 2px 10px rgba(0,0,0,.18);margin-bottom:14px;overflow:hidden;}
 .tbar{width:5px;flex-shrink:0;align-self:stretch;}
@@ -491,8 +478,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tinfo{flex:1;}
 .tname{font-weight:700;font-size:15px;color:var(--dark);}
 .tdetail{font-size:12px;color:var(--gray);margin-top:3px;}
-.troom{font-size:11px;font-weight:700;background:var(--lavender-bg);color:var(--earth);
-  padding:3px 9px;border-radius:10px;white-space:nowrap;flex-shrink:0;}
 .t-empty{text-align:center;padding:40px 20px;color:var(--gray);}
 .t-empty-icon{font-size:44px;margin-bottom:10px;}
 /* Extras chips */
@@ -590,10 +575,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 .day-chip-main .day-chip-content{padding-bottom:4px;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
-   pour facturer le client à son départ — même traitement que la ligne
-   "Total séjour" du volet En séjour (.tcard-total dans stayCard) : libellé
-   à gauche, montant en gras à droite, fond distinct. Pas de repli/détail
-   ici, juste le total. */
+   pour facturer le client à son départ : libellé à gauche, montant en gras
+   à droite, fond distinct — pas de repli/détail, juste le total. */
 .dep-total-line{display:flex;align-items:center;justify-content:space-between;
   padding:6px 12px;background:#D8D3CD;font-size:12px;color:#6E6860;}
 .dep-total-line span:last-child{font-weight:700;font-size:13px;}
@@ -964,7 +947,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 /* Interrupteur "table d'hôte" (réglages → Services) : masque partout la colonne
    de couverts de la grille, les badges repas, et le panneau "Menu du jour". */
 body.no-dinner .pt td.c-th,body.no-dinner .pt thead th.th-th,
-body.no-dinner .bth,body.no-dinner .dinner-badge,
+body.no-dinner .bth,
 body.no-dinner .tsec-panel.th,body.no-dinner .fg-th-notes{display:none;}
 
 /* Interrupteur "taxe de séjour" (réglages → Taxe de séjour) : masque la case
@@ -3455,101 +3438,34 @@ function td(tr,cls,txt){
 //  TODAY VIEW
 // ═══════════════════════════════════════════════════════════════
 
-// Carte "En séjour" (client présent ce jour-là, avec ses extras et son
-// total) — partagée entre la vue Jour et la vue Semaine (un jour de la
-// semaine peut afficher les mêmes clients que la vue Jour le ferait pour
-// cette date). Les id des volets Extras/Total sont scopés par date
-// (`${b.id}-${ds}`) : dans la vue Semaine, une même réservation peut
+// Carte "En séjour" (vue Semaine) : sert avant tout à noter les extras du
+// jour pour chaque client présent — arrivées, gens en séjour et départs du
+// jour (ces derniers peuvent encore consommer le matin même). L'id du volet
+// Extras est scopé par date (`${b.id}-${ds}`) : une même réservation peut
 // apparaître plusieurs jours de suite, donc l'id doit rester unique par
 // jour affiché — sans ça, ouvrir les extras un jour rouvrirait par erreur
 // le volet d'un autre jour (même réservation, premier id trouvé dans le DOM).
-function stayCard(b,ds,sub,showTotal=false){
+function stayCard(b,ds,sub){
   const g=guest(b.guestId);const col=g?g.color:'#999';const rm=room(b.roomId);
-  const hasDin=b.dinnerNights&&b.dinnerNights[ds];
-  const thBadge=hasDin?`<span class="dinner-badge" style="font-size:11px;color:var(--green);font-weight:600;flex-shrink:0;display:inline-flex;align-items:center;gap:3px">${MEAL_ICON_SM}${b.nbPersons||2}</span>`:'';
-    const xd=getExtrasDayTotal(b,ds);
-    const extLabel=xd>0?`<span class="extbtn-total">${xd.toLocaleString('fr-FR')} €</span>`:`<span class="extbtn-add">+</span>`;
-    let totalHtml='';
-    const isCustomPrice=b.prixNet!=null;
-    if(showTotal){
-      const nights=Math.round((new Date(b.checkOut)-new Date(b.checkIn))/86400000);
-      const rate=getNightlyRate(b);
-      const dinCount=b.dinnerNights?Object.keys(b.dinnerNights).filter(d=>b.dinnerNights[d]&&d>=b.checkIn&&d<b.checkOut).length:0;
-      const noBfCount=b.noBreakfast?Object.keys(b.noBreakfast).filter(d=>b.noBreakfast[d]&&d>=b.checkIn&&d<b.checkOut).length:0;
-      const bfDeduction=getBreakfastDeduction(b,b.checkIn,b.checkOut);
-      const pax=b.nbPersons||2;
-      const extTotal=getExtrasTotal(b);
-      const cribRev=getBabyCribRevenue(b);
-      const isCustom=isCustomPrice;
-      const total=getStayTotal(b);
-      if(total>0||isCustom){
-        const tid='tt-'+b.id+'-'+ds;
-        const tariff=getTariffForDate(b.checkIn||ds);
-        let rows='';
-        if(isCustom){
-          const autoTotal=nights*rate-bfDeduction+dinCount*pax*tariff.th+cribRev;
-          rows+=`<div class="ttd-line"><span>Prix personnalisé</span><span>${b.prixNet.toLocaleString('fr-FR')} €</span></div>`;
-          if(autoTotal>0) rows+=`<div class="ttd-line" style="opacity:.5;font-style:italic"><span>Calcul auto (hors extras) : ${autoTotal.toLocaleString('fr-FR')} €</span><span></span></div>`;
-          if(dinCount>0) rows+=`<div class="ttd-line"><span>${dinCount} repas × ${pax} pers × ${tariff.th} €</span><span>${(dinCount*pax*tariff.th).toLocaleString('fr-FR')} €</span></div>`;
-          if(extTotal>0){
-            rows+=`<div class="ttd-line"><span>Extras</span><span>${extTotal.toLocaleString('fr-FR')} €</span></div>`;
-            rows+=Object.keys(b.extras).sort().map(eds=>{
-              const dayTotal=getExtrasDayTotal(b,eds);
-              if(dayTotal<=0)return'';
-              const itemLines=Object.entries(b.extras[eds]).filter(([,qty])=>qty).map(([id,qty])=>{
-                const item=S.catalog.find(c=>c.id===id);
-                if(!item)return'';
-                return `<div class="ttd-line ttd-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(item.price*qty).toLocaleString('fr-FR')} €</span></div>`;
-              }).join('');
-              return `<div class="ttd-line ttd-subline"><span>${fmtDate(eds)}</span><span>${dayTotal.toLocaleString('fr-FR')} €</span></div>${itemLines}`;
-            }).join('');
-          }
-          if(dinCount>0||extTotal>0) rows+=`<div class="ttd-line ttd-sep"><span>Total séjour</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
-        } else {
-          rows+=`<div class="ttd-line"><span>${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €</span><span>${(nights*rate).toLocaleString('fr-FR')} €</span></div>`;
-          if(noBfCount>0) rows+=`<div class="ttd-line"><span>${noBfCount} nuit${noBfCount>1?'s':''} sans petit-déj</span><span>-${bfDeduction.toLocaleString('fr-FR')} €</span></div>`;
-          if(dinCount>0) rows+=`<div class="ttd-line"><span>${dinCount} repas × ${pax} pers × ${tariff.th} €</span><span>${(dinCount*pax*tariff.th).toLocaleString('fr-FR')} €</span></div>`;
-          if(cribRev>0) rows+=`<div class="ttd-line"><span>Lit bébé × ${nights} nuit${nights>1?'s':''}</span><span>${cribRev.toLocaleString('fr-FR')} €</span></div>`;
-          if(extTotal>0){
-            rows+=`<div class="ttd-line"><span>Extras</span><span>${extTotal.toLocaleString('fr-FR')} €</span></div>`;
-            rows+=Object.keys(b.extras).sort().map(eds=>{
-              const dayTotal=getExtrasDayTotal(b,eds);
-              if(dayTotal<=0)return'';
-              const itemLines=Object.entries(b.extras[eds]).filter(([,qty])=>qty).map(([id,qty])=>{
-                const item=S.catalog.find(c=>c.id===id);
-                if(!item)return'';
-                return `<div class="ttd-line ttd-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(item.price*qty).toLocaleString('fr-FR')} €</span></div>`;
-              }).join('');
-              return `<div class="ttd-line ttd-subline"><span>${fmtDate(eds)}</span><span>${dayTotal.toLocaleString('fr-FR')} €</span></div>${itemLines}`;
-            }).join('');
-          }
-          rows+=`<div class="ttd-line ttd-sep"><span>Total séjour</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
-        }
-        const lbl=isCustom&&extTotal<=0&&dinCount<=0?'Prix personnalisé':'Total séjour';
-        totalHtml=`<div class="tcard-total" onclick="event.stopPropagation();(function(el){var d=document.getElementById('${tid}');var show=d.style.display!=='block';d.style.display=show?'block':'none';var c=el.querySelector('.tcard-total-chev');if(c)c.style.transform=show?'rotate(180deg)':''})(this)">
-          <span class="tcard-total-lbl">${lbl} — ${nights} nuit${nights>1?'s':''}</span>
-          <span class="tcard-total-right"><span class="tcard-total-val">${total.toLocaleString('fr-FR')} €</span><span class="tcard-total-chev">▾</span></span>
+  const xd=getExtrasDayTotal(b,ds);
+  const extLabel=xd>0?`<span class="extbtn-total">${xd.toLocaleString('fr-FR')} €</span>`:`<span class="extbtn-add">+</span>`;
+  const detail=[sub,b.notes].filter(Boolean).join(' — ');
+  return`<div class="tcard">
+    <div class="tbar" style="background:${col}"></div>
+    <div class="tcard-content">
+      <div class="tcard-header" onclick="openEditModal('${b.id}','${ds}')">
+        <div class="tcard-header-inner">
+          <div class="tinfo"><div class="tname">${g?g.name:'?'}</div>
+            ${detail?`<div class="tdetail">${detail}</div>`:''}</div>
+          <span class="bcont-init" style="flex:0 0 auto;opacity:.6">${rm?rm.short:''}</span>
         </div>
-        <div class="tcard-total-detail" id="${tid}" style="display:none">${rows}</div>`;
-      }
-    }
-    return`<div class="tcard">
-      <div class="tbar" style="background:${col}"></div>
-      <div class="tcard-content">
-        <div class="tcard-header" onclick="openEditModal('${b.id}','${ds}')">
-          <div class="tcard-header-inner">
-            <div class="tinfo"><div class="tname">${g?g.name:'?'}</div>
-              <div class="tdetail">${sub}${b.notes?' — '+b.notes:''}</div></div>
-            ${thBadge}<div class="troom">${rm?rm.name:''}</div>
-          </div>
-        </div>
-        <div class="tcard-extbtn" onclick="event.stopPropagation();var x=document.getElementById('xe-${b.id}-${ds}');var show=x.style.display!=='block';x.style.display=show?'block':'none';openExtrasId=show?'${b.id}-${ds}':null;">
-          <span class="extbtn-label">Extras</span>${extLabel}
-        </div>
-        <div class="tcard-extras" id="xe-${b.id}-${ds}" onclick="event.stopPropagation()">${extrasHTMLFor(b,ds)}</div>
-        ${totalHtml}
       </div>
-    </div>`;
+      <div class="tcard-extbtn" onclick="event.stopPropagation();var x=document.getElementById('xe-${b.id}-${ds}');var show=x.style.display!=='block';x.style.display=show?'block':'none';openExtrasId=show?'${b.id}-${ds}':null;">
+        <span class="extbtn-label">Extras</span>${extLabel}
+      </div>
+      <div class="tcard-extras" id="xe-${b.id}-${ds}" onclick="event.stopPropagation()">${extrasHTMLFor(b,ds)}</div>
+    </div>
+  </div>`;
 }
 
 // Personnes extérieures (ajoutées depuis la Table d'hôtes, vue Grille) —
@@ -7356,9 +7272,13 @@ function renderWeek(){
     const deps=S.bookings.filter(b=>b.checkOut===ds);
     const stays=S.bookings.filter(b=>b.checkIn<ds&&b.checkOut>ds);
     const extDinersDay=(S.extDiners&&S.extDiners[ds])||[];
+    // "En séjour" sert avant tout à noter les extras du jour : y figurent
+    // aussi les départs du jour (checkOut===ds), absents jusqu'ici alors
+    // qu'ils peuvent encore consommer le matin même avant de partir.
     const inHouse=stays
-      .map(b=>({b,sub:`Départ le ${fmtDate(b.checkOut)}`}))
+      .map(b=>({b,sub:''}))
       .concat(arrs.map(b=>({b,sub:b.arrivalTime?`Arrivée · ${b.arrivalTime}`:'Arrivée'})))
+      .concat(deps.map(b=>({b,sub:'Départ'})))
       .sort((x,y)=>(guest(x.b.guestId)?.name||'').localeCompare(guest(y.b.guestId)?.name||''))
       .concat(extDinersDay.map(e=>({ext:e})));
     const isToday=ds===today;
@@ -7535,7 +7455,7 @@ function renderWeek(){
     </div>`;
     h+=`<div class="tsec-panel th${thCollapsed?' collapsed':''}">
       <div class="tsec-hd${thHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','th',true)">
-        ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal} couvert${thTotal>1?'s':''}</span></span><span class="tsec-chev">▾</span>
+        ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal}</span></span><span class="tsec-chev">▾</span>
       </div>
       <div class="tsec-body">
         ${thPeopleHTML}
@@ -7544,7 +7464,7 @@ function renderWeek(){
       </div>
     </div>`;
 
-    h+=wpanel('stay','●','En séjour',inHouse,item=>item.ext?extDinerStayCard(item.ext,ds):stayCard(item.b,ds,item.sub,true));
+    h+=wpanel('stay','●','En séjour',inHouse,item=>item.ext?extDinerStayCard(item.ext,ds):stayCard(item.b,ds,item.sub));
 
     h+=`</div></div>`;
   }
