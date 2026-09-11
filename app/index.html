@@ -587,7 +587,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    réutilisées telles quelles) puis le menu du jour en une ligne, avant le
    bouton qui ouvre le modal Table d'hôtes pour tout modifier. */
 .thsum-people{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
-.thsum-menu-row{display:flex;gap:8px;margin-bottom:10px;}
+.thsum-menu-rows{margin-bottom:10px;}
+.thsum-menu-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.thsum-menu-row:last-child{margin-bottom:0;}
+.thsum-menu-tag{flex:none;width:56px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--earth);background:var(--lavender-bg);border-radius:6px;padding:4px 2px;}
 .thsum-menu-input{flex:1;min-width:0;border:none;border-bottom:1px solid var(--light);background:transparent;
   font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);padding:4px 2px;outline:none;}
 .thsum-menu-input::placeholder{color:var(--gray);}
@@ -7495,17 +7499,22 @@ function renderWeek(){
           <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${p.sub}</span>
         </div>
       </div>`).join('')}</div>`:'<div class="tsec-empty">Aucun couvert ce soir</div>';
-    // Le menu reste modifiable ici, sans passer par le modal — juste des
-    // champs discrets (pas de libellé au-dessus, un simple soulignement) au
-    // lieu des .fg/.fl/.fi pleine largeur d'avant, pour ne pas reprendre
-    // toute la place que prenait "Menu du jour". setMenuField ne redessine
+    // Le menu reste modifiable ici, sans passer par le modal — une ligne par
+    // plat (superposées, plus lisibles qu'une seule ligne à trois colonnes
+    // étroites), chacune avec son nom dans un petit cartouche coloré à
+    // gauche (comme .mtag) plutôt qu'un libellé au-dessus ou un simple
+    // placeholder qui disparaît une fois rempli. setMenuField ne redessine
     // rien de son côté (juste persist()) : pas de risque de perdre le
     // volet ouvert ni la saisie en cours en tapant ici.
     const escAttr=s=>(s||'').replace(/"/g,'&quot;');
-    const thMenuHTML=`<div class="thsum-menu-row">
-      <input class="thsum-menu-input" placeholder="Entrée" value="${escAttr(dm.entree)}" onchange="setMenuField('${ds}','entree',this.value)">
-      <input class="thsum-menu-input" placeholder="Plat" value="${escAttr(dm.plat)}" onchange="setMenuField('${ds}','plat',this.value)">
-      <input class="thsum-menu-input" placeholder="Dessert" value="${escAttr(dm.dessert)}" onchange="setMenuField('${ds}','dessert',this.value)">
+    const thMenuRow=(tag,field,val)=>`<div class="thsum-menu-row">
+      <span class="thsum-menu-tag">${tag}</span>
+      <input class="thsum-menu-input" placeholder="—" value="${escAttr(val)}" onchange="setMenuField('${ds}','${field}',this.value)">
+    </div>`;
+    const thMenuHTML=`<div class="thsum-menu-rows">
+      ${thMenuRow('Entrée','entree',dm.entree)}
+      ${thMenuRow('Plat','plat',dm.plat)}
+      ${thMenuRow('Dessert','dessert',dm.dessert)}
     </div>`;
     h+=`<div class="tsec-panel th${thCollapsed?' collapsed':''}">
       <div class="tsec-hd${thHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','th',true)">
