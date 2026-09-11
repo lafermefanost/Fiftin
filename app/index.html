@@ -7358,21 +7358,20 @@ function renderWeek(){
       </div>`;
     };
 
-    // Départs et arrivées fusionnés en UN seul volet (au lieu de deux
-    // .tsec-panel côte à côte, chacun avec son propre en-tête/ombre) — la
-    // dualité gauche/droite reste visible via les deux colonnes internes,
-    // simplement sans la doubler en deux boîtes complètes.
+    // Départs et arrivées fusionnés en UN seul bloc (au lieu de deux
+    // .tsec-panel côte à côte). Pas d'en-tête ici : "Départs & arrivées"
+    // faisait doublon avec les nombres déjà donnés par chaque titre de
+    // colonne ("Départs (N)"/"Arrivées (N)") juste en dessous — retiré,
+    // avec le repli/dépli qui allait avec (plus rien à replier sans titre à
+    // cliquer ; un bloc de cette taille reste de toute façon lisible
+    // affiché en permanence). La dualité gauche/droite reste visible via
+    // les deux colonnes internes.
     {
-      const depArrCnt=deps.length+arrs.length;
-      const depArrCollapsed=panelCollapsed(ds,'deparr',depArrCnt===0);
       const depArrCol=(icon,title,items,renderFn)=>`<div class="dep-arr-col">
         <div class="dep-arr-col-title">${icon} ${title} (${items.length})</div>
         ${items.length?items.map(renderFn).join(''):'<div class="tsec-empty">Aucun</div>'}
       </div>`;
-      h+=`<div class="tsec-panel deparr${depArrCollapsed?' collapsed':''}">
-        <div class="tsec-hd${depArrCnt>0?' has-items':''}" onclick="toggleTsecPanel('${ds}','deparr',${depArrCnt===0})">
-          ↕ Départs &amp; arrivées<span class="tsec-count"><span>${depArrCnt}</span></span><span class="tsec-chev">▾</span>
-        </div>
+      h+=`<div class="tsec-panel deparr">
         <div class="tsec-body">
           <div class="dep-arr-cols">
             ${depArrCol('↑','Départs',deps,b=>wMiniChip(b,null))}
