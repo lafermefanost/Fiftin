@@ -783,25 +783,26 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    coin à arrondir). Le format "carte" centrée avec marge n'existe qu'à
    partir de 600px (voir les media queries ci-dessous), où il y a la place
    pour respirer autour. */
-.overlay{position:fixed;top:0;left:0;right:0;bottom:auto;background:rgba(0,0,0,.68);z-index:1000;
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.68);z-index:1000;
   -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
   display:flex;align-items:stretch;justify-content:center;
-  /* 'bottom' est explicitement 'auto' (pas inset:0, qui remet top ET bottom
-     à 0) : la hauteur est fixée UNIQUEMENT par la propriété height
-     ci-dessous, sans dépendre de la résolution "top+bottom+height tous
-     fixés = sur-contraint" — ambiguë en pratique selon les navigateurs.
-     Sur mobile, 100vh se cale sur la hauteur "grand format", celle où la
-     barre d'adresse est réduite — pas sur ce qui est réellement visible
-     quand elle est affichée. Le bas du modal se retrouve alors caché
-     sous elle (perçu comme "tronqué en bas"). dvh est censé suivre en
-     direct la zone réellement visible, mais reste ici en repli seulement :
-     testé sur iPhone (Safari), le trou persiste identique avec dvh — ce
-     Safari-là ne le recalcule visiblement pas comme attendu pour un
-     élément fixed. --vvh (voir script, tout en bas du fichier) vient de
-     window.visualViewport, mis à jour en JS à chaque resize/scroll de la
-     zone visible : plus fiable en pratique que de compter sur le moteur
-     CSS seul. */
-  height:100vh; height:100dvh; height:var(--vvh, 100dvh);}
+  /* Plusieurs tentatives précédentes (100vh, 100dvh, puis une hauteur
+     poussée en JS depuis window.visualViewport dans une custom property)
+     ont toutes laissé le même trou en bas sur iPhone (Safari) quand le
+     clavier s'ouvre : en calant délibérément la hauteur sur la zone
+     "au-dessus du clavier" (ce que visualViewport.height donne quand le
+     clavier est ouvert), le calcul dépendait d'un évènement resize/scroll
+     de visualViewport qui s'est révélé pas assez fiable dans ce contexte
+     précis (retard, ou pas déclenché du tout selon les cas) — un trou
+     apparaissait alors entre le bas du modal (trop tôt) et le clavier.
+     Revenu à top+bottom (sans hauteur explicite du tout, donc sans
+     ambiguïté de sur-contrainte) : le clavier est une couche native
+     par-dessus la page, pas un redimensionnement de la fenêtre — .overlay
+     n'a donc pas besoin de "deviner" sa hauteur en fonction du clavier,
+     juste de rester ancré du haut au bas de l'écran comme n'importe quel
+     autre élément plein écran ; le clavier s'affiche par-dessus sans
+     laisser de trou, et .modal-scrollarea (voir plus bas) permet toujours
+     de faire défiler jusqu'à un champ qu'il masquerait. */}
 @media(min-width:600px){.overlay{align-items:center;padding:20px;}}
 
 .modal{background:var(--white);border-radius:0;width:100%;
@@ -1865,26 +1866,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════
-//  HAUTEUR RÉELLEMENT VISIBLE (barre d'adresse dynamique de Safari iOS)
-// ═══════════════════════════════════════════════════════════════
-// .overlay (voir CSS, plein écran des modaux sur mobile) utilise --vvh en
-// priorité sur 100dvh : sur Safari iOS testé, dvh n'a pas suivi la zone
-// réellement visible quand la barre d'adresse est affichée (le bas du
-// modal restait cachée dessous). window.visualViewport.height donne
-// cette valeur de façon fiable ; on la pousse nous-mêmes dans une custom
-// property à chaque changement plutôt que de compter sur le moteur CSS.
-function syncViewportHeight(){
-  const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
-  document.documentElement.style.setProperty('--vvh',h+'px');
-}
-syncViewportHeight();
-if(window.visualViewport){
-  visualViewport.addEventListener('resize',syncViewportHeight);
-  visualViewport.addEventListener('scroll',syncViewportHeight);
-}
-window.addEventListener('orientationchange',syncViewportHeight);
-
 // ═══════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════
