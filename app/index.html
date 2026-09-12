@@ -558,14 +558,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-toprow .wsm-occ .wsm-val{font-size:26px;}
 /* Cases qui n'affichent pas un montant en euros (pourcentage, nombre de
    nuits/séjours…) : fond lavande plutôt que vert, texte blanc inchangé
-   (hérité de .wsm-val/.wsm-lbl/.wsm-sub et .mstat-card.mstat-rev, déjà
-   blancs par défaut) — pour une vraie différence visuelle avec les
-   autres cases, restées vertes. Sélecteurs à 2 classes (.wsm-item/
-   .wsm-total + .stat-nonmoney) pour battre leur propre fond vert
-   (.wsm-item{background:var(--green)}, .wsm-total{background:...}).*/
-.wsm-item.stat-nonmoney,.wsm-total.stat-nonmoney{background:var(--lavender);}
-/* 3 classes : battent .mstat-card.mstat-rev{background:var(--green)}
-   (2 classes), quel que soit l'ordre dans la feuille. */
+   (hérité de .mstat-card.mstat-rev, déjà blanc par défaut) — pour une
+   vraie différence visuelle avec les autres cases, restées vertes.
+   Ne concerne plus que .mstat-card désormais (Durée moyenne de séjour,
+   Nuits plateformes) — Remplissage/Occupation (%) et Nuitées/Repas
+   (.wsm-item) sont repassés au vert par ailleurs. 3 classes : battent
+   .mstat-card.mstat-rev{background:var(--green)} (2 classes), quel que
+   soit l'ordre dans la feuille. */
 .mstat-card.mstat-rev.stat-nonmoney{background:var(--lavender);border-color:var(--lavender);}
 .today-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .tsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
@@ -7710,8 +7709,8 @@ function renderWeek(){
   h+=`<div class="week-summary">
     <div class="wsm-total"><div class="wsm-val">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
     <div class="wsm-row">
-      <div class="wsm-item stat-nonmoney"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
-      ${dinnerEnabled()?`<div class="wsm-item stat-nonmoney"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
+      <div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
+      ${dinnerEnabled()?`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
       <div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>
     </div>
   </div>`;
@@ -8322,9 +8321,9 @@ function renderMonth(){
   if(eventsRevenue>0){
     mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${eventsRevenue.toLocaleString('fr-FR')} €</div><div class="wsm-lbl">événements</div></div>`);
   }
-  mRevItems.push(`<div class="wsm-item stat-nonmoney"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`);
+  mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`);
   if(dinnerEnabled()){
-    mRevItems.push(`<div class="wsm-item stat-nonmoney"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
+    mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
   }
   h+=`<div class="week-summary">
     <div class="wsm-toprow">
