@@ -3967,7 +3967,7 @@ function renderToday(){
     ${monthsHtml}
   </div>
   <div class="yr-stats" style="margin-top:14px">
-    <div class="mstat-card mstat-rev stat-nonmoney"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
     <div class="mstat-card mstat-rev stat-nonmoney"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
@@ -8317,7 +8317,7 @@ function renderMonth(){
   h+=`<div class="week-summary">
     <div class="wsm-toprow">
       <div class="wsm-total"><div class="wsm-val">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux du mois</div></div>
-      <div class="wsm-total wsm-occ stat-nonmoney"><div class="wsm-val">${occPct}%</div><div class="wsm-lbl">remplissage</div></div>
+      <div class="wsm-total wsm-occ"><div class="wsm-val">${occPct}%</div><div class="wsm-lbl">remplissage</div></div>
     </div>
   </div>`;
 
@@ -8639,7 +8639,7 @@ function renderMonth(){
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
-          <div class="mstat-card mstat-rev stat-nonmoney" style="grid-column:1/-1">
+          <div class="mstat-card mstat-rev" style="grid-column:1/-1">
             <div class="mstat-val">${st.occRate}%</div>
             <div class="mstat-sub">occupation</div>
             <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
@@ -9111,7 +9111,7 @@ function renderYear(){
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
-          <div class="mstat-card mstat-rev stat-nonmoney"${showPlatform?'':' style="grid-column:1/-1"'}>
+          <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
             <div class="mstat-val">${st.occRate}%</div>
             <div class="mstat-sub">occupation</div>
             <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
@@ -9155,7 +9155,7 @@ function renderYear(){
           <div class="mstat-sub">CA projeté</div>
           <div class="mstat-detail">${projNights} nuits totales</div>
         </div>
-        <div class="mstat-card mstat-rev stat-nonmoney">
+        <div class="mstat-card mstat-rev">
           <div class="mstat-val">${occRate}%</div>
           <div class="mstat-sub">occupation</div>
           <div class="mstat-detail">${totalRooms} chambres</div>
