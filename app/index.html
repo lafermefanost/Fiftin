@@ -1113,14 +1113,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 /* Cartouches structure (SASU, LMNP…) repliables, comme les jours de la vue
    Semaine — pas "Activité globale" (.yr-total), qui n'a pas de chevron ni
-   d'onclick sur son en-tête. En-tête en bandeau beige-gris plein bord (même
-   technique que .wday-head : marges négatives qui annulent le padding du
-   cartouche parent pour aller jusqu'aux bords, coins arrondis assortis). */
-.yr-group:not(.yr-total)>.yr-group-hd{background:var(--light);color:var(--gray);
+   d'onclick sur son en-tête. En-tête en bandeau vert moyen plein bord (même
+   technique que .wday-head, dont il reprend aussi la couleur : marges
+   négatives qui annulent le padding du cartouche parent pour aller jusqu'aux
+   bords, coins arrondis assortis). Les sous-encarts internes (.yr-subhd)
+   restent en beige-gris neutre — même hiérarchie que la vue Semaine, où le
+   conteneur du jour est vert (.wday-head) mais ses sous-volets (Ménage,
+   Table d'hôtes…) restent en gris clair (.tsec-hd). */
+.yr-group:not(.yr-total)>.yr-group-hd{background:var(--green);
   margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;}
 .yr-group.collapsed>.yr-group-body{display:none;}
+.yr-group:not(.yr-total)>.yr-group-hd .yr-group-name{color:#fff;}
 .yr-group-chev{font-size:11px;opacity:.6;transition:transform .2s;}
+.yr-group:not(.yr-total)>.yr-group-hd .yr-group-chev{color:#fff;}
 .yr-group.collapsed .yr-group-chev{transform:rotate(-90deg);}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
 .yr-group-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
@@ -8434,10 +8440,11 @@ function renderYear(){
       <div class="yr-subhd">${title}</div>
       <div class="tsec-body">${inner}</div>
     </div>`;
-    // Seuils (Franchise TVA…) : pas de bandeau ici, chaque jauge porte déjà
-    // son propre libellé (voir gauge/nightsGauge) — juste l'encart blanc à
-    // ombre qui le détache, comme les autres sous-encarts de la structure.
-    const gaugesCardHTML=gaugesHTML?`<div class="tsec-panel"><div class="tsec-body">${gaugesHTML}</div></div>`:'';
+    // Seuils (Franchise TVA…) : même bandeau que les autres sous-encarts,
+    // même si chaque jauge porte déjà son propre libellé en plus (voir
+    // gauge/nightsGauge) — pour que l'encart soit repérable au même titre
+    // que "Revenus par mois" etc. sans avoir à le déplier pour comprendre.
+    const gaugesCardHTML=gaugesHTML?subSection('Seuils',gaugesHTML):'';
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleYearGroup('${gid}')">
         <div class="yr-group-name">${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
@@ -8488,9 +8495,6 @@ function renderYear(){
     const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
     const yearCharges=variableChargesForMonth(yStart,yEnd).total;
     return`<div class="yr-group yr-total">
-      <div class="yr-group-hd">
-        <div class="yr-group-name">Activité globale</div>
-      </div>
       <div class="yr-stats">
         <div class="mstat-card mstat-rev">
           <div class="mstat-val">${Math.round(realCA).toLocaleString('fr-FR')} €</div>
