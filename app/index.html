@@ -553,6 +553,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wday-chev{display:inline-block;transition:transform .15s;}
 .wday-card.collapsed .wday-chev{transform:rotate(-90deg);}
 .wday-card .tsec-panel{margin-bottom:10px;}
+/* Résumé du jour ("Aujourd'hui, vous avez…", voir renderWeek) — juste
+   au-dessus du volet Événements, en tête de vue Semaine. Cartouche pleine
+   largeur, ton assistant plutôt qu'un volet de plus à déplier. */
+.wbrief{display:flex;align-items:flex-start;gap:10px;background:var(--lavender-bg);
+  color:var(--earth);border-radius:12px;padding:14px 16px;margin-bottom:12px;
+  font-size:13px;line-height:1.45;}
+.wbrief svg{margin-top:1px;color:var(--green);}
 /* Volet Départs & arrivées fusionné (voir renderWeek) — Départs au-dessus
    d'Arrivées (au lieu de deux colonnes côte à côte) plutôt que deux
    .tsec-panel séparés : la dualité reste lisible (séparateur horizontal
@@ -1918,6 +1925,9 @@ const BREAKFAST_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="n
 // gardait le picto neutre "●" hérité d'avant que ce volet ne se recentre
 // sur les extras).
 const EXTRA_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+// Pictogramme étincelle (résumé du jour, voir renderWeek → wbrief) — ton
+// "assistant" plutôt qu'une simple icône de planning.
+const BRIEF_ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;flex-shrink:0"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.287L3 12l5.8 1.9a2 2 0 0 1 1.287 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.287L21 12l-5.8-1.9a2 2 0 0 1-1.287-1.287L12 3Z"/></svg>';
 
 const PALETTE = [
   '#5B8DB5','#6B9E60','#A8956A','#8B7DB0','#C09A4A','#5B9E94',
@@ -7274,6 +7284,36 @@ function renderWeek(){
       </div>
     </div>`;
   };
+  // Résumé "Aujourd'hui" — voir .wbrief, juste au-dessus du volet
+  // Événements. Seulement si la semaine affichée contient le jour courant
+  // (sinon "aujourd'hui" n'aurait pas de sens ici, voir weekPrefillDate
+  // plus bas pour la même vérification). Omet les catégories à zéro plutôt
+  // que de dire "0 départs" ; sur une journée sans rien de prévu, un mot
+  // rassurant plutôt que de faire disparaître la cartouche (elle resterait
+  // affichée les autres jours — sa disparition ponctuelle ressemblerait à
+  // un bug plutôt qu'à une vraie absence de tâches).
+  if(today>=S.wStart&&today<wEnd){
+    const tArrs=S.bookings.filter(b=>b.checkIn===today).length;
+    const tDeps=S.bookings.filter(b=>b.checkOut===today).length;
+    const tDiners=S.bookings.filter(b=>activeOn(b,today)&&b.dinnerNights&&b.dinnerNights[today])
+        .reduce((s,b)=>s+(b.nbPersons||2),0)
+      +((S.extDiners&&S.extDiners[today])||[]).filter(e=>e.dinner!==false)
+        .reduce((s,e)=>s+(e.count||1),0);
+    const briefParts=[];
+    if(tArrs>0)briefParts.push(`${tArrs} arrivée${tArrs>1?'s':''} à préparer`);
+    if(tDeps>0)briefParts.push(`${tDeps} départ${tDeps>1?'s':''} à facturer`);
+    if(tDiners>0)briefParts.push(`${tDiners} dîner${tDiners>1?'s':''} à prévoir`);
+    let briefMsg;
+    if(!briefParts.length){
+      briefMsg='Journée calme aujourd\'hui : aucune arrivée, départ ni dîner à prévoir.';
+    }else if(briefParts.length===1){
+      briefMsg=`Aujourd'hui, vous avez ${briefParts[0]}.`;
+    }else{
+      const last=briefParts.pop();
+      briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
+    }
+    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+  }
   const weekEvs=S.events.filter(ev=>ev.startDate<wEnd&&ev.endDate>=S.wStart);
   // Jours fériés de la semaine : même volet, en lecture seule, avant les
   // événements ajoutés à la main — parcouru à l'envers pour qu'un éventuel
