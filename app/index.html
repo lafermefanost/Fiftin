@@ -593,13 +593,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .thsum-menu-input::placeholder{color:var(--gray);}
 .thsum-menu-input:focus{border-bottom-color:var(--green);}
 /* Chambres à préparer (arrivées du jour) — tout en haut du volet Ménage,
-   avant le personnel (voir renderWeek). Info primaire = nom court de la
-   chambre, secondaire = pour qui, en petit dessous. */
-.mng-rooms{margin-bottom:12px;}
-.mng-room-row{display:flex;align-items:baseline;gap:10px;padding:6px 0;}
-.mng-room-row:not(:last-child){border-bottom:1px solid var(--light);}
-.mng-room-name{font-size:15px;font-weight:700;color:var(--dark);flex:none;min-width:40px;}
-.mng-room-guest{font-size:12px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+   avant le personnel (voir renderWeek). Une cartouche par chambre (même
+   fond/arrondi que .cln-stepper, .cleaner-btn plus bas dans ce même volet),
+   alignées horizontalement et passant à la ligne au besoin — plus lisible
+   qu'une liste à puces. Info primaire = nom court de la chambre, secondaire
+   = pour qui, en petit dessous dans la même cartouche. */
+.mng-rooms{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.mng-room-card{display:flex;flex-direction:column;gap:2px;padding:7px 12px;
+  border-radius:10px;background:#F7F5F1;min-width:0;}
+.mng-room-name{font-size:15px;font-weight:700;color:var(--dark);}
+.mng-room-guest{font-size:11px;color:var(--gray);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* Personnel de ménage : une ligne par personne, empilées verticalement
    (plus une rangée de chips qu'il fallait ensuite retrouver plus bas dans
    une liste de détail séparée qui répétait le nom — voir cln-row). Le
@@ -7114,8 +7117,13 @@ function getMondayOf(ds){
 }
 function chWeek(dir){S.wStart=addDays(S.wStart,dir*7);renderWeek();}
 function thisWeek(){S.wStart=getMondayOf(todayISO());renderWeek();}
+// Un seul jour ouvert à la fois : ouvrir un jour referme automatiquement
+// tous les autres, pour une lecture jour par jour plus claire (pas besoin
+// de refermer soi-même les précédents). Cliquer sur le jour déjà ouvert le
+// referme normalement, sans en rouvrir un autre à sa place.
 function toggleWeekDay(ds){
-  if(weekOpenDays.has(ds)) weekOpenDays.delete(ds); else weekOpenDays.add(ds);
+  if(weekOpenDays.has(ds)) weekOpenDays.delete(ds);
+  else weekOpenDays=new Set([ds]);
   renderWeek();
 }
 
@@ -7371,7 +7379,7 @@ function renderWeek(){
     // la femme de ménage doit retrouver), secondaire = pour qui.
     const roomsToPrep=arrs.map(b=>{
       const rm=room(b.roomId);const g=guest(b.guestId);
-      return`<div class="mng-room-row">
+      return`<div class="mng-room-card">
         <span class="mng-room-name">${rm?rm.short:'?'}</span>
         <span class="mng-room-guest">${g?g.name:'?'}</span>
       </div>`;
