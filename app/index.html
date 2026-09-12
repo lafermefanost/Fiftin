@@ -633,13 +633,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .cln-group{margin-top:14px;padding-top:12px;border-top:1px solid var(--light);}
 /* Même cartouche que .cln-stepper (l'encart des heures) plutôt qu'une
    pastille au trait — le nom reste sur SA ligne, sans être répété ailleurs
-   (voir cln-row/cln-hm-row juste à côté). */
-.cleaner-btn{flex:0 1 auto;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+   (voir cln-row/cln-hm-row juste à côté). Taille fixe (pas flex:1) : tous
+   les boutons ont la même largeur quel que soit le nom, pour une rangée
+   régulière plutôt que des tailles variables selon la longueur du texte. */
+.cleaner-btn{flex:0 0 88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   padding:9px 10px;border:none;border-radius:10px;
   font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-align:left;
   color:var(--dark);background:#F7F5F1;cursor:pointer;transition:all .15s;}
 .cleaner-btn:hover{background:#EFEBE3;}
-.cleaner-on{background:var(--green)!important;color:#fff!important;}
+/* Lavande à l'activation, comme les autres indicateurs "rempli" de l'appli
+   (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de vert ici. */
+.cleaner-on{background:var(--lavender)!important;color:var(--green-deep)!important;}
 .extras-day-tab{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
