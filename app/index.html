@@ -932,11 +932,17 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gcontact-btn.copy{background:var(--green);border:none;cursor:pointer;font-family:'Jost',sans-serif;transition:background .15s;}
 
 /* Listes avec recherche (clients, événements) : hauteur fixe plutôt que
-   dictée par le nombre de résultats — sans ça, sur mobile la modale
-   (ancrée en bas de l'écran) change de hauteur à chaque lettre tapée et
-   tout le haut (champ de recherche, bouton +) se déplace à l'écran, ce
-   qui perturbe la lecture pendant la frappe. Défile en interne au-delà. */
-#gList,#evList{height:min(52vh,420px);overflow-y:auto;}
+   dictée par le nombre de résultats — sans ça, en carte desktop (.modal en
+   height:auto, voir plus bas) la modale change de hauteur à chaque lettre
+   tapée et tout le haut (champ de recherche, bouton +) se déplace à
+   l'écran, ce qui perturbe la lecture pendant la frappe. Défile en interne
+   au-delà. Seulement à partir de 600px : en dessous .modal est déjà en
+   plein écran à height:100% fixe (jamais dicté par son contenu), donc ce
+   risque n'existe pas — et le imposer quand même y coupait la moitié de la
+   liste (ex: les volets Événements empilés, ou le Calendrier fiscal, bien
+   plus hauts que 420px) dans une mini-zone de défilement imbriquée dans la
+   modale, difficile à distinguer d'un simple bug d'affichage. */
+@media(min-width:600px){#gList,#evList{height:min(52vh,420px);overflow-y:auto;}}
 /* Guest list */
 .glist-sep{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;
   letter-spacing:.06em;padding:12px 0 4px;}
