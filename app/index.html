@@ -1019,10 +1019,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    remplace tout par la liste du calendrier fiscal. Rangée fixe, avant
    .modal-scrollarea, comme le reste des contrôles de la modale. */
 .evfilter-row{display:flex;gap:6px;margin-bottom:10px;}
-.evfilter-btn{flex:1;padding:8px 6px;border:1.5px solid var(--light);border-radius:8px;
+.evfilter-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;
+  padding:8px 6px;border:1.5px solid var(--light);border-radius:8px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;
   letter-spacing:.03em;color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;
   text-align:center;}
+.evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
 .evfilter-btn.on{background:var(--green);color:#fff;border-color:var(--green);}
 /* Volets mois (voir renderEvList), dans le filtre Pro ou Perso — un par
@@ -1064,7 +1066,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .evcard-time{font-size:11px;color:var(--gray);margin-top:2px;}
 
 /* Settings */
-.set-sec{margin-bottom:12px;background:#fff;border:1.5px solid var(--light);border-radius:12px;padding:12px 14px;}
+/* Lavande plutôt que blanc, pour distinguer chaque onglet de Réglages du
+   reste de l'appli (blanc partout ailleurs) — .set-card à l'intérieur
+   (voir plus bas) garde son fond neutre habituel pour rester lisible en
+   contraste. */
+.set-sec{margin-bottom:12px;background:var(--lavender-bg);border:1.5px solid var(--lavender);border-radius:12px;padding:12px 14px;}
 .set-sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
   color:var(--gray);margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;}
 .set-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--light);}
@@ -1662,7 +1668,15 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div class="evfilter-row">
       <button type="button" class="evfilter-btn" id="evfilter-pro" onclick="setEvFilter('pro')">Pro</button>
       <button type="button" class="evfilter-btn" id="evfilter-perso" onclick="setEvFilter('perso')">Perso</button>
-      <button type="button" class="evfilter-btn" id="evfilter-fiscal" onclick="setEvFilter('fiscal')">📅 Fiscal</button>
+      <button type="button" class="evfilter-btn" id="evfilter-fiscal" onclick="setEvFilter('fiscal')">
+        <!-- Calendrier repris tel quel de l'icône Événements (voir .mtitle
+             plus haut) avec un signe % à la place de la ligne du haut — pour
+             rester dans la même famille visuelle tout en se distinguant
+             clairement du calendrier générique déjà affiché juste au-dessus
+             dans l'en-tête de cette modale, plus représentatif d'échéances
+             fiscales qu'un simple calendrier. -->
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="8.5" y1="17" x2="15.5" y2="12.5"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="16.5" r="1.3"/></svg> Fiscal
+      </button>
     </div>
     <div class="modal-scrollarea"><div id="evList"></div></div>
   </div>
@@ -1975,6 +1989,38 @@ function relevantFiscalCalendar(){
 // Pictogramme repas (fourchette + couteau), épuré comme les autres icônes du planning
 const MEAL_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
 const MEAL_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;flex-shrink:0"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>';
+// Pictogrammes des catégories de charges (Réglages → Catégories — relevé
+// bancaire, voir renderSettings) — un par catégorie par défaut
+// (DEFAULT_SETTINGS.chargeCategories), reconnu par id plutôt que par
+// libellé (modifiable par l'utilisateur, l'id ne change jamais). Une
+// catégorie ajoutée à la main (id généré, absent de cette liste) retombe
+// sur CATEGORY_ICON_FALLBACK — une étiquette générique plutôt qu'un
+// pictogramme mal choisi. Toutes en primitives simples (rect/circle/line/
+// tracés à lignes droites), même esprit filaire que le reste de l'appli.
+const CATEGORY_ICONS={
+  depot:'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  notesfrais:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/>',
+  perso:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  associe:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  alim:'<path d="M6 8h12l-1 12H7L6 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/>',
+  petitdej:'<path d="M4 8h12v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V8z"/><path d="M16 9h2a2 2 0 0 1 0 4h-2"/><line x1="7" y1="4" x2="7" y2="6"/><line x1="10" y1="3" x2="10" y2="6"/><line x1="13" y1="4" x2="13" y2="6"/>',
+  energie:'<path d="M13 2 5 14h5l-1 8 9-12h-5l1-8z"/>',
+  travaux:'<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/>',
+  deco:'<rect x="3" y="4" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 15l-5-5-4 4-3-3-6 6"/>',
+  logiciels:'<rect x="3" y="4" width="18" height="12" rx="2"/><line x1="8" y1="20" x2="16" y2="20"/><line x1="12" y1="16" x2="12" y2="20"/>',
+  marketing:'<polyline points="4 17 10 11 14 15 20 7"/><polyline points="14 7 20 7 20 13"/>',
+  repasaffaires:'<path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/>',
+  auto:'<path d="M3 17h1l1.5-5h11L18 17h1"/><circle cx="7" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/>',
+  fraisbancaires:'<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
+  compta:'<rect x="5" y="2" width="14" height="20" rx="2"/><rect x="8" y="5" width="8" height="3"/><circle cx="8.5" cy="12" r="0.9"/><circle cx="12" cy="12" r="0.9"/><circle cx="15.5" cy="12" r="0.9"/><circle cx="8.5" cy="16" r="0.9"/><circle cx="12" cy="16" r="0.9"/><circle cx="15.5" cy="16" r="0.9"/>',
+  mutuelle:'<path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>',
+  conciergerie:'<circle cx="7" cy="15" r="4"/><line x1="10" y1="12" x2="20" y2="2"/><line x1="16" y1="6" x2="19" y2="9"/><line x1="13" y1="9" x2="16" y2="12"/>',
+  linge:'<rect x="4" y="3" width="16" height="18" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2"/><circle cx="7" cy="6" r="0.8"/><circle cx="10" cy="6" r="0.8"/>',
+};
+const CATEGORY_ICON_FALLBACK='<path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.2"/>';
+function categoryIconHTML(id){
+  return`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:var(--gray)">${CATEGORY_ICONS[id]||CATEGORY_ICON_FALLBACK}</svg>`;
+}
 // Palette "maison" des graphiques (revenus par structure en vue Année, camembert
 // des charges en vue Mois) — tons terre/vert cohérents avec le reste de
 // l'appli plutôt qu'une palette générique.
@@ -6650,7 +6696,8 @@ function renderSettings(){
   let chargesBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px">Mots-clés (séparés par des virgules) recherchés dans le marchand/description pour catégoriser automatiquement chaque import.</div>`;
   (st.chargeCategories||[]).forEach(c=>{
     chargesBody+=`<div class="set-card set-card-row">
-      <input class="mch-label" style="flex:0 0 140px" value="${(c.label||'').replace(/"/g,'&quot;')}" placeholder="Catégorie"
+      ${categoryIconHTML(c.id)}
+      <input class="mch-label" style="flex:0 0 124px" value="${(c.label||'').replace(/"/g,'&quot;')}" placeholder="Catégorie"
         onblur="updateChargeCategoryField('${c.id}','label',this.value)"
         onkeydown="if(event.key==='Enter')this.blur()">
       <input class="mch-label" style="flex:1 1 160px;font-size:12px;color:var(--gray)" value="${(c.keywords||[]).join(', ').replace(/"/g,'&quot;')}" placeholder="mot-clé1, mot-clé2…"
