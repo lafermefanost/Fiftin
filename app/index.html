@@ -736,6 +736,19 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-pie-row{display:flex;align-items:center;gap:8px;font-size:12px;}
 .mch-pie-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
 .mch-pie-label{flex:1;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+/* Jauge à tranches proportionnelles (voir buildSourceRevGauge) — remplace
+   le camembert pour "Répartition par source" : une seule barre pleine
+   largeur, chaque tranche large proportionnellement à sa part de CA, plus
+   lisible pour comparer des parts côte à côte qu'un camembert. Réutilise
+   .mch-pie-total-line/.mch-pie-legend/.mch-pie-row (dot+libellé+%+valeur)
+   telles quelles, seul le graphique lui-même change. Séparateur entre
+   tranches : un fond neutre visible à travers un petit espace (margin)
+   plutôt qu'une bordure, qui casserait l'arrondi des tranches d'extrémité.*/
+.src-gauge{margin-top:16px;padding-top:16px;border-top:1px solid var(--light);}
+.src-gauge-bar{display:flex;height:18px;border-radius:9px;overflow:hidden;
+  background:var(--light);margin-bottom:12px;}
+.src-gauge-seg{height:100%;}
+.src-gauge-seg+.src-gauge-seg{margin-left:2px;}
 .mch-pie-pct{color:var(--gray);flex-shrink:0;width:30px;text-align:right;}
 .mch-pie-val{font-weight:700;color:var(--dark);flex-shrink:0;width:64px;text-align:right;}
 .mch-group-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding-top:10px;border-top:1px dashed var(--light);}
@@ -6162,13 +6175,18 @@ function buildChargesDonut(breakdown){
     </div>
   </div>`;
 }
-// Camembert de répartition du CA par source (vue Année, une fois par
-// structure) — couleur propre à chaque source (celle configurée dans
-// Réglages → Sources), pas la palette générique des charges, pour rester
-// cohérent avec les pastilles de source utilisées ailleurs dans l'appli.
-// `entries` déjà résolues en {label,val,color} par l'appelant (voir
-// structSourceBreakdown dans renderYear), pas de calcul de CA ici.
-function buildSourceRevDonut(entries){
+// Jauge à tranches proportionnelles de répartition du CA par source (vue
+// Année et vue Mois, "Répartition par source") — une seule barre
+// horizontale, une tranche par source, largeur proportionnelle à sa part de
+// CA, plus lisible qu'un camembert pour comparer des parts côte à côte
+// (remplace l'ancien camembert, voir buildDonutSlices resté pour les
+// charges/réservations). Couleur propre à chaque source (celle configurée
+// dans Réglages → Sources), pas la palette générique des charges, pour
+// rester cohérent avec les pastilles de source utilisées ailleurs dans
+// l'appli. `entries` déjà résolues en {label,val,color} par l'appelant
+// (voir structSourceBreakdown/structSourceBreakdownMonth), pas de calcul de
+// CA ici.
+function buildSourceRevGauge(entries){
   const MAX_SLICES=6;
   let raw=entries.filter(e=>e.val>0).sort((a,b)=>b.val-a.val);
   if(!raw.length)return'';
@@ -6177,21 +6195,19 @@ function buildSourceRevDonut(entries){
     const restTotal=raw.slice(MAX_SLICES-1).reduce((s,e)=>s+e.val,0);
     raw=[...shown,{label:'Autres',val:restTotal,color:'#C7C2B8'}];
   }
-  const{pathsHTML,segs,total,size}=buildDonutSlices(raw);
+  const total=raw.reduce((s,e)=>s+e.val,0);
+  const segs=raw.map(e=>({...e,frac:e.val/total}));
+  const barHTML=segs.map(s=>`<div class="src-gauge-seg" style="width:${(s.frac*100).toFixed(2)}%;background:${s.color}"></div>`).join('');
   const legendHTML=segs.map(s=>`<div class="mch-pie-row">
     <span class="mch-pie-dot" style="background:${s.color}"></span>
     <span class="mch-pie-label">${s.label.replace(/</g,'&lt;')}</span>
     <span class="mch-pie-pct">${Math.round(s.frac*100)}%</span>
     <span class="mch-pie-val">${Math.round(s.val).toLocaleString('fr-FR')} €</span>
   </div>`).join('');
-  return`<div class="mch-pie-block">
-    <div class="mch-pie-svgwrap" style="width:${size}px;height:${size}px">
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${pathsHTML}</svg>
-    </div>
-    <div class="mch-pie-legend-col">
-      <div class="mch-pie-total-line">${Math.round(total).toLocaleString('fr-FR')} € au total</div>
-      <div class="mch-pie-legend">${legendHTML}</div>
-    </div>
+  return`<div class="src-gauge">
+    <div class="mch-pie-total-line">${Math.round(total).toLocaleString('fr-FR')} € au total</div>
+    <div class="src-gauge-bar">${barHTML}</div>
+    <div class="mch-pie-legend">${legendHTML}</div>
   </div>`;
 }
 // Même camembert, mais pour la proportion de RÉSERVATIONS (pas de CA) entre
@@ -8534,7 +8550,7 @@ function renderMonth(){
         </div>
         ${st.rooms.length?subSection('Taux par chambre',occBody):''}
         ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,bookingsBody)}
-        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
         ${subSection('Charges réelles',chargesBody)}
       </div>
     </div>`;
@@ -9001,7 +9017,7 @@ function renderYear(){
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
-        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
             <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
