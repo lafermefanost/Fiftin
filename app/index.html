@@ -2047,6 +2047,7 @@ const SETTINGS_PANEL_ICONS={
   menage:'<path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
   charges:'<rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/>',
   export:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  reglementation:'<line x1="12" y1="3" x2="12" y2="20"/><line x1="6" y1="20" x2="18" y2="20"/><line x1="4" y1="7" x2="20" y2="7"/><path d="M4 7l-2 6h6l-2-6"/><path d="M20 7l-2 6h6l-2-6"/>',
 };
 // Palette "maison" des graphiques (revenus par structure en vue Année, camembert
 // des charges en vue Mois) — tons terre/vert cohérents avec le reste de
@@ -6339,6 +6340,33 @@ function toggleSettingsPanel(id){
   if(id==='equipe'&&settingsPanelOpen[id])loadTeamMembers();
   renderSettings();
 }
+// Rappels réglementaires (déclaration meublé de tourisme, TVA, LMP, Loi Le
+// Meur…) — déplacés de la vue Année vers ce dernier onglet de Réglages
+// (consultés bien moins souvent que le reste de cette vue). Les seuils
+// affichés viennent des seuils réellement configurés (n'importe quelle
+// structure, retrouvés par mot-clé dans leur libellé plutôt que par un id
+// de structure fixe 'sasu'/'lmnp' qui n'existe plus forcément : les
+// structures juridiques sont une liste libre, renommable/supprimable) — lit
+// S.settings directement plutôt que de recevoir structs/structThr en
+// paramètre, pour rester appelable depuis renderSettings sans dépendre du
+// scope de renderYear.
+function regulatoryItemsHTML(){
+  const structs=(S.settings?.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const structThr=S.settings?.structureThresholds||DEFAULT_SETTINGS.structureThresholds;
+  const allThr=structs.flatMap(s=>structThr[s.id]||[]);
+  const findThrByLabel=kw=>allThr.find(t=>(t.label||'').toLowerCase().includes(kw));
+  const lmpThr=findThrByLabel('lmp');
+  const tvaThr=findThrByLabel('tva');
+  const nightsThr=allThr.find(t=>t.type==='nights');
+  return`<div class="yr-regl-item">📋 <b>Déclaration meublé de tourisme</b> — numéro d'enregistrement obligatoire en mairie avant mise en location.</div>
+    <div class="yr-regl-item">💶 <b>Taxe de séjour</b> — à collecter et reverser à la commune (souvent automatisée par Airbnb/Booking).</div>
+    <div class="yr-regl-item">⚠️ <b>LMNP → LMP</b> — si recettes > ${(lmpThr?.amount||23000).toLocaleString('fr-FR')} € <em>et</em> > 50 % des revenus du foyer, passage au statut LMP avec cotisations sociales obligatoires.</div>
+    <div class="yr-regl-item">💰 <b>Franchise TVA hébergement</b> — si CA > ${(tvaThr?.amount||85000).toLocaleString('fr-FR')} € (37 500 € pour des prestations de services), assujettissement à la TVA. Le projet de seuil unique à 25 000 € a été définitivement abandonné (loi n° 2025-1044 du 3 nov. 2025) : les seuils 2026 restent inchangés. Vérifier avec votre expert-comptable.</div>
+    <div class="yr-regl-item">📎 <b>Nouvelle mention TVA (à partir du 1ᵉʳ sept. 2026)</b> — « TVA non applicable, art. 293 B du CGI » devient « TVA non applicable, art. L. 223-3 du CIBS » (recodification à droit constant, ordonnance n° 2025-1247 du 17 déc. 2025). L'ancienne mention reste tolérée sur les factures jusqu'au 31/12/2027 — rien d'urgent, mais à mettre à jour sur vos modèles de facture.</div>
+    <div class="yr-regl-item">🧾 <b>Facturation électronique</b> — réception obligatoire dès le <b>1ᵉʳ septembre 2026</b> pour toutes les entreprises, y compris en franchise de TVA : il faut pouvoir recevoir vos factures fournisseurs via une plateforme agréée (PA, ex-PDP). Émission obligatoire à partir du 1ᵉʳ septembre 2027 pour les micro-entreprises/TPE (2026 déjà pour les grandes entreprises/ETI). Sanctions renforcées par la loi de finances 2026 : jusqu'à 50 €/facture non conforme et 500 €/e-reporting manquant (plafond 15 000 €/an).</div>
+    <div class="yr-regl-item">🏠 <b>Loi Le Meur (nov. 2024)</b> — résidence principale : limite de <b>${(nightsThr?.amount||120)} nuits/an</b> via plateformes numériques. Les communes >200 000 hab. peuvent abaisser à 90 nuits. Nouvelles exigences DPE pour les meublés de tourisme neufs dès 2025.</div>
+    <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px">Ces informations sont indicatives — consultez votre expert-comptable.</div>`;
+}
 // Enveloppe une section des réglages dans un volet dépliant, comme les volets des
 // vues Mois/Année (même chevron, même mécanique). L'état ouvert/fermé est mémorisé
 // par id pour survivre aux multiples re-rendus déclenchés par chaque modification.
@@ -6751,6 +6779,11 @@ function renderSettings(){
     <button class="btn-s" style="width:100%;margin-bottom:8px" onclick="exportEventsCSV()">🎉 Exporter les événements (CSV)</button>
     <button class="btn-s" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>`;
   h+=settingsPanel('export','Export',exportBody);
+
+  // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
+  // consulté bien moins souvent que le reste — dernier onglet plutôt que de
+  // l'alourdir en permanence là-bas.
+  h+=settingsPanel('reglementation','Réglementation — rappels',regulatoryItemsHTML());
 
   byId('settingsBody').innerHTML=h;
 }
@@ -8813,33 +8846,10 @@ function renderYear(){
   // utilisé dans groupCard ci-dessus) — plus de bloc "toutes structures" à
   // part ici, le ménage n'est plus jamais orphelin.
 
-  // Regulatory — les seuils affichés viennent des seuils réellement configurés
-  // (n'importe quelle structure, retrouvés par mot-clé dans leur libellé plutôt
-  // que par un id de structure fixe 'sasu'/'lmnp' qui n'existe plus forcément :
-  // les structures juridiques sont une liste libre, renommable/supprimable).
-  const allThr=structs.flatMap(s=>structThr[s.id]||[]);
-  const findThrByLabel=kw=>allThr.find(t=>(t.label||'').toLowerCase().includes(kw));
-  const lmpThr=findThrByLabel('lmp');
-  const tvaThr=findThrByLabel('tva');
-  const nightsThr=allThr.find(t=>t.type==='nights');
-  const reglHTML=`<div class="yr-section yr-regl" onclick="this.classList.toggle('open')">
-    <div class="yr-section-title" style="cursor:pointer;margin-bottom:0;display:flex;justify-content:space-between;align-items:center">Réglementation — rappels<span class="yr-regl-chev">▾</span></div>
-    <div class="yr-regl-body" style="margin-top:10px">
-      <div class="yr-regl-item">📋 <b>Déclaration meublé de tourisme</b> — numéro d'enregistrement obligatoire en mairie avant mise en location.</div>
-      <div class="yr-regl-item">💶 <b>Taxe de séjour</b> — à collecter et reverser à la commune (souvent automatisée par Airbnb/Booking).</div>
-      <div class="yr-regl-item">⚠️ <b>LMNP → LMP</b> — si recettes > ${(lmpThr?.amount||23000).toLocaleString('fr-FR')} € <em>et</em> > 50 % des revenus du foyer, passage au statut LMP avec cotisations sociales obligatoires.</div>
-      <div class="yr-regl-item">💰 <b>Franchise TVA hébergement</b> — si CA > ${(tvaThr?.amount||85000).toLocaleString('fr-FR')} € (37 500 € pour des prestations de services), assujettissement à la TVA. Le projet de seuil unique à 25 000 € a été définitivement abandonné (loi n° 2025-1044 du 3 nov. 2025) : les seuils 2026 restent inchangés. Vérifier avec votre expert-comptable.</div>
-      <div class="yr-regl-item">📎 <b>Nouvelle mention TVA (à partir du 1ᵉʳ sept. 2026)</b> — « TVA non applicable, art. 293 B du CGI » devient « TVA non applicable, art. L. 223-3 du CIBS » (recodification à droit constant, ordonnance n° 2025-1247 du 17 déc. 2025). L'ancienne mention reste tolérée sur les factures jusqu'au 31/12/2027 — rien d'urgent, mais à mettre à jour sur vos modèles de facture.</div>
-      <div class="yr-regl-item">🧾 <b>Facturation électronique</b> — réception obligatoire dès le <b>1ᵉʳ septembre 2026</b> pour toutes les entreprises, y compris en franchise de TVA : il faut pouvoir recevoir vos factures fournisseurs via une plateforme agréée (PA, ex-PDP). Émission obligatoire à partir du 1ᵉʳ septembre 2027 pour les micro-entreprises/TPE (2026 déjà pour les grandes entreprises/ETI). Sanctions renforcées par la loi de finances 2026 : jusqu'à 50 €/facture non conforme et 500 €/e-reporting manquant (plafond 15 000 €/an).</div>
-      <div class="yr-regl-item">🏠 <b>Loi Le Meur (nov. 2024)</b> — résidence principale : limite de <b>${(nightsThr?.amount||120)} nuits/an</b> via plateformes numériques. Les communes >200 000 hab. peuvent abaisser à 90 nuits. Nouvelles exigences DPE pour les meublés de tourisme neufs dès 2025.</div>
-      <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px">Ces informations sont indicatives — consultez votre expert-comptable.</div>
-    </div>
-  </div>`;
-
-  // Calendrier fiscal : déplacé dans la liste des Événements (volet
-  // "Calendrier fiscal", voir buildEventsFiscalHTML/renderEvList) pour voir
-  // toutes les échéances d'un coup au même endroit que les autres dates
-  // importantes, plutôt qu'un panneau séparé ici en plus.
+  // Réglementation — rappels : déplacé dans Réglages (dernier onglet, voir
+  // regulatoryItemsHTML/renderSettings), comme le Calendrier fiscal déplacé
+  // dans les Événements — consulté bien moins souvent que le reste de cette
+  // vue, pas besoin qu'il l'alourdisse en permanence ici.
 
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
   const chevR=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
@@ -8860,7 +8870,6 @@ function renderYear(){
     ${globalHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
-    ${reglHTML}
   </div>`;
 }
 
