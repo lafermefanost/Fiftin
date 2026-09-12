@@ -995,23 +995,14 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 }
 
 /* Events modal */
-/* Onglets mois (voir renderEvList) — remplacent les anciennes barres de mois
-   pleine largeur (repliables) : chips indépendantes, une par mois qui a du
-   contenu, plus un onglet "Fiscal" dédié à la fin pour voir toutes les
-   échéances d'un coup plutôt que dispersées mois par mois. Défile
-   horizontalement si trop nombreuses plutôt que de passer à la ligne. */
-.evtabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
-  padding-bottom:8px;margin-bottom:6px;}
-.evtab{flex:none;position:relative;padding:6px 14px;border:1.5px solid var(--light);
-  border-radius:16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
-  color:var(--gray);background:#fff;cursor:pointer;white-space:nowrap;transition:all .15s;}
-.evtab:hover{border-color:#aaa;color:var(--dark);}
-.evtab.on{background:var(--green);color:#fff;border-color:var(--green);}
-/* Repère du mois en cours, indépendant de l'onglet sélectionné — pour
-   toujours pouvoir repérer "où on en est" même en consultant un autre mois. */
-.evtab-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
-  background:var(--green);margin-left:5px;vertical-align:middle;}
-.evtab.on .evtab-dot{background:#fff;}
+/* Volets mois (voir renderEvList) — un par mois qui a du contenu, plus un
+   dernier volet dédié "Calendrier fiscal", chacun repris tel quel du
+   composant .wday-card/.wday-head/.wday-body de la vue Semaine (même
+   couleur, mêmes coins arrondis, même chevron) pour rester cohérent avec le
+   reste de l'appli plutôt que d'inventer un système de chips à part. Un seul
+   volet ouvert à la fois (voir toggleEvMonth), refermable comme les jours de
+   la vue Semaine — au clic sur le volet déjà ouvert, tout se referme. */
+.ev-months{display:flex;flex-direction:column;gap:12px;}
 /* Repère "Aujourd'hui" dans la liste du mois en cours, même sans événement
    ce jour-là (voir renderEvList) — un simple filet avec libellé, pas une
    carte de plus à lire. */
@@ -1630,7 +1621,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     </button>
     <input class="fi" id="evListSearch" placeholder="Rechercher un événement…" autocomplete="off"
       style="margin-bottom:10px" oninput="renderEvList(this.value)">
-    <div id="evTabs" class="evtabs"></div>
     <div id="evList"></div>
   </div>
 </div>
@@ -4576,26 +4566,30 @@ function delGuest(){
 // ═══════════════════════════════════════════════════════════════
 //  EVENTS MODAL
 // ═══════════════════════════════════════════════════════════════
-// Onglet actif de la liste (voir renderEvList) : une clé de mois
-// (année×12+mois, comme dans groups) ou 'fiscal'. Mémorisé au niveau module
-// pour survivre aux re-rendus déclenchés par un ajout/une modification
-// d'événement pendant que la modale reste ouverte.
-let evListActiveTab=null;
+// Volet actuellement ouvert dans la liste (voir renderEvList) : une clé de
+// mois (année×12+mois, comme dans groups), 'fiscal', ou null si tout est
+// replié. Mémorisé au niveau module pour survivre aux re-rendus déclenchés
+// par un ajout/une modification d'événement pendant que la modale reste
+// ouverte — même principe que weekOpenDays pour la vue Semaine, mais une
+// seule valeur à la fois puisqu'un seul volet peut être ouvert ici.
+let evOpenMonth=null;
 // presetKey (optionnel) : ouvre directement sur ce mois plutôt que le mois
 // en cours — utilisé par openDayEvent pour retrouver un événement passé/
 // futur sans devoir d'abord naviguer jusqu'à son mois à la main.
 function openEventsModal(presetKey){
   byId('evListSearch').value='';
-  if(presetKey!=null) evListActiveTab=presetKey;
+  if(presetKey!=null) evOpenMonth=presetKey;
   else{
     const todayD=new Date(todayISO()+'T00:00:00');
-    evListActiveTab=todayD.getFullYear()*12+todayD.getMonth();
+    evOpenMonth=todayD.getFullYear()*12+todayD.getMonth();
   }
   renderEvList();
   byId('modalEvents').style.display='flex';
 }
-function selectEvTab(key){
-  evListActiveTab=key;
+// Referme le volet ouvert s'il est déjà ouvert, sinon en ouvre un nouveau
+// (et referme l'ancien) — mêmes semantiques que toggleWeekDay.
+function toggleEvMonth(key){
+  evOpenMonth=(evOpenMonth===key)?null:key;
   renderEvList(byId('evListSearch').value);
 }
 const evBadge=(ds,col)=>{
@@ -4651,10 +4645,9 @@ function renderEvList(term){
   const curYear=todayD.getFullYear();
 
   // Recherche : liste plate, tout mélangé (événements, fériés, échéances
-  // fiscales) — chercher doit retrouver une échéance fiscale même si
-  // l'onglet "Fiscal" n'est pas ouvert, donc pas de vue par onglets ici.
+  // fiscales) — chercher doit retrouver une échéance fiscale même si son
+  // volet n'est pas ouvert, donc pas de vue par volets ici.
   if(term){
-    byId('evTabs').innerHTML='';
     const sorted=[...S.events,...getHolidayPseudoEvents(),...getFiscalPseudoEvents()]
       .sort((a,b)=>a.startDate.localeCompare(b.startDate))
       .filter(ev=>{
@@ -4668,13 +4661,13 @@ function renderEvList(term){
     return;
   }
 
-  // Pas de recherche : un onglet par mois qui a du contenu (événements +
-  // fériés — pas les échéances fiscales, qui ont leur propre onglet dédié
-  // pour les voir toutes d'un coup, voir buildEventsFiscalHTML) + un
-  // onglet "Fiscal" à la fin. Clé numérique (année×12+mois) plutôt qu'une
-  // simple chaîne "année-mois" : une comparaison alphabétique aurait mal
-  // classé les mois à un chiffre (ex: "2026-9" > "2026-10" en tri de
-  // chaînes).
+  // Pas de recherche : un volet par mois qui a du contenu (événements +
+  // fériés — pas les échéances fiscales, qui ont leur propre volet dédié
+  // pour les voir toutes d'un coup, voir buildEventsFiscalHTML) + un volet
+  // "Calendrier fiscal" à la fin, empilés façon vue Semaine (.wday-card).
+  // Clé numérique (année×12+mois) plutôt qu'une simple chaîne "année-mois" :
+  // une comparaison alphabétique aurait mal classé les mois à un chiffre
+  // (ex: "2026-9" > "2026-10" en tri de chaînes).
   const sorted=[...S.events,...getHolidayPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
   const groups=[];
   let curGroup=null;
@@ -4688,48 +4681,45 @@ function renderEvList(term){
     curGroup.events.push(ev);
   });
 
-  // Onglet actif : celui mémorisé s'il correspond encore à un mois affiché,
-  // sinon le mois en cours s'il a du contenu, sinon le premier mois
-  // disponible, sinon l'onglet Fiscal en dernier recours (n'arrive
-  // normalement jamais, les jours fériés couvrent déjà toute l'année).
-  if(evListActiveTab!=='fiscal'&&!groups.some(g=>g.key===evListActiveTab)){
-    evListActiveTab=groups.some(g=>g.key===todayKey)?todayKey
-      :(groups[0]?groups[0].key:'fiscal');
-  }
-  const tabLabel=key=>{
-    const m=((key%12)+12)%12, y=Math.floor(key/12);
-    return MON3[m]+(y!==curYear?` ${y}`:'');
+  // Repère "Aujourd'hui" à l'intérieur du volet du mois en cours, inséré à
+  // sa place chronologique — même sans événement ce jour précis (voir
+  // .ev-today-mark), pour toujours avoir un point de repère visuel.
+  const monthBodyHTML=g=>{
+    let h='';
+    let markInserted=g.key!==todayKey;
+    g.events.forEach(ev=>{
+      if(!markInserted&&ev.startDate>=today){
+        h+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
+        markInserted=true;
+      }
+      h+=evCardHTML(ev);
+    });
+    if(!markInserted) h+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
+    return h;
   };
-  // .evtab-dot repère le mois en cours indépendamment de l'onglet
-  // sélectionné, pour toujours savoir "où on en est" même en consultant un
-  // autre mois ou l'onglet Fiscal.
-  byId('evTabs').innerHTML=groups.map(g=>`<button type="button" class="evtab${g.key===evListActiveTab?' on':''}"
-      onclick="selectEvTab(${g.key})">${tabLabel(g.key)}${g.key===todayKey?'<span class="evtab-dot"></span>':''}</button>`).join('')
-    +`<button type="button" class="evtab${evListActiveTab==='fiscal'?' on':''}" onclick="selectEvTab('fiscal')">📅 Fiscal</button>`;
-
-  if(evListActiveTab==='fiscal'){
-    byId('evList').innerHTML=buildEventsFiscalHTML();
-    return;
-  }
-  const activeGroup=groups.find(g=>g.key===evListActiveTab);
-  if(!activeGroup||!activeGroup.events.length){
-    byId('evList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun événement</p>';
-    return;
-  }
-  // Repère "Aujourd'hui" dans le mois en cours, inséré à sa place
-  // chronologique — même sans événement ce jour précis (voir .ev-today-mark),
-  // pour toujours avoir un point de repère visuel dans la liste.
-  let cardsHtml='';
-  let markInserted=evListActiveTab!==todayKey;
-  activeGroup.events.forEach(ev=>{
-    if(!markInserted&&ev.startDate>=today){
-      cardsHtml+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
-      markInserted=true;
-    }
-    cardsHtml+=evCardHTML(ev);
-  });
-  if(!markInserted) cardsHtml+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
-  byId('evList').innerHTML=cardsHtml;
+  const monthBarHTML=g=>{
+    const isCur=g.key===todayKey;
+    const open=g.key===evOpenMonth;
+    const m=((g.key%12)+12)%12, y=Math.floor(g.key/12);
+    const label=MON[m]+(y!==curYear?` ${y}`:'');
+    const count=g.events.length;
+    return`<div class="wday-card${isCur?' wday-today':''}${open?'':' collapsed'}">
+      <div class="wday-head" onclick="toggleEvMonth(${g.key})">
+        <div class="wday-name">${isCur?'Ce mois-ci — ':''}${label}</div>
+        <div class="wday-date">${count} événement${count>1?'s':''}<span class="wday-chev">▾</span></div>
+      </div>
+      <div class="wday-body">${open?monthBodyHTML(g):''}</div>
+    </div>`;
+  };
+  const fiscalOpen=evOpenMonth==='fiscal';
+  const fiscalBarHTML=`<div class="wday-card${fiscalOpen?'':' collapsed'}">
+    <div class="wday-head" onclick="toggleEvMonth('fiscal')">
+      <div class="wday-name">📅 Calendrier fiscal</div>
+      <div class="wday-date"><span class="wday-chev">▾</span></div>
+    </div>
+    <div class="wday-body">${fiscalOpen?buildEventsFiscalHTML():''}</div>
+  </div>`;
+  byId('evList').innerHTML=`<div class="ev-months">${groups.map(monthBarHTML).join('')}${fiscalBarHTML}</div>`;
 }
 
 function openEventEdit(id,prefillDate){
@@ -7293,9 +7283,8 @@ function openDayEvent(ds){
     openEventEdit(null,ds);
     return;
   }
-  // Ouvre directement sur le mois de l'événement (voir openEventsModal) :
-  // avec les onglets, sa carte n'existe dans le DOM que si son mois est
-  // sélectionné — plus de volet à déplier comme avec les anciennes barres.
+  // Ouvre directement le volet du mois de l'événement (voir openEventsModal) :
+  // sa carte n'existe dans le DOM que si le volet de son mois est déplié.
   const sd=new Date(dayEvs[0].startDate+'T00:00:00');
   openEventsModal(sd.getFullYear()*12+sd.getMonth());
   setTimeout(()=>{
@@ -8666,10 +8655,10 @@ function renderYear(){
     </div>
   </div>`;
 
-  // Calendrier fiscal : déplacé dans la liste des Événements (onglet
-  // "Fiscal", voir buildEventsFiscalHTML/renderEvList) pour voir toutes les
-  // échéances d'un coup au même endroit que les autres dates importantes,
-  // plutôt qu'un panneau séparé ici en plus.
+  // Calendrier fiscal : déplacé dans la liste des Événements (volet
+  // "Calendrier fiscal", voir buildEventsFiscalHTML/renderEvList) pour voir
+  // toutes les échéances d'un coup au même endroit que les autres dates
+  // importantes, plutôt qu'un panneau séparé ici en plus.
 
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
   const chevR=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
