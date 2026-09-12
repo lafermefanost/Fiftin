@@ -7371,7 +7371,7 @@ function renderWeek(){
   const weekEvCollapsed=panelCollapsed('week','ev',true);
   h+=`<div class="tsec-panel ev${weekEvCollapsed?' collapsed':''}">
     <div class="tsec-hd${weekEvs.length>0?' has-items':''}" onclick="toggleTsecPanel('week','ev',true)">
-      ${EVENT_ICON} Événements<span class="tsec-count"><span>${weekEvs.length}</span></span><span class="tsec-chev">▾</span>
+      ${EVENT_ICON} Événements de la semaine<span class="tsec-count"><span>${weekEvs.length}</span></span><span class="tsec-chev">▾</span>
     </div>
     <div class="tsec-body">${weekEvs.length?weekEvs.map(evCard).join(''):'<div class="tsec-empty">Aucun</div>'}${weekEvAddBtn}</div>
   </div>`;
@@ -7447,9 +7447,12 @@ function renderWeek(){
     const wpanel=(cls,icon,title,items,renderFn)=>{
       const cnt=items.length;
       const body=cnt?items.map(renderFn).join(''):`<div class="tsec-empty">Aucun</div>`;
-      const collapsed=panelCollapsed(ds,cls,cnt===0);
+      // Replié par défaut même s'il y a des extras (contrairement au calcul
+      // habituel cnt===0) : ce volet doit s'ouvrir à la main plutôt que se
+      // déplier tout seul dès qu'un client a une consommation à noter.
+      const collapsed=panelCollapsed(ds,cls,true);
       return`<div class="tsec-panel ${cls}${collapsed?' collapsed':''}">
-        <div class="tsec-hd${cnt>0?' has-items':''}" onclick="toggleTsecPanel('${ds}','${cls}',${cnt===0})">
+        <div class="tsec-hd${cnt>0?' has-items':''}" onclick="toggleTsecPanel('${ds}','${cls}',true)">
           ${icon} ${title}<span class="tsec-count"><span>${cnt}</span></span><span class="tsec-chev">▾</span>
         </div>
         <div class="tsec-body">${body}</div>
