@@ -1105,6 +1105,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   -webkit-overflow-scrolling:touch;}
 .yr-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
 .yr-group{background:#fff;border-radius:12px;padding:12px 14px;border:1.5px solid var(--light);}
+/* "Activité globale" (voir globalCard dans renderYear) : sort du cartouche
+   blanc — on comprend que c'est le total en voyant ensuite les encarts par
+   structure (SASU, LMNP…), pas besoin de la boîte en plus pour le dire. */
+.yr-group.yr-total{background:none;border:none;padding:0;}
 .yr-total .yr-stats{margin-bottom:0;}
 .yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
