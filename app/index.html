@@ -694,8 +694,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   color:var(--gray);margin-bottom:10px;}
 .mocc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .mocc-room{font-size:13px;font-weight:500;color:var(--dark);width:46px;flex-shrink:0;}
-.mocc-bar-bg{flex:1;height:8px;background:var(--light);border-radius:4px;overflow:hidden;}
-.mocc-bar-fill{height:100%;border-radius:4px;background:var(--green);transition:width .3s;}
+.mocc-bar-bg{flex:1;height:8px;background:var(--light);border-radius:3px;overflow:hidden;}
+.mocc-bar-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s;}
 .mocc-pct{font-size:13px;font-weight:500;color:var(--gray);width:30px;text-align:right;flex-shrink:0;}
 .mocc-taxe{display:flex;justify-content:space-between;align-items:center;
   margin-top:10px;padding-top:10px;border-top:1px solid var(--light);
@@ -740,7 +740,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    tranches : un fond neutre visible à travers un petit espace (margin)
    plutôt qu'une bordure, qui casserait l'arrondi des tranches d'extrémité.*/
 .src-gauge{margin-top:16px;padding-top:16px;border-top:1px solid var(--light);}
-.src-gauge-bar{display:flex;height:18px;border-radius:9px;overflow:hidden;
+.src-gauge-bar{display:flex;height:18px;border-radius:4px;overflow:hidden;
   background:var(--light);margin-bottom:12px;}
 .src-gauge-seg{height:100%;}
 .src-gauge-seg+.src-gauge-seg{margin-left:2px;}
@@ -1217,9 +1217,9 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
 .yr-gauge-thr{font-size:10px;color:var(--gray);}
-.yr-gauge-bar{height:10px;background:var(--light);border-radius:6px;overflow:hidden;position:relative;}
-.yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
-.yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:6px;transition:width .3s;}
+.yr-gauge-bar{height:10px;background:var(--light);border-radius:3px;overflow:hidden;position:relative;}
+.yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
+.yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
 /* Fond lavande pâle + texte sombre plutôt que du lavande plein (illisible en
    petit texte sur la carte blanche) — la barre de la jauge elle-même
