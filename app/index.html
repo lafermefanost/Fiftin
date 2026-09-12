@@ -1145,6 +1145,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
 .yr-group-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
 .yr-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+/* .mch-pie-block (camembert charges/sources, voir buildChargesDonut/
+   buildSourceRevDonut) porte un liseré du haut par défaut pour la vue Mois,
+   où il sépare la liste des charges du camembert — pas dans l'esprit de la
+   vue Année, réglée à la place ci-dessus/ci-dessous (voir .mch-total-row,
+   .yr-regl-item). Reste inchangé partout ailleurs (vue Mois). */
+.yr-group .mch-pie-block{margin-top:14px;padding-top:0;border-top:none;}
 /* Sous-encarts d'une structure (seuils, revenus par mois, répartition par
    source/charges) : chacun son propre encart blanc à ombre portée qui le
    détache du fond blanc du cartouche structure — exactement le traitement
@@ -1203,8 +1209,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-regl.open .yr-regl-body{display:block;}
 .yr-regl.open .yr-regl-chev{display:inline-block;transform:rotate(180deg);}
 .yr-regl-chev{display:inline-block;transition:transform .2s;margin-left:4px;}
-.yr-regl-item{font-size:12px;color:var(--dark);padding:5px 0;border-bottom:1px solid var(--light);line-height:1.5;}
-.yr-regl-item:last-child{border-bottom:none;}
+/* Pas de liseré entre les items (voir demande d'origine : enlever les
+   fines lignes de séparation en vue Année, pas dans l'esprit du reste du
+   site) — l'espacement seul suffit à les distinguer. */
+.yr-regl-item{font-size:12px;color:var(--dark);padding:8px 0;line-height:1.5;}
 
 /* ─── GUEST HISTORY ────────────────────────────────────────── */
 .geh-wrap{background:#F8F6F2;border-radius:10px;padding:12px 14px;border:1px solid var(--light);margin-bottom:8px;}
@@ -8654,7 +8662,7 @@ function renderYear(){
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
         ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
-        ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
+        ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
             <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
           </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>')}
@@ -8745,7 +8753,7 @@ function renderYear(){
       <div class="yr-regl-item">📎 <b>Nouvelle mention TVA (à partir du 1ᵉʳ sept. 2026)</b> — « TVA non applicable, art. 293 B du CGI » devient « TVA non applicable, art. L. 223-3 du CIBS » (recodification à droit constant, ordonnance n° 2025-1247 du 17 déc. 2025). L'ancienne mention reste tolérée sur les factures jusqu'au 31/12/2027 — rien d'urgent, mais à mettre à jour sur vos modèles de facture.</div>
       <div class="yr-regl-item">🧾 <b>Facturation électronique</b> — réception obligatoire dès le <b>1ᵉʳ septembre 2026</b> pour toutes les entreprises, y compris en franchise de TVA : il faut pouvoir recevoir vos factures fournisseurs via une plateforme agréée (PA, ex-PDP). Émission obligatoire à partir du 1ᵉʳ septembre 2027 pour les micro-entreprises/TPE (2026 déjà pour les grandes entreprises/ETI). Sanctions renforcées par la loi de finances 2026 : jusqu'à 50 €/facture non conforme et 500 €/e-reporting manquant (plafond 15 000 €/an).</div>
       <div class="yr-regl-item">🏠 <b>Loi Le Meur (nov. 2024)</b> — résidence principale : limite de <b>${(nightsThr?.amount||120)} nuits/an</b> via plateformes numériques. Les communes >200 000 hab. peuvent abaisser à 90 nuits. Nouvelles exigences DPE pour les meublés de tourisme neufs dès 2025.</div>
-      <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px;border-bottom:none">Ces informations sont indicatives — consultez votre expert-comptable.</div>
+      <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px">Ces informations sont indicatives — consultez votre expert-comptable.</div>
     </div>
   </div>`;
 
