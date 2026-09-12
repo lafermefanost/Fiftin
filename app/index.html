@@ -692,6 +692,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .month-occ{background:#fff;border-radius:12px;padding:14px;border:1.5px solid var(--light);}
 .mocc-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
   color:var(--gray);margin-bottom:10px;}
+/* Total inséré sur la même ligne qu'un titre (ex. "Répartition par
+   source (sur 101 000 € au total)") plutôt que sur sa propre ligne :
+   annule la casse/graisse du titre parent pour rester une précision
+   secondaire, pas une deuxième hiérarchie d'info. */
+.mocc-title-note{font-weight:400;text-transform:none;letter-spacing:normal;color:var(--gray);}
 .mocc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .mocc-room{font-size:13px;font-weight:500;color:var(--dark);width:46px;flex-shrink:0;}
 .mocc-bar-bg{flex:1;height:11px;background:var(--light);border-radius:3px;overflow:hidden;}
@@ -6230,6 +6235,13 @@ function buildChargesDonut(breakdown){
 // l'appli. `entries` déjà résolues en {label,val,color} par l'appelant
 // (voir structSourceBreakdown/structSourceBreakdownMonth), pas de calcul de
 // CA ici.
+// Total pris en compte par buildSourceRevGauge (voir juste en dessous) —
+// exposé séparément pour que l'appelant l'affiche sur la même ligne que le
+// titre "Répartition par source" ("… (sur 101 000 € au total)") plutôt
+// que sur sa propre ligne à l'intérieur de la jauge.
+function sourceRevTotal(entries){
+  return entries.filter(e=>e.val>0).reduce((s,e)=>s+e.val,0);
+}
 function buildSourceRevGauge(entries){
   const MAX_SLICES=6;
   let raw=entries.filter(e=>e.val>0).sort((a,b)=>b.val-a.val);
@@ -6249,7 +6261,6 @@ function buildSourceRevGauge(entries){
     <span class="mch-pie-val">${Math.round(s.val).toLocaleString('fr-FR')} €</span>
   </div>`).join('');
   return`<div class="src-gauge">
-    <div class="mch-pie-total-line">${Math.round(total).toLocaleString('fr-FR')} € au total</div>
     <div class="src-gauge-bar">${barHTML}</div>
     <div class="mch-pie-legend">${legendHTML}</div>
   </div>`;
@@ -8523,7 +8534,7 @@ function renderMonth(){
       // Libellés explicites pour les deux parties fusionnées ici (jauge de
       // source + liste clients) — sans ça, la jauge et la liste s'enchaînent
       // sans qu'on sache ce que chacune représente.
-      bookingsBody=(sourceEntries.length?`<div class="mocc-title" style="font-weight:700">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
+      bookingsBody=(sourceEntries.length?`<div class="mocc-title" style="font-weight:700">Répartition par source <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span></div>${buildSourceRevGauge(sourceEntries)}`:'')
         +`<div class="mocc-title" style="font-weight:700${sourceEntries.length?';margin-top:16px':''}">Toutes les réservations</div>`
         +`<div class="mbk-clients">`
         +shownRows.map(row=>{
@@ -9051,7 +9062,7 @@ function renderYear(){
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
-        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}
+        ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
             <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
