@@ -1026,7 +1026,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   text-align:center;}
 .evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
-.evfilter-btn.on{background:var(--green);color:#fff;border-color:var(--green);}
+.evfilter-btn.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
 /* Volets mois (voir renderEvList), dans le filtre Pro ou Perso — un par
    mois qui a du contenu, repris tel quel du composant
    .wday-card/.wday-head/.wday-body de la vue Semaine (même couleur, mêmes
@@ -2077,8 +2077,6 @@ const PALETTE = [
 // ═══════════════════════════════════════════════════════════════
 const S = {year:2026, bookings:[], guests:[], events:[], cleaning:{}, menus:{}, extDiners:{}, transactions:[], view:'grid', mYear:new Date().getFullYear(), mMonth:new Date().getMonth(), wStart:null, todayDate:null, catalog:[], charges:[], settings:null};
 let bankExpandedCat=null;
-let monthBklistOpen=false;
-let monthChargesOpen=false;
 let settingsPanelOpen={};
 // Cache local de la liste des comptes Personnel de ce propriétaire (Réglages
 // → Équipe) — rechargée depuis Firestore à l'ouverture du panneau, voir
@@ -6258,11 +6256,6 @@ function deleteTransaction(id){
   persist();
   if(S.view==='month')renderMonth();
 }
-function toggleMonthPanel(which){
-  if(which==='bklist')monthBklistOpen=!monthBklistOpen;
-  else monthChargesOpen=!monthChargesOpen;
-  if(S.view==='month')renderMonth();
-}
 function toggleBankCat(key){
   bankExpandedCat=bankExpandedCat===key?null:key;
   if(S.view==='month')renderMonth();
@@ -8048,23 +8041,42 @@ function getMonthStats(y,m){
     nightsRevenue,repasRevenue,eventsRevenue,totalRev,occPct};
 }
 
+// État des volets structure de la vue Mois (voir toggleMonthGroup) — même
+// principe que yearOpenGroups pour la vue Année : mémorisé par gid, remis à
+// zéro au changement de mois plutôt que jamais, pour ne pas garder replié un
+// onglet d'un mois qu'on ne regarde plus.
+let monthOpenGroups=new Map();
+let monthOpenGroupsFor=null;
+function monthGroupCollapsed(gid){
+  return monthOpenGroups.has(gid)?monthOpenGroups.get(gid):false;
+}
+function toggleMonthGroup(gid){
+  monthOpenGroups.set(gid,!monthGroupCollapsed(gid));
+  renderMonth();
+}
+// Volet "Événements du mois" (voir renderMonth) — un seul volet collectif,
+// même principe que le volet Événements de la vue Semaine (toggleTsecPanel
+// hardcode renderWeek, pas réutilisable ici).
+let monthEvOpen=false;
+function toggleMonthEv(){
+  monthEvOpen=!monthEvOpen;
+  renderMonth();
+}
+
 function renderMonth(){
   const y=S.mYear, m=S.mMonth;
+  const monthKey=y+'-'+m;
+  if(monthOpenGroupsFor!==monthKey){
+    monthOpenGroupsFor=monthKey;
+    monthOpenGroups=new Map();
+  }
   const{daysInMonth,mStart,mEndExact,bks,totalPossible,totalNights,periodRevTotal,
     totalExtras,totalRepas,repasRevenueFromBookings,taxeSejourTotal,extDinersRevenueTotal,
     nightsRevenue,repasRevenue,eventsRevenue,totalRev,occPct}=getMonthStats(y,m);
-
-  // Per-room occupancy
-  const roomOcc=ROOMS.map(r=>{
-    let nights=0;
-    bks.filter(b=>b.roomId===r.id).forEach(bk=>{
-      const oStart=bk.checkIn>mStart?bk.checkIn:mStart;
-      const oEnd=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
-      const n=daysBetween(oStart,oEnd);
-      if(n>0)nights+=n;
-    });
-    return{r,nights,pct:Math.round(nights/daysInMonth*100)};
-  });
+  const today=todayISO();
+  const structs=(S.settings?.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const structColor=i=>STRUCTURE_COLORS[i%STRUCTURE_COLORS.length];
+  const cats=S.settings.chargeCategories||[];
 
   let h='<div class="month-inner">';
 
@@ -8085,7 +8097,9 @@ function renderMonth(){
   </div>`;
   h+=`<div class="vnav-now-row">${monthDiff!==0?`<button class="vnav-now-btn" onclick="thisMonth()">Ce mois-ci</button>`:''}</div>`;
 
-  // Revenue breakdown — total chapeau + détail par catégorie
+  // Revenue breakdown — total chapeau + détail par catégorie. Reste global
+  // (toutes structures confondues), comme "Activité globale" en vue Année :
+  // le détail par structure vient ensuite, dans les volets ci-dessous.
   const mRevItems=[
     `<div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`,
     `<div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>`
@@ -8104,8 +8118,10 @@ function renderMonth(){
     <div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>
   </div>`;
 
-
-  // Financial summary (charges + marge) — only if charges configured
+  // Financial summary (charges + marge) — only if charges configured. Reste
+  // global lui aussi (bankCharges couvre déjà toutes les structures) — pas
+  // le ménage, comme avant cette refonte (voir cleanCostTotal plus bas,
+  // désormais calculé par structure et non plus additionné ici).
   const bankCharges=variableChargesForMonth(mStart,mEndExact);
   const totalCh=bankCharges.total;
   if(totalCh>0){
@@ -8125,158 +8141,159 @@ function renderMonth(){
     </div>`;
   }
 
-  // Per-room occupancy bars
-  h+=`<div class="month-occ"><div class="mocc-title">Taux par chambre</div>`;
-  roomOcc.forEach(({r,nights,pct})=>{
-    h+=`<div class="mocc-row">
-      <div class="mocc-room">${r.short}</div>
-      <div class="mocc-bar-bg"><div class="mocc-bar-fill" style="width:${pct}%"></div></div>
-      <div class="mocc-pct">${pct}%</div>
-    </div>`;
-  });
-  h+=`</div>`;
-
-  // Taxe de séjour du mois — catégorie à part (sa propre carte, pas une ligne
-  // ajoutée dans une carte qui parle d'autre chose), placée sous Taux par
-  // chambre. Masquée si la collecte est désactivée dans les réglages (voir
-  // taxeSejourEnabled). Toujours exclue du CA ci-dessus.
-  if(taxeSejourEnabled())h+=`<div class="month-occ">
-    <div class="mocc-title">Taxe de séjour</div>
-    <div class="mocc-taxe" style="margin-top:0;padding-top:0;border-top:none">
-      <span>Collectée ce mois-ci</span><span>${taxeSejourTotal>0?taxeSejourTotal.toLocaleString('fr-FR')+' €':'—'}</span>
+  // Volet "Événements du mois" — même principe que le volet Événements de la
+  // vue Semaine (même carte .evcard, même bouton d'ajout), mais pour tout le
+  // mois affiché plutôt qu'un seul jour à la fois. Réutilise evCardHTML (la
+  // carte du modal Événements) telle quelle plutôt que de dupliquer un
+  // rendu déjà validé ailleurs.
+  const monthEvs=S.events.filter(ev=>ev.startDate<mEndExact&&ev.endDate>=mStart);
+  for(let i=daysInMonth-1;i>=0;i--){
+    const dds=addDays(mStart,i);
+    const hn=getHolidayName(dds);
+    if(hn)monthEvs.unshift({id:'holiday-'+dds,title:hn,startDate:dds,endDate:dds,isHoliday:true});
+    const fn=getFiscalPseudoEvents().find(f=>f.startDate===dds);
+    if(fn)monthEvs.unshift(fn);
+  }
+  monthEvs.sort((a,b)=>a.startDate.localeCompare(b.startDate));
+  const monthPrefillDate=(today>=mStart&&today<mEndExact)?today:mStart;
+  const monthEvAddBtn=`<div class="tsec-add" onclick="event.stopPropagation();openEventEdit(null,'${monthPrefillDate}')">+ Ajouter un événement</div>`;
+  h+=`<div class="tsec-panel ev${monthEvOpen?'':' collapsed'}">
+    <div class="tsec-hd${monthEvs.length>0?' has-items':''}" onclick="toggleMonthEv()">
+      ${EVENT_ICON} Événements du mois<span class="tsec-count"><span>${monthEvs.length}</span></span><span class="tsec-chev">▾</span>
     </div>
+    <div class="tsec-body">${monthEvs.length?monthEvs.map(evCardHTML).join(''):'<div class="tsec-empty">Aucun</div>'}${monthEvAddBtn}</div>
   </div>`;
 
-  // Booking list — grouped by client, sorted by revenue desc
-  const byGuest={};
-  bks.forEach(bk=>{
-    const gid=bk.guestId||'?';
-    if(!byGuest[gid]) byGuest[gid]={gid,bkCount:0,nights:0,rev:0};
-    const oStart=bk.checkIn>mStart?bk.checkIn:mStart;
-    const oEnd=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
-    const n=daysBetween(oStart,oEnd);
-    byGuest[gid].bkCount++;
-    byGuest[gid].nights+=n;
-    byGuest[gid].rev+=getBookingRevForPeriod(bk,mStart,mEndExact);
-  });
-  const clientRows=Object.values(byGuest).sort((a,b)=>b.rev-a.rev);
-
-  // Source breakdown — couvre maintenant tout le CA du mois (pas seulement les
-  // nuitées/repas des réservations comme avant), pour que la somme des d.rev
-  // par source retombe exactement sur "revenus totaux du mois" et que les %
-  // (une part de revenu désormais, plus une part de nombre de résas) totalisent
-  // 100. Trois attributions : les extras d'une réservation suivent sa propre
-  // source ; les personnes extérieures (aucune notion de source pour un
-  // passage sans réservation) sont rattachées à Direct ; les événements ont
-  // déjà leur propre source (ev.source), utilisée telle quelle.
-  const srcDef=S.settings.sources||DEFAULT_SETTINGS.sources;
-  const srcMap={};
-  srcDef.forEach(s=>{srcMap[s.id]={n:0,rev:0};});
-  const addSrcRev=(srcId,amount)=>{
-    if(!amount)return;
-    const key=srcMap[srcId]!==undefined?srcId:'direct';
-    if(srcMap[key])srcMap[key].rev+=amount;
-  };
-  bks.forEach(bk=>{
-    const src=bk.source||'direct';
-    const key=srcMap[src]!==undefined?src:'direct';
-    srcMap[key].n++;
-    let bkExtras=0;
-    for(let i=0;i<daysInMonth;i++)bkExtras+=getExtrasDayTotal(bk,addDays(mStart,i));
-    addSrcRev(src,getBookingRevForPeriod(bk,mStart,mEndExact)+bkExtras);
-  });
-  for(let i=0;i<daysInMonth;i++){
-    const dds=addDays(mStart,i);
-    addSrcRev('direct',extDinersRevenueForDate(dds)+extDinersExtrasTotalForDate(dds));
-  }
-  S.events.forEach(ev=>{
-    const src=ev.source||'direct';
-    let evRev=(ev.prixNet>0&&ev.startDate>=mStart&&ev.startDate<mEndExact)?ev.prixNet:0;
-    for(let i=0;i<daysInMonth;i++){
-      const dds=addDays(mStart,i);
-      if(dds>=ev.startDate&&dds<=ev.endDate)evRev+=getExtrasDayTotalEv(ev,dds);
+  // Résumé assistant — équivalent du "Aujourd'hui, vous avez…" de la vue
+  // Semaine (.wbrief), mais à l'échelle du mois : plutôt que de répéter la
+  // journée du jour (déjà couverte par Jour/Semaine), il annonce ce qui
+  // RESTE à venir d'ici la fin du mois affiché — l'équivalent "actionnable"
+  // pour cette granularité. N'a de sens que pour le mois en cours (comme le
+  // brief de la Semaine, affiché seulement quand la semaine contient
+  // aujourd'hui) : un mois passé ou futur n'a pas de "reste à venir".
+  if(monthDiff===0){
+    const mArrs=S.bookings.filter(b=>b.checkIn>=today&&b.checkIn<mEndExact).length;
+    const mDeps=S.bookings.filter(b=>b.checkOut>=today&&b.checkOut<mEndExact).length;
+    let mDiners=0;
+    if(dinnerEnabled()){
+      for(let i=0;i<daysInMonth;i++){
+        const ds=addDays(mStart,i);
+        if(ds<today)continue;
+        mDiners+=S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
+            .reduce((s,b)=>s+(b.nbPersons||2),0)
+          +((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false)
+            .reduce((s,e)=>s+(e.count||1),0);
+      }
     }
-    addSrcRev(src,evRev);
-  });
-  // Actif dès qu'une source a du revenu, même sans réservation ce mois-ci
-  // (ex. un événement Airbnb sans nuitée) — sinon son CA disparaîtrait de la
-  // liste tout en restant compté dans le total, cassant l'égalité recherchée.
-  const srcActive=srcDef.filter(s=>srcMap[s.id]&&(srcMap[s.id].n>0||srcMap[s.id].rev>0));
-
-  if(bks.length||srcActive.length){
-    h+=`<div class="month-bklist yr-regl${monthBklistOpen?' open':''}" onclick="toggleMonthPanel('bklist')">
-    <div class="mbk-title" style="cursor:pointer;margin-bottom:0;display:flex;justify-content:space-between;align-items:center">${bks.length} réservation${bks.length>1?'s':''}<span class="yr-regl-chev">▾</span></div>
-    <div class="yr-regl-body" style="margin-top:10px">
-    ${buildSourceCountDonut(srcActive,srcMap)}
-    <div class="mbk-clients"${srcActive.length&&clientRows.length?' style="margin-top:14px;padding-top:12px;border-top:1px solid var(--light)"':''}>`;
-    clientRows.forEach(row=>{
-      const g=guest(row.gid);
-      h+=`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
-        <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
-        <div class="mbk-name">${g?g.name:'?'}</div>
-        <div class="mbk-meta">${row.bkCount > 1 ? row.bkCount+' rés · ' : ''}${row.nights}n</div>
-        ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
-      </div>`;
-    });
-    h+=`</div></div></div>`;
+    const briefParts=[];
+    if(mArrs>0)briefParts.push(`${mArrs} arrivée${mArrs>1?'s':''}`);
+    if(mDeps>0)briefParts.push(`${mDeps} départ${mDeps>1?'s':''}`);
+    if(mDiners>0)briefParts.push(`${mDiners} dîner${mDiners>1?'s':''}`);
+    let briefMsg;
+    if(!briefParts.length){
+      briefMsg='Rien de prévu d\'ici la fin du mois : aucune arrivée, départ ni dîner à venir.';
+    }else if(briefParts.length===1){
+      briefMsg=`Ce mois-ci, il vous reste encore ${briefParts[0]} à venir.`;
+    }else{
+      const last=briefParts.pop();
+      briefMsg=`Ce mois-ci, il vous reste encore ${briefParts.join(', ')} et ${last} à venir.`;
+    }
+    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
   }
 
-  // Charges réelles — relevé bancaire panel (un groupe par structure/compte importé)
-  const monthStructs=(S.settings?.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
-  const cats=S.settings.chargeCategories||[];
-  h+=`<div class="month-charges yr-regl${monthChargesOpen?' open':''}" onclick="toggleMonthPanel('charges')">
-    <div class="mch-header" style="margin-bottom:0;cursor:pointer">
-      <div class="mch-title">Charges réelles — relevé bancaire</div>
-      <span class="yr-regl-chev">▾</span>
-    </div>
-    <div class="yr-regl-body" style="margin-top:10px">`;
-  // Ménage — première catégorie du panel, avant les groupes par structure
-  // (SASU, LMNP…). Heures et coût saisis progressivement, jour par jour, par
-  // les femmes de ménage (vue Semaine → volet Ménage), au tarif horaire de
-  // chacune (Réglages → Équipe ménage) — pas une catégorie retrouvée dans un
-  // import bancaire, mais une vraie charge, incluse dans le total ci-dessous.
-  let cleanCostTotal=0;
-  if(CLEANERS.length){
-    const cleaningByPerson={};
+  // ── Classement par structure — même principe que la vue Année
+  // (groupCard/yr-group) : un volet repliable par structure, avec ses
+  // propres chiffres (CA, occupation, taux par chambre, réservations,
+  // répartition par source, charges réelles) plutôt qu'un unique bloc
+  // mélangeant toutes les structures. ──
+  const subSection=(title,inner)=>`<div class="tsec-panel">
+    <div class="yr-subhd">${title}</div>
+    <div class="tsec-body">${inner}</div>
+  </div>`;
+  function getGroupRoomsM(gid){return ROOMS.filter(r=>(r.group||structs[0].id)===gid);}
+  function groupStatsMonth(gid){
+    const rooms=getGroupRoomsM(gid);
+    const roomIds=new Set(rooms.map(r=>r.id));
+    const gbks=S.bookings.filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<mEndExact&&bk.checkOut>mStart);
+    const realBks=gbks.filter(bk=>bk.checkOut<=today);
+    const realCA=realBks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,mStart,mEndExact),0);
+    const realNights=realBks.reduce((s,bk)=>{
+      const oS=bk.checkIn>mStart?bk.checkIn:mStart;
+      const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
+      return s+daysBetween(oS,oE);
+    },0);
+    const projCA=gbks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,mStart,mEndExact),0);
+    const projNights=gbks.reduce((s,bk)=>{
+      const oS=bk.checkIn>mStart?bk.checkIn:mStart;
+      const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
+      return s+daysBetween(oS,oE);
+    },0);
+    // Capacité écoulée bornée aux deux côtés (un mois futur donne 0, un mois
+    // passé donne le mois entier) — contrairement à l'année, un mois peut
+    // très bien être entièrement dans le futur, pas seulement l'inverse.
+    const elapsedEnd=today<mStart?mStart:(today<mEndExact?today:mEndExact);
+    const elapsedCap=rooms.length*daysBetween(mStart,elapsedEnd);
+    const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
+    return{rooms,bks:gbks,realCA,realNights,projCA,projNights,occRate};
+  }
+  function structCleaningCostMonth(gid){
+    if(!CLEANERS.length)return{total:0,rows:[]};
+    const byPerson={};
     for(let i=0;i<daysInMonth;i++){
       const ds=addDays(mStart,i);
       (S.cleaning[ds]||[]).forEach(c=>{
         const hours=c.hours||0;
         if(hours<=0)return;
+        if((c.group||structs[0].id)!==gid)return;
         const rate=CLEANERS.find(cl=>cl.name===c.name)?.rate??15;
-        if(!cleaningByPerson[c.name])cleaningByPerson[c.name]={hours:0,cost:0,rate};
-        cleaningByPerson[c.name].hours+=hours;
-        cleaningByPerson[c.name].cost+=hours*rate;
+        if(!byPerson[c.name])byPerson[c.name]={hours:0,cost:0,rate};
+        byPerson[c.name].hours+=hours;
+        byPerson[c.name].cost+=hours*rate;
       });
     }
-    const cleanRows=Object.entries(cleaningByPerson);
-    cleanCostTotal=cleanRows.reduce((s,[,v])=>s+v.cost,0);
-    h+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
-    h+=cleanRows.length
-      ? cleanRows.map(([name,v])=>`<div class="mch-row">
-          <span style="flex:1;font-size:13px;color:var(--dark)">${name} <span style="color:var(--gray);font-size:11px">(${v.hours.toLocaleString('fr-FR')} h × ${v.rate} €)</span></span>
-          <span style="font-size:13px;font-weight:600;color:var(--dark)">${v.cost.toLocaleString('fr-FR')} €</span>
-        </div>`).join('')
-      : `<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune heure enregistrée pour ce mois.</div>`;
-    h+=`<div class="mch-subtotal-row"><span>Sous-total Ménage</span><span>${cleanCostTotal.toLocaleString('fr-FR')} €</span></div>`;
+    const rows=Object.entries(byPerson);
+    return{total:rows.reduce((s,[,v])=>s+v.cost,0),rows};
   }
-  // Répartition par catégorie (toutes structures + Ménage confondues), pour le
-  // camembert en fin de panneau — alimentée au fil de la boucle ci-dessous,
-  // pas recalculée à part, pour rester exactement cohérente avec les
-  // sous-totaux affichés au-dessus.
-  const chargeBreakdown={};
-  if(cleanCostTotal>0)chargeBreakdown['Ménage']=cleanCostTotal;
-  let anyBankTx=cleanCostTotal>0;
-  monthStructs.map(s=>[s.id,s.name]).forEach(([gid,label])=>{
+  function structSourceBreakdownMonth(gid){
+    const rooms=getGroupRoomsM(gid);
+    const roomIds=new Set(rooms.map(r=>r.id));
+    const gbks=S.bookings.filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<mEndExact&&bk.checkOut>mStart);
+    const sd=S.settings.sources||DEFAULT_SETTINGS.sources;
+    const bySrc={};
+    gbks.forEach(bk=>{
+      if(isSourceNoRevenue(bk.source))return;
+      const key=sd.find(s=>s.id===bk.source)?bk.source:'direct';
+      bySrc[key]=(bySrc[key]||0)+getBookingRevForPeriod(bk,mStart,mEndExact);
+    });
+    return sd.filter(s=>!s.noRevenue&&bySrc[s.id]>0).map(s=>({label:s.label,val:bySrc[s.id],color:s.color}));
+  }
+  function groupCardMonth(gid,name,color){
+    const collapsed=monthGroupCollapsed(gid);
+    const st=groupStatsMonth(gid);
+    const clean=structCleaningCostMonth(gid);
     const bc=variableChargesForMonth(mStart,mEndExact,gid);
     const catRows=Object.entries(bc.byCat).filter(([id,v])=>v.count>0).sort((a,b)=>b[1].total-a[1].total);
-    if(catRows.length)anyBankTx=true;
-    catRows.forEach(([,v])=>{
-      if(v.excluded)return;
-      chargeBreakdown[v.label]=(chargeBreakdown[v.label]||0)+v.total;
-    });
-    h+=`<div class="mch-group-hd">
-      <span class="mch-group-name">${label}</span>
+    const chargesEntries={};
+    if(clean.total>0)chargesEntries['Ménage']=clean.total;
+    catRows.forEach(([,v])=>{if(!v.excluded)chargesEntries[v.label]=(chargesEntries[v.label]||0)+v.total;});
+    const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
+
+    // Charges de cette structure : ménage, puis relevé bancaire (import/
+    // ajout manuel, catégories dépliables sur clic — mêmes actions qu'avant
+    // cette refonte, juste déplacées dans le volet de leur structure).
+    let chargesBody='';
+    if(CLEANERS.length){
+      chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
+      chargesBody+=clean.rows.length
+        ? clean.rows.map(([nm,v])=>`<div class="mch-row">
+            <span style="flex:1;font-size:13px;color:var(--dark)">${nm} <span style="color:var(--gray);font-size:11px">(${v.hours.toLocaleString('fr-FR')} h × ${v.rate} €)</span></span>
+            <span style="font-size:13px;font-weight:600;color:var(--dark)">${v.cost.toLocaleString('fr-FR')} €</span>
+          </div>`).join('')
+        : `<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune heure enregistrée pour ce mois.</div>`;
+      chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total Ménage</span><span>${clean.total.toLocaleString('fr-FR')} €</span></div>`;
+    }
+    chargesBody+=`<div class="mch-group-hd">
+      <span class="mch-group-name">Relevé bancaire</span>
       <div style="display:flex;gap:6px">
         <input type="file" id="bankCsvInput-${gid}" accept=".csv" style="display:none" onchange="handleBankFileChange(this,'${gid}')" onclick="event.stopPropagation()">
         <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();byId('bankCsvInput-${gid}').click()">Importer CSV</button>
@@ -8284,46 +8301,149 @@ function renderMonth(){
       </div>
     </div>`;
     if(!catRows.length){
-      h+=`<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune transaction importée pour ce mois.</div>`;
-      return;
+      chargesBody+=`<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune transaction importée pour ce mois.</div>`;
+    }else{
+      const txByCat={};
+      monthTransactions(mStart,mEndExact).filter(t=>t.direction==='Debit'&&(t.group||defaultStructureId())===gid).forEach(t=>{
+        const cid=t.categoryId||'';
+        if(!txByCat[cid])txByCat[cid]=[];
+        txByCat[cid].push(t);
+      });
+      catRows.forEach(([id,v])=>{
+        const key=gid+':'+id;
+        chargesBody+=`<div class="mch-row" style="cursor:pointer" onclick="event.stopPropagation();toggleBankCat('${key}')">
+          <span style="flex:1;font-size:13px;color:var(--dark)">${v.label}${v.excluded?' <span style="color:#bbb;font-size:10px">(hors charges)</span>':''} <span style="color:var(--gray);font-size:11px">(${v.count})</span></span>
+          <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}">${Math.round(v.total).toLocaleString('fr-FR')} €</span>
+        </div>`;
+        if(bankExpandedCat===key){
+          (txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).forEach(t=>{
+            chargesBody+=`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
+              <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
+              <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
+              <select style="font-size:11px;border:1px solid var(--light);border-radius:6px;flex-shrink:0" onchange="setTransactionCategory('${t.id}',this.value)" onclick="event.stopPropagation()">
+                <option value="">Non catégorisé</option>
+                ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
+              </select>
+              <button class="mch-del" onclick="event.stopPropagation();deleteTransaction('${t.id}')" title="Supprimer">×</button>
+            </div>`;
+          });
+        }
+      });
+      chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total relevé bancaire</span><span>${Math.round(bc.total).toLocaleString('fr-FR')} €</span></div>`;
     }
-    const txByCat={};
-    monthTransactions(mStart,mEndExact).filter(t=>t.direction==='Debit'&&(t.group||'sasu')===gid).forEach(t=>{
-      const cid=t.categoryId||'';
-      if(!txByCat[cid])txByCat[cid]=[];
-      txByCat[cid].push(t);
-    });
-    catRows.forEach(([id,v])=>{
-      const key=gid+':'+id;
-      h+=`<div class="mch-row" style="cursor:pointer" onclick="event.stopPropagation();toggleBankCat('${key}')">
-        <span style="flex:1;font-size:13px;color:var(--dark)">${v.label}${v.excluded?' <span style="color:#bbb;font-size:10px">(hors charges)</span>':''} <span style="color:var(--gray);font-size:11px">(${v.count})</span></span>
-        <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}">${Math.round(v.total).toLocaleString('fr-FR')} €</span>
+    if(chargesTotal>0){
+      chargesBody+=`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
+        <span>Total charges de cette structure</span>
+        <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / mois</span>
       </div>`;
-      if(bankExpandedCat===key){
-        (txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).forEach(t=>{
-          h+=`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
-            <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
-            <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
-            <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
-            <select style="font-size:11px;border:1px solid var(--light);border-radius:6px;flex-shrink:0" onchange="setTransactionCategory('${t.id}',this.value)" onclick="event.stopPropagation()">
-              <option value="">Non catégorisé</option>
-              ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
-            </select>
-            <button class="mch-del" onclick="event.stopPropagation();deleteTransaction('${t.id}')" title="Supprimer">×</button>
-          </div>`;
-        });
-      }
+      chargesBody+=buildChargesDonut(chargesEntries);
+    }
+
+    // Réservations de cette structure (client par client, comme avant cette
+    // refonte) + répartition PAR NOMBRE de réservations (donut), distincte
+    // de la répartition par CA juste après.
+    const gByGuest={};
+    st.bks.forEach(bk=>{
+      const gid2=bk.guestId||'?';
+      if(!gByGuest[gid2])gByGuest[gid2]={gid:gid2,bkCount:0,nights:0,rev:0};
+      const oS=bk.checkIn>mStart?bk.checkIn:mStart;
+      const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
+      gByGuest[gid2].bkCount++;
+      gByGuest[gid2].nights+=daysBetween(oS,oE);
+      gByGuest[gid2].rev+=getBookingRevForPeriod(bk,mStart,mEndExact);
     });
-    h+=`<div class="mch-subtotal-row"><span>Sous-total ${label}</span><span>${Math.round(bc.total).toLocaleString('fr-FR')} €</span></div>`;
-  });
-  if(anyBankTx){
-    h+=`<div class="mch-total-row">
-      <span>Total charges réelles</span>
-      <span class="mch-total-val">${Math.round(bankCharges.total+cleanCostTotal).toLocaleString('fr-FR')} € / mois</span>
+    const gClientRows=Object.values(gByGuest).sort((a,b)=>b.rev-a.rev);
+    const gSrcDef=S.settings.sources||DEFAULT_SETTINGS.sources;
+    const gSrcMap={};
+    gSrcDef.forEach(s=>{gSrcMap[s.id]={n:0,rev:0};});
+    st.bks.forEach(bk=>{
+      const src=bk.source||'direct';
+      const key=gSrcMap[src]!==undefined?src:'direct';
+      gSrcMap[key].n++;
+    });
+    const gSrcActive=gSrcDef.filter(s=>gSrcMap[s.id]&&gSrcMap[s.id].n>0);
+    let bookingsBody;
+    if(st.bks.length){
+      bookingsBody=buildSourceCountDonut(gSrcActive,gSrcMap)
+        +`<div class="mbk-clients"${gSrcActive.length&&gClientRows.length?' style="margin-top:14px;padding-top:12px;border-top:1px solid var(--light)"':''}>`
+        +gClientRows.map(row=>{
+          const g=guest(row.gid);
+          return`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
+            <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
+            <div class="mbk-name">${g?g.name:'?'}</div>
+            <div class="mbk-meta">${row.bkCount > 1 ? row.bkCount+' rés · ' : ''}${row.nights}n</div>
+            ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
+          </div>`;
+        }).join('')
+        +`</div>`;
+    }else{
+      bookingsBody='<div class="yr-chart-nodata">Aucune réservation pour cette structure</div>';
+    }
+
+    // Taux par chambre — mêmes barres qu'avant cette refonte, désormais
+    // limitées aux chambres de cette structure.
+    const occBody=st.rooms.map(r=>{
+      let nights=0;
+      st.bks.filter(b=>b.roomId===r.id).forEach(bk=>{
+        const oS=bk.checkIn>mStart?bk.checkIn:mStart;
+        const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
+        const n=daysBetween(oS,oE);
+        if(n>0)nights+=n;
+      });
+      const pct=Math.round(nights/daysInMonth*100);
+      return`<div class="mocc-row">
+        <div class="mocc-room">${r.short}</div>
+        <div class="mocc-bar-bg"><div class="mocc-bar-fill" style="width:${pct}%"></div></div>
+        <div class="mocc-pct">${pct}%</div>
+      </div>`;
+    }).join('');
+
+    const sourceEntries=structSourceBreakdownMonth(gid);
+
+    return`<div class="yr-group${collapsed?' collapsed':''}">
+      <div class="yr-group-hd" onclick="toggleMonthGroup('${gid}')">
+        <div class="yr-group-name">${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
+        <span class="yr-group-chev">▾</span>
+      </div>
+      <div class="yr-group-body">
+        <div class="yr-stats">
+          <div class="mstat-card mstat-rev">
+            <div class="mstat-val">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-sub">CA réalisé</div>
+            <div class="mstat-detail">${st.realNights} nuits passées</div>
+          </div>
+          <div class="mstat-card mstat-rev">
+            <div class="mstat-val">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-sub">CA projeté</div>
+            <div class="mstat-detail">${st.projNights} nuits totales</div>
+          </div>
+          <div class="mstat-card mstat-rev" style="grid-column:1/-1">
+            <div class="mstat-val">${st.occRate}%</div>
+            <div class="mstat-sub">occupation</div>
+            <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
+          </div>
+        </div>
+        ${st.rooms.length?subSection('Taux par chambre',occBody):''}
+        ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,bookingsBody)}
+        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+        ${subSection('Charges réelles',chargesBody)}
+      </div>
     </div>`;
-    h+=buildChargesDonut(chargeBreakdown);
   }
-  h+=`</div></div>`;
+  h+=structs.map((s,i)=>groupCardMonth(s.id,s.name,structColor(i))).join('');
+
+  // Taxe de séjour du mois — catégorie à part (sa propre carte, pas une
+  // ligne ajoutée dans une carte qui parle d'autre chose), après les volets
+  // structure comme en vue Année (taxeSejourYearHTML). Masquée si la
+  // collecte est désactivée dans les réglages. Toujours exclue du CA
+  // ci-dessus.
+  if(taxeSejourEnabled())h+=`<div class="month-occ">
+    <div class="mocc-title">Taxe de séjour</div>
+    <div class="mocc-taxe" style="margin-top:0;padding-top:0;border-top:none">
+      <span>Collectée ce mois-ci</span><span>${taxeSejourTotal>0?taxeSejourTotal.toLocaleString('fr-FR')+' €':'—'}</span>
+    </div>
+  </div>`;
 
   h+='</div>';
   byId('monthWrap').innerHTML=h;
