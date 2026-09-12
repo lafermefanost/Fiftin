@@ -569,8 +569,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wbrief svg{margin-top:1px;color:var(--green);}
 /* .tsec-panel a son propre margin-bottom (12px, pour les cas où il n'est
    pas dans un conteneur à gap) — en trop ici puisque .tsec-panel.ev est un
-   enfant direct de .week-inner, qui espace déjà via son gap. */
-.week-inner>.tsec-panel{margin-bottom:0;}
+   enfant direct de .week-inner/.month-inner, qui espacent déjà via leur
+   gap (sans ça, marge + gap s'additionnent au lieu de se confondre, d'où le
+   trou trop large entre "Événements du mois" et le résumé assistant juste
+   en dessous en vue Mois). */
+.week-inner>.tsec-panel,.month-inner>.tsec-panel{margin-bottom:0;}
 /* Volet Départs & arrivées fusionné (voir renderWeek) — Départs au-dessus
    d'Arrivées (au lieu de deux colonnes côte à côte) plutôt que deux
    .tsec-panel séparés : la dualité reste lisible (séparateur horizontal
