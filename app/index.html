@@ -693,10 +693,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mocc-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
   color:var(--gray);margin-bottom:10px;}
 .mocc-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
-.mocc-room{font-size:11px;color:var(--dark);width:46px;flex-shrink:0;}
+.mocc-room{font-size:13px;font-weight:500;color:var(--dark);width:46px;flex-shrink:0;}
 .mocc-bar-bg{flex:1;height:8px;background:var(--light);border-radius:4px;overflow:hidden;}
 .mocc-bar-fill{height:100%;border-radius:4px;background:var(--green);transition:width .3s;}
-.mocc-pct{font-size:10px;color:var(--gray);width:30px;text-align:right;flex-shrink:0;}
+.mocc-pct{font-size:13px;font-weight:500;color:var(--gray);width:30px;text-align:right;flex-shrink:0;}
 .mocc-taxe{display:flex;justify-content:space-between;align-items:center;
   margin-top:10px;padding-top:10px;border-top:1px solid var(--light);
   font-size:12px;color:var(--gray);font-weight:500;}
@@ -1207,7 +1207,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    d'un sous-encart doit démarrer exactement à la même position que son
    propre contenu juste en dessous, pas plus loin dans la marge. */
 .yr-subhd{padding:11px 10px 0;font-weight:700;font-size:12px;text-transform:uppercase;
-  letter-spacing:.04em;color:var(--lavender);}
+  letter-spacing:.04em;color:var(--green);}
+/* Exception à la règle ci-dessus (vert moyen) : "Répartition par source" et
+   "Toutes les réservations" reprennent exactement la typo/couleur des
+   libellés Ménage/Relevé bancaire (.mch-group-name) au lieu du vert des
+   autres titres de module — voir subSection(title,inner,'yr-subhd-plain'). */
+.yr-subhd-plain{font-size:11px;font-weight:700;color:var(--gray);}
 .yr-gauge{margin-bottom:10px;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
@@ -8354,8 +8359,8 @@ function renderMonth(){
   // propres chiffres (CA, occupation, taux par chambre, réservations,
   // répartition par source, charges réelles) plutôt qu'un unique bloc
   // mélangeant toutes les structures. ──
-  const subSection=(title,inner)=>`<div class="tsec-panel">
-    <div class="yr-subhd">${title}</div>
+  const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel">
+    <div class="yr-subhd ${titleClass}">${title}</div>
     <div class="tsec-body">${inner}</div>
   </div>`;
   function getGroupRoomsM(gid){return ROOMS.filter(r=>(r.group||structs[0].id)===gid);}
@@ -8518,8 +8523,8 @@ function renderMonth(){
       // Libellés explicites pour les deux parties fusionnées ici (jauge de
       // source + liste clients) — sans ça, la jauge et la liste s'enchaînent
       // sans qu'on sache ce que chacune représente.
-      bookingsBody=(sourceEntries.length?`<div class="mocc-title" style="color:var(--lavender)">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
-        +`<div class="mocc-title" style="color:var(--lavender)${sourceEntries.length?';margin-top:16px':''}">Toutes les réservations</div>`
+      bookingsBody=(sourceEntries.length?`<div class="mocc-title" style="font-weight:700">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
+        +`<div class="mocc-title" style="font-weight:700${sourceEntries.length?';margin-top:16px':''}">Toutes les réservations</div>`
         +`<div class="mbk-clients">`
         +shownRows.map(row=>{
           const g=guest(row.gid);
@@ -9011,8 +9016,8 @@ function renderYear(){
     if(cleanCost>0)chargesEntries['Ménage']=(chargesEntries['Ménage']||0)+cleanCost;
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
     const sourceEntries=structSourceBreakdown(gid);
-    const subSection=(title,inner)=>`<div class="tsec-panel">
-      <div class="yr-subhd">${title}</div>
+    const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel">
+      <div class="yr-subhd ${titleClass}">${title}</div>
       <div class="tsec-body">${inner}</div>
     </div>`;
     // Seuils (Franchise TVA…) : même bandeau que les autres sous-encarts,
@@ -9046,7 +9051,7 @@ function renderYear(){
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
-        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
             <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
