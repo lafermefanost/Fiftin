@@ -1198,13 +1198,22 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    qui annulent le padding du cartouche parent pour aller jusqu'aux bords)
    mais sans son bandeau plein. Pas de ligne quand replié : il n'y a alors
    plus rien en dessous à délimiter. */
+/* Même épaisseur que .tsec-hd (ex. "Événements du mois"), dont la hauteur
+   réelle vient surtout de son badge-compteur (.tsec-count, 18px + son
+   padding) plutôt que de son padding seul (11px) — un simple alignement
+   de padding ne suffit donc pas à égaliser les deux. min-height fixe à
+   la hauteur mesurée de .tsec-hd, complétée par align-items:center
+   (déjà sur .yr-group-hd) pour garder l'icône/texte centrés dedans. */
 .yr-group:not(.yr-total)>.yr-group-hd{background:#fff;border-bottom:1px solid var(--light);
-  margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
+  min-height:51px;box-sizing:border-box;
+  margin:-12px -14px 12px;padding:11px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;border-bottom:none;}
 .yr-group.collapsed>.yr-group-body{display:none;}
-.yr-group:not(.yr-total)>.yr-group-hd .yr-group-name{color:var(--gray);}
+/* Couleur alignée sur .tsec-hd.has-items (ex. "Événements du mois" avec
+   des événements ce mois-ci) plutôt que le gris neutre par défaut. */
+.yr-group:not(.yr-total)>.yr-group-hd .yr-group-name{color:var(--green-deep);}
 .yr-group-chev{font-size:11px;opacity:.6;transition:transform .2s;}
-.yr-group:not(.yr-total)>.yr-group-hd .yr-group-chev{color:var(--gray);}
+.yr-group:not(.yr-total)>.yr-group-hd .yr-group-chev{color:var(--green-deep);}
 .yr-group.collapsed .yr-group-chev{transform:rotate(-90deg);}
 /* font-size aligné sur .tsec-hd (12px, ex. "Événements du mois") plutôt
    que 11px — les deux sont des titres d'encart de même rang. */
