@@ -645,13 +645,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
 .extras-day-tab:hover{border-color:#aaa;color:var(--dark);}
 .extras-day-tab.on{background:var(--green);color:#fff;border-color:var(--green);}
-.cln-hm-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;justify-content:flex-end;}
-.cln-stepper{display:flex;align-items:center;gap:4px;background:#F7F5F1;border-radius:8px;padding:2px 4px;flex:none;}
-.cln-step{width:24px;height:24px;flex:none;border:1px solid var(--light);border-radius:6px;background:#fff;
-  font-family:'Jost',sans-serif;font-size:15px;line-height:1;color:var(--dark);cursor:pointer;
+.cln-hm-row{display:flex;align-items:center;gap:8px;flex:1;min-width:0;justify-content:flex-end;}
+/* Un seul compteur (plus un pour les heures + un pour les minutes) : la
+   place gagnée sert à agrandir les boutons +/− pour qu'ils soient faciles
+   à viser au doigt (34px, au lieu des 24px d'origine). */
+.cln-stepper{display:flex;align-items:center;gap:8px;background:#F7F5F1;border-radius:10px;padding:4px 6px;flex:none;}
+.cln-step{width:34px;height:34px;flex:none;border:1px solid var(--light);border-radius:8px;background:#fff;
+  font-family:'Jost',sans-serif;font-size:19px;line-height:1;color:var(--dark);cursor:pointer;
   display:flex;align-items:center;justify-content:center;padding:0;}
 .cln-step:active{background:var(--green);color:#fff;border-color:var(--green);}
-.cln-hm-val{font-size:11px;font-weight:600;color:var(--dark);min-width:32px;text-align:center;}
+.cln-hm-val{font-size:13px;font-weight:700;color:var(--dark);min-width:46px;text-align:center;}
 .cln-cost{font-size:12px;font-weight:600;color:var(--green);white-space:nowrap;flex:none;}
 
 /* ─── MONTH VIEW ─────────────────────────────────────────────── */
@@ -7462,31 +7465,28 @@ function renderWeek(){
         // bouge la molette des heures sur iOS — voir le repli hasPendingWrites
         // dans applyRemoteData, qui limite déjà la casse mais ne change rien
         // au fait que ce champ n'apportait pas grand-chose).
-        // Durée par boutons +/− (heures entières, minutes par quart d'heure)
-        // plutôt qu'un champ à taper : plus rapide au doigt, et surtout ça
-        // élimine complètement la classe de bugs des champs natifs (heure/
-        // nombre) qui déclenchaient 'change' à des moments imprévisibles sur
-        // iOS. La durée reste stockée en heures décimales (c.hours, ex. 1.25)
-        // — inchangé pour tout le reste du code (coût, totaux Année…) — seule
-        // la saisie change ; adjustCleanerHours raisonne en minutes totales et
-        // la répartition heures/minutes affichée n'est qu'un calcul d'affichage.
+        // Durée par boutons +/− plutôt qu'un champ à taper : plus rapide au
+        // doigt, et surtout ça élimine complètement la classe de bugs des
+        // champs natifs (heure/nombre) qui déclenchaient 'change' à des
+        // moments imprévisibles sur iOS. Un seul compteur qui avance par
+        // quart d'heure (pas un pour les heures et un pour les minutes : ça
+        // faisait deux paires de boutons à viser plutôt qu'une) — la durée
+        // reste stockée en heures décimales (c.hours, ex. 1.25), inchangé
+        // pour tout le reste du code (coût, totaux Année…) ; seul l'affichage
+        // ("1h30") est recomposé à partir du total en minutes.
         // Compteur toujours visible, même à 0 pour une personne pas encore
         // activée : l'augmenter l'active du même coup (voir
         // adjustCleanerHours), plus besoin de d'abord toucher son nom.
         const totalMin=Math.round(((c&&c.hours)||0)*60);
         const wh=Math.floor(totalMin/60), mm=totalMin%60;
+        const durLabel=mm===0?`${wh} h`:`${wh}h${mm}`;
         const cost=((c&&c.hours)||0)*(cl.rate??15);
         hh+=`<div class="cln-row">
           <button class="cleaner-btn${c?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>
           <div class="cln-hm-row">
             <div class="cln-stepper">
-              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',-60)">−</button>
-              <span class="cln-hm-val">${wh} h</span>
-              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',60)">+</button>
-            </div>
-            <div class="cln-stepper">
               <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',-15)">−</button>
-              <span class="cln-hm-val">${mm} min</span>
+              <span class="cln-hm-val">${durLabel}</span>
               <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',15)">+</button>
             </div>
             <span class="cln-cost">${cost.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
