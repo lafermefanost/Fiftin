@@ -553,13 +553,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wday-chev{display:inline-block;transition:transform .15s;}
 .wday-card.collapsed .wday-chev{transform:rotate(-90deg);}
 .wday-card .tsec-panel{margin-bottom:10px;}
-/* Résumé du jour ("Aujourd'hui, vous avez…", voir renderWeek) — tout en
-   haut de la vue Semaine, avant même la navigation de semaine. Cartouche
-   pleine largeur, ton assistant plutôt qu'un volet de plus à déplier. */
+/* Résumé du jour ("Aujourd'hui, vous avez…", voir renderWeek) — juste sous
+   le volet Événements. Cartouche pleine largeur, ton assistant plutôt
+   qu'un volet de plus à déplier. Pas de margin-bottom : .week-inner
+   espace déjà ses enfants directs via son gap (12px) — en ajouter un ici
+   doublerait l'écart avec le bloc suivant (idem .tsec-panel juste
+   au-dessus, neutralisé plus bas pour la même raison). */
 .wbrief{display:flex;align-items:flex-start;gap:10px;background:var(--lavender-bg);
-  color:var(--earth);border-radius:12px;padding:14px 16px;margin-bottom:12px;
+  color:var(--earth);border-radius:12px;padding:14px 16px;
   font-size:13px;line-height:1.45;}
 .wbrief svg{margin-top:1px;color:var(--green);}
+/* .tsec-panel a son propre margin-bottom (12px, pour les cas où il n'est
+   pas dans un conteneur à gap) — en trop ici puisque .tsec-panel.ev est un
+   enfant direct de .week-inner, qui espace déjà via son gap. */
+.week-inner>.tsec-panel{margin-bottom:0;}
 /* Volet Départs & arrivées fusionné (voir renderWeek) — Départs au-dessus
    d'Arrivées (au lieu de deux colonnes côte à côte) plutôt que deux
    .tsec-panel séparés : la dualité reste lisible (séparateur horizontal
@@ -7218,39 +7225,6 @@ function renderWeek(){
 
   let h='<div class="week-inner">';
 
-  // Résumé "Aujourd'hui" — voir .wbrief. Tout en haut de la vue Semaine,
-  // avant même la navigation de semaine et les stats : la première chose vue
-  // en ouvrant l'appli. Seulement si la semaine affichée contient le jour
-  // courant (sinon "aujourd'hui" n'aurait pas de sens ici, voir
-  // weekPrefillDate plus bas pour la même vérification). Omet les
-  // catégories à zéro plutôt que de dire "0 départs" ; sur une journée sans
-  // rien de prévu, un mot rassurant plutôt que de faire disparaître la
-  // cartouche (elle resterait affichée les autres jours — sa disparition
-  // ponctuelle ressemblerait à un bug plutôt qu'à une vraie absence de
-  // tâches).
-  if(today>=S.wStart&&today<wEnd){
-    const tArrs=S.bookings.filter(b=>b.checkIn===today).length;
-    const tDeps=S.bookings.filter(b=>b.checkOut===today).length;
-    const tDiners=S.bookings.filter(b=>activeOn(b,today)&&b.dinnerNights&&b.dinnerNights[today])
-        .reduce((s,b)=>s+(b.nbPersons||2),0)
-      +((S.extDiners&&S.extDiners[today])||[]).filter(e=>e.dinner!==false)
-        .reduce((s,e)=>s+(e.count||1),0);
-    const briefParts=[];
-    if(tArrs>0)briefParts.push(`${tArrs} arrivée${tArrs>1?'s':''} à préparer`);
-    if(tDeps>0)briefParts.push(`${tDeps} départ${tDeps>1?'s':''} à facturer`);
-    if(tDiners>0)briefParts.push(`${tDiners} dîner${tDiners>1?'s':''} à prévoir`);
-    let briefMsg;
-    if(!briefParts.length){
-      briefMsg='Journée calme aujourd\'hui : aucune arrivée, départ ni dîner à prévoir.';
-    }else if(briefParts.length===1){
-      briefMsg=`Aujourd'hui, vous avez ${briefParts[0]}.`;
-    }else{
-      const last=briefParts.pop();
-      briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
-    }
-    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
-  }
-
   h+=`<div class="vnav">
     <button class="vnav-btn" onclick="chWeek(-1)">${chevL}</button>
     <div class="vnav-center">
@@ -7340,6 +7314,37 @@ function renderWeek(){
     </div>
     <div class="tsec-body">${weekEvs.length?weekEvs.map(evCard).join(''):'<div class="tsec-empty">Aucun</div>'}${weekEvAddBtn}</div>
   </div>`;
+
+  // Résumé "Aujourd'hui" — voir .wbrief. Juste sous le volet Événements.
+  // Seulement si la semaine affichée contient le jour courant (sinon
+  // "aujourd'hui" n'aurait pas de sens ici, voir weekPrefillDate ci-dessus
+  // pour la même vérification). Omet les catégories à zéro plutôt que de
+  // dire "0 départs" ; sur une journée sans rien de prévu, un mot rassurant
+  // plutôt que de faire disparaître la cartouche (elle resterait affichée
+  // les autres jours — sa disparition ponctuelle ressemblerait à un bug
+  // plutôt qu'à une vraie absence de tâches).
+  if(today>=S.wStart&&today<wEnd){
+    const tArrs=S.bookings.filter(b=>b.checkIn===today).length;
+    const tDeps=S.bookings.filter(b=>b.checkOut===today).length;
+    const tDiners=S.bookings.filter(b=>activeOn(b,today)&&b.dinnerNights&&b.dinnerNights[today])
+        .reduce((s,b)=>s+(b.nbPersons||2),0)
+      +((S.extDiners&&S.extDiners[today])||[]).filter(e=>e.dinner!==false)
+        .reduce((s,e)=>s+(e.count||1),0);
+    const briefParts=[];
+    if(tArrs>0)briefParts.push(`${tArrs} arrivée${tArrs>1?'s':''} à préparer`);
+    if(tDeps>0)briefParts.push(`${tDeps} départ${tDeps>1?'s':''} à facturer`);
+    if(tDiners>0)briefParts.push(`${tDiners} dîner${tDiners>1?'s':''} à prévoir`);
+    let briefMsg;
+    if(!briefParts.length){
+      briefMsg='Journée calme aujourd\'hui : aucune arrivée, départ ni dîner à prévoir.';
+    }else if(briefParts.length===1){
+      briefMsg=`Aujourd'hui, vous avez ${briefParts[0]}.`;
+    }else{
+      const last=briefParts.pop();
+      briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
+    }
+    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+  }
 
   for(let i=0;i<7;i++){
     const ds=addDays(S.wStart,i);
