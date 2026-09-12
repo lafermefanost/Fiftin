@@ -24,11 +24,6 @@ html,body{height:100%;overflow:hidden;}
      jamais aux catégories, statuts ou "+ ajouter" génériques des réglages. */
   --yellow:#DEEB82;
   --gray:#6B6B6B; --light:#E2DFD8; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
-  /* Gris-beige plus foncé que --cream (déjà utilisé pour "Autres" dans les
-     graphiques de répartition, voir buildChargesDonut/buildSourceRevGauge)
-     — repris pour tout texte gris-beige sur fond foncé, où --cream se
-     distingue trop peu du blanc. */
-  --cream-dk:#C7C2B8;
   --shadow:0 2px 10px rgba(0,0,0,.14); --r:6px;
   --hdr:52px; --bar:40px;
 }
@@ -548,16 +543,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-toprow .wsm-total{padding:16px 10px 14px;}
 .wsm-toprow .wsm-occ .wsm-val{font-size:26px;}
 /* Cases qui n'affichent pas un montant en euros (pourcentage, nombre de
-   nuits/séjours…) : texte dans notre gris-beige foncé (var(--cream-dk),
-   déjà utilisé pour "Autres" dans les graphiques de répartition) plutôt
-   qu'en blanc, pour les distinguer des cases en euros qui restent
-   blanches — --cream (plus clair) se distinguait trop peu du blanc ici.
-   rgba(199,194,184,x) = #C7C2B8 (--cream-dk) aux mêmes opacités que le
+   nuits/séjours…) : texte dans le gris-beige du fond de l'appli
+   (var(--cream), background du body — voir plus haut) plutôt qu'en
+   blanc, pour les distinguer des cases en euros qui restent blanches.
+   rgba(239,238,234,x) = #EFEEEA (--cream) aux mêmes opacités que le
    blanc qu'elles remplacent. Partagé par .wsm-item/.wsm-occ (Semaine/
    Mois) et .mstat-card (Mois/Année) via .stat-nonmoney. */
-.stat-nonmoney .wsm-val{color:var(--cream-dk);}
-.stat-nonmoney .wsm-lbl{color:rgba(199,194,184,.8);}
-.stat-nonmoney .wsm-sub{color:rgba(199,194,184,.85);}
+.stat-nonmoney .wsm-val{color:var(--cream);}
+.stat-nonmoney .wsm-lbl{color:rgba(239,238,234,.8);}
+.stat-nonmoney .wsm-sub{color:rgba(239,238,234,.85);}
 /* Exception : dans une case par ailleurs "non-euro" (ex. Nuitées, valeur
    principale = un nombre de nuits), une sous-ligne qui affiche quand même
    un montant (son CA) reste blanche, jamais en gris-beige — seule la
@@ -567,9 +561,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Spécificité égale à .mstat-card.mstat-rev .mstat-val (2 classes) plus
    bas dans la feuille : sans le 3e sélecteur ici, cette règle perdrait
    contre elle malgré .stat-nonmoney posé sur le même élément. */
-.mstat-card.mstat-rev.stat-nonmoney .mstat-val{color:var(--cream-dk);}
-.mstat-card.mstat-rev.stat-nonmoney .mstat-sub{color:rgba(199,194,184,.75);}
-.mstat-card.mstat-rev.stat-nonmoney .mstat-detail{color:rgba(199,194,184,.5);}
+.mstat-card.mstat-rev.stat-nonmoney .mstat-val{color:var(--cream);}
+.mstat-card.mstat-rev.stat-nonmoney .mstat-sub{color:rgba(239,238,234,.75);}
+.mstat-card.mstat-rev.stat-nonmoney .mstat-detail{color:rgba(239,238,234,.5);}
 .today-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .tsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
