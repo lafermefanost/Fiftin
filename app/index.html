@@ -602,9 +602,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mng-room-guest{font-size:12px;color:var(--gray);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* Personnel de ménage : une ligne par personne, empilées verticalement
    (plus une rangée de chips qu'il fallait ensuite retrouver plus bas dans
-   une liste de détail séparée qui répétait le nom — voir cln-row). */
+   une liste de détail séparée qui répétait le nom — voir cln-row). Le
+   compteur d'heures reste toujours visible à droite du nom, activée ou
+   non : l'augmenter active la personne du même coup (voir
+   adjustCleanerHours), plus besoin de d'abord toucher son nom. */
 .cln-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
-.cln-row{display:flex;flex-direction:column;gap:6px;}
+.cln-row{display:flex;align-items:center;gap:8px;}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
    menageGroup dans renderWeek) — séparateur discret entre deux structures,
    pas une carte à part comme .tsec-panel (ça resterait UN seul onglet). */
@@ -612,9 +615,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   color:var(--gray);margin-bottom:6px;}
 .cln-group{margin-top:14px;padding-top:12px;border-top:1px solid var(--light);}
 /* Même cartouche que .cln-stepper (l'encart des heures) plutôt qu'une
-   pastille au trait — active ou non, le nom reste sur SA ligne, sans être
-   répété plus bas (voir cln-row/cln-hm-row juste en dessous quand activé). */
-.cleaner-btn{display:block;width:100%;padding:9px 14px;border:none;border-radius:10px;
+   pastille au trait — le nom reste sur SA ligne, sans être répété ailleurs
+   (voir cln-row/cln-hm-row juste à côté). */
+.cleaner-btn{flex:0 1 auto;max-width:88px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  padding:9px 10px;border:none;border-radius:10px;
   font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-align:left;
   color:var(--dark);background:#F7F5F1;cursor:pointer;transition:all .15s;}
 .cleaner-btn:hover{background:#EFEBE3;}
@@ -624,14 +628,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
 .extras-day-tab:hover{border-color:#aaa;color:var(--dark);}
 .extras-day-tab.on{background:var(--green);color:#fff;border-color:var(--green);}
-.cln-hm-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-left:2px;}
-.cln-stepper{display:flex;align-items:center;gap:6px;background:#F7F5F1;border-radius:8px;padding:3px 5px;}
-.cln-step{width:26px;height:26px;flex:none;border:1px solid var(--light);border-radius:6px;background:#fff;
-  font-family:'Jost',sans-serif;font-size:16px;line-height:1;color:var(--dark);cursor:pointer;
+.cln-hm-row{display:flex;align-items:center;gap:6px;flex:1;min-width:0;justify-content:flex-end;}
+.cln-stepper{display:flex;align-items:center;gap:4px;background:#F7F5F1;border-radius:8px;padding:2px 4px;flex:none;}
+.cln-step{width:24px;height:24px;flex:none;border:1px solid var(--light);border-radius:6px;background:#fff;
+  font-family:'Jost',sans-serif;font-size:15px;line-height:1;color:var(--dark);cursor:pointer;
   display:flex;align-items:center;justify-content:center;padding:0;}
 .cln-step:active{background:var(--green);color:#fff;border-color:var(--green);}
-.cln-hm-val{font-size:12px;font-weight:600;color:var(--dark);min-width:40px;text-align:center;}
-.cln-cost{margin-left:auto;font-size:12px;font-weight:600;color:var(--green);white-space:nowrap;}
+.cln-hm-val{font-size:11px;font-weight:600;color:var(--dark);min-width:32px;text-align:center;}
+.cln-cost{font-size:12px;font-weight:600;color:var(--green);white-space:nowrap;flex:none;}
 
 /* ─── MONTH VIEW ─────────────────────────────────────────────── */
 #monthWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
@@ -5429,11 +5433,21 @@ function toggleCleaner(ds,name,group){
 // minutes se traduit alors tout seul par +1h/0min à l'affichage (dérivé du
 // total à chaque rendu, voir totalMin/wh/mm), pas besoin de gérer la
 // retenue à la main. Jamais négatif (Math.max(0,…)).
+// Les compteurs d'heures restent affichés même pour une personne pas encore
+// activée (voir menageGroup) : augmenter ses heures l'active du même coup
+// (plus besoin de d'abord toucher son nom) — on crée alors l'entrée à la
+// volée, comme le ferait toggleCleaner. Diminuer sans entrée existante ne
+// fait rien (rien à retirer).
 function adjustCleanerHours(ds,name,group,deltaMin){
   const list=S.cleaning[ds]||[];
   const g=group||defaultStructureId();
-  const c=list.find(x=>x.name===name&&(x.group||defaultStructureId())===g);
-  if(!c)return;
+  let c=list.find(x=>x.name===name&&(x.group||defaultStructureId())===g);
+  if(!c){
+    if(deltaMin<=0)return;
+    c=group?{name,hours:0,time:null,group}:{name,hours:0,time:null};
+    list.push(c);
+    S.cleaning[ds]=list;
+  }
   const curMin=Math.round((c.hours||0)*60);
   c.hours=Math.max(0,curMin+deltaMin)/60;
   persist();
@@ -7371,9 +7385,9 @@ function renderWeek(){
     const menageGroup=(groupId,titleSuffix)=>{
       const cleaners=groupId==null?dayCleaners:dayCleaners.filter(c=>(c.group||structsForClean[0].id)===groupId);
       let hh=titleSuffix?`<div class="cln-group-name">${titleSuffix.replace(/</g,'&lt;')}</div>`:'';
-      // Une seule ligne par personne (bouton nom + heures si activée), plus
-      // de chip à toucher puis à retrouver plus bas dans une liste séparée
-      // qui répétait le nom — le nom n'apparaît qu'une fois. Filtrées à la
+      // Une seule ligne par personne (bouton nom + heures), plus de chip à
+      // toucher puis à retrouver plus bas dans une liste séparée qui
+      // répétait le nom — le nom n'apparaît qu'une fois. Filtrées à la
       // structure de ce sous-groupe (réglages → Équipe ménage), plus celles
       // sans structure assignée ("Toutes structures", visibles partout) ;
       // sans effet à structure unique (groupId===null). On garde aussi les
@@ -7387,26 +7401,28 @@ function renderWeek(){
       known.concat(extra).forEach(cl=>{
         const name=cl.name;
         const c=cleaners.find(x=>x.name===name);
+        // Heure de venue retirée : perturbait plus qu'elle n'aidait (champ non
+        // indispensable, et <input type=time> déclenche 'change' dès qu'on
+        // bouge la molette des heures sur iOS — voir le repli hasPendingWrites
+        // dans applyRemoteData, qui limite déjà la casse mais ne change rien
+        // au fait que ce champ n'apportait pas grand-chose).
+        // Durée par boutons +/− (heures entières, minutes par quart d'heure)
+        // plutôt qu'un champ à taper : plus rapide au doigt, et surtout ça
+        // élimine complètement la classe de bugs des champs natifs (heure/
+        // nombre) qui déclenchaient 'change' à des moments imprévisibles sur
+        // iOS. La durée reste stockée en heures décimales (c.hours, ex. 1.25)
+        // — inchangé pour tout le reste du code (coût, totaux Année…) — seule
+        // la saisie change ; adjustCleanerHours raisonne en minutes totales et
+        // la répartition heures/minutes affichée n'est qu'un calcul d'affichage.
+        // Compteur toujours visible, même à 0 pour une personne pas encore
+        // activée : l'augmenter l'active du même coup (voir
+        // adjustCleanerHours), plus besoin de d'abord toucher son nom.
+        const totalMin=Math.round(((c&&c.hours)||0)*60);
+        const wh=Math.floor(totalMin/60), mm=totalMin%60;
+        const cost=((c&&c.hours)||0)*(cl.rate??15);
         hh+=`<div class="cln-row">
-          <button class="cleaner-btn${c?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>`;
-        if(c){
-          // Heure de venue retirée : perturbait plus qu'elle n'aidait (champ non
-          // indispensable, et <input type=time> déclenche 'change' dès qu'on
-          // bouge la molette des heures sur iOS — voir le repli hasPendingWrites
-          // dans applyRemoteData, qui limite déjà la casse mais ne change rien
-          // au fait que ce champ n'apportait pas grand-chose).
-          // Durée par boutons +/− (heures entières, minutes par quart d'heure)
-          // plutôt qu'un champ à taper : plus rapide au doigt, et surtout ça
-          // élimine complètement la classe de bugs des champs natifs (heure/
-          // nombre) qui déclenchaient 'change' à des moments imprévisibles sur
-          // iOS. La durée reste stockée en heures décimales (c.hours, ex. 1.25)
-          // — inchangé pour tout le reste du code (coût, totaux Année…) — seule
-          // la saisie change ; adjustCleanerHours raisonne en minutes totales et
-          // la répartition heures/minutes affichée n'est qu'un calcul d'affichage.
-          const totalMin=Math.round((c.hours||0)*60);
-          const wh=Math.floor(totalMin/60), mm=totalMin%60;
-          const cost=(c.hours||0)*(cl.rate??15);
-          hh+=`<div class="cln-hm-row">
+          <button class="cleaner-btn${c?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>
+          <div class="cln-hm-row">
             <div class="cln-stepper">
               <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',-60)">−</button>
               <span class="cln-hm-val">${wh} h</span>
@@ -7418,9 +7434,8 @@ function renderWeek(){
               <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',15)">+</button>
             </div>
             <span class="cln-cost">${cost.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
-          </div>`;
-        }
-        hh+=`</div>`;
+          </div>
+        </div>`;
       });
       hh+=`</div>`;
       return hh;
