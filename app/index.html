@@ -864,7 +864,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .fi:focus,.fsel:focus{border-color:var(--lavender);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
-.frow>.fg{min-width:0;}
+/* Aligne les deux champs d'une rangée sur leur INPUT plutôt que sur le haut
+   de la cellule — sans ça, dès qu'un des deux libellés est plus long et
+   passe sur 2 lignes (ex: "Heure d'arrivée (optionnel)" vs "Heure de fin
+   (optionnel)", ou "Prix / nuit (défaut : 100€ solo · 125€ double)" vs
+   "Notes"), son champ se retrouve plus bas que l'autre alors que les deux
+   cellules ont déjà la même hauteur (comportement par défaut de la grille).
+   Sans effet quand les deux libellés font la même hauteur (cas le plus
+   courant : Début/Fin, Arrivée/Départ…). */
+.frow>.fg{min-width:0;display:flex;flex-direction:column;justify-content:flex-end;}
 
 .gsearch{margin-top:6px;}
 .gpicker{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;
