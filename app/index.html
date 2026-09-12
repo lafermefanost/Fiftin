@@ -444,7 +444,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:5px 16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--green);
   cursor:pointer;}
 .vnav-now-btn:hover{background:var(--green);color:#fff;}
-.tsec-panel{border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
 .tsec-hd:active{filter:brightness(.96);}
 .tsec-hd{background:var(--light);color:var(--gray);}
@@ -1174,15 +1174,18 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    charges) — jamais de vraie séparation à marquer. */
 .yr-group .mch-pie-block{margin-top:14px;padding-top:0;border-top:none;}
 .yr-group .src-gauge{margin-top:0;padding-top:0;border-top:none;}
-/* Sous-encarts d'une structure (seuils, revenus par mois, répartition par
-   source/charges) : chacun son propre encart blanc à ombre portée qui le
-   détache du fond blanc du cartouche structure — exactement le traitement
-   des sous-volets d'un jour en vue Semaine (.tsec-panel/.tsec-hd/.tsec-body,
-   réutilisés tels quels). .yr-subhd reprend le visuel de .tsec-hd (bandeau
-   beige-gris) mais sans le curseur/l'effet actif : ces sous-encarts ne se
-   replient pas eux-mêmes, seul le cartouche structure entier se replie. */
-.yr-subhd{padding:11px 14px;font-weight:700;font-size:12px;text-transform:uppercase;
-  letter-spacing:.04em;background:var(--light);color:var(--gray);}
+/* Sous-encarts d'une structure (taux par chambre, réservations, seuils,
+   revenus par mois, répartition par source/charges) : chacun son propre
+   encart blanc à ombre portée qui le détache du fond blanc du cartouche
+   structure — exactement le traitement des sous-volets d'un jour en vue
+   Semaine (.tsec-panel/.tsec-body, réutilisés tels quels), à ceci près que
+   .yr-subhd n'a pas de bandeau beige-gris (contrairement à .tsec-hd) : un
+   simple libellé sur fond blanc, tout le module reste blanc du titre au
+   contenu — l'ombre portée suffit à le détacher visuellement du cartouche
+   structure. Ces sous-encarts ne se replient pas eux-mêmes, seul le
+   cartouche structure entier se replie. */
+.yr-subhd{padding:11px 14px 0;font-weight:700;font-size:12px;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--gray);}
 .yr-gauge{margin-bottom:10px;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
@@ -8472,8 +8475,12 @@ function renderMonth(){
       const clientsOpen=monthClientsExpanded.has(gid);
       const shownRows=clientsOpen?gClientRows:gClientRows.slice(0,MONTH_CLIENTS_CAP);
       const hiddenCount=gClientRows.length-shownRows.length;
-      bookingsBody=(sourceEntries.length?buildSourceRevGauge(sourceEntries):'')
-        +`<div class="mbk-clients"${sourceEntries.length&&gClientRows.length?' style="margin-top:14px"':''}>`
+      // Libellés explicites pour les deux parties fusionnées ici (jauge de
+      // source + liste clients) — sans ça, la jauge et la liste s'enchaînent
+      // sans qu'on sache ce que chacune représente.
+      bookingsBody=(sourceEntries.length?`<div class="mocc-title">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
+        +`<div class="mocc-title"${sourceEntries.length?' style="margin-top:16px"':''}>Toutes les réservations</div>`
+        +`<div class="mbk-clients">`
         +shownRows.map(row=>{
           const g=guest(row.gid);
           return`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
