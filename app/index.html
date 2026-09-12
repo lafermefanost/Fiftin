@@ -573,12 +573,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
-.day-chip-main .day-chip-content{padding-bottom:4px;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
    pour facturer le client à son départ : libellé à gauche, montant en gras
    à droite, fond distinct — pas de repli/détail, juste le total. */
 .dep-total-line{display:flex;align-items:center;justify-content:space-between;
-  padding:6px 12px;background:#D8D3CD;font-size:12px;color:#6E6860;}
+  padding:6px 12px;margin-top:-6px;background:#D8D3CD;font-size:12px;color:#6E6860;}
 .dep-total-line span:last-child{font-weight:700;font-size:13px;}
 /* Résumé Table d'hôtes (voir renderWeek, tsec-panel.th) — qui mange (chips
    réutilisées telles quelles) puis le menu du jour en une ligne, avant le
