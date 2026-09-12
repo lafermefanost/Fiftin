@@ -560,9 +560,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    nuits/séjours…) : fond lavande plutôt que vert, texte blanc inchangé
    (hérité de .mstat-card.mstat-rev, déjà blanc par défaut) — pour une
    vraie différence visuelle avec les autres cases, restées vertes.
-   Ne concerne plus que .mstat-card désormais (Durée moyenne de séjour,
-   Nuits plateformes) — Remplissage/Occupation (%) et Nuitées/Repas
-   (.wsm-item) sont repassés au vert par ailleurs. 3 classes : battent
+   Ne reste plus que "Durée moyenne de séjour" (Année, globalCard) —
+   Remplissage/Occupation (%), Nuitées/Repas (.wsm-item) et Nuits
+   plateformes sont repassés au vert par ailleurs. 3 classes : battent
    .mstat-card.mstat-rev{background:var(--green)} (2 classes), quel que
    soit l'ordre dans la feuille. */
 .mstat-card.mstat-rev.stat-nonmoney{background:var(--lavender);border-color:var(--lavender);}
@@ -9071,7 +9071,7 @@ function renderYear(){
     const platLimit=nightsThr[0]?.amount||120;
     const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#1D2820',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
-    const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev stat-nonmoney">
+    const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
           <div class="mstat-val">${st.platNights}</div>
           <div class="mstat-sub">nuits plateformes</div>
           <div class="mstat-detail">/ ${platLimit} autorisées</div>
