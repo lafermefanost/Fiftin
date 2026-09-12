@@ -1066,16 +1066,18 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .evcard-time{font-size:11px;color:var(--gray);margin-top:2px;}
 
 /* Settings */
-/* Lavande plutôt que blanc, pour distinguer chaque onglet de Réglages du
-   reste de l'appli (blanc partout ailleurs) — .set-card à l'intérieur
-   (voir plus bas) garde son fond neutre habituel pour rester lisible en
-   contraste. --lavender (plus soutenu) plutôt que --lavender-bg (trop
-   proche du blanc, la distinction ne se voyait pas assez) — même teinte que
-   .tsec-hd.has-items, avec le même texte foncé (--green-deep) pour garder
-   un bon contraste dessus. */
-.set-sec{margin-bottom:12px;background:var(--lavender);border:1.5px solid var(--lavender);border-radius:12px;padding:12px 14px;}
+/* Gris-beige plutôt que blanc, pour distinguer chaque onglet de Réglages du
+   reste de l'appli (blanc partout ailleurs) — --cream, déjà le gris-beige
+   de fond de toute l'appli (voir #gridWrap etc.), pas --light : --light est
+   déjà pris par .btn-s (voir "Se déconnecter" dans Compte, en fond direct
+   sur .set-sec, sans .set-card autour) et les deux se confondraient sinon.
+   .set-card à l'intérieur garde son fond neutre habituel (encore plus
+   clair) pour rester lisible en contraste. Pas de bordure séparée, la
+   teinte se suffit à elle-même, dans le même esprit que la suppression des
+   fins liserés en vue Année. */
+.set-sec{margin-bottom:12px;background:var(--cream);border:none;border-radius:12px;padding:12px 14px;}
 .set-sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-  color:var(--green-deep);margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;}
+  color:var(--gray);margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:6px;cursor:pointer;}
 .set-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--light);}
 .set-row:last-child{border-bottom:none;}
 .set-fi{flex:1;border:none;background:transparent;font-family:'Jost',sans-serif;
