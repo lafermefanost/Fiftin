@@ -1130,6 +1130,14 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   padding:1px 7px;border-radius:9px;margin:-1px 0;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
+/* Sous-sections à l'intérieur d'une même carte structure (voir groupCard/
+   subSection dans renderYear) : un bandeau plein plutôt qu'un simple trait
+   + libellé au-dessus — même traitement neutre que les en-têtes de
+   sous-volets de la vue Semaine (.tsec-hd), mais sans le cadre/l'ombre
+   d'un panneau à part, puisque tout reste dans LE bloc de la structure. */
+.yr-subhd{background:var(--light);color:var(--gray);font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-radius:8px;
+  margin:16px 0 10px;}
 .yr-chart{display:flex;gap:3px;align-items:flex-end;height:96px;margin-bottom:6px;}
 .yr-bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;height:100%;}
 .yr-bar-area{flex:1;display:flex;flex-direction:column;justify-content:flex-end;}
@@ -8391,8 +8399,8 @@ function renderYear(){
     if(cleanCost>0)chargesEntries['Ménage']=(chargesEntries['Ménage']||0)+cleanCost;
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
     const sourceEntries=structSourceBreakdown(gid);
-    const subSection=(title,inner)=>`<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--light)">
-      <div class="yr-section-title">${title}</div>
+    const subSection=(title,inner)=>`<div>
+      <div class="yr-subhd">${title}</div>
       ${inner}
     </div>`;
     return`<div class="yr-group">
