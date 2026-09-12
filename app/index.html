@@ -1192,15 +1192,15 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 /* Cartouches structure (SASU, LMNP…) repliables, comme les jours de la vue
    Semaine — pas "Activité globale" (.yr-total), qui n'a pas de chevron ni
-   d'onclick sur son en-tête. En-tête en bandeau gris-beige plein bord (même
-   technique de positionnement que .wday-head — marges négatives qui
-   annulent le padding du cartouche parent pour aller jusqu'aux bords,
-   coins arrondis assortis — mais pas sa couleur : ici gris-beige/texte
-   gris plutôt que vert/blanc, pour rester proche du blanc du cartouche
-   plutôt que d'un bandeau plein vert). */
-.yr-group:not(.yr-total)>.yr-group-hd{background:var(--cream);
+   d'onclick sur son en-tête. En-tête blanc (comme le reste du cartouche,
+   pas de bandeau de couleur), avec seulement une ligne de séparation en
+   bas — même technique de positionnement que .wday-head (marges négatives
+   qui annulent le padding du cartouche parent pour aller jusqu'aux bords)
+   mais sans son bandeau plein. Pas de ligne quand replié : il n'y a alors
+   plus rien en dessous à délimiter. */
+.yr-group:not(.yr-total)>.yr-group-hd{background:#fff;border-bottom:1px solid var(--light);
   margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
-.yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;}
+.yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;border-bottom:none;}
 .yr-group.collapsed>.yr-group-body{display:none;}
 .yr-group:not(.yr-total)>.yr-group-hd .yr-group-name{color:var(--gray);}
 .yr-group-chev{font-size:11px;opacity:.6;transition:transform .2s;}
