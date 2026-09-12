@@ -8500,13 +8500,9 @@ function renderMonth(){
     // Charges de cette structure : ménage, puis relevé bancaire (import/
     // ajout manuel, catégories dépliables sur clic — mêmes actions qu'avant
     // cette refonte, juste déplacées dans le volet de leur structure).
-    // Jauge Ménage/Relevé bancaire en tête — même composant que la
-    // répartition par source (buildSourceRevGauge), réutilisé tel quel
-    // pour ces deux seules entrées plutôt qu'une liste de sous-totaux nus.
-    let chargesBody=buildSourceRevGauge([
-      {label:'Ménage',val:clean.total,color:STRUCTURE_COLORS[0]},
-      {label:'Relevé bancaire',val:bc.total,color:STRUCTURE_COLORS[1]}
-    ]);
+    // Pas de jauge Ménage/Relevé bancaire ici : déjà couvert par le
+    // camembert du module "Répartition des charges" juste après.
+    let chargesBody='';
     if(CLEANERS.length){
       chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
       chargesBody+=clean.rows.length
