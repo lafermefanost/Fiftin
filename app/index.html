@@ -8066,7 +8066,20 @@ function monthRevenueRank(y,m){
   const total=sorted.length;
   const thisRev=months.find(x=>x.y===y&&x.m===m).rev;
   const avg=months.reduce((s,x)=>s+x.rev,0)/total;
-  return{rank,total,rev:thisRev,avg};
+  // Rebond après un mois calme (en dessous de la moyenne) : proportion des
+  // mois calmes déjà vécus où le mois suivant a fait mieux — pour rester
+  // encourageant sur un mois calme (voir renderMonth) avec un vrai chiffre
+  // plutôt qu'une formule vague, seulement quand assez de mois calmes se
+  // sont déjà produits pour que ça veuille dire quelque chose.
+  let calmCount=0,reboundCount=0;
+  for(let i=0;i<months.length-1;i++){
+    if(months[i].rev<avg){
+      calmCount++;
+      if(months[i+1].rev>months[i].rev)reboundCount++;
+    }
+  }
+  const reboundPct=calmCount>=3?Math.round(reboundCount/calmCount*100):null;
+  return{rank,total,rev:thisRev,avg,reboundPct};
 }
 
 // État des volets structure de la vue Mois (voir toggleMonthGroup) — même
@@ -8204,7 +8217,7 @@ function renderMonth(){
   if(monthDiff<=0){
     const cmp=monthRevenueRank(y,m);
     if(cmp){
-      const{rank,total,rev,avg}=cmp;
+      const{rank,total,rev,avg,reboundPct}=cmp;
       const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
       const diffStr=diffPct==null?'':diffPct>=0?` — ${diffPct}% au-dessus de votre moyenne mensuelle`:` — ${Math.abs(diffPct)}% en dessous de votre moyenne mensuelle`;
       const revStr=rev>0?rev.toLocaleString('fr-FR')+' €':'—';
@@ -8214,7 +8227,14 @@ function renderMonth(){
       }else if(rank<=3){
         briefMsg=`Ce mois se classe ${rank}ᵉ meilleur mois sur ${total} suivis, avec ${revStr}${diffStr}.`;
       }else if(total>5&&rank>total-3){
-        briefMsg=`Un des mois les plus calmes enregistrés (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}.`;
+        // Reste encourageant sur un mois calme (voir reboundPct ci-dessus) :
+        // un vrai chiffre tiré de l'historique quand il y en a assez pour
+        // être parlant, sinon une formule plus générale mais toujours
+        // positive plutôt que de s'arrêter sur le constat d'un mois calme.
+        const reboundClause=(reboundPct!=null&&reboundPct>=50)
+          ?` Bonne nouvelle : sur votre historique, un mois calme est suivi d'un mois meilleur ${reboundPct}% du temps.`
+          :` Statistiquement, les mois calmes sont souvent suivis d'un rebond.`;
+        briefMsg=`Un des mois les plus calmes enregistrés (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}.${reboundClause}`;
       }else{
         briefMsg=`Ce mois se classe ${rank}ᵉ sur ${total} mois suivis, avec ${revStr}${diffStr}.`;
       }
