@@ -1189,7 +1189,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    structure (SASU, LMNP…), pas besoin de la boîte en plus pour le dire. */
 .yr-group.yr-total{background:none;border:none;padding:0;}
 .yr-total .yr-stats{margin-bottom:0;}
-.yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+/* Pas de justify-content:space-between : le badge-compteur (.yr-group-count,
+   juste en dessous) se pousse lui-même à droite via margin-left:auto —
+   même technique que .tsec-count dans .tsec-hd — pour laisser le chevron
+   juste après lui plutôt qu'au bout d'un espacement égal à 3 éléments. */
+.yr-group-hd{display:flex;align-items:center;margin-bottom:10px;}
+/* Nombre de logements de la structure, à côté de son nom — même style
+   exact que .tsec-count ("Événements du mois" : pilule, 18px, gras) mais
+   en gris-beige léger plutôt que blanc plein, pour rester une info
+   secondaire qui n'attire pas l'œil comme le ferait le compteur
+   d'événements. Fait aussi toute la hauteur du cartouche : c'est ce
+   contenu, pas un padding forcé, qui donne à ce cartouche la même
+   épaisseur que .tsec-hd. */
+.yr-group-count{margin-left:auto;background:var(--light);color:var(--gray)!important;
+  border-radius:12px;padding:4px 13px;font-size:18px;font-weight:700;}
 /* Cartouches structure (SASU, LMNP…) repliables, comme les jours de la vue
    Semaine — pas "Activité globale" (.yr-total), qui n'a pas de chevron ni
    d'onclick sur son en-tête. En-tête blanc (comme le reste du cartouche,
@@ -1198,14 +1211,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    qui annulent le padding du cartouche parent pour aller jusqu'aux bords)
    mais sans son bandeau plein. Pas de ligne quand replié : il n'y a alors
    plus rien en dessous à délimiter. */
-/* Même épaisseur que .tsec-hd (ex. "Événements du mois"), dont la hauteur
-   réelle vient surtout de son badge-compteur (.tsec-count, 18px + son
-   padding) plutôt que de son padding seul (11px) — un simple alignement
-   de padding ne suffit donc pas à égaliser les deux. min-height fixe à
-   la hauteur mesurée de .tsec-hd, complétée par align-items:center
-   (déjà sur .yr-group-hd) pour garder l'icône/texte centrés dedans. */
 .yr-group:not(.yr-total)>.yr-group-hd{background:#fff;border-bottom:1px solid var(--light);
-  min-height:51px;box-sizing:border-box;
   margin:-12px -14px 12px;padding:11px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;border-bottom:none;}
 .yr-group.collapsed>.yr-group-body{display:none;}
@@ -8618,6 +8624,7 @@ function renderMonth(){
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleMonthGroup('${gid}')">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
+        <span class="yr-group-count">${st.rooms.length}</span>
         <span class="yr-group-chev">▾</span>
       </div>
       <div class="yr-group-body">
@@ -9083,6 +9090,7 @@ function renderYear(){
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleYearGroup('${gid}')">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
+        <span class="yr-group-count">${st.rooms.length}</span>
         <span class="yr-group-chev">▾</span>
       </div>
       <div class="yr-group-body">
