@@ -465,6 +465,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    badge neutre comme les autres volets (Ménage, Table d'hôtes…). */
 .tsec-panel.ev .tsec-count{color:var(--lavender)!important;}
 .tsec-count span{color:var(--dark);}
+/* Le chiffre affiché est dans ce <span> imbriqué (voir tsec-count span
+   ci-dessus) — sa propre couleur explicite ignorait sinon celle posée
+   sur .tsec-count parent, qui ne s'hérite pas à travers une règle
+   directe comme celle-ci. */
+.tsec-panel.ev .tsec-count span{color:var(--lavender)!important;}
 .tsec-chev{font-size:11px;opacity:.6;transition:transform .2s;margin-left:4px;}
 .tsec-panel.collapsed>.tsec-hd .tsec-chev{transform:rotate(-90deg);}
 .tsec-body{background:var(--white);padding:10px 10px 6px;}
