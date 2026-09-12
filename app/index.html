@@ -542,6 +542,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-toprow{display:grid;grid-template-columns:2fr 1fr;gap:10px;}
 .wsm-toprow .wsm-total{padding:16px 10px 14px;}
 .wsm-toprow .wsm-occ .wsm-val{font-size:26px;}
+/* Remplissage / nuitées / repas : texte dans la couleur du bouton +Résa
+   (var(--yellow)) plutôt qu'en blanc, pour les distinguer des cartes CA/
+   extras/événements. rgba(222,235,130,x) = #DEEB82 (--yellow) aux mêmes
+   opacités que le blanc qu'elles remplacent. */
+.wsm-occ .wsm-val{color:var(--yellow);}
+.wsm-occ .wsm-lbl{color:rgba(222,235,130,.8);}
+.wsm-item-yl .wsm-val{color:var(--yellow);}
+.wsm-item-yl .wsm-lbl{color:rgba(222,235,130,.8);}
+.wsm-item-yl .wsm-sub{color:rgba(222,235,130,.85);}
 .today-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .tsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
@@ -7661,8 +7670,8 @@ function renderWeek(){
   h+=`<div class="week-summary">
     <div class="wsm-total"><div class="wsm-val">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
     <div class="wsm-row">
-      <div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
-      ${dinnerEnabled()?`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
+      <div class="wsm-item wsm-item-yl"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
+      ${dinnerEnabled()?`<div class="wsm-item wsm-item-yl"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
       <div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>
     </div>
   </div>`;
@@ -8264,28 +8273,33 @@ function renderMonth(){
   // Revenue breakdown — total chapeau + détail par catégorie. Reste global
   // (toutes structures confondues), comme "Activité globale" en vue Année :
   // le détail par structure vient ensuite, dans les volets ci-dessous.
+  // Extras/événements en tête (à gauche), nuitées/repas ensuite — ordre
+  // volontairement inversé par rapport à l'ancien nuitées→repas→extras→
+  // événements.
   const mRevItems=[
-    `<div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`,
     `<div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>`
   ];
-  if(dinnerEnabled()){
-    mRevItems.splice(1,0,`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
-  }
   if(eventsRevenue>0){
     mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${eventsRevenue.toLocaleString('fr-FR')} €</div><div class="wsm-lbl">événements</div></div>`);
+  }
+  mRevItems.push(`<div class="wsm-item wsm-item-yl"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`);
+  if(dinnerEnabled()){
+    mRevItems.push(`<div class="wsm-item wsm-item-yl"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
   }
   h+=`<div class="week-summary">
     <div class="wsm-toprow">
       <div class="wsm-total"><div class="wsm-val">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux du mois</div></div>
       <div class="wsm-total wsm-occ"><div class="wsm-val">${occPct}%</div><div class="wsm-lbl">remplissage</div></div>
     </div>
-    <div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>
   </div>`;
 
   // Financial summary (charges + marge) — only if charges configured. Reste
   // global lui aussi (bankCharges couvre déjà toutes les structures) — pas
   // le ménage, comme avant cette refonte (voir cleanCostTotal plus bas,
   // désormais calculé par structure et non plus additionné ici).
+  // Placé juste après le CA/remplissage (au lieu d'après le détail nuitées/
+  // extras/événements) pour rester visuellement proche du chiffre
+  // d'affaires dont charges et marge dérivent directement.
   const bankCharges=variableChargesForMonth(mStart,mEndExact);
   const totalCh=bankCharges.total;
   if(totalCh>0){
@@ -8304,6 +8318,8 @@ function renderMonth(){
       </div>
     </div>`;
   }
+
+  h+=`<div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>`;
 
   // Volet "Événements du mois" — même principe que le volet Événements de la
   // vue Semaine (même carte .evcard, même bouton d'ajout), mais pour tout le
