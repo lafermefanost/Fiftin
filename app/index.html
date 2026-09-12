@@ -1113,15 +1113,27 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 /* Cartouches structure (SASU, LMNP…) repliables, comme les jours de la vue
    Semaine — pas "Activité globale" (.yr-total), qui n'a pas de chevron ni
-   d'onclick sur son en-tête. */
-.yr-group:not(.yr-total)>.yr-group-hd{cursor:pointer;}
-.yr-group.collapsed>.yr-group-hd{margin-bottom:0;}
+   d'onclick sur son en-tête. En-tête en bandeau beige-gris plein bord (même
+   technique que .wday-head : marges négatives qui annulent le padding du
+   cartouche parent pour aller jusqu'aux bords, coins arrondis assortis). */
+.yr-group:not(.yr-total)>.yr-group-hd{background:var(--light);color:var(--gray);
+  margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
+.yr-group.collapsed>.yr-group-hd{margin:-12px -14px -12px;border-radius:10px;}
 .yr-group.collapsed>.yr-group-body{display:none;}
 .yr-group-chev{font-size:11px;opacity:.6;transition:transform .2s;}
 .yr-group.collapsed .yr-group-chev{transform:rotate(-90deg);}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
 .yr-group-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
 .yr-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
+/* Sous-encarts d'une structure (seuils, revenus par mois, répartition par
+   source/charges) : chacun son propre encart blanc à ombre portée qui le
+   détache du fond blanc du cartouche structure — exactement le traitement
+   des sous-volets d'un jour en vue Semaine (.tsec-panel/.tsec-hd/.tsec-body,
+   réutilisés tels quels). .yr-subhd reprend le visuel de .tsec-hd (bandeau
+   beige-gris) mais sans le curseur/l'effet actif : ces sous-encarts ne se
+   replient pas eux-mêmes, seul le cartouche structure entier se replie. */
+.yr-subhd{padding:11px 14px;font-weight:700;font-size:12px;text-transform:uppercase;
+  letter-spacing:.04em;background:var(--light);color:var(--gray);}
 .yr-gauge{margin-bottom:10px;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
@@ -1138,14 +1150,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   padding:1px 7px;border-radius:9px;margin:-1px 0;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
-/* Sous-sections à l'intérieur d'une même carte structure (voir groupCard/
-   subSection dans renderYear) : un bandeau plein plutôt qu'un simple trait
-   + libellé au-dessus — même traitement neutre que les en-têtes de
-   sous-volets de la vue Semaine (.tsec-hd), mais sans le cadre/l'ombre
-   d'un panneau à part, puisque tout reste dans LE bloc de la structure. */
-.yr-subhd{background:var(--light);color:var(--gray);font-size:11px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.05em;padding:7px 10px;border-radius:8px;
-  margin:16px 0 10px;}
 .yr-chart{display:flex;gap:3px;align-items:flex-end;height:96px;margin-bottom:6px;}
 .yr-bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;height:100%;}
 .yr-bar-area{flex:1;display:flex;flex-direction:column;justify-content:flex-end;}
@@ -8426,10 +8430,14 @@ function renderYear(){
     if(cleanCost>0)chargesEntries['Ménage']=(chargesEntries['Ménage']||0)+cleanCost;
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
     const sourceEntries=structSourceBreakdown(gid);
-    const subSection=(title,inner)=>`<div>
+    const subSection=(title,inner)=>`<div class="tsec-panel">
       <div class="yr-subhd">${title}</div>
-      ${inner}
+      <div class="tsec-body">${inner}</div>
     </div>`;
+    // Seuils (Franchise TVA…) : pas de bandeau ici, chaque jauge porte déjà
+    // son propre libellé (voir gauge/nightsGauge) — juste l'encart blanc à
+    // ombre qui le détache, comme les autres sous-encarts de la structure.
+    const gaugesCardHTML=gaugesHTML?`<div class="tsec-panel"><div class="tsec-body">${gaugesHTML}</div></div>`:'';
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleYearGroup('${gid}')">
         <div class="yr-group-name">${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
@@ -8454,7 +8462,7 @@ function renderYear(){
           </div>
           ${platStatHTML}
         </div>
-        ${gaugesHTML}
+        ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
         ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
