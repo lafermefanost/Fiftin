@@ -8085,6 +8085,70 @@ function monthRevenueRank(y,m){
   return{rank,total,rev:thisRev,avg,reboundPct};
 }
 
+// CA (réservations uniquement — même périmètre que groupStats/globalCard en
+// vue Année, pas le CA élargi de getMonthStats avec extras/repas/
+// événements) sur une période — année entière par défaut, ou jusqu'à `upTo`
+// (exclu) pour comparer une année en cours à la même période une année
+// passée (voir yearRevenueInsight).
+function yearTotalCA(year,upTo){
+  const yStart=`${year}-01-01`;
+  const yEndFull=`${year+1}-01-01`;
+  const yEnd=upTo&&upTo<yEndFull?upTo:yEndFull;
+  return S.bookings.filter(bk=>bk.checkIn<yEnd&&bk.checkOut>yStart)
+    .reduce((s,bk)=>s+getBookingRevForPeriod(bk,yStart,yEnd),0);
+}
+// Résumé assistant de la vue Année (voir renderYear) — même esprit que
+// monthRevenueRank pour la vue Mois, mais une année ne se compare pas de la
+// même façon selon qu'elle est déjà terminée ou en cours :
+//  - année passée (déjà complète) → classement par CA parmi les autres
+//    années COMPLÈTES suivies (comparer une année complète à l'année en
+//    cours, forcément partielle, ne serait pas honnête) ;
+//  - année en cours → projection en fin d'année au rythme actuel, comparée
+//    au total de l'année précédente (repère "projections" demandé), avec un
+//    repli sur la comparaison YTD si la projection n'est pas encore fiable
+//    (moins de 30 jours écoulés) ;
+//  - année future, ou pas assez d'historique pour que la comparaison
+//    utilisée veuille dire quelque chose → null (voir chaque branche).
+function yearRevenueInsight(year){
+  const now=new Date();
+  const curYear=now.getFullYear();
+  if(year>curYear)return null;
+  if(!S.bookings.length)return null;
+  const minCheckIn=S.bookings.reduce((min,b)=>b.checkIn<min?b.checkIn:min,S.bookings[0].checkIn);
+  const firstYear=parseInt(minCheckIn.slice(0,4));
+
+  if(year<curYear){
+    const years=[];
+    for(let yy=firstYear;yy<curYear;yy++)years.push({y:yy,rev:yearTotalCA(yy)});
+    if(years.length<2)return null;
+    const sorted=[...years].sort((a,b)=>b.rev-a.rev);
+    const rank=sorted.findIndex(x=>x.y===year)+1;
+    const total=sorted.length;
+    const rev=years.find(x=>x.y===year).rev;
+    const avg=years.reduce((s,x)=>s+x.rev,0)/total;
+    return{kind:'rank',rank,total,rev,avg};
+  }
+
+  // Année en cours.
+  const todayISOStr=todayISO();
+  const daysElapsed=daysBetween(`${year}-01-01`,todayISOStr);
+  if(daysElapsed<7)return null; // tout début d'année : rien d'assez significatif à dire
+  const ytdRev=yearTotalCA(year,todayISOStr);
+  if(firstYear>=year){
+    // Toute première année suivie, aucune année précédente pour comparer.
+    return ytdRev>0?{kind:'first',rev:ytdRev}:null;
+  }
+  const lastYearYtd=yearTotalCA(year-1,`${year-1}-${todayISOStr.slice(5)}`);
+  const lastYearFull=yearTotalCA(year-1);
+  if(daysElapsed>=30&&lastYearFull>0){
+    const daysInYear=daysBetween(`${year}-01-01`,`${year+1}-01-01`);
+    const projected=Math.round(ytdRev/daysElapsed*daysInYear);
+    return{kind:'projection',projected,lastYearFull,ytdRev};
+  }
+  if(lastYearYtd>0)return{kind:'ytd',ytdRev,lastYearYtd};
+  return{kind:'first',rev:ytdRev};
+}
+
 // État des volets structure de la vue Mois (voir toggleMonthGroup) — même
 // principe que yearOpenGroups pour la vue Année : mémorisé par gid, remis à
 // zéro au changement de mois plutôt que jamais, pour ne pas garder replié un
@@ -8987,6 +9051,43 @@ function renderYear(){
   }
   const globalHTML=globalCard();
 
+  // Résumé assistant — voir yearRevenueInsight pour le détail de chaque cas
+  // (année complète vs en cours) et pourquoi. Toujours formulé de façon
+  // positive, y compris quand l'année est en retard sur la précédente —
+  // même principe que le brief de la vue Mois.
+  const yearInsight=yearRevenueInsight(year);
+  let yearBriefHTML='';
+  if(yearInsight){
+    let briefMsg=null;
+    if(yearInsight.kind==='rank'){
+      const{rank,total,rev,avg}=yearInsight;
+      const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
+      const diffStr=diffPct==null?'':diffPct>=0?` (+${diffPct}% vs. la moyenne)`:` (${diffPct}% vs. la moyenne)`;
+      if(rank===1){
+        briefMsg=`🏆 Meilleure année complète enregistrée, avec ${Math.round(rev).toLocaleString('fr-FR')} € de CA${diffStr}.`;
+      }else if(total>3&&rank>total-2){
+        briefMsg=`Une année plus calme que les autres (${rank}ᵉ sur ${total} années complètes), avec ${Math.round(rev).toLocaleString('fr-FR')} €. Chaque année suivie aide à mieux anticiper la suivante.`;
+      }else{
+        briefMsg=`Cette année se classe ${rank}ᵉ sur ${total} années complètes suivies, avec ${Math.round(rev).toLocaleString('fr-FR')} €${diffStr}.`;
+      }
+    }else if(yearInsight.kind==='projection'){
+      const{projected,lastYearFull}=yearInsight;
+      const projDiffPct=Math.round((projected-lastYearFull)/lastYearFull*100);
+      briefMsg=projDiffPct>=0
+        ?`📈 Au rythme actuel, vous devriez terminer l'année autour de ${projected.toLocaleString('fr-FR')} €, soit ${projDiffPct}% de plus qu'en ${year-1}.`
+        :`Au rythme actuel, vous termineriez l'année autour de ${projected.toLocaleString('fr-FR')} € — ${Math.abs(projDiffPct)}% de moins qu'en ${year-1}, mais il reste du temps pour combler l'écart.`;
+    }else if(yearInsight.kind==='ytd'){
+      const{ytdRev,lastYearYtd}=yearInsight;
+      const ytdDiffPct=Math.round((ytdRev-lastYearYtd)/lastYearYtd*100);
+      briefMsg=ytdDiffPct>=0
+        ?`Vous êtes ${ytdDiffPct}% au-dessus de la même période en ${year-1}.`
+        :`${Math.abs(ytdDiffPct)}% en dessous de la même période en ${year-1} pour l'instant, mais l'année n'est pas terminée.`;
+    }else if(yearInsight.kind==='first'){
+      briefMsg=`${Math.round(yearInsight.rev).toLocaleString('fr-FR')} € de CA depuis le début de l'année — première année suivie, de quoi bâtir une vraie comparaison l'an prochain.`;
+    }
+    if(briefMsg)yearBriefHTML=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+  }
+
   // Total taxe de séjour de l'année — même prorata que le CA par mois,
   // mais volontairement calculé et affiché à part (jamais dans le CA).
   const yearStart=`${year}-01-01`,yearEndExclusive=`${year+1}-01-01`;
@@ -9032,6 +9133,7 @@ function renderYear(){
     </div>
     <div class="vnav-now-row">${year!==todayYear?`<button class="vnav-now-btn" onclick="thisYear()">Cette année</button>`:''}</div>
     ${globalHTML}
+    ${yearBriefHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
   </div>`;
