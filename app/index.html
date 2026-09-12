@@ -6780,6 +6780,21 @@ function removeMember(uid){
     console.error(err);alert('Impossible de retirer ce membre.');
   });
 }
+// Vue Année laissée en attente le temps que les réglages restent ouverts
+// (voir closeM) plutôt que re-rendue tout de suite : ce re-render du fond
+// tombait pile au moment où le clavier mobile se referme (onblur d'un
+// champ comme le nom de structure) — un instant déjà fragile pour le
+// calcul de hauteur de la modale (voir .overlay, vvh) où on a déjà vu le
+// bas de la modale se tronquer ; le re-render du fond juste à ce moment-là
+// pouvait faire réapparaître un bout de la vue du dessous. Le fond n'étant
+// de toute façon pas visible tant que la modale reste ouverte, différer ne
+// coûte rien — juste rafraîchi un peu plus tard, à la fermeture.
+let yearRefreshPending=false;
+function refreshYearMaybe(){
+  if(S.view!=='year')return;
+  if(byId('modalSettings')&&byId('modalSettings').style.display==='flex') yearRefreshPending=true;
+  else renderYear();
+}
 function delStructure(id){
   if(!S.settings.structures||S.settings.structures.length<=1)return;
   const usedBy=(S.settings.rooms||[]).filter(r=>r.group===id);
@@ -6789,21 +6804,21 @@ function delStructure(id){
   const fallback=S.settings.structures[0].id;
   (S.settings.rooms||[]).forEach(r=>{if(r.group===id)r.group=fallback;});
   saveSettings();applySettings();renderSettings();renderGrid();
-  if(S.view==='year')renderYear();
+  refreshYearMaybe();
 }
 function updateStructureName(id,name){
   const s=(S.settings.structures||[]).find(x=>x.id===id);
   if(!s)return;
   s.name=name;
   saveSettings();
-  if(S.view==='year')renderYear();
+  refreshYearMaybe();
 }
 function updateStructureType(id,type){
   const s=(S.settings.structures||[]).find(x=>x.id===id);
   if(!s)return;
   s.type=type||null;
   saveSettings();
-  if(S.view==='year')renderYear();
+  refreshYearMaybe();
 }
 function addStructureThreshold(sid){
   if(!S.settings.structureThresholds)S.settings.structureThresholds={};
@@ -8188,7 +8203,16 @@ function goToday(){
 // ═══════════════════════════════════════════════════════════════
 //  MODAL UTILS
 // ═══════════════════════════════════════════════════════════════
-function closeM(id){byId(id).style.display='none';}
+function closeM(id){
+  byId(id).style.display='none';
+  // Vue Année laissée en attente pendant que les réglages étaient ouverts
+  // (voir refreshYearMaybe) : c'est le bon moment pour la rafraîchir enfin,
+  // le fond redevenant visible.
+  if(id==='modalSettings'&&yearRefreshPending){
+    yearRefreshPending=false;
+    if(S.view==='year')renderYear();
+  }
+}
 
 function openModalClear(){clearRangeSel();}
 function ovClose(e,id){if(e.target.classList.contains('overlay'))closeM(id);}
