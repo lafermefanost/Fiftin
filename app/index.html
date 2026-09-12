@@ -1257,6 +1257,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
 .yr-gauge-thr{font-size:10px;color:var(--gray);}
 .yr-gauge-bar{height:13px;background:var(--light);border-radius:3px;overflow:hidden;position:relative;}
+.yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
 /* Fond lavande pâle + texte sombre plutôt que du lavande plein (illisible en
@@ -8952,22 +8953,22 @@ function renderYear(){
   }
 
   function gauge(realCA,projCA,threshold,color,label){
+    // Pas de traitement "alerte" (emoji ⚠️/⚡ + pilule colorée sur le
+    // titre, barre qui vire au lavande) quand on approche/dépasse le
+    // seuil — Franchise TVA doit rester écrit exactement comme les
+    // autres seuils, sans ce warning visuel. Toujours la couleur
+    // configurée pour ce seuil, deux calques (projeté pâle + réalisé
+    // plein), comme avant l'introduction de cette alerte.
     const projPct=Math.min(100,projCA/threshold*100);
-    const cls=projPct>=100?'yr-gauge-danger':projPct>=80?'yr-gauge-warn':'';
-    const fillColor=cls?'#B2BBDA':color;
-    // Une seule barre pleine (largeur = projPct, la trajectoire à
-    // surveiller pour un seuil), exactement comme nightsGauge — pas deux
-    // calques superposés (projeté pâle + réalisé plein) qui, sous 100%,
-    // isolaient un segment arrondi flottant dans la piste ("un boudin")
-    // au lieu d'un seuil écrit comme les autres. Réalisé/Projeté restent
-    // affichés en texte juste en dessous, l'info n'est pas perdue.
-    return`<div class="yr-gauge${cls?' '+cls:''}">
+    const realPct=Math.min(100,realCA/threshold*100);
+    return`<div class="yr-gauge">
       <div class="yr-gauge-top">
-        <span class="yr-gauge-lbl">${label}${cls==='yr-gauge-danger'?' ⚠️':cls==='yr-gauge-warn'?' ⚡':''}</span>
+        <span class="yr-gauge-lbl">${label}</span>
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-real" style="width:${projPct}%;background:${fillColor}"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:${color}44"></div>
+        <div class="yr-gauge-real" style="width:${realPct}%;background:${color}"></div>
       </div>
       <div class="yr-gauge-bot">
         <span style="font-size:10px;color:var(--gray)">Réalisé <b>${Math.round(realCA).toLocaleString('fr-FR')} €</b></span>
