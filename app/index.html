@@ -445,7 +445,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   cursor:pointer;}
 .vnav-now-btn:hover{background:var(--green);color:#fff;}
 .tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
+/* Padding horizontal aligné sur .tsec-body (10px, pas 14px) : le titre
+   d'un volet doit démarrer exactement à la même position que son propre
+   contenu juste en dessous. */
+.tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 10px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
 .tsec-hd:active{filter:brightness(.96);}
 .tsec-hd{background:var(--light);color:var(--gray);}
 .tsec-hd.has-items{background:var(--lavender);color:var(--green-deep);}
@@ -545,9 +548,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
 .tsm-lbl{font-size:9px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wday-card{background:#fff;border-radius:12px;padding:12px 14px;}
-/* Même repère que .rv-day-today (voir goToday) — léger contour vert sur
-   la carte du jour même, pour la retrouver d'un coup d'œil dans la liste. */
-.wday-card.wday-today{outline:1.5px solid var(--green);outline-offset:-1.5px;}
+/* Plus de contour vert sur la carte du jour/mois en cours (vue Semaine,
+   volet Événements) — le préfixe "Aujourd'hui — "/"Ce mois-ci — " dans
+   .wday-name suffit déjà à la repérer, le contour en plus alourdissait. */
 .wday-head{display:flex;justify-content:space-between;align-items:baseline;
   background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
 .wday-card.collapsed .wday-head{margin:-12px -14px -12px;border-radius:10px;}
@@ -1184,8 +1187,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    contenu — l'ombre portée suffit à le détacher visuellement du cartouche
    structure. Ces sous-encarts ne se replient pas eux-mêmes, seul le
    cartouche structure entier se replie. */
-.yr-subhd{padding:11px 14px 0;font-weight:700;font-size:12px;text-transform:uppercase;
-  letter-spacing:.04em;color:var(--gray);}
+/* Padding horizontal aligné sur .tsec-body (10px, pas 14px) : le titre
+   d'un sous-encart doit démarrer exactement à la même position que son
+   propre contenu juste en dessous, pas plus loin dans la marge. */
+.yr-subhd{padding:11px 10px 0;font-weight:700;font-size:12px;text-transform:uppercase;
+  letter-spacing:.04em;color:var(--lavender);}
 .yr-gauge{margin-bottom:10px;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
 .yr-gauge-lbl{font-size:11px;font-weight:600;color:var(--dark);}
@@ -4837,32 +4843,32 @@ function renderEvList(term){
     return;
   }
 
-  // Pas de recherche : un volet par mois qui a du contenu, empilés façon
-  // vue Semaine (.wday-card). Clé numérique (année×12+mois) plutôt qu'une
-  // simple chaîne "année-mois" : une comparaison alphabétique aurait mal
-  // classé les mois à un chiffre (ex: "2026-9" > "2026-10" en tri de
-  // chaînes).
+  // Pas de recherche : un volet par mois, empilés façon vue Semaine
+  // (.wday-card) — TOUS les mois qui se suivent entre le premier et le
+  // dernier concerné (mois en cours compris), même sans événement ce
+  // mois-là : un filtre qui saute un mois vide (ex: pas de jour férié en
+  // septembre) casserait la continuité attendue d'un calendrier. Clé
+  // numérique (année×12+mois) plutôt qu'une simple chaîne "année-mois" :
+  // une comparaison alphabétique aurait mal classé les mois à un chiffre
+  // (ex: "2026-9" > "2026-10" en tri de chaînes).
   const sorted=[...catEvents,...getHolidayPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
-  const groups=[];
-  let curGroup=null;
+  const byKey=new Map();
   sorted.forEach(ev=>{
     const sd=new Date(ev.startDate+'T00:00:00');
     const key=sd.getFullYear()*12+sd.getMonth();
-    if(!curGroup||curGroup.key!==key){
-      curGroup={key,events:[]};
-      groups.push(curGroup);
-    }
-    curGroup.events.push(ev);
+    if(!byKey.has(key))byKey.set(key,[]);
+    byKey.get(key).push(ev);
   });
-  if(!groups.length){
-    byId('evList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun événement</p>';
-    return;
-  }
+  const allKeys=[...byKey.keys(),todayKey];
+  const minKey=Math.min(...allKeys),maxKey=Math.max(...allKeys);
+  const groups=[];
+  for(let k=minKey;k<=maxKey;k++)groups.push({key:k,events:byKey.get(k)||[]});
 
   // Repère "Aujourd'hui" à l'intérieur du volet du mois en cours, inséré à
   // sa place chronologique — même sans événement ce jour précis (voir
   // .ev-today-mark), pour toujours avoir un point de repère visuel.
   const monthBodyHTML=g=>{
+    if(!g.events.length&&g.key!==todayKey) return'<div class="tsec-empty">Aucun</div>';
     let h='';
     let markInserted=g.key!==todayKey;
     g.events.forEach(ev=>{
@@ -8478,8 +8484,8 @@ function renderMonth(){
       // Libellés explicites pour les deux parties fusionnées ici (jauge de
       // source + liste clients) — sans ça, la jauge et la liste s'enchaînent
       // sans qu'on sache ce que chacune représente.
-      bookingsBody=(sourceEntries.length?`<div class="mocc-title">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
-        +`<div class="mocc-title"${sourceEntries.length?' style="margin-top:16px"':''}>Toutes les réservations</div>`
+      bookingsBody=(sourceEntries.length?`<div class="mocc-title" style="color:var(--lavender)">Répartition par source</div>${buildSourceRevGauge(sourceEntries)}`:'')
+        +`<div class="mocc-title" style="color:var(--lavender)${sourceEntries.length?';margin-top:16px':''}">Toutes les réservations</div>`
         +`<div class="mbk-clients">`
         +shownRows.map(row=>{
           const g=guest(row.gid);
