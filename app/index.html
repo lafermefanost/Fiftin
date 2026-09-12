@@ -8040,6 +8040,34 @@ function getMonthStats(y,m){
     totalExtras,totalRepas,repasRevenueFromBookings,taxeSejourTotal,extDinersRevenueTotal,
     nightsRevenue,repasRevenue,eventsRevenue,totalRev,occPct};
 }
+// Classement d'un mois par revenus totaux parmi tous les mois suivis (du
+// premier mois avec une réservation jusqu'au mois réel en cours) — pour la
+// vue Mois (voir renderMonth), un repère plus utile que le récap
+// arrivées/départs d'origine dès qu'on parle rentabilité : où se situe ce
+// mois par rapport aux autres plutôt qu'une liste de tâches déjà couverte
+// par Jour/Semaine. Seulement pour un mois déjà entamé (voir l'appelant) —
+// classer un mois entièrement futur n'aurait pas de sens, ses réservations
+// ne font que commencer à arriver. Retourne null si l'historique est trop
+// court (moins de 3 mois) pour qu'un classement veuille dire quelque chose.
+function monthRevenueRank(y,m){
+  if(!S.bookings.length)return null;
+  const minCheckIn=S.bookings.reduce((min,b)=>b.checkIn<min?b.checkIn:min,S.bookings[0].checkIn);
+  const minD=new Date(minCheckIn+'T00:00:00');
+  const now=new Date();
+  const months=[];
+  let cy=minD.getFullYear(),cm=minD.getMonth();
+  while(cy<now.getFullYear()||(cy===now.getFullYear()&&cm<=now.getMonth())){
+    months.push({y:cy,m:cm,rev:getMonthStats(cy,cm).totalRev});
+    cm++;if(cm>11){cm=0;cy++;}
+  }
+  if(months.length<3)return null;
+  const sorted=[...months].sort((a,b)=>b.rev-a.rev);
+  const rank=sorted.findIndex(x=>x.y===y&&x.m===m)+1;
+  const total=sorted.length;
+  const thisRev=months.find(x=>x.y===y&&x.m===m).rev;
+  const avg=months.reduce((s,x)=>s+x.rev,0)/total;
+  return{rank,total,rev:thisRev,avg};
+}
 
 // État des volets structure de la vue Mois (voir toggleMonthGroup) — même
 // principe que yearOpenGroups pour la vue Année : mémorisé par gid, remis à
@@ -8164,41 +8192,34 @@ function renderMonth(){
     <div class="tsec-body">${monthEvs.length?monthEvs.map(evCardHTML).join(''):'<div class="tsec-empty">Aucun</div>'}${monthEvAddBtn}</div>
   </div>`;
 
-  // Résumé assistant — équivalent du "Aujourd'hui, vous avez…" de la vue
-  // Semaine (.wbrief), mais à l'échelle du mois : plutôt que de répéter la
-  // journée du jour (déjà couverte par Jour/Semaine), il annonce ce qui
-  // RESTE à venir d'ici la fin du mois affiché — l'équivalent "actionnable"
-  // pour cette granularité. N'a de sens que pour le mois en cours (comme le
-  // brief de la Semaine, affiché seulement quand la semaine contient
-  // aujourd'hui) : un mois passé ou futur n'a pas de "reste à venir".
-  if(monthDiff===0){
-    const mArrs=S.bookings.filter(b=>b.checkIn>=today&&b.checkIn<mEndExact).length;
-    const mDeps=S.bookings.filter(b=>b.checkOut>=today&&b.checkOut<mEndExact).length;
-    let mDiners=0;
-    if(dinnerEnabled()){
-      for(let i=0;i<daysInMonth;i++){
-        const ds=addDays(mStart,i);
-        if(ds<today)continue;
-        mDiners+=S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
-            .reduce((s,b)=>s+(b.nbPersons||2),0)
-          +((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false)
-            .reduce((s,e)=>s+(e.count||1),0);
+  // Résumé assistant — pas l'équivalent littéral du "Aujourd'hui, vous
+  // avez…" de la vue Semaine (une liste d'arrivées/départs à venir avait
+  // peu d'intérêt ici, déjà couverte par Jour/Semaine, et cette vue parle
+  // surtout rentabilité) : un repère de comparaison, où ce mois se situe
+  // par revenus totaux face aux autres mois suivis (voir monthRevenueRank)
+  // — plus utile pour se situer que pour lister des tâches. N'a de sens que
+  // pour un mois déjà entamé (mois en cours ou passé) : un mois entièrement
+  // futur n'a pas encore assez de réservations pour se comparer aux autres.
+  // Absent si l'historique est trop court (voir monthRevenueRank).
+  if(monthDiff<=0){
+    const cmp=monthRevenueRank(y,m);
+    if(cmp){
+      const{rank,total,rev,avg}=cmp;
+      const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
+      const diffStr=diffPct==null?'':diffPct>=0?` — ${diffPct}% au-dessus de votre moyenne mensuelle`:` — ${Math.abs(diffPct)}% en dessous de votre moyenne mensuelle`;
+      const revStr=rev>0?rev.toLocaleString('fr-FR')+' €':'—';
+      let briefMsg;
+      if(rank===1){
+        briefMsg=`🏆 Meilleur mois enregistré, avec ${revStr} de revenus (sur ${total} mois suivis)${diffStr}.`;
+      }else if(rank<=3){
+        briefMsg=`Ce mois se classe ${rank}ᵉ meilleur mois sur ${total} suivis, avec ${revStr}${diffStr}.`;
+      }else if(total>5&&rank>total-3){
+        briefMsg=`Un des mois les plus calmes enregistrés (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}.`;
+      }else{
+        briefMsg=`Ce mois se classe ${rank}ᵉ sur ${total} mois suivis, avec ${revStr}${diffStr}.`;
       }
+      h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
     }
-    const briefParts=[];
-    if(mArrs>0)briefParts.push(`${mArrs} arrivée${mArrs>1?'s':''}`);
-    if(mDeps>0)briefParts.push(`${mDeps} départ${mDeps>1?'s':''}`);
-    if(mDiners>0)briefParts.push(`${mDiners} dîner${mDiners>1?'s':''}`);
-    let briefMsg;
-    if(!briefParts.length){
-      briefMsg='Rien de prévu d\'ici la fin du mois : aucune arrivée, départ ni dîner à venir.';
-    }else if(briefParts.length===1){
-      briefMsg=`Ce mois-ci, il vous reste encore ${briefParts[0]} à venir.`;
-    }else{
-      const last=briefParts.pop();
-      briefMsg=`Ce mois-ci, il vous reste encore ${briefParts.join(', ')} et ${last} à venir.`;
-    }
-    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
   }
 
   // ── Classement par structure — même principe que la vue Année
