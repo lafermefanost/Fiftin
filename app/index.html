@@ -623,8 +623,18 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    compteur d'heures reste toujours visible à droite du nom, activée ou
    non : l'augmenter active la personne du même coup (voir
    adjustCleanerHours), plus besoin de d'abord toucher son nom. */
-.cln-list{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
-.cln-row{display:flex;align-items:center;gap:8px;}
+.cln-list{display:flex;flex-direction:column;gap:10px;margin-bottom:8px;}
+.cln-row{display:flex;flex-direction:column;gap:6px;}
+.cln-row-main{display:flex;align-items:center;gap:8px;}
+/* Chips de durées courantes (voir setCleanerHours dans menageGroup) : un
+   tap fixe la valeur directement, pour éviter d'enchaîner les +15min du
+   stepper dans le rush sur une durée habituelle. */
+.cln-presets{display:flex;gap:6px;flex-wrap:wrap;}
+.cln-preset{padding:5px 10px;border:1px solid var(--light);border-radius:14px;
+  font-family:'Jost',sans-serif;font-size:11px;font-weight:600;
+  color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
+.cln-preset:hover{border-color:#aaa;color:var(--dark);}
+.cln-preset.sel{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
 /* Sous-groupe par structure à l'intérieur de l'onglet Ménage unique (voir
    menageGroup dans renderWeek) — séparateur discret entre deux structures,
    pas une carte à part comme .tsec-panel (ça resterait UN seul onglet). */
@@ -5481,6 +5491,26 @@ function adjustCleanerHours(ds,name,group,deltaMin){
   if(S.view==='today')renderToday();
   else renderWeek();
 }
+// Durée en un tap (voir cln-presets dans menageGroup) : chips des durées les
+// plus courantes (30 min/1h/1h30/2h), pour éviter d'enchaîner les +15min du
+// stepper dans le rush — fixe la valeur directement au lieu de l'ajouter,
+// et active la personne au passage si besoin (même principe qu'
+// adjustCleanerHours). Le stepper +/- reste à côté pour ajuster les cas qui
+// ne tombent pas sur une de ces durées.
+function setCleanerHours(ds,name,group,hours){
+  const list=S.cleaning[ds]||[];
+  const g=group||defaultStructureId();
+  let c=list.find(x=>x.name===name&&(x.group||defaultStructureId())===g);
+  if(!c){
+    c=group?{name,hours:0,time:null,group}:{name,hours:0,time:null};
+    list.push(c);
+    S.cleaning[ds]=list;
+  }
+  c.hours=hours;
+  persist();
+  if(S.view==='today')renderToday();
+  else renderWeek();
+}
 
 function getMenu(ds){
   return S.menus[ds]||{entree:'',plat:'',dessert:''};
@@ -7485,16 +7515,30 @@ function renderWeek(){
         const wh=Math.floor(totalMin/60), mm=totalMin%60;
         const durLabel=mm===0?`${wh} h`:`${wh}h${mm}`;
         const cost=((c&&c.hours)||0)*(cl.rate??15);
+        // Chips de durées courantes (voir setCleanerHours) : un tap fixe
+        // directement la valeur (et active la personne au passage), pour ne
+        // pas enchaîner les +15min du stepper dans le rush pour une durée
+        // habituelle. Repère visuel (.sel) quand la valeur en cours
+        // correspond exactement à un preset.
+        const presets=[.5,1,1.5,2];
+        const presetHTML=presets.map(hv=>{
+          const lbl=hv%1===0?`${hv} h`:`${Math.floor(hv)}h${Math.round((hv%1)*60)}`;
+          const sel=c&&Math.abs((c.hours||0)-hv)<0.001;
+          return`<button type="button" class="cln-preset${sel?' sel':''}" onclick="setCleanerHours('${ds}','${name}','${groupId||''}',${hv})">${lbl}</button>`;
+        }).join('');
         hh+=`<div class="cln-row">
-          <button class="cleaner-btn${c?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>
-          <div class="cln-hm-row">
-            <div class="cln-stepper">
-              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',-15)">−</button>
-              <span class="cln-hm-val">${durLabel}</span>
-              <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',15)">+</button>
+          <div class="cln-row-main">
+            <button class="cleaner-btn${c?' cleaner-on':''}" onclick="toggleCleaner('${ds}','${name}'${groupId?`,'${groupId}'`:''})">${name}</button>
+            <div class="cln-hm-row">
+              <div class="cln-stepper">
+                <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',-15)">−</button>
+                <span class="cln-hm-val">${durLabel}</span>
+                <button type="button" class="cln-step" onclick="adjustCleanerHours('${ds}','${name}','${groupId||''}',15)">+</button>
+              </div>
+              <span class="cln-cost">${cost.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
             </div>
-            <span class="cln-cost">${cost.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
           </div>
+          <div class="cln-presets">${presetHTML}</div>
         </div>`;
       });
       hh+=`</div>`;
