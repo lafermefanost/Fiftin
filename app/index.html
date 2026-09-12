@@ -698,12 +698,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   margin-top:10px;padding-top:10px;border-top:1px solid var(--light);
   font-size:12px;color:var(--gray);font-weight:500;}
 .mocc-taxe span:last-child{font-weight:700;color:var(--dark);}
-.month-bklist{background:#fff;border-radius:12px;padding:14px;border:1.5px solid var(--light);}
-.mbk-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--gray);margin-bottom:10px;}
-.mbk-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--light);
-  cursor:pointer;}
-.mbk-row:last-child{border-bottom:none;}
+.mbk-row{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;}
 .mbk-row:hover{opacity:.75;}
 .mbk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .mbk-name{flex:1;font-size:13px;font-weight:500;}
@@ -711,10 +706,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mbk-rev{font-size:12px;color:var(--green);font-weight:600;flex-shrink:0;}
 
 /* ─── MONTH CHARGES ─────────────────────────────────────────── */
-.month-charges{background:#fff;border-radius:12px;padding:14px;border:1.5px solid var(--light);}
-.mch-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-size:11px;}
-.mch-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
-.mch-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--light);}
+.mch-row{display:flex;align-items:center;gap:8px;padding:7px 0;}
 .mch-row:last-child{border-bottom:none;}
 .mch-label{flex:1;border:none;background:transparent;font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);outline:none;min-width:0;}
 .mch-amount{width:80px;border:none;background:transparent;font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);text-align:right;outline:none;}
@@ -1172,12 +1164,16 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
 .yr-group-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
 .yr-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
-/* .mch-pie-block (camembert charges/sources, voir buildChargesDonut/
-   buildSourceRevDonut) porte un liseré du haut par défaut pour la vue Mois,
-   où il sépare la liste des charges du camembert — pas dans l'esprit de la
-   vue Année, réglée à la place ci-dessus/ci-dessous (voir .mch-total-row,
-   .yr-regl-item). Reste inchangé partout ailleurs (vue Mois). */
+/* .mch-pie-block (camembert des charges, voir buildChargesDonut) et
+   .src-gauge (jauge de répartition par source, voir buildSourceRevGauge)
+   portent chacun un liseré du haut par défaut — pas dans l'esprit d'un
+   volet de structure (vue Année et vue Mois, toutes deux en .yr-group
+   depuis leur classement par structure) : chacun y est soit le seul
+   contenu de son sous-encart (Répartition par source), soit précédé d'une
+   ligne de total qui a déjà elle-même son liseré retiré (Répartition des
+   charges) — jamais de vraie séparation à marquer. */
 .yr-group .mch-pie-block{margin-top:14px;padding-top:0;border-top:none;}
+.yr-group .src-gauge{margin-top:0;padding-top:0;border-top:none;}
 /* Sous-encarts d'une structure (seuils, revenus par mois, répartition par
    source/charges) : chacun son propre encart blanc à ombre portée qui le
    détache du fond blanc du cartouche structure — exactement le traitement
@@ -6210,36 +6206,6 @@ function buildSourceRevGauge(entries){
     <div class="mch-pie-legend">${legendHTML}</div>
   </div>`;
 }
-// Même camembert, mais pour la proportion de RÉSERVATIONS (pas de CA) entre
-// les sources — vue Mois, section "X réservations". Couleur propre à chaque
-// source (déjà utilisée pour les points/barres de la répartition juste en
-// dessous) plutôt que la palette générique des charges.
-function buildSourceCountDonut(srcActive,srcMap){
-  const MAX_SLICES=6;
-  let raw=srcActive.map(s=>({label:s.label,val:srcMap[s.id].n,color:s.color})).filter(e=>e.val>0).sort((a,b)=>b.val-a.val);
-  if(!raw.length)return'';
-  if(raw.length>MAX_SLICES){
-    const shown=raw.slice(0,MAX_SLICES-1);
-    const restTotal=raw.slice(MAX_SLICES-1).reduce((s,e)=>s+e.val,0);
-    raw=[...shown,{label:'Autres',val:restTotal,color:'#C7C2B8'}];
-  }
-  const{pathsHTML,segs,total,size}=buildDonutSlices(raw);
-  const legendHTML=segs.map(s=>`<div class="mch-pie-row">
-    <span class="mch-pie-dot" style="background:${s.color}"></span>
-    <span class="mch-pie-label">${s.label.replace(/</g,'&lt;')}</span>
-    <span class="mch-pie-pct">${Math.round(s.frac*100)}%</span>
-    <span class="mch-pie-val">${s.val} résa${s.val>1?'s':''}</span>
-  </div>`).join('');
-  return`<div class="mch-pie-block">
-    <div class="mch-pie-svgwrap" style="width:${size}px;height:${size}px">
-      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${pathsHTML}</svg>
-    </div>
-    <div class="mch-pie-legend-col">
-      <div class="mch-pie-total-line">${total} réservation${total>1?'s':''} au total</div>
-      <div class="mch-pie-legend">${legendHTML}</div>
-    </div>
-  </div>`;
-}
 function variableChargesForMonth(mStart,mEndExact,group){
   const cats=S.settings.chargeCategories||[];
   const byCat={};
@@ -8186,6 +8152,20 @@ function toggleMonthEv(){
   monthEvOpen=!monthEvOpen;
   renderMonth();
 }
+// Liste clients de "Réservations" (voir groupCardMonth) coupée à
+// MONTH_CLIENTS_CAP par défaut — cette liste sert avant tout à repérer les
+// clients les plus importants (déjà triée par CA décroissant), pas à
+// consulter la réservation de tel client précis, donc pas besoin de tout
+// afficher d'emblée dès qu'une structure a beaucoup de clients. Dépliable
+// par structure (Set de gid), remis à zéro au changement de mois comme les
+// volets structure eux-mêmes.
+const MONTH_CLIENTS_CAP=10;
+let monthClientsExpanded=new Set();
+function toggleMonthClients(gid){
+  if(monthClientsExpanded.has(gid))monthClientsExpanded.delete(gid);
+  else monthClientsExpanded.add(gid);
+  renderMonth();
+}
 
 function renderMonth(){
   const y=S.mYear, m=S.mMonth;
@@ -8193,6 +8173,7 @@ function renderMonth(){
   if(monthOpenGroupsFor!==monthKey){
     monthOpenGroupsFor=monthKey;
     monthOpenGroups=new Map();
+    monthClientsExpanded=new Set();
   }
   const{daysInMonth,mStart,mEndExact,bks,totalPossible,totalNights,periodRevTotal,
     totalExtras,totalRepas,repasRevenueFromBookings,taxeSejourTotal,extDinersRevenueTotal,
@@ -8465,8 +8446,11 @@ function renderMonth(){
     }
 
     // Réservations de cette structure (client par client, comme avant cette
-    // refonte) + répartition PAR NOMBRE de réservations (donut), distincte
-    // de la répartition par CA juste après.
+    // refonte) + répartition par source — intégrée directement ici plutôt
+    // que dans un sous-encart séparé (voir sourceEntries plus bas), à la
+    // jauge à tranches proportionnelles plutôt qu'à l'ancien camembert par
+    // NOMBRE de réservations (buildSourceCountDonut, retiré : redondant
+    // avec cette même jauge, par CA, une fois les deux réunies).
     const gByGuest={};
     st.bks.forEach(bk=>{
       const gid2=bk.guestId||'?';
@@ -8478,20 +8462,19 @@ function renderMonth(){
       gByGuest[gid2].rev+=getBookingRevForPeriod(bk,mStart,mEndExact);
     });
     const gClientRows=Object.values(gByGuest).sort((a,b)=>b.rev-a.rev);
-    const gSrcDef=S.settings.sources||DEFAULT_SETTINGS.sources;
-    const gSrcMap={};
-    gSrcDef.forEach(s=>{gSrcMap[s.id]={n:0,rev:0};});
-    st.bks.forEach(bk=>{
-      const src=bk.source||'direct';
-      const key=gSrcMap[src]!==undefined?src:'direct';
-      gSrcMap[key].n++;
-    });
-    const gSrcActive=gSrcDef.filter(s=>gSrcMap[s.id]&&gSrcMap[s.id].n>0);
+    const sourceEntries=structSourceBreakdownMonth(gid);
     let bookingsBody;
     if(st.bks.length){
-      bookingsBody=buildSourceCountDonut(gSrcActive,gSrcMap)
-        +`<div class="mbk-clients"${gSrcActive.length&&gClientRows.length?' style="margin-top:14px;padding-top:12px;border-top:1px solid var(--light)"':''}>`
-        +gClientRows.map(row=>{
+      // Coupée à MONTH_CLIENTS_CAP par défaut (déjà triée par CA décroissant
+      // ci-dessus) — cette liste sert avant tout à repérer les clients les
+      // plus importants, pas à tout afficher d'emblée (voir
+      // toggleMonthClients/monthClientsExpanded).
+      const clientsOpen=monthClientsExpanded.has(gid);
+      const shownRows=clientsOpen?gClientRows:gClientRows.slice(0,MONTH_CLIENTS_CAP);
+      const hiddenCount=gClientRows.length-shownRows.length;
+      bookingsBody=(sourceEntries.length?buildSourceRevGauge(sourceEntries):'')
+        +`<div class="mbk-clients"${sourceEntries.length&&gClientRows.length?' style="margin-top:14px"':''}>`
+        +shownRows.map(row=>{
           const g=guest(row.gid);
           return`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
             <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
@@ -8500,7 +8483,9 @@ function renderMonth(){
             ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
           </div>`;
         }).join('')
-        +`</div>`;
+        +`</div>`
+        +(hiddenCount>0?`<div class="tsec-add" onclick="event.stopPropagation();toggleMonthClients('${gid}')">+ Afficher les ${hiddenCount} client${hiddenCount>1?'s':''} suivant${hiddenCount>1?'s':''}</div>`
+          :clientsOpen&&gClientRows.length>MONTH_CLIENTS_CAP?`<div class="tsec-add" onclick="event.stopPropagation();toggleMonthClients('${gid}')">Afficher moins</div>`:'');
     }else{
       bookingsBody='<div class="yr-chart-nodata">Aucune réservation pour cette structure</div>';
     }
@@ -8522,8 +8507,6 @@ function renderMonth(){
         <div class="mocc-pct">${pct}%</div>
       </div>`;
     }).join('');
-
-    const sourceEntries=structSourceBreakdownMonth(gid);
 
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleMonthGroup('${gid}')">
@@ -8550,7 +8533,6 @@ function renderMonth(){
         </div>
         ${st.rooms.length?subSection('Taux par chambre',occBody):''}
         ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,bookingsBody)}
-        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
         ${subSection('Charges réelles',chargesBody)}
       </div>
     </div>`;
