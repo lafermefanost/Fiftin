@@ -1111,6 +1111,14 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-group.yr-total{background:none;border:none;padding:0;}
 .yr-total .yr-stats{margin-bottom:0;}
 .yr-group-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+/* Cartouches structure (SASU, LMNP…) repliables, comme les jours de la vue
+   Semaine — pas "Activité globale" (.yr-total), qui n'a pas de chevron ni
+   d'onclick sur son en-tête. */
+.yr-group:not(.yr-total)>.yr-group-hd{cursor:pointer;}
+.yr-group.collapsed>.yr-group-hd{margin-bottom:0;}
+.yr-group.collapsed>.yr-group-body{display:none;}
+.yr-group-chev{font-size:11px;opacity:.6;transition:transform .2s;}
+.yr-group.collapsed .yr-group-chev{transform:rotate(-90deg);}
 .yr-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
 .yr-group-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
 .yr-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px;}
@@ -8198,8 +8206,26 @@ document.addEventListener('keydown',e=>{
 // ═══════════════════════════════════════════════════════════════
 //  YEAR VIEW
 // ═══════════════════════════════════════════════════════════════
+// État ouvert/fermé des cartouches structure (SASU, LMNP…) — même principe
+// que weekPanelState pour la vue Semaine : ouvert par défaut (absent de la
+// Map), mémorisé seulement une fois replié/déplié à la main. Remis à zéro
+// au changement d'année plutôt que jamais, pour ne pas garder replié un
+// onglet d'une année qu'on ne regarde plus.
+let yearOpenGroups=new Map();
+let yearOpenGroupsFor=null;
+function yearGroupCollapsed(gid){
+  return yearOpenGroups.has(gid)?yearOpenGroups.get(gid):false;
+}
+function toggleYearGroup(gid){
+  yearOpenGroups.set(gid,!yearGroupCollapsed(gid));
+  renderYear();
+}
 function renderYear(){
   const year=S.year;
+  if(yearOpenGroupsFor!==year){
+    yearOpenGroupsFor=year;
+    yearOpenGroups=new Map();
+  }
   const yStart=`${year}-01-01`;
   const yEnd=`${year+1}-01-01`;
   const today=todayISO();
@@ -8372,6 +8398,7 @@ function renderYear(){
   // thresholdConfigs : liste libre de seuils pour cette structure, de type 'revenue' (jauge
   // CA réalisé/projeté vs montant) ou 'nights' (jauge nuits plateformes vs limite). 0, 1 ou N.
   function groupCard(gid,name,thresholdConfigs,color){
+    const collapsed=yearGroupCollapsed(gid);
     const st=groupStats(gid);
     const revenueThr=(thresholdConfigs||[]).filter(t=>t.type==='revenue');
     const nightsThr=(thresholdConfigs||[]).filter(t=>t.type==='nights');
@@ -8403,35 +8430,38 @@ function renderYear(){
       <div class="yr-subhd">${title}</div>
       ${inner}
     </div>`;
-    return`<div class="yr-group">
-      <div class="yr-group-hd">
+    return`<div class="yr-group${collapsed?' collapsed':''}">
+      <div class="yr-group-hd" onclick="toggleYearGroup('${gid}')">
         <div class="yr-group-name">${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
+        <span class="yr-group-chev">▾</span>
       </div>
-      <div class="yr-stats">
-        <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
-          <div class="mstat-sub">CA réalisé</div>
-          <div class="mstat-detail">${st.realNights} nuits passées</div>
+      <div class="yr-group-body">
+        <div class="yr-stats">
+          <div class="mstat-card mstat-rev">
+            <div class="mstat-val">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-sub">CA réalisé</div>
+            <div class="mstat-detail">${st.realNights} nuits passées</div>
+          </div>
+          <div class="mstat-card mstat-rev">
+            <div class="mstat-val">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-sub">CA projeté</div>
+            <div class="mstat-detail">${st.projNights} nuits totales</div>
+          </div>
+          <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
+            <div class="mstat-val">${st.occRate}%</div>
+            <div class="mstat-sub">occupation</div>
+            <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
+          </div>
+          ${platStatHTML}
         </div>
-        <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
-          <div class="mstat-sub">CA projeté</div>
-          <div class="mstat-detail">${st.projNights} nuits totales</div>
-        </div>
-        <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
-          <div class="mstat-val">${st.occRate}%</div>
-          <div class="mstat-sub">occupation</div>
-          <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
-        </div>
-        ${platStatHTML}
+        ${gaugesHTML}
+        ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
+        ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
+        ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
+            <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
+            <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
+          </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>')}
       </div>
-      ${gaugesHTML}
-      ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
-      ${subSection('Répartition par source',sourceEntries.length?buildSourceRevDonut(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>')}
-      ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0">
-          <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
-          <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
-        </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>')}
     </div>`;
   }
 
