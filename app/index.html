@@ -937,16 +937,6 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    tout le haut (champ de recherche, bouton +) se déplace à l'écran, ce
    qui perturbe la lecture pendant la frappe. Défile en interne au-delà. */
 #gList,#evList{height:min(52vh,420px);overflow-y:auto;}
-/* overflow-y:auto force aussi overflow-x en "auto" (les deux doivent être
-   non-"visible" ensemble — règle CSS) : la bande de mois d'#evList, pensée
-   pour déborder jusqu'aux bords de la modale via une marge négative relative
-   au padding de .modal, se faisait donc rogner par ce nouveau conteneur de
-   défilement, plus étroit. On déplace le débord sur #evList lui-même (marge
-   négative + padding qui compense, à l'identique de ce que faisait
-   .evmonth-sep) : la bande de .evmonth-sep n'a alors plus qu'à rejoindre le
-   bord d'#evList, pas au-delà — donc jamais rognée par son overflow. */
-#evList{margin:0 -18px;padding:0 18px;box-sizing:border-box;}
-
 /* Guest list */
 .glist-sep{font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;
   letter-spacing:.06em;padding:12px 0 4px;}
@@ -1005,29 +995,31 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 }
 
 /* Events modal */
-/* Barre de mois plus fine et discrète, alignée sur le style des séparateurs de
-   mois de la grille principale (.msep-label) plutôt qu'un bandeau épais — et
-   cliquable pour replier/déplier le mois (fermé par défaut pour les mois
-   antérieurs au mois en cours). */
-.evmonth-sep{background:var(--green-deep);color:#F0EBE0;font-family:'Jost',sans-serif;
-  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
-  padding:4px 18px;margin:14px -18px 0;
-  display:flex;align-items:center;justify-content:space-between;gap:8px;
-  cursor:pointer;user-select:none;}
-.evmonth-group:first-child .evmonth-sep{margin-top:0;}
-/* Un mois replié n'a plus de contenu en dessous : le grand écart pensé pour
-   séparer une barre du volet précédent devient un vide superflu quand
-   plusieurs mois fermés se suivent ("bandes de prison") — on le réduit à un
-   simple filet entre deux barres consécutives. */
-.evmonth-group.collapsed .evmonth-sep{margin-top:2px;}
-.evmonth-group:first-child.collapsed .evmonth-sep{margin-top:0;}
-/* Le mois qui suit un mois replié n'a lui non plus rien d'autre qu'une barre
-   juste au-dessus (même s'il est lui-même ouvert) : même filet resserré,
-   plutôt que le grand écart resté par défaut. */
-.evmonth-group.collapsed+.evmonth-group .evmonth-sep{margin-top:2px;}
-.evmonth-chev{font-size:9px;opacity:.7;transition:transform .15s;flex-shrink:0;}
-.evmonth-group.collapsed .evmonth-chev{transform:rotate(-90deg);}
-.evmonth-group.collapsed .evmonth-body{display:none;}
+/* Onglets mois (voir renderEvList) — remplacent les anciennes barres de mois
+   pleine largeur (repliables) : chips indépendantes, une par mois qui a du
+   contenu, plus un onglet "Fiscal" dédié à la fin pour voir toutes les
+   échéances d'un coup plutôt que dispersées mois par mois. Défile
+   horizontalement si trop nombreuses plutôt que de passer à la ligne. */
+.evtabs{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  padding-bottom:8px;margin-bottom:6px;}
+.evtab{flex:none;position:relative;padding:6px 14px;border:1.5px solid var(--light);
+  border-radius:16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
+  color:var(--gray);background:#fff;cursor:pointer;white-space:nowrap;transition:all .15s;}
+.evtab:hover{border-color:#aaa;color:var(--dark);}
+.evtab.on{background:var(--green);color:#fff;border-color:var(--green);}
+/* Repère du mois en cours, indépendant de l'onglet sélectionné — pour
+   toujours pouvoir repérer "où on en est" même en consultant un autre mois. */
+.evtab-dot{display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--green);margin-left:5px;vertical-align:middle;}
+.evtab.on .evtab-dot{background:#fff;}
+/* Repère "Aujourd'hui" dans la liste du mois en cours, même sans événement
+   ce jour-là (voir renderEvList) — un simple filet avec libellé, pas une
+   carte de plus à lire. */
+.ev-today-mark{display:flex;align-items:center;gap:8px;margin:6px 0;
+  font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  color:var(--green);}
+.ev-today-mark::before,.ev-today-mark::after{content:'';flex:1;height:1px;
+  background:var(--green);opacity:.35;}
 .evcard{display:flex;align-items:center;gap:12px;padding:10px 0;
   border-bottom:1px solid var(--light);cursor:pointer;transition:opacity .15s,background-color .4s;
   border-radius:8px;}
@@ -1638,6 +1630,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     </button>
     <input class="fi" id="evListSearch" placeholder="Rechercher un événement…" autocomplete="off"
       style="margin-bottom:10px" oninput="renderEvList(this.value)">
+    <div id="evTabs" class="evtabs"></div>
     <div id="evList"></div>
   </div>
 </div>
@@ -2458,6 +2451,49 @@ function getFiscalPseudoEvents(){
 }
 function getFiscalName(ds){
   return getFiscalPseudoEvents().find(f=>f.startDate===ds)?.title||null;
+}
+// Carte d'une échéance fiscale (.yr-fiscal-item) — partagée entre le volet
+// "Calendrier fiscal" de la vue Année et l'onglet "Fiscal" de la liste des
+// Événements (voir renderYear/renderEvList), pour un rendu identique aux
+// deux endroits. `f` vient de relevantFiscalCalendar(), `ds` est sa date
+// pour l'année considérée, `today` sert au calcul "passé/bientôt/urgent".
+function fiscalItemHTML(f,ds,today){
+  const diff=daysBetween(today,ds);
+  const isPast=ds<today;
+  const isSoon=!isPast&&diff<=30;
+  const isUrgent=!isPast&&diff<=7;
+  let badge='';
+  if(isUrgent) badge=`<span class="yr-fiscal-badge" style="background:#C0392B">J-${diff}</span>`;
+  else if(isSoon) badge=`<span class="yr-fiscal-badge" style="background:#1D2820">J-${diff}</span>`;
+  const stampColor=isPast?'#BFBAB4':f.color;
+  const tag=(f.approx?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> ≈</span>':'')
+           +(f.cond?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> si applicable</span>':'');
+  const d=new Date(ds+'T00:00:00');
+  return`<div class="yr-fiscal-item${isPast?' past':''}${isSoon?' soon':''}" style="border-left-color:${f.color}">
+    <div class="yr-fiscal-stamp" style="background:${stampColor}">
+      <div class="yr-fiscal-day">${d.getDate()}</div>
+      <div class="yr-fiscal-mon">${MON3[d.getMonth()]}</div>
+    </div>
+    <div class="yr-fiscal-body">
+      <div class="yr-fiscal-title">${badge}${f.title}${tag}</div>
+      <div class="yr-fiscal-desc">${f.desc}</div>
+    </div>
+  </div>`;
+}
+// Toutes les échéances fiscales à venir/récentes (année en cours + suivante,
+// même portée que getFiscalPseudoEvents), triées, pour l'onglet "Fiscal" de
+// la liste des Événements — les voir toutes d'un coup plutôt que dispersées
+// mois par mois parmi les autres onglets.
+function buildEventsFiscalHTML(){
+  const today=todayISO();
+  const y=new Date().getFullYear();
+  const items=relevantFiscalCalendar();
+  const all=[];
+  [y,y+1].forEach(year=>{
+    items.forEach(f=>all.push({f,ds:`${year}-${p(f.m)}-${p(f.d)}`}));
+  });
+  all.sort((a,b)=>a.ds.localeCompare(b.ds));
+  return`<div class="yr-fiscal">${all.map(x=>fiscalItemHTML(x.f,x.ds,today)).join('')}</div>`;
 }
 
 function light(hex){
@@ -4540,104 +4576,160 @@ function delGuest(){
 // ═══════════════════════════════════════════════════════════════
 //  EVENTS MODAL
 // ═══════════════════════════════════════════════════════════════
-function openEventsModal(){
+// Onglet actif de la liste (voir renderEvList) : une clé de mois
+// (année×12+mois, comme dans groups) ou 'fiscal'. Mémorisé au niveau module
+// pour survivre aux re-rendus déclenchés par un ajout/une modification
+// d'événement pendant que la modale reste ouverte.
+let evListActiveTab=null;
+// presetKey (optionnel) : ouvre directement sur ce mois plutôt que le mois
+// en cours — utilisé par openDayEvent pour retrouver un événement passé/
+// futur sans devoir d'abord naviguer jusqu'à son mois à la main.
+function openEventsModal(presetKey){
   byId('evListSearch').value='';
-  renderEvList();byId('modalEvents').style.display='flex';
+  if(presetKey!=null) evListActiveTab=presetKey;
+  else{
+    const todayD=new Date(todayISO()+'T00:00:00');
+    evListActiveTab=todayD.getFullYear()*12+todayD.getMonth();
+  }
+  renderEvList();
+  byId('modalEvents').style.display='flex';
 }
-
+function selectEvTab(key){
+  evListActiveTab=key;
+  renderEvList(byId('evListSearch').value);
+}
+const evBadge=(ds,col)=>{
+  const d=new Date(ds+'T00:00:00');
+  const lc=light(col);
+  return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+    <div class="evdate-day">${d.getDate()}</div>
+    <div class="evdate-mon">${MON3[d.getMonth()]}</div>
+  </div>`;
+};
+// Carte d'un événement/jour férié (voir renderEvList) — une échéance
+// fiscale a sa propre carte dédiée (fiscalItemHTML) : elle vit dans
+// l'onglet "Fiscal", plus mélangée mois par mois avec le reste.
+function evCardHTML(ev){
+  const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
+  const isSingle=ev.startDate===ev.endDate;
+  const dateHtml=isSingle
+    ? evBadge(ev.startDate,col)
+    : `<div class="evdate-range">${evBadge(ev.startDate,col)}<span class="evdate-arrow">→</span>${evBadge(ev.endDate,col)}</div>`;
+  if(ev.isHoliday){
+    return`<div class="evcard evcard-holiday">
+      ${dateHtml}
+      <div class="evcard-info">
+        <div class="evcard-title">${ev.title}</div>
+        <div class="evcard-time">Jour férié</div>
+      </div>
+    </div>`;
+  }
+  if(ev.isFiscal){
+    return`<div class="evcard evcard-holiday">
+      ${dateHtml}
+      <div class="evcard-info">
+        <div class="evcard-title">${ev.title}</div>
+        <div class="evcard-time">Échéance fiscale</div>
+      </div>
+    </div>`;
+  }
+  const timeStr=ev.startTime?(ev.endTime?`${ev.startTime} – ${ev.endTime}`:ev.startTime):'';
+  return`<div class="evcard" data-evid="${ev.id}" onclick="openEventEdit('${ev.id}')">
+    ${dateHtml}
+    <div class="evcard-info">
+      <div class="evcard-title">${ev.title}</div>
+      ${timeStr?`<div class="evcard-time">${timeStr}</div>`:''}
+      ${ev.prixNet>0?`<div class="evcard-time">${ev.prixNet.toLocaleString('fr-FR')} € générés</div>`:''}
+    </div>
+  </div>`;
+}
 function renderEvList(term){
   term=(term||'').trim().toLowerCase();
-  // Les jours fériés — et, de la même façon, les échéances du calendrier
-  // fiscal — ont une vraie existence dans cette liste (pas juste un repère
-  // dans la grille ou le panneau dédié de la vue Année), à côté des
-  // événements ajoutés à la main.
-  let sorted=[...S.events,...getHolidayPseudoEvents(),...getFiscalPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
-  if(term){
-    sorted=sorted.filter(ev=>{
-      if(ev.isHoliday||ev.isFiscal)return ev.title.toLowerCase().includes(term);
-      const g=ev.guestId?guest(ev.guestId):null;
-      return ev.title.toLowerCase().includes(term)||(g&&g.name.toLowerCase().includes(term));
-    });
-  }
-  if(!sorted.length){
-    byId('evList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun événement</p>';return;
-  }
-  const badge=(ds,col)=>{
-    const d=new Date(ds+'T00:00:00');
-    const lc=light(col);
-    return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
-      <div class="evdate-day">${d.getDate()}</div>
-      <div class="evdate-mon">${MON3[d.getMonth()]}</div>
-    </div>`;
-  };
-  // Regroupe par mois de début — un événement à cheval sur plusieurs mois
-  // reste rangé sous son mois de départ, son badge de dates (départ → fin)
-  // montrant déjà clairement qu'il déborde sur le(s) mois suivant(s).
-  // Clé numérique (année×12+mois) plutôt qu'une simple chaîne "année-mois" :
-  // une comparaison alphabétique aurait mal classé les mois à un chiffre
-  // (ex: "2026-9" > "2026-10" en tri de chaînes).
-  const todayD=new Date(todayISO()+'T00:00:00');
+  const today=todayISO();
+  const todayD=new Date(today+'T00:00:00');
   const todayKey=todayD.getFullYear()*12+todayD.getMonth();
+  const curYear=todayD.getFullYear();
+
+  // Recherche : liste plate, tout mélangé (événements, fériés, échéances
+  // fiscales) — chercher doit retrouver une échéance fiscale même si
+  // l'onglet "Fiscal" n'est pas ouvert, donc pas de vue par onglets ici.
+  if(term){
+    byId('evTabs').innerHTML='';
+    const sorted=[...S.events,...getHolidayPseudoEvents(),...getFiscalPseudoEvents()]
+      .sort((a,b)=>a.startDate.localeCompare(b.startDate))
+      .filter(ev=>{
+        if(ev.isHoliday||ev.isFiscal)return ev.title.toLowerCase().includes(term);
+        const g=ev.guestId?guest(ev.guestId):null;
+        return ev.title.toLowerCase().includes(term)||(g&&g.name.toLowerCase().includes(term));
+      });
+    byId('evList').innerHTML=sorted.length
+      ?sorted.map(evCardHTML).join('')
+      :'<p style="text-align:center;color:var(--gray);padding:20px">Aucun événement</p>';
+    return;
+  }
+
+  // Pas de recherche : un onglet par mois qui a du contenu (événements +
+  // fériés — pas les échéances fiscales, qui ont leur propre onglet dédié
+  // pour les voir toutes d'un coup, voir buildEventsFiscalHTML) + un
+  // onglet "Fiscal" à la fin. Clé numérique (année×12+mois) plutôt qu'une
+  // simple chaîne "année-mois" : une comparaison alphabétique aurait mal
+  // classé les mois à un chiffre (ex: "2026-9" > "2026-10" en tri de
+  // chaînes).
+  const sorted=[...S.events,...getHolidayPseudoEvents()].sort((a,b)=>a.startDate.localeCompare(b.startDate));
   const groups=[];
   let curGroup=null;
   sorted.forEach(ev=>{
     const sd=new Date(ev.startDate+'T00:00:00');
     const key=sd.getFullYear()*12+sd.getMonth();
     if(!curGroup||curGroup.key!==key){
-      curGroup={key,label:`${MON[sd.getMonth()]} ${sd.getFullYear()}`,events:[]};
+      curGroup={key,events:[]};
       groups.push(curGroup);
     }
     curGroup.events.push(ev);
   });
-  // Replié par défaut pour les mois déjà passés — dépliable au clic ; le mois
-  // en cours et les mois à venir restent ouverts d'emblée.
-  // En recherche, les mois passés restent dépliés (un résultat filtré cliqué
-  // par accident sous un chevron replié ne serait pas trouvé) — seule la
-  // navigation normale (sans recherche) replie les mois déjà passés.
-  let html=groups.map(g=>{
-    const isPast=!term&&g.key<todayKey;
-    const cardsHtml=g.events.map(ev=>{
-      const col=ev.isHoliday?'#6B6B6B':ev.isFiscal?ev.color:(ev.color||'#A8C5A0');
-      const isSingle=ev.startDate===ev.endDate;
-      const dateHtml=isSingle
-        ? badge(ev.startDate,col)
-        : `<div class="evdate-range">${badge(ev.startDate,col)}<span class="evdate-arrow">→</span>${badge(ev.endDate,col)}</div>`;
-      const timeStr=ev.startTime?(ev.endTime?`${ev.startTime} – ${ev.endTime}`:ev.startTime):'';
-      if(ev.isHoliday){
-        return`<div class="evcard evcard-holiday">
-          ${dateHtml}
-          <div class="evcard-info">
-            <div class="evcard-title">${ev.title}</div>
-            <div class="evcard-time">Jour férié</div>
-          </div>
-        </div>`;
-      }
-      if(ev.isFiscal){
-        return`<div class="evcard evcard-holiday">
-          ${dateHtml}
-          <div class="evcard-info">
-            <div class="evcard-title">${ev.title}</div>
-            <div class="evcard-time">Échéance fiscale</div>
-          </div>
-        </div>`;
-      }
-      return`<div class="evcard" data-evid="${ev.id}" onclick="openEventEdit('${ev.id}')">
-        ${dateHtml}
-        <div class="evcard-info">
-          <div class="evcard-title">${ev.title}</div>
-          ${timeStr?`<div class="evcard-time">${timeStr}</div>`:''}
-          ${ev.prixNet>0?`<div class="evcard-time">${ev.prixNet.toLocaleString('fr-FR')} € générés</div>`:''}
-        </div>
-      </div>`;
-    }).join('');
-    return`<div class="evmonth-group${isPast?' collapsed':''}">
-      <div class="evmonth-sep" onclick="this.parentElement.classList.toggle('collapsed')">
-        <span>${g.label}</span><span class="evmonth-chev">▾</span>
-      </div>
-      <div class="evmonth-body">${cardsHtml}</div>
-    </div>`;
-  }).join('');
-  byId('evList').innerHTML=html;
+
+  // Onglet actif : celui mémorisé s'il correspond encore à un mois affiché,
+  // sinon le mois en cours s'il a du contenu, sinon le premier mois
+  // disponible, sinon l'onglet Fiscal en dernier recours (n'arrive
+  // normalement jamais, les jours fériés couvrent déjà toute l'année).
+  if(evListActiveTab!=='fiscal'&&!groups.some(g=>g.key===evListActiveTab)){
+    evListActiveTab=groups.some(g=>g.key===todayKey)?todayKey
+      :(groups[0]?groups[0].key:'fiscal');
+  }
+  const tabLabel=key=>{
+    const m=((key%12)+12)%12, y=Math.floor(key/12);
+    return MON3[m]+(y!==curYear?` ${y}`:'');
+  };
+  // .evtab-dot repère le mois en cours indépendamment de l'onglet
+  // sélectionné, pour toujours savoir "où on en est" même en consultant un
+  // autre mois ou l'onglet Fiscal.
+  byId('evTabs').innerHTML=groups.map(g=>`<button type="button" class="evtab${g.key===evListActiveTab?' on':''}"
+      onclick="selectEvTab(${g.key})">${tabLabel(g.key)}${g.key===todayKey?'<span class="evtab-dot"></span>':''}</button>`).join('')
+    +`<button type="button" class="evtab${evListActiveTab==='fiscal'?' on':''}" onclick="selectEvTab('fiscal')">📅 Fiscal</button>`;
+
+  if(evListActiveTab==='fiscal'){
+    byId('evList').innerHTML=buildEventsFiscalHTML();
+    return;
+  }
+  const activeGroup=groups.find(g=>g.key===evListActiveTab);
+  if(!activeGroup||!activeGroup.events.length){
+    byId('evList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun événement</p>';
+    return;
+  }
+  // Repère "Aujourd'hui" dans le mois en cours, inséré à sa place
+  // chronologique — même sans événement ce jour précis (voir .ev-today-mark),
+  // pour toujours avoir un point de repère visuel dans la liste.
+  let cardsHtml='';
+  let markInserted=evListActiveTab!==todayKey;
+  activeGroup.events.forEach(ev=>{
+    if(!markInserted&&ev.startDate>=today){
+      cardsHtml+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
+      markInserted=true;
+    }
+    cardsHtml+=evCardHTML(ev);
+  });
+  if(!markInserted) cardsHtml+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
+  byId('evList').innerHTML=cardsHtml;
 }
 
 function openEventEdit(id,prefillDate){
@@ -7201,12 +7293,14 @@ function openDayEvent(ds){
     openEventEdit(null,ds);
     return;
   }
-  openEventsModal();
+  // Ouvre directement sur le mois de l'événement (voir openEventsModal) :
+  // avec les onglets, sa carte n'existe dans le DOM que si son mois est
+  // sélectionné — plus de volet à déplier comme avec les anciennes barres.
+  const sd=new Date(dayEvs[0].startDate+'T00:00:00');
+  openEventsModal(sd.getFullYear()*12+sd.getMonth());
   setTimeout(()=>{
     const card=document.querySelector(`.evcard[data-evid="${dayEvs[0].id}"]`);
     if(!card)return;
-    const group=card.closest('.evmonth-group');
-    if(group)group.classList.remove('collapsed');
     card.scrollIntoView({block:'center',behavior:'smooth'});
     card.classList.add('evcard-flash');
     setTimeout(()=>card.classList.remove('evcard-flash'),1200);
@@ -8572,38 +8666,10 @@ function renderYear(){
     </div>
   </div>`;
 
-  // Calendrier fiscal — voir FISCAL_CALENDAR / relevantFiscalCalendar()
-  // (défini en haut du fichier, réutilisé aussi par les pseudo-événements
-  // de la Grille/Semaine/liste Événements — voir getFiscalPseudoEvents).
-  const fiscalItems=relevantFiscalCalendar().map(f=>{
-    const ds=`${year}-${p(f.m)}-${p(f.d)}`;
-    const diff=daysBetween(today,ds);
-    const isPast=ds<today;
-    const isSoon=!isPast&&diff<=30;
-    const isUrgent=!isPast&&diff<=7;
-    let badge='';
-    if(isUrgent) badge=`<span class="yr-fiscal-badge" style="background:#C0392B">J-${diff}</span>`;
-    else if(isSoon) badge=`<span class="yr-fiscal-badge" style="background:#1D2820">J-${diff}</span>`;
-    const stampColor=isPast?'#BFBAB4':f.color;
-    const tag=(f.approx?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> ≈</span>':'')
-             +(f.cond?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> si applicable</span>':'');
-    return`<div class="yr-fiscal-item${isPast?' past':''}${isSoon?' soon':''}" style="border-left-color:${f.color}">
-      <div class="yr-fiscal-stamp" style="background:${stampColor}">
-        <div class="yr-fiscal-day">${f.d}</div>
-        <div class="yr-fiscal-mon">${MON3[f.m-1]}</div>
-      </div>
-      <div class="yr-fiscal-body">
-        <div class="yr-fiscal-title">${badge}${f.title}${tag}</div>
-        <div class="yr-fiscal-desc">${f.desc}</div>
-      </div>
-    </div>`;
-  }).join('');
-  const fiscalHTML=`<div class="yr-section yr-regl" onclick="this.classList.toggle('open')">
-    <div class="yr-section-title" style="cursor:pointer;margin-bottom:0;display:flex;justify-content:space-between;align-items:center">Calendrier fiscal<span class="yr-regl-chev">▾</span></div>
-    <div class="yr-regl-body" style="margin-top:10px">
-      <div class="yr-fiscal">${fiscalItems}</div>
-    </div>
-  </div>`;
+  // Calendrier fiscal : déplacé dans la liste des Événements (onglet
+  // "Fiscal", voir buildEventsFiscalHTML/renderEvList) pour voir toutes les
+  // échéances d'un coup au même endroit que les autres dates importantes,
+  // plutôt qu'un panneau séparé ici en plus.
 
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
   const chevR=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
@@ -8624,7 +8690,6 @@ function renderYear(){
     ${globalHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
-    ${fiscalHTML}
     ${reglHTML}
   </div>`;
 }
