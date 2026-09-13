@@ -770,7 +770,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-pie-val{font-weight:700;color:var(--dark);flex-shrink:0;width:64px;text-align:right;}
 .mch-group-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding-top:10px;border-top:1px dashed var(--light);}
 .mch-group-hd:first-of-type{margin-top:0;padding-top:0;border-top:none;}
-.mch-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);}
+/* Pilule lavande plutôt qu'un simple libellé gris nu — plus lisible pour
+   distinguer Ménage / Ajout manuel / Relevé bancaire les uns des autres. */
+.mch-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--green-deep);background:var(--lavender-bg);padding:3px 10px;border-radius:10px;
+  display:inline-block;}
 .mch-subtotal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);padding:4px 0 0;}
 /* Financial cards row */
 .month-fin{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -1250,9 +1254,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-subhd{padding:11px 10px 0;font-weight:700;font-size:12px;text-transform:uppercase;
   letter-spacing:.04em;color:var(--green);}
 /* Exception à la règle ci-dessus (vert moyen) : "Répartition par source" et
-   "Toutes les réservations" reprennent exactement la typo/couleur des
-   libellés Ménage/Relevé bancaire (.mch-group-name) au lieu du vert des
-   autres titres de module — voir subSection(title,inner,'yr-subhd-plain'). */
+   "Toutes les réservations" restent en gris plutôt qu'en vert, comme
+   l'étaient à l'origine les libellés Ménage/Relevé bancaire/Ajout manuel
+   (.mch-group-name, depuis passés en pilule lavande, voir plus bas) — voir
+   subSection(title,inner,'yr-subhd-plain'). */
 .yr-subhd-plain{font-size:11px;font-weight:700;color:var(--gray);}
 .yr-gauge{margin-bottom:10px;}
 .yr-gauge-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;}
@@ -6299,7 +6304,7 @@ function buildSourceRevGauge(entries){
     <div class="mch-pie-legend">${legendHTML}</div>
   </div>`;
 }
-function variableChargesForMonth(mStart,mEndExact,group){
+function variableChargesForMonth(mStart,mEndExact,group,manualOnly){
   const cats=S.settings.chargeCategories||[];
   const byCat={};
   cats.forEach(c=>{byCat[c.id]={label:c.label,total:0,excluded:!!c.excluded,count:0};});
@@ -6314,6 +6319,13 @@ function variableChargesForMonth(mStart,mEndExact,group){
     // d'avant la généralisation à N structures), sinon elle disparaîtrait
     // silencieusement de toute répartition filtrée par structure.
     if(group&&(t.group||defaultStructureId())!==group)return;
+    // manualOnly non fourni (undefined) : tout, sans distinction — appelé
+    // ainsi partout ailleurs (Répartition des charges, vue Année…). Passé
+    // en booléen (voir groupCardMonth → "Charges réelles") pour ne
+    // renvoyer que les transactions "+ Ajouter" (true) ou uniquement les
+    // lignes de relevé importées (false), sans jamais perdre de charges :
+    // les deux appels couvrent ensemble exactement le même total.
+    if(manualOnly!==undefined&&!!t.manual!==manualOnly)return;
     const cid=t.categoryId||'';
     if(!byCat[cid])byCat[cid]={label:'Non catégorisé',total:0,excluded:true,count:0};
     byCat[cid].total+=t.amount;
@@ -8476,24 +8488,63 @@ function renderMonth(){
     const collapsed=monthGroupCollapsed(gid);
     const st=groupStatsMonth(gid);
     const clean=structCleaningCostMonth(gid);
-    const bc=variableChargesForMonth(mStart,mEndExact,gid);
+    // Relevé bancaire (CSV importé) et Ajout manuel (bouton "+ Ajouter",
+    // t.manual===true) sont maintenant deux groupes distincts à l'écran
+    // — voir catRowsHTML plus bas — mais leurs totaux sont additionnés
+    // exactement pareil dans chargesEntries/chargesTotal : rien n'est
+    // perdu du chiffre global en les séparant visuellement.
+    const bc=variableChargesForMonth(mStart,mEndExact,gid,false);
+    const bcManual=variableChargesForMonth(mStart,mEndExact,gid,true);
     const catRows=Object.entries(bc.byCat).filter(([id,v])=>v.count>0).sort((a,b)=>b[1].total-a[1].total);
+    const catRowsManual=Object.entries(bcManual.byCat).filter(([id,v])=>v.count>0).sort((a,b)=>b[1].total-a[1].total);
     const chargesEntries={};
     if(clean.total>0)chargesEntries['Ménage']=clean.total;
     catRows.forEach(([,v])=>{if(!v.excluded)chargesEntries[v.label]=(chargesEntries[v.label]||0)+v.total;});
+    catRowsManual.forEach(([,v])=>{if(!v.excluded)chargesEntries[v.label]=(chargesEntries[v.label]||0)+v.total;});
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
 
-    // Charges de cette structure : ménage, puis relevé bancaire (import/
-    // ajout manuel, catégories dépliables sur clic — mêmes actions qu'avant
-    // cette refonte, juste déplacées dans le volet de leur structure).
-    // Petit boudin Ménage/Relevé bancaire en tête, en camaïeu lavande
-    // (même composant que la répartition par source, réutilisé tel quel
-    // pour ces deux seules entrées) — reste distinct du camembert de
-    // "Répartition des charges" juste après, qui détaille par catégorie.
-    let chargesBody=buildSourceRevGauge([
-      {label:'Ménage',val:clean.total,color:'#B2BBDA'},
-      {label:'Relevé bancaire',val:bc.total,color:'#7E89BE'}
-    ]);
+    // Rendu d'un groupe de transactions (Ajout manuel OU Relevé bancaire),
+    // catégorie par catégorie avec expansion au clic — factorisé pour ne
+    // pas dupliquer cette logique entre les deux groupes, qui ne diffèrent
+    // que par leur filtre manual/non-manual et le préfixe de clé
+    // d'expansion (bankExpandedCat, partagé, doit rester unique entre les
+    // deux groupes même si une même catégorie existe des deux côtés).
+    function catRowsHTML(rows,keyPrefix,manualOnly){
+      if(!rows.length){
+        return`<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune transaction ${manualOnly?'ajoutée':'importée'} pour ce mois.</div>`;
+      }
+      const txByCat={};
+      monthTransactions(mStart,mEndExact).filter(t=>t.direction==='Debit'&&(t.group||defaultStructureId())===gid&&!!t.manual===manualOnly).forEach(t=>{
+        const cid=t.categoryId||'';
+        if(!txByCat[cid])txByCat[cid]=[];
+        txByCat[cid].push(t);
+      });
+      return rows.map(([id,v])=>{
+        const key=keyPrefix+':'+id;
+        let rowHtml=`<div class="mch-row" style="cursor:pointer" onclick="event.stopPropagation();toggleBankCat('${key}')">
+          <span style="flex:1;font-size:13px;color:var(--dark)">${v.label}${v.excluded?' <span style="color:#bbb;font-size:10px">(hors charges)</span>':''} <span style="color:var(--gray);font-size:11px">(${v.count})</span></span>
+          <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}">${Math.round(v.total).toLocaleString('fr-FR')} €</span>
+        </div>`;
+        if(bankExpandedCat===key){
+          rowHtml+=(txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).map(t=>`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
+              <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
+              <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
+              <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
+              <select style="font-size:11px;border:1px solid var(--light);border-radius:6px;flex-shrink:0" onchange="setTransactionCategory('${t.id}',this.value)" onclick="event.stopPropagation()">
+                <option value="">Non catégorisé</option>
+                ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
+              </select>
+              <button class="mch-del" onclick="event.stopPropagation();deleteTransaction('${t.id}')" title="Supprimer">×</button>
+            </div>`).join('');
+        }
+        return rowHtml;
+      }).join('');
+    }
+
+    // Charges de cette structure : ménage, ajout manuel, puis relevé
+    // bancaire importé — trois groupes distincts (chacun son libellé en
+    // pilule lavande), plutôt que l'ajout manuel mêlé au relevé bancaire.
+    let chargesBody='';
     if(CLEANERS.length){
       chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
       chargesBody+=clean.rows.length
@@ -8505,45 +8556,20 @@ function renderMonth(){
       chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total Ménage</span><span>${clean.total.toLocaleString('fr-FR')} €</span></div>`;
     }
     chargesBody+=`<div class="mch-group-hd">
+      <span class="mch-group-name">Ajout manuel</span>
+      <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
+    </div>`;
+    chargesBody+=catRowsHTML(catRowsManual,gid+':manual',true);
+    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total ajout manuel</span><span>${Math.round(bcManual.total).toLocaleString('fr-FR')} €</span></div>`;
+    chargesBody+=`<div class="mch-group-hd">
       <span class="mch-group-name">Relevé bancaire</span>
       <div style="display:flex;gap:6px">
         <input type="file" id="bankCsvInput-${gid}" accept=".csv" style="display:none" onchange="handleBankFileChange(this,'${gid}')" onclick="event.stopPropagation()">
         <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();byId('bankCsvInput-${gid}').click()">Importer CSV</button>
-        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
       </div>
     </div>`;
-    if(!catRows.length){
-      chargesBody+=`<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune transaction importée pour ce mois.</div>`;
-    }else{
-      const txByCat={};
-      monthTransactions(mStart,mEndExact).filter(t=>t.direction==='Debit'&&(t.group||defaultStructureId())===gid).forEach(t=>{
-        const cid=t.categoryId||'';
-        if(!txByCat[cid])txByCat[cid]=[];
-        txByCat[cid].push(t);
-      });
-      catRows.forEach(([id,v])=>{
-        const key=gid+':'+id;
-        chargesBody+=`<div class="mch-row" style="cursor:pointer" onclick="event.stopPropagation();toggleBankCat('${key}')">
-          <span style="flex:1;font-size:13px;color:var(--dark)">${v.label}${v.excluded?' <span style="color:#bbb;font-size:10px">(hors charges)</span>':''} <span style="color:var(--gray);font-size:11px">(${v.count})</span></span>
-          <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}">${Math.round(v.total).toLocaleString('fr-FR')} €</span>
-        </div>`;
-        if(bankExpandedCat===key){
-          (txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).forEach(t=>{
-            chargesBody+=`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
-              <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
-              <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
-              <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
-              <select style="font-size:11px;border:1px solid var(--light);border-radius:6px;flex-shrink:0" onchange="setTransactionCategory('${t.id}',this.value)" onclick="event.stopPropagation()">
-                <option value="">Non catégorisé</option>
-                ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
-              </select>
-              <button class="mch-del" onclick="event.stopPropagation();deleteTransaction('${t.id}')" title="Supprimer">×</button>
-            </div>`;
-          });
-        }
-      });
-      chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total relevé bancaire</span><span>${Math.round(bc.total).toLocaleString('fr-FR')} €</span></div>`;
-    }
+    chargesBody+=catRowsHTML(catRows,gid+':bank',false);
+    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total relevé bancaire</span><span>${Math.round(bc.total).toLocaleString('fr-FR')} €</span></div>`;
     // Répartition des charges — module séparé (total + camembert), même
     // principe que la vue Année (voir plus bas dans le fichier) plutôt que
     // mêlé au détail Ménage/Relevé bancaire de "Charges réelles" ci-dessus.
