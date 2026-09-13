@@ -7624,36 +7624,24 @@ function thisWeek(){S.wStart=getMondayOf(todayISO());renderWeek();}
 // tous les autres, pour une lecture jour par jour plus claire (pas besoin
 // de refermer soi-même les précédents). Cliquer sur le jour déjà ouvert le
 // referme normalement, sans en rouvrir un autre à sa place. Revient
-// volontairement sur aujourd'hui à chaque retour sur la vue Semaine après
-// un rechargement complet (voir renderWeek) — comportement normal de
-// cette section, pas persisté.
+// volontairement sur aujourd'hui à chaque retour sur la vue Semaine — que
+// ce soit après un simple changement de vue (voir setView, qui remet
+// weekOpenDaysFor à null en la quittant) ou un rechargement complet de la
+// page — comportement normal de cette section, jamais mémorisé.
 function toggleWeekDay(ds){
   if(weekOpenDays.has(ds)) weekOpenDays.delete(ds);
   else weekOpenDays=new Set([ds]);
   renderWeek();
 }
-// Mémorise (localStorage, par appareil — pas Firestore, ce n'est qu'un
-// confort d'affichage, pas une donnée à synchroniser) l'état des sous-
-// volets À L'INTÉRIEUR d'un jour (Extras du jour, Table d'hôtes, Ménage…)
-// — pas quel jour est ouvert (voir toggleWeekDay ci-dessus, volontairement
-// non persisté). weekPanelState n'est qu'en mémoire JS et repart de zéro
-// à chaque rechargement complet de la page (fermeture de l'onglet/
-// l'appli, pas un simple changement de vue interne, déjà préservé sans
-// ça). Best-effort : échoue silencieusement en navigation privée ou
-// stockage plein plutôt que de casser la vue.
-function saveWeekPanelState(){
-  try{
-    localStorage.setItem('fiftinWeekPanelState',JSON.stringify({wStart:S.wStart,panelState:[...weekPanelState]}));
-  }catch(e){}
-}
-function loadWeekPanelState(){
-  try{ return JSON.parse(localStorage.getItem('fiftinWeekPanelState')); }
-  catch(e){ return null; }
-}
 
 // État replié/déplié d'un volet à l'intérieur d'un jour — voir weekPanelState.
 // Pas encore basculé manuellement (absent de la Map) : on retombe sur
-// defaultCollapsed (le calcul habituel, ex. replié si vide).
+// defaultCollapsed (le calcul habituel, ex. replié si vide). weekPanelState
+// survit aux re-rendus DANS la vue Semaine (synchro temps réel, changement
+// de jour ouvert…) mais doit repartir de zéro dès qu'on quitte la vue —
+// voir setView, qui le réinitialise en le quittant — pour que ces
+// sous-volets reviennent toujours fermés au prochain retour, jamais
+// mémorisés d'une visite à l'autre.
 function panelCollapsed(ds,cls,defaultCollapsed){
   const key=ds+':'+cls;
   return weekPanelState.has(key)?weekPanelState.get(key):defaultCollapsed;
@@ -7661,7 +7649,6 @@ function panelCollapsed(ds,cls,defaultCollapsed){
 function toggleTsecPanel(ds,cls,defaultCollapsed){
   const key=ds+':'+cls;
   weekPanelState.set(key,!panelCollapsed(ds,cls,defaultCollapsed));
-  saveWeekPanelState();
   renderWeek();
 }
 
@@ -7675,15 +7662,9 @@ function renderWeek(){
   const weekRelLabel=isCurrentWeek?'Cette semaine':isLastWeek?'Semaine dernière':isNextWeek?'Semaine prochaine':'';
   if(weekOpenDaysFor!==S.wStart){
     weekOpenDaysFor=S.wStart;
-    // Le jour ouvert revient toujours sur aujourd'hui (comportement normal
-    // de cette section, jamais persisté) — seul l'état des sous-volets à
-    // l'intérieur d'un jour est restauré (voir saveWeekPanelState), si
-    // c'est bien celui de cette semaine.
     weekOpenDays=new Set();
     if(today>=S.wStart&&today<wEnd) weekOpenDays.add(today);
-    const saved=loadWeekPanelState();
-    weekPanelState=(saved&&saved.wStart===S.wStart&&Array.isArray(saved.panelState))
-      ?new Map(saved.panelState):new Map();
+    weekPanelState=new Map();
   }
   const mondayDate=new Date(S.wStart+'T00:00:00');
   const sundayDate=new Date(addDays(S.wStart,6)+'T00:00:00');
@@ -8829,6 +8810,16 @@ function toggleGridZoom(){
 const PERSONNEL_ALLOWED_VIEWS=['grid'];
 function setView(v){
   if(currentRole==='personnel'&&!PERSONNEL_ALLOWED_VIEWS.includes(v))v='grid';
+  // En quittant la vue Semaine : referme les sous-volets à l'intérieur d'un
+  // jour (Extras du jour, Table d'hôtes, Ménage…, weekPanelState) ET le
+  // jour lui-même (weekOpenDaysFor=null force renderWeek à retomber sur
+  // aujourd'hui ouvert au prochain rendu, voir plus bas) — rien de tout ça
+  // ne doit rester mémorisé d'une visite à l'autre, y compris un simple
+  // changement de vue interne sans rechargement de page.
+  if(S.view==='week'&&v!=='week'){
+    weekPanelState=new Map();
+    weekOpenDaysFor=null;
+  }
   S.view=v;
   ['grid','today','week','month','year'].forEach(id=>{
     const w=byId(id+'Wrap');
