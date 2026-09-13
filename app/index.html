@@ -722,7 +722,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mocc-taxe span:last-child{font-weight:700;color:var(--dark);}
 .mbk-row{display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer;}
 .mbk-row:hover{opacity:.75;}
-.mbk-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* Petite barre verticale de couleur plutôt qu'un point — .mbk-row a déjà
+   align-items:center, donc reste bien centrée verticalement. */
+.mbk-dot{width:4px;height:16px;border-radius:2px;flex-shrink:0;}
 .mbk-name{flex:1;font-size:13px;font-weight:500;}
 .mbk-meta{font-size:11px;color:var(--gray);}
 .mbk-rev{font-size:12px;color:var(--green);font-weight:600;flex-shrink:0;}
@@ -1260,12 +1262,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-proj{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
-/* Fond lavande pâle + texte sombre plutôt que du lavande plein (illisible en
-   petit texte sur la carte blanche) — la barre de la jauge elle-même
-   (fillColor, plus bas) passe, elle, en lavande plein. */
-.yr-gauge.yr-gauge-warn .yr-gauge-lbl,
-.yr-gauge.yr-gauge-danger .yr-gauge-lbl{color:var(--green-deep);background:var(--lavender-bg);
-  padding:1px 7px;border-radius:9px;margin:-1px 0;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
 .yr-chart{display:flex;gap:3px;align-items:flex-end;height:96px;margin-bottom:6px;}
@@ -8929,17 +8925,18 @@ function renderYear(){
   }
 
   function nightsGauge(nights,limit,label){
+    // Exception à la règle lavande de gauge() ci-dessous : ce seuil reste
+    // en vert moyen, tout le temps (pas de virage lavande/alerte près de
+    // la limite, comme gauge() n'en fait plus non plus).
     const lbl=label||'Nuits plateformes';
     const pct=Math.min(100,nights/limit*100);
-    const cls=pct>=100?'yr-gauge-danger':pct>=80?'yr-gauge-warn':'';
-    const fillColor=cls?'#B2BBDA':'#354B38';
-    return`<div class="yr-gauge${cls?' '+cls:''}">
+    return`<div class="yr-gauge">
       <div class="yr-gauge-top">
-        <span class="yr-gauge-lbl">${lbl}${cls==='yr-gauge-danger'?' ⚠️':cls==='yr-gauge-warn'?' ⚡':''}</span>
+        <span class="yr-gauge-lbl">${lbl}</span>
         <span class="yr-gauge-thr">limite ${limit} nuits</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-real" style="width:${pct}%;background:${fillColor}"></div>
+        <div class="yr-gauge-real" style="width:${pct}%;background:var(--green)"></div>
       </div>
       <div class="yr-gauge-bot">
         <span style="font-size:10px;color:var(--gray)"><b>${nights}</b> nuits via Airbnb / Booking</span>
@@ -8949,12 +8946,14 @@ function renderYear(){
   }
 
   function gauge(realCA,projCA,threshold,color,label){
-    // Pas de traitement "alerte" (emoji ⚠️/⚡ + pilule colorée sur le
-    // titre, barre qui vire au lavande) quand on approche/dépasse le
-    // seuil — Franchise TVA doit rester écrit exactement comme les
-    // autres seuils, sans ce warning visuel. Toujours la couleur
-    // configurée pour ce seuil, deux calques (projeté pâle + réalisé
-    // plein), comme avant l'introduction de cette alerte.
+    // Toujours en lavande (sauf nightsGauge ci-dessus, resté vert moyen) —
+    // color (la couleur configurée pour ce seuil) n'est plus utilisée ici,
+    // gardée dans la signature pour ne pas casser l'appelant. Pas de
+    // traitement "alerte" (emoji ⚠️/⚡ + pilule colorée sur le titre, barre
+    // recolorée) quand on approche/dépasse le seuil — Franchise TVA doit
+    // rester écrit exactement comme les autres seuils, sans ce warning
+    // visuel. Deux calques (projeté pâle + réalisé plein), comme avant
+    // l'introduction de cette alerte.
     const projPct=Math.min(100,projCA/threshold*100);
     const realPct=Math.min(100,realCA/threshold*100);
     return`<div class="yr-gauge">
@@ -8963,8 +8962,8 @@ function renderYear(){
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-proj" style="width:${projPct}%;background:${color}44"></div>
-        <div class="yr-gauge-real" style="width:${realPct}%;background:${color}"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:#B2BBDA44"></div>
+        <div class="yr-gauge-real" style="width:${realPct}%;background:var(--lavender)"></div>
       </div>
       <div class="yr-gauge-bot">
         <span style="font-size:10px;color:var(--gray)">Réalisé <b>${Math.round(realCA).toLocaleString('fr-FR')} €</b></span>
@@ -9081,6 +9080,34 @@ function renderYear(){
     if(cleanCost>0)chargesEntries['Ménage']=(chargesEntries['Ménage']||0)+cleanCost;
     const chargesTotal=Object.values(chargesEntries).reduce((s,v)=>s+v,0);
     const sourceEntries=structSourceBreakdown(gid);
+    // Top 10 meilleurs clients de l'année pour cette structure (par CA
+    // décroissant) — même agrégation que gByGuest en vue Mois, mais sur
+    // toute l'année et sans volet extensible : un vrai "top", pas une
+    // liste complète à dérouler.
+    const YEAR_TOP_CLIENTS=10;
+    const gByGuestYear={};
+    st.bks.forEach(bk=>{
+      const gid2=bk.guestId||'?';
+      if(!gByGuestYear[gid2])gByGuestYear[gid2]={gid:gid2,bkCount:0,nights:0,rev:0};
+      const oS=bk.checkIn>yStart?bk.checkIn:yStart;
+      const oE=bk.checkOut<yEnd?bk.checkOut:yEnd;
+      gByGuestYear[gid2].bkCount++;
+      gByGuestYear[gid2].nights+=daysBetween(oS,oE);
+      gByGuestYear[gid2].rev+=getBookingRevForPeriod(bk,yStart,yEnd);
+    });
+    const topClientRows=Object.values(gByGuestYear).sort((a,b)=>b.rev-a.rev).slice(0,YEAR_TOP_CLIENTS);
+    const topClientsBody=topClientRows.length?`<div class="mbk-clients">`
+      +topClientRows.map(row=>{
+        const g=guest(row.gid);
+        return`<div class="mbk-row" onclick="event.stopPropagation();openGuestEdit('${row.gid}')">
+          <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
+          <div class="mbk-name">${g?g.name:'?'}</div>
+          <div class="mbk-meta">${row.bkCount > 1 ? row.bkCount+' rés · ' : ''}${row.nights}n</div>
+          ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
+        </div>`;
+      }).join('')
+      +`</div>`
+      :'<div class="yr-chart-nodata">Aucune réservation pour cette structure</div>';
     const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel">
       <div class="yr-subhd ${titleClass}">${title}</div>
       <div class="tsec-body">${inner}</div>
@@ -9116,7 +9143,8 @@ function renderYear(){
           ${platStatHTML}
         </div>
         ${gaugesCardHTML}
-        ${subSection('Revenus par mois',structMonthlyChart(gid,color))}
+        ${subSection('Revenus par mois',structMonthlyChart(gid,'var(--green)'))}
+        ${subSection(topClientRows.length?`Top ${topClientRows.length} client${topClientRows.length>1?'s':''}`:'Top clients',topClientsBody)}
         ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
