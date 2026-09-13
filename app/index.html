@@ -556,16 +556,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-toprow{display:grid;grid-template-columns:2fr 1fr;gap:10px;}
 .wsm-toprow .wsm-total{padding:16px 10px 14px;}
 .wsm-toprow .wsm-occ .wsm-val{font-size:26px;}
-/* Cases qui n'affichent pas un montant en euros (pourcentage, nombre de
-   nuits/séjours…) : fond lavande plutôt que vert, texte blanc inchangé
-   (hérité de .mstat-card.mstat-rev, déjà blanc par défaut) — pour une
-   vraie différence visuelle avec les autres cases, restées vertes.
-   Ne reste plus que "Durée moyenne de séjour" (Année, globalCard) —
-   Remplissage/Occupation (%), Nuitées/Repas (.wsm-item) et Nuits
-   plateformes sont repassés au vert par ailleurs. 3 classes : battent
-   .mstat-card.mstat-rev{background:var(--green)} (2 classes), quel que
-   soit l'ordre dans la feuille. */
-.mstat-card.mstat-rev.stat-nonmoney{background:var(--lavender);border-color:var(--lavender);}
 .today-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .tsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
@@ -3979,7 +3969,7 @@ function renderToday(){
   </div>
   <div class="yr-stats" style="margin-top:14px">
     <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
-    <div class="mstat-card mstat-rev stat-nonmoney"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
     <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
