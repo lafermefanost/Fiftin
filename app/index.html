@@ -7623,11 +7623,32 @@ function thisWeek(){S.wStart=getMondayOf(todayISO());renderWeek();}
 // Un seul jour ouvert à la fois : ouvrir un jour referme automatiquement
 // tous les autres, pour une lecture jour par jour plus claire (pas besoin
 // de refermer soi-même les précédents). Cliquer sur le jour déjà ouvert le
-// referme normalement, sans en rouvrir un autre à sa place.
+// referme normalement, sans en rouvrir un autre à sa place. Revient
+// volontairement sur aujourd'hui à chaque retour sur la vue Semaine après
+// un rechargement complet (voir renderWeek) — comportement normal de
+// cette section, pas persisté.
 function toggleWeekDay(ds){
   if(weekOpenDays.has(ds)) weekOpenDays.delete(ds);
   else weekOpenDays=new Set([ds]);
   renderWeek();
+}
+// Mémorise (localStorage, par appareil — pas Firestore, ce n'est qu'un
+// confort d'affichage, pas une donnée à synchroniser) l'état des sous-
+// volets À L'INTÉRIEUR d'un jour (Extras du jour, Table d'hôtes, Ménage…)
+// — pas quel jour est ouvert (voir toggleWeekDay ci-dessus, volontairement
+// non persisté). weekPanelState n'est qu'en mémoire JS et repart de zéro
+// à chaque rechargement complet de la page (fermeture de l'onglet/
+// l'appli, pas un simple changement de vue interne, déjà préservé sans
+// ça). Best-effort : échoue silencieusement en navigation privée ou
+// stockage plein plutôt que de casser la vue.
+function saveWeekPanelState(){
+  try{
+    localStorage.setItem('fiftinWeekPanelState',JSON.stringify({wStart:S.wStart,panelState:[...weekPanelState]}));
+  }catch(e){}
+}
+function loadWeekPanelState(){
+  try{ return JSON.parse(localStorage.getItem('fiftinWeekPanelState')); }
+  catch(e){ return null; }
 }
 
 // État replié/déplié d'un volet à l'intérieur d'un jour — voir weekPanelState.
@@ -7640,6 +7661,7 @@ function panelCollapsed(ds,cls,defaultCollapsed){
 function toggleTsecPanel(ds,cls,defaultCollapsed){
   const key=ds+':'+cls;
   weekPanelState.set(key,!panelCollapsed(ds,cls,defaultCollapsed));
+  saveWeekPanelState();
   renderWeek();
 }
 
@@ -7653,9 +7675,15 @@ function renderWeek(){
   const weekRelLabel=isCurrentWeek?'Cette semaine':isLastWeek?'Semaine dernière':isNextWeek?'Semaine prochaine':'';
   if(weekOpenDaysFor!==S.wStart){
     weekOpenDaysFor=S.wStart;
+    // Le jour ouvert revient toujours sur aujourd'hui (comportement normal
+    // de cette section, jamais persisté) — seul l'état des sous-volets à
+    // l'intérieur d'un jour est restauré (voir saveWeekPanelState), si
+    // c'est bien celui de cette semaine.
     weekOpenDays=new Set();
     if(today>=S.wStart&&today<wEnd) weekOpenDays.add(today);
-    weekPanelState=new Map();
+    const saved=loadWeekPanelState();
+    weekPanelState=(saved&&saved.wStart===S.wStart&&Array.isArray(saved.panelState))
+      ?new Map(saved.panelState):new Map();
   }
   const mondayDate=new Date(S.wStart+'T00:00:00');
   const sundayDate=new Date(addDays(S.wStart,6)+'T00:00:00');
