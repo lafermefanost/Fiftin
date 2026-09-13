@@ -1028,13 +1028,23 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .rating-chip.on{filter:grayscale(0);opacity:1;border-color:var(--green);background:#F7FAF6;}
 
 /* Mobile bottom nav */
+/* Marge gauche/droite/bas en plus du strict nécessaire (14px/10px) — sur
+   un téléphone à écran arrondi (coins bas surtout), les icônes des
+   boutons extrêmes (Grille, Année) sinon collées au bord se faisaient
+   "manger" par l'arrondi. env(safe-area-inset-*) ajoute la marge système
+   réelle par-dessus si elle est plus grande (encoche, barre de geste). */
 .mbnav{display:none;height:54px;background:var(--white);
-  border-top:1px solid var(--light);flex-shrink:0;}
+  border-top:1px solid var(--light);flex-shrink:0;
+  padding-left:max(14px,env(safe-area-inset-left));
+  padding-right:max(14px,env(safe-area-inset-right));
+  padding-bottom:max(10px,env(safe-area-inset-bottom));}
 .mbnav-btn{flex:1;border:none;background:transparent;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Jost',sans-serif;font-size:9px;color:var(--gray);cursor:pointer;
   letter-spacing:.03em;text-transform:uppercase;}
-.mbnav-btn.on{color:var(--green);background:#E8E3DB;border-radius:10px;}
+/* Essai : fond lavande plutôt que le beige-gris d'origine (#E8E3DB), pour
+   voir le rendu — à repasser en arrière si ça ne convainc pas. */
+.mbnav-btn.on{color:var(--green);background:var(--lavender-bg);border-radius:10px;}
 .mbnav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
 
 @media(max-width:599px){
