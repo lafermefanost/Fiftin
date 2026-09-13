@@ -6433,8 +6433,12 @@ function openSettings(){
   renderSettings();
   byId('modalSettings').style.display='flex';
 }
+// Accordéon : ouvrir une section referme celle qui était ouverte — plus
+// facile à lire qu'avoir plusieurs volets dépliés en même temps.
 function toggleSettingsPanel(id){
-  settingsPanelOpen[id]=!settingsPanelOpen[id];
+  const wasOpen=!!settingsPanelOpen[id];
+  settingsPanelOpen={};
+  if(!wasOpen)settingsPanelOpen[id]=true;
   if(id==='equipe'&&settingsPanelOpen[id])loadTeamMembers();
   renderSettings();
 }
