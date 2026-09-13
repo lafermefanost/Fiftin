@@ -1033,8 +1033,12 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    boutons extrêmes (Grille, Année) sinon collées au bord se faisaient
    "manger" par l'arrondi. env(safe-area-inset-*) ajoute la marge système
    réelle par-dessus si elle est plus grande (encoche, barre de geste). */
+/* gap:6px : sans lui, les boutons (flex:1) se touchent bord à bord et le
+   fond arrondi de l'onglet actif (.mbnav-btn.on) déborde presque sur son
+   voisin — on dirait que les deux pastilles se chevauchent en passant de
+   l'une à l'autre. */
 .mbnav{display:none;height:54px;background:var(--white);
-  border-top:1px solid var(--light);flex-shrink:0;
+  border-top:1px solid var(--light);flex-shrink:0;gap:6px;
   padding-top:4px;
   padding-left:max(14px,env(safe-area-inset-left));
   padding-right:max(14px,env(safe-area-inset-right));
