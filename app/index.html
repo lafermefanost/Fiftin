@@ -539,7 +539,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;}
 .bkp-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;
   cursor:pointer;padding:0;line-height:1;}
-#weekWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
+/* Essai (à retirer si ça ne convainc pas) : remplace le vert (foncé et
+   moyen) par #5C4BFE, sur la vue Semaine seulement — les composants
+   internes lisent tous var(--green)/var(--green-deep), donc les
+   redéfinir ici pour ce seul conteneur suffit sans toucher au reste de
+   l'appli (header, autres vues) ni dupliquer chaque règle une à une. */
+#weekWrap{--green:#5C4BFE;--green-deep:#5C4BFE;
+  flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
 .week-summary{display:flex;flex-direction:column;gap:10px;}
@@ -549,7 +555,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
 .wsm-lbl{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wsm-sub{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;}
-.wsm-total{background:#354B38;border-radius:12px;padding:16px 10px 14px;
+.wsm-total{background:var(--green);border-radius:12px;padding:16px 10px 14px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
 .wsm-total .wsm-val{font-size:30px;}
 .wsm-total .wsm-lbl{font-size:11px;}
