@@ -540,14 +540,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .bkp-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;
   cursor:pointer;padding:0;line-height:1;}
 /* Essai (à retirer si ça ne convainc pas) : remplace le vert (foncé et
-   moyen) par #5444EB, sur la vue Semaine seulement — même teinte que
-   #5C4BFE (la préférée, HSL 246°), luminosité et saturation encore un
-   peu réduites par rapport à #6354F5 (246°/65%/89% → 246°/60%/81%)
-   pour continuer d'adoucir sans changer le ton. Les composants internes
+   moyen) par #3F2DE9, sur la vue Semaine seulement — même teinte que
+   #5C4BFE (la préférée, HSL 246°) et même saturation que #5444EB (81%),
+   luminosité encore un peu réduite (246°/59%/81% → 246°/54%/81%) pour
+   continuer d'adoucir sans changer le ton. Les composants internes
    lisent tous var(--green)/var(--green-deep), donc les redéfinir ici
    pour ce seul conteneur suffit sans toucher au reste de l'appli
    (header, autres vues) ni dupliquer chaque règle une à une. */
-#weekWrap{--green:#5444EB;--green-deep:#5444EB;
+#weekWrap{--green:#3F2DE9;--green-deep:#3F2DE9;
   flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
