@@ -20,6 +20,16 @@ html,body{height:100%;overflow:hidden;}
 :root{
   --cream:#EFEEEA; --earth:#1D2820; --green:#354B38; --green-deep:#1D2820; --dark:#2C2C2C;
   --lavender:#B2BBDA; --lavender-bg:#E7E9F1;
+  /* Essai (à retirer si ça ne convainc pas — un `git revert` de ce commit
+     suffit) : deux variantes vertes de --lavender/--lavender-bg, même
+     luminosité/saturation, juste la teinte de --green à la place du
+     bleu-violet (calculé en HSL). Utilisées uniquement pour les badges
+     purement informatifs (tags, bandeaux "a des éléments", pilules de
+     catégorie) — le lavande d'origine reste inchangé partout où il sert
+     d'état interactif (nav sélectionnée, filtre actif, focus, sync en
+     cours, jauges, bouton mail) : voir les usages de --lavender restants
+     dans le fichier. */
+  --green-mid:#B2DAB7; --green-bg:#E7F1E8;
   /* Jaune d'accent : réservé aux actions du client (résa, création de compte),
      jamais aux catégories, statuts ou "+ ajouter" génériques des réglages. */
   --yellow:#DEEB82;
@@ -327,14 +337,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .pt td.c-menage{min-width:110px;max-width:170px;font-size:10px;text-align:center;}
 .pt td.c-event{min-width:150px;max-width:320px;font-size:10px;padding:1px 4px;}
 
-.mtag{display:inline-block;background:var(--lavender-bg);border-radius:3px;
+.mtag{display:inline-block;background:var(--green-bg);border-radius:3px;
   padding:1px 4px;font-size:9px;font-weight:600;color:var(--earth);margin:1px;}
 .etag{display:inline-block;border-radius:3px;padding:1px 6px;
   font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:125px;}
-/* Jour férié : même sobriété que .mtag (fond lavande pâle, texte vert foncé)
+/* Jour férié : même sobriété que .mtag (fond vert pâle, texte vert foncé)
    plutôt que la couleur pleine et propre à chaque événement de .etag. */
-.holiday-tag{display:inline-block;background:var(--lavender-bg);border-radius:3px;
+.holiday-tag{display:inline-block;background:var(--green-bg);border-radius:3px;
   padding:1px 6px;font-size:10px;font-weight:500;color:var(--earth);}
 
 /* ─── DINNER NIGHT CHIPS ───────────────────────────────────── */
@@ -451,25 +461,25 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 10px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
 .tsec-hd:active{filter:brightness(.96);}
 .tsec-hd{background:var(--light);color:var(--gray);}
-.tsec-hd.has-items{background:var(--lavender);color:var(--green-deep);}
+.tsec-hd.has-items{background:var(--green-mid);color:var(--green-deep);}
 /* "Événements du mois"/"de la semaine" (.tsec-panel.ev) : texte + picto
-   blancs plutôt que vert foncé sur ce même fond lavande — l'icône
+   blancs plutôt que vert foncé sur ce même fond vert — l'icône
    (EVENT_ICON, stroke="currentColor") suit automatiquement. */
 .tsec-panel.ev>.tsec-hd.has-items{color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
 .tsec-count{margin-left:auto;background:#fff;color:var(--dark)!important;border-radius:12px;padding:4px 13px;font-size:15px;font-weight:700;}
-/* "Événements du mois"/"de la semaine" : chiffre en lavande plutôt que
-   noir/gris foncé, pour rester dans la même famille de couleur que le
-   fond lavande de son bandeau (.tsec-hd.has-items) plutôt qu'un simple
-   badge neutre comme les autres volets (Ménage, Table d'hôtes…). */
-.tsec-panel.ev .tsec-count{color:var(--lavender)!important;}
+/* "Événements du mois"/"de la semaine" : chiffre en vert (--green-mid)
+   plutôt que noir/gris foncé, pour rester dans la même famille de
+   couleur que le fond de son bandeau (.tsec-hd.has-items) plutôt qu'un
+   simple badge neutre comme les autres volets (Ménage, Table d'hôtes…). */
+.tsec-panel.ev .tsec-count{color:var(--green-mid)!important;}
 .tsec-count span{color:var(--dark);}
 /* Le chiffre affiché est dans ce <span> imbriqué (voir tsec-count span
    ci-dessus) — sa propre couleur explicite ignorait sinon celle posée
    sur .tsec-count parent, qui ne s'hérite pas à travers une règle
    directe comme celle-ci. */
-.tsec-panel.ev .tsec-count span{color:var(--lavender)!important;}
+.tsec-panel.ev .tsec-count span{color:var(--green-mid)!important;}
 .tsec-chev{font-size:11px;opacity:.6;transition:transform .2s;margin-left:4px;}
 .tsec-panel.collapsed>.tsec-hd .tsec-chev{transform:rotate(-90deg);}
 .tsec-body{background:var(--white);padding:10px 10px 6px;}
@@ -608,7 +618,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
-.dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
+.dep-arr-num.has-val{background:var(--green-mid);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
@@ -625,7 +635,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .thsum-menu-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .thsum-menu-row:last-child{margin-bottom:0;}
 .thsum-menu-tag{flex:none;width:56px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.04em;color:var(--earth);background:var(--lavender-bg);border-radius:6px;padding:4px 2px;}
+  letter-spacing:.04em;color:var(--earth);background:var(--green-bg);border-radius:6px;padding:4px 2px;}
 .thsum-menu-input{flex:1;min-width:0;border:none;border-bottom:1px solid var(--light);background:transparent;
   font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);padding:4px 2px;outline:none;}
 .thsum-menu-input::placeholder{color:var(--gray);}
@@ -770,10 +780,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-pie-val{font-weight:700;color:var(--dark);flex-shrink:0;width:64px;text-align:right;}
 .mch-group-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding-top:10px;border-top:1px dashed var(--light);}
 .mch-group-hd:first-of-type{margin-top:0;padding-top:0;border-top:none;}
-/* Pilule lavande plutôt qu'un simple libellé gris nu — plus lisible pour
+/* Pilule vert pâle plutôt qu'un simple libellé gris nu — plus lisible pour
    distinguer Ménage / Ajout manuel / Relevé bancaire les uns des autres. */
 .mch-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--green-deep);background:var(--lavender-bg);padding:3px 10px;border-radius:10px;
+  color:var(--green-deep);background:var(--green-bg);padding:3px 10px;border-radius:10px;
   display:inline-block;}
 .mch-subtotal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);padding:4px 0 0;}
 /* Financial cards row */
