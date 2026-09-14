@@ -540,14 +540,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .bkp-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;
   cursor:pointer;padding:0;line-height:1;}
 /* Essai (à retirer si ça ne convainc pas) : remplace le vert (foncé et
-   moyen) par #5446DF, sur la vue Semaine seulement — même teinte que
-   #5C4BFE (la préférée, HSL 246°), même luminosité que #4F3FE6 (57%),
-   saturation encore un peu baissée (246°/57%/77% → 246°/57%/71%) car
-   "c'est encore un peu trop vibrant". Les composants internes lisent
-   tous var(--green)/var(--green-deep), donc les redéfinir ici pour ce
-   seul conteneur suffit sans toucher au reste de l'appli (header,
-   autres vues) ni dupliquer chaque règle une à une. */
-#weekWrap{--green:#5446DF;--green-deep:#5446DF;
+   moyen) par #584ADB, sur la vue Semaine seulement — même teinte que
+   #5C4BFE (la préférée, HSL 246°), même luminosité (57%), saturation
+   très légèrement rebaissée (246°/57%/71% → 246°/57%/67%) car "très
+   très légèrement moins de vibrance encore pour pas être trop violent
+   pour les yeux". Les composants internes lisent tous var(--green)/
+   var(--green-deep), donc les redéfinir ici pour ce seul conteneur
+   suffit sans toucher au reste de l'appli (header, autres vues) ni
+   dupliquer chaque règle une à une. */
+#weekWrap{--green:#584ADB;--green-deep:#584ADB;
   flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
