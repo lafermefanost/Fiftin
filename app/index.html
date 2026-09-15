@@ -5684,7 +5684,10 @@ function setExtDinerExtra(ds,extId,itemId,delta){
   if(nv===0)delete e.extras[itemId];
   else e.extras[itemId]=nv;
   if(!Object.keys(e.extras).length)delete e.extras;
-  openExtrasId='ext-'+extId;
+  // Même correctif que setExtra : id scopé par jour, sinon le volet rouvert
+  // par renderWeek() juste après ne retrouve pas sa carte (xe-ext-id-ds) et
+  // se referme visuellement à chaque clic sur un extra.
+  openExtrasId='ext-'+extId+'-'+ds;
   persist();
   renderToday();
   if(S.view==='week')renderWeek();
@@ -7330,13 +7333,23 @@ function setExtra(bid,ds,itemId,delta){
   if(nv===0)delete bk.extras[ds][itemId];
   else bk.extras[ds][itemId]=nv;
   if(!Object.keys(bk.extras[ds]).length)delete bk.extras[ds];
-  openExtrasId=bid;
+  // id scopé par jour (voir stayCard/tcard-extbtn) : sans le -ds, le volet
+  // rouvert plus bas par renderWeek() (xe-+openExtrasId) ne retrouvait pas
+  // sa carte et retombait fermé après chaque clic.
+  openExtrasId=bid+'-'+ds;
   persist();
   renderToday();
   if(byId('modalBooking').style.display==='flex'&&editBid===bid){
     renderModalExtras();
     updateModalTotal();
   }
+  // Sans ça, un extra/repas ajouté depuis la carte "Extras du jour" (vue
+  // Semaine) ne s'affichait qu'après avoir quitté la vue et qu'elle se
+  // redessine — persist() et bk.extras étaient bien à jour, mais rien ne
+  // redemandait à renderWeek()/renderMonth() de relire cet état pendant
+  // qu'on restait sur la vue (setExtraEv/setExtDinerExtra le font déjà).
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
 }
 function getExtrasDayTotal(bk,ds){
   if(!bk.extras||!bk.extras[ds])return 0;
