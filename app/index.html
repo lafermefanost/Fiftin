@@ -5609,6 +5609,12 @@ function toggleDinnerNight(bid,ds,checked){
   else delete b.dinnerNights[ds];
   persist();
   renderGrid();
+  // Manquait ici (voir toggleExtDinerMeal juste en dessous, qui l'a déjà) :
+  // sans ça, le nombre de repas affiché dans le panneau "Table d'hôtes" de
+  // la Vue Semaine (derrière ce modal) restait figé tant qu'on ne quittait
+  // pas la vue — seul le total à l'intérieur du modal (renderTHBody) se
+  // mettait à jour.
+  if(S.view==='week')renderWeek();
   renderTHBody(ds);
 }
 
