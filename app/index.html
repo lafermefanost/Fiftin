@@ -4798,6 +4798,14 @@ function saveGuest(){
     S.guests.push({id:uid(),...data});
   }
   persist();closeM('modalGuestEdit');renderGrid();
+  // Même défaut que setExtra/toggleDinnerNight/setMenuField (voir leurs
+  // commentaires) : un client peut être édité (nom/couleur) depuis la vue
+  // Semaine/Mois/Jour (modalGuestEdit ouvert par-dessus modalBooking) — sans
+  // ça, sa fiche y restait affichée avec l'ancien nom/couleur jusqu'au
+  // prochain changement de vue.
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
   if(byId('modalBooking').style.display==='flex')renderGPicker();
 }
 
@@ -4808,6 +4816,12 @@ function delGuest(){
   S.guests=S.guests.filter(g=>g.id!==editGid);
   if(nb) S.bookings=S.bookings.filter(b=>b.guestId!==editGid);
   persist();closeM('modalGuestEdit');renderGrid();
+  // Idem saveGuest : les réservations de ce client (si supprimées avec lui)
+  // doivent disparaître immédiatement des autres vues, pas seulement de la
+  // Grille.
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -5938,6 +5952,13 @@ function setMenuField(ds,field,val){
   if(!S.menus[ds])S.menus[ds]={entree:'',plat:'',dessert:''};
   S.menus[ds][field]=val;
   persist();
+  // Même défaut que setExtra/toggleDinnerNight (voir leurs commentaires) :
+  // sans ça, le bandeau "Table d'hôtes" de la Vue Semaine ne passait en
+  // surbrillance (has-items) qu'au retour sur la vue après avoir tapé un
+  // premier menu — que ce champ soit édité en inline (thsum-menu-input)
+  // ou depuis le modal (th-menu-*), le champ lui-même reste correct dans
+  // les deux cas (sa propre valeur DOM), seul ce bandeau était en retard.
+  if(S.view==='week')renderWeek();
 }
 
 function daysBetween(d1,d2){
@@ -7294,6 +7315,11 @@ function updateCatalogItem(id,field,value){
   S.catalog[i][field]=value;
   saveCatalog();
   if(db)pushToFirebase();
+  // Le catalogue se modifie aussi depuis le lien "Modifier le catalogue"
+  // affiché directement dans le panneau Extras de la vue Semaine — sans ça,
+  // les chips derrière (nom/prix/emoji) restaient sur l'ancienne version
+  // du catalogue jusqu'au prochain changement de vue.
+  if(S.view==='week')renderWeek();
 }
 // Gère le select "catégorie" de chaque article, y compris le choix
 // "+ Nouvelle catégorie…" qui demande le nom via une invite.
@@ -7321,6 +7347,8 @@ function addCatalogItem(){
   saveCatalog();
   if(db)pushToFirebase();
   renderSettings();
+  // Voir updateCatalogItem juste au-dessus.
+  if(S.view==='week')renderWeek();
 }
 function delCatalogItem(id){
   if(!confirm('Supprimer cet article ?'))return;
@@ -7328,6 +7356,8 @@ function delCatalogItem(id){
   saveCatalog();
   if(db)pushToFirebase();
   renderSettings();
+  // Voir updateCatalogItem juste au-dessus.
+  if(S.view==='week')renderWeek();
 }
 
 function setExtra(bid,ds,itemId,delta){
