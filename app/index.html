@@ -630,6 +630,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);padding:4px 2px;outline:none;}
 .thsum-menu-input::placeholder{color:var(--gray);}
 .thsum-menu-input:focus{border-bottom-color:var(--green);}
+/* Livre de recettes (voir openRecipeBook) : lien discret au-dessus du menu
+   du jour, même style que "Modifier le catalogue" (.catalog-link). Liste
+   de plats déjà servis, un par ligne, tapotable pour le réutiliser tel
+   quel dans le champ du jour (voir pickRecipeAt) — pas de champ de
+   recherche ni de tri à choisir, juste triée du plus récent au plus
+   ancien : reste utilisable même avec beaucoup d'entrées sans rien à
+   configurer.*/
+.recipe-row{padding:8px 4px;border-bottom:1px solid var(--light);cursor:pointer;}
+.recipe-row:active{background:var(--cream);}
+.recipe-name{font-size:13px;font-weight:500;color:var(--dark);display:block;}
+.recipe-meta{font-size:11px;color:var(--gray);}
 /* Chambres à préparer (arrivées du jour) — tout en haut du volet Ménage,
    avant le personnel (voir renderWeek). Une cartouche par chambre (même
    fond/arrondi que .cln-stepper, .cleaner-btn plus bas dans ce même volet),
@@ -2011,6 +2022,28 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div class="macts">
       <button class="btn-p" onclick="closeM('modalTH')">OK</button>
     </div>
+  </div>
+</div>
+
+<!-- Datalists de suggestion (voir refreshMenuDatalists) : reliées aux champs
+     entrée/plat/dessert (inline vue Semaine + modal Table d'hôtes ci-dessus)
+     via list="…" — suggestion native du navigateur au clic dans le champ,
+     sans aucun composant à construire ni maintenir. -->
+<datalist id="dlEntree"></datalist>
+<datalist id="dlPlat"></datalist>
+<datalist id="dlDessert"></datalist>
+
+<!-- ─── LIVRE DE RECETTES ───────────────────────────────────────────────
+     Liste, par entrée/plat/dessert, de tout ce qui a déjà été servi (voir
+     menuBook) — nombre de fois et dernière date. Tapoter une ligne remplit
+     le champ du jour ouvert (pickRecipeAt) et referme ce modal. -->
+<div class="overlay" id="modalRecipes" style="display:none" onclick="ovClose(event,'modalRecipes')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">📖 Recettes déjà servies</div>
+      <button class="mclose" onclick="closeM('modalRecipes')">✕</button>
+    </div>
+    <div id="recipesBody"></div>
   </div>
 </div>
 
@@ -5600,16 +5633,20 @@ function renderTHBody(ds){
 
   const dm=getMenu(ds);
   bodyHtml+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--light)">
-    <div style="font-size:12px;font-weight:600;color:var(--gray);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Menu du jour</div>
-    <div class="fg"><label class="fl">Entrée</label><input class="fi" id="th-menu-entree" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
-    <div class="fg"><label class="fl">Plat</label><input class="fi" id="th-menu-plat" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
-    <div class="fg" style="margin-bottom:0"><label class="fl">Dessert</label><input class="fi" id="th-menu-dessert" placeholder="—" onchange="setMenuField('${ds}','dessert',this.value)"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em">Menu du jour</div>
+      <button type="button" class="catalog-link" onclick="openRecipeBook('${ds}')">📖 Recettes déjà servies</button>
+    </div>
+    <div class="fg"><label class="fl">Entrée</label><input class="fi" id="th-menu-entree" list="dlEntree" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
+    <div class="fg"><label class="fl">Plat</label><input class="fi" id="th-menu-plat" list="dlPlat" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
+    <div class="fg" style="margin-bottom:0"><label class="fl">Dessert</label><input class="fi" id="th-menu-dessert" list="dlDessert" placeholder="—" onchange="setMenuField('${ds}','dessert',this.value)"></div>
   </div>`;
 
   byId('thModalBody').innerHTML=bodyHtml;
   byId('th-menu-entree').value=dm.entree||'';
   byId('th-menu-plat').value=dm.plat||'';
   byId('th-menu-dessert').value=dm.dessert||'';
+  refreshMenuDatalists();
   const tot=active.filter(b=>b.dinnerNights&&b.dinnerNights[ds]).reduce((s,b)=>s+(b.nbPersons||2),0)
     + extDinersCount(ds);
   byId('thTotal').textContent=tot>0?`Total : ${tot} couvert${tot>1?'s':''}`:' ';
@@ -5959,6 +5996,93 @@ function setMenuField(ds,field,val){
   // ou depuis le modal (th-menu-*), le champ lui-même reste correct dans
   // les deux cas (sa propre valeur DOM), seul ce bandeau était en retard.
   if(S.view==='week')renderWeek();
+  // Le plat qu'on vient de taper doit pouvoir ressortir tout de suite dans
+  // les suggestions/le livre de recettes, pas seulement au prochain rendu.
+  refreshMenuDatalists();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  LIVRE DE RECETTES — voir modalRecipes dans le HTML. Rien de plus
+//  qu'une lecture de S.menus déjà là (aucune nouvelle donnée à saisir) :
+//  un plat = un texte identique (à la casse près) entré un jour ou l'autre
+//  dans entree/plat/dessert. Volontairement pas de recherche, pas de tri
+//  à choisir, pas de fiche détaillée (ingrédients, notes…) — juste le nom,
+//  combien de fois, la dernière date, trié du plus récent au plus ancien :
+//  ça reste utile même avec des dizaines de plats, sans rien à apprendre.
+// ═══════════════════════════════════════════════════════════════
+function menuBook(){
+  const cats=['entree','plat','dessert'];
+  const byCat={entree:{},plat:{},dessert:{}};
+  Object.keys(S.menus||{}).sort().forEach(ds=>{
+    const m=S.menus[ds];
+    cats.forEach(cat=>{
+      const v=(m[cat]||'').trim();
+      if(!v)return;
+      const key=v.toLowerCase();
+      const entry=byCat[cat][key]||(byCat[cat][key]={name:v,dates:[]});
+      entry.name=v; // garde l'orthographe/casse la plus récente
+      entry.dates.push(ds);
+    });
+  });
+  const out={};
+  cats.forEach(cat=>{
+    // dates poussées dans l'ordre chronologique (Object.keys triés plus
+    // haut) : la dernière de chaque tableau est donc la plus récente.
+    out[cat]=Object.values(byCat[cat]).sort((a,b)=>
+      b.dates[b.dates.length-1].localeCompare(a.dates[a.dates.length-1]));
+  });
+  return out;
+}
+// Suggestions natives du navigateur (voir <datalist> dans le HTML) —
+// rafraîchies à chaque saisie (setMenuField) et à chaque affichage d'un
+// endroit qui les utilise (renderWeek/renderTHBody), pour être à jour même
+// après une synchro qui aurait apporté de nouveaux menus depuis un autre
+// appareil.
+function refreshMenuDatalists(){
+  const book=menuBook();
+  const esc=s=>(s||'').replace(/"/g,'&quot;');
+  const opts=arr=>arr.map(it=>`<option value="${esc(it.name)}">`).join('');
+  byId('dlEntree').innerHTML=opts(book.entree);
+  byId('dlPlat').innerHTML=opts(book.plat);
+  byId('dlDessert').innerHTML=opts(book.dessert);
+}
+// ds mémorisé le temps que le modal reste ouvert : tapoter un plat remplit
+// le champ de CE jour précis, que le livre ait été ouvert depuis la vue
+// Semaine (inline) ou depuis le modal Table d'hôtes.
+let recipeBookDs=null;
+function openRecipeBook(ds){
+  recipeBookDs=ds;
+  renderRecipesBody();
+  byId('modalRecipes').style.display='flex';
+}
+function renderRecipesBody(){
+  const book=menuBook();
+  const labels={entree:'Entrée',plat:'Plat',dessert:'Dessert'};
+  let h='';
+  ['entree','plat','dessert'].forEach(cat=>{
+    const items=book[cat];
+    h+=`<div class="thsum-menu-tag" style="width:auto;display:inline-block;margin:14px 0 8px">${labels[cat]}</div>`;
+    h+=items.length?items.map((it,i)=>{
+      const n=it.dates.length;
+      const last=fmtDateShort(it.dates[it.dates.length-1]);
+      return `<div class="recipe-row" onclick="pickRecipeAt('${cat}',${i})">
+        <span class="recipe-name">${escHtml(it.name)}</span>
+        <span class="recipe-meta">${n}× · dernière fois le ${last}</span>
+      </div>`;
+    }).join(''):'<div class="tsec-empty">Rien servi pour l\'instant</div>';
+  });
+  byId('recipesBody').innerHTML=h;
+}
+function pickRecipeAt(cat,idx){
+  if(!recipeBookDs)return;
+  const it=menuBook()[cat][idx];
+  if(!it)return;
+  setMenuField(recipeBookDs,cat,it.name);
+  // Le modal Table d'hôtes, s'il est ouvert sur ce même jour, affiche ses
+  // propres champs (th-menu-*) — setMenuField ne les touche pas lui-même
+  // (voir son commentaire), donc on les resynchronise ici.
+  if(byId('modalTH').style.display==='flex'&&thCurrentDate===recipeBookDs)renderTHBody(recipeBookDs);
+  closeM('modalRecipes');
 }
 
 function daysBetween(d1,d2){
@@ -7756,6 +7880,11 @@ function toggleTsecPanel(ds,cls,defaultCollapsed){
 
 function renderWeek(){
   if(!S.wStart) S.wStart=getMondayOf(todayISO());
+  // Suggestions du champ menu (voir <datalist> dans le HTML) à jour à
+  // chaque affichage de cette vue — pas seulement après une saisie locale,
+  // au cas où une synchro depuis un autre appareil aurait apporté de
+  // nouveaux menus entretemps.
+  refreshMenuDatalists();
   const today=todayISO();
   const wEnd=addDays(S.wStart,7);
   const isCurrentWeek=S.wStart===getMondayOf(today);
@@ -8138,15 +8267,20 @@ function renderWeek(){
     // plat (superposées, plus lisibles qu'une seule ligne à trois colonnes
     // étroites), chacune avec son nom dans un petit cartouche coloré à
     // gauche (comme .mtag) plutôt qu'un libellé au-dessus ou un simple
-    // placeholder qui disparaît une fois rempli. setMenuField ne redessine
-    // rien de son côté (juste persist()) : pas de risque de perdre le
-    // volet ouvert ni la saisie en cours en tapant ici.
+    // placeholder qui disparaît une fois rempli. Chaque champ propose aussi
+    // les plats déjà servis (list=, voir refreshMenuDatalists) et le lien
+    // "Recettes déjà servies" ouvre le livre complet avec les dates
+    // (openRecipeBook) — voir CLAUDE.md/commentaires de setMenuField : ce
+    // dernier redessine bien la vue depuis le correctif de mise à jour en
+    // direct, donc pas de risque de perdre le volet ouvert en tapant ici.
     const escAttr=s=>(s||'').replace(/"/g,'&quot;');
+    const dlFor={entree:'dlEntree',plat:'dlPlat',dessert:'dlDessert'};
     const thMenuRow=(tag,field,val)=>`<div class="thsum-menu-row">
       <span class="thsum-menu-tag">${tag}</span>
-      <input class="thsum-menu-input" placeholder="—" value="${escAttr(val)}" onchange="setMenuField('${ds}','${field}',this.value)">
+      <input class="thsum-menu-input" list="${dlFor[field]}" placeholder="—" value="${escAttr(val)}" onchange="setMenuField('${ds}','${field}',this.value)">
     </div>`;
     const thMenuHTML=`<div class="thsum-menu-rows">
+      <button type="button" class="catalog-link" style="display:block;margin:0 0 6px auto" onclick="openRecipeBook('${ds}')">📖 Recettes déjà servies</button>
       ${thMenuRow('Entrée','entree',dm.entree)}
       ${thMenuRow('Plat','plat',dm.plat)}
       ${thMenuRow('Dessert','dessert',dm.dessert)}
