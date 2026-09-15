@@ -7020,12 +7020,25 @@ function toggleDinnerEnabled(checked){
   if(S.view==='week')renderWeek();
   if(S.view==='month')renderMonth();
 }
+// Rafraîchit les vues dont les totaux dépendent des tarifs/réglages
+// Services (nuitée, repas, petit-déj, taxe de séjour) — Réglages peut
+// s'ouvrir par-dessus n'importe laquelle d'entre elles (bouton engrenage,
+// toujours visible), donc ce sont les mêmes qu'ailleurs (voir setExtra,
+// toggleDinnerNight…) : sans ce rafraîchissement, les totaux déjà à
+// l'écran restaient sur l'ancien tarif jusqu'au prochain changement de vue.
+function refreshRevenueViews(){
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
+  if(S.view==='year')renderYear();
+}
 // Interrupteur global "petit-déjeuner" (réglages → Services)
 function toggleBreakfastEnabled(checked){
   S.settings.breakfastEnabled=checked;
   saveSettings();
   applySettings();
   if(byId('modalBooking').style.display==='flex'){renderBreakfastList();updateModalTotal();}
+  refreshRevenueViews();
 }
 // Interrupteur global "taxe de séjour" (réglages → Taxe de séjour)
 function toggleTaxeSejourEnabled(checked){
@@ -7033,23 +7046,27 @@ function toggleTaxeSejourEnabled(checked){
   saveSettings();
   applySettings();
   if(byId('modalBooking').style.display==='flex')updateModalTotal();
+  refreshRevenueViews();
 }
 
 // Tariff CRUD
 function addTariff(){
   S.settings.tariffHistory.push({id:uid(),from:todayISO(),th:25,bf:5,thExt:30});
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function delTariff(id){
   if(S.settings.tariffHistory.length<=1)return;
   S.settings.tariffHistory=S.settings.tariffHistory.filter(t=>t.id!==id);
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function updateTariff(id,field,val){
   const t=S.settings.tariffHistory.find(x=>x.id===id);
   if(!t)return;
   t[field]=val;
   saveSettings();
+  refreshRevenueViews();
 }
 
 // Taxe de séjour CRUD (même logique que les tarifs ci-dessus)
@@ -7060,11 +7077,13 @@ function addTaxeSejourRate(){
   const base=last?{...last}:{type:'fixed',amount:1};
   S.settings.taxeSejourHistory.push({...base,id:uid(),from:todayISO()});
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function delTaxeSejourRate(id){
   if(S.settings.taxeSejourHistory.length<=1)return;
   S.settings.taxeSejourHistory=S.settings.taxeSejourHistory.filter(t=>t.id!==id);
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function updateTaxeSejourRate(id,field,val){
   const t=S.settings.taxeSejourHistory.find(x=>x.id===id);
@@ -7074,6 +7093,7 @@ function updateTaxeSejourRate(id,field,val){
   // Le modal de réservation peut être ouvert avec la case déjà cochée : le montant
   // affiché doit refléter le nouveau taux sans attendre une fermeture/réouverture.
   if(byId('modalBooking').style.display==='flex')updateModalTotal();
+  refreshRevenueViews();
 }
 
 // Contrat de location — champ simple (pas une liste), un seul objet à jour.
@@ -7089,11 +7109,13 @@ function addRoom(){
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
   S.settings.rooms.push({id:uid(),name:'Chambre '+n,short:'C'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
   saveSettings();applySettings();renderSettings();renderGrid();
+  refreshRevenueViews();
 }
 function delRoom(id){
   if(!confirm('Supprimer cette chambre ? Les réservations associées ne seront pas supprimées.'))return;
   S.settings.rooms=S.settings.rooms.filter(r=>r.id!==id);
   saveSettings();applySettings();renderSettings();renderGrid();
+  refreshRevenueViews();
 }
 function updateRoom(id,field,val){
   const r=S.settings.rooms.find(x=>x.id===id);
@@ -7102,6 +7124,10 @@ function updateRoom(id,field,val){
   saveSettings();applySettings();
   if(field==='name'||field==='short')renderGrid();
   if(field==='maxPersons')renderSettings();
+  // Le nom/raccourci d'une chambre s'affiche aussi sur les cartes de la Vue
+  // Semaine (bcont-init) et dans "Taux par chambre" en Vue Mois — pas
+  // seulement dans la Grille (déjà couverte ci-dessus).
+  refreshRevenueViews();
 }
 
 // Tarif nuitée par chambre — CRUD
@@ -7115,12 +7141,14 @@ function addRoomTariff(roomId){
   for(let p=1;p<=max;p++)prices[p]=last&&last.prices&&last.prices[p]!=null?last.prices[p]:(p===1?100:125);
   r.tariffHistory.push({id:uid(),from:todayISO(),prices});
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function delRoomTariff(roomId,tid){
   const r=S.settings.rooms.find(x=>x.id===roomId);
   if(!r||!r.tariffHistory||r.tariffHistory.length<=1)return;
   r.tariffHistory=r.tariffHistory.filter(t=>t.id!==tid);
   saveSettings();renderSettings();
+  refreshRevenueViews();
 }
 function updateRoomTariff(roomId,tid,field,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
@@ -7128,6 +7156,7 @@ function updateRoomTariff(roomId,tid,field,val){
   if(!t)return;
   t[field]=val;
   saveSettings();
+  refreshRevenueViews();
 }
 function updateRoomTariffPrice(roomId,tid,pax,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
@@ -7136,6 +7165,7 @@ function updateRoomTariffPrice(roomId,tid,pax,val){
   if(!t.prices)t.prices={};
   t.prices[pax]=val;
   saveSettings();
+  refreshRevenueViews();
 }
 
 // Structures juridiques — CRUD
@@ -7213,6 +7243,14 @@ function delStructure(id){
   (S.settings.rooms||[]).forEach(r=>{if(r.group===id)r.group=fallback;});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshYearMaybe();
+  // refreshYearMaybe() ne couvre que la Vue Année (différé exprès, voir son
+  // commentaire) — la Vue Mois affiche aussi le nom de chaque structure
+  // (en-tête de carte) et la Vue Semaine le sélecteur de structure du volet
+  // Ménage (structsForClean) quand il y en a plusieurs : sans ça, ils
+  // restaient sur l'ancien nom/l'ancienne liste jusqu'au prochain
+  // changement de vue.
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
 }
 function updateStructureName(id,name){
   const s=(S.settings.structures||[]).find(x=>x.id===id);
@@ -7220,6 +7258,8 @@ function updateStructureName(id,name){
   s.name=name;
   saveSettings();
   refreshYearMaybe();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
 }
 function updateStructureType(id,type){
   const s=(S.settings.structures||[]).find(x=>x.id===id);
@@ -7233,11 +7273,13 @@ function addStructureThreshold(sid){
   if(!S.settings.structureThresholds[sid])S.settings.structureThresholds[sid]=[];
   S.settings.structureThresholds[sid].push({id:uid(),type:'revenue',label:'Nouveau seuil',amount:0,color:'#1D2820'});
   saveSettings();renderSettings();
+  refreshYearMaybe();
 }
 function delStructureThreshold(sid,tid){
   if(!S.settings.structureThresholds||!S.settings.structureThresholds[sid])return;
   S.settings.structureThresholds[sid]=S.settings.structureThresholds[sid].filter(t=>t.id!==tid);
   saveSettings();renderSettings();
+  refreshYearMaybe();
 }
 function updateStructureThreshold(sid,tid,field,val){
   const arr=S.settings.structureThresholds&&S.settings.structureThresholds[sid];
@@ -7247,6 +7289,7 @@ function updateStructureThreshold(sid,tid,field,val){
   if(field==='type')t.color=val==='nights'?'#354B38':'#1D2820';
   saveSettings();
   if(field==='type')renderSettings();
+  refreshYearMaybe();
 }
 
 // Source CRUD
@@ -7287,16 +7330,26 @@ function addCleaner(){
   const rate=parseFloat(byId('newCleanerRateInput').value)||15;
   S.settings.cleaners.push({name:v,rate});
   saveSettings();applySettings();renderSettings();
+  // Le volet Ménage (Vue Jour/Semaine) affiche un bouton par personne de
+  // cette liste — sans ça, la personne qu'on vient d'ajouter n'y apparaît
+  // qu'au prochain changement de vue.
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
 }
 function delCleaner(i){
   S.settings.cleaners.splice(i,1);
   saveSettings();applySettings();renderSettings();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
 }
 function updateCleanerField(i,field,val){
   const c=S.settings.cleaners[i];
   if(!c)return;
   c[field]=field==='rate'?(parseFloat(val)||0):val;
   saveSettings();applySettings();
+  // Manquait 'today' : le volet Ménage existe aussi en Vue Jour, pas
+  // seulement Semaine/Mois (voir toggleCleaner un peu plus haut).
+  if(S.view==='today')renderToday();
   if(S.view==='month')renderMonth();
   if(S.view==='week')renderWeek();
 }
