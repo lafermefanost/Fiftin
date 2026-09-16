@@ -401,9 +401,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-day-cell.sel-range{background:#E8F4E5 !important;}
 .rv-day-cell.sel-end{background:#D4EAD0 !important;outline:2px solid #5A8C54;outline-offset:-2px;}
 .rv-day-cell.sel-start.sel-end{outline:2px solid #354B38;}
-/* Repère du jour du jour lui-même (voir goToday) — léger contour vert,
-   distinct des contours de sélection ci-dessus qui sont plus appuyés. */
-.rv-day-cell.rv-day-today{outline:1.5px solid var(--green);outline-offset:-1.5px;}
+/* Repère du jour du jour lui-même (voir goToday) — contour vert foncé
+   bien visible : le 1.5px var(--green) d'origine se voyait trop peu pour
+   repérer la case au premier coup d'œil, surtout occupée par un séjour
+   coloré (.rv-seg) qui couvre presque toute la case. */
+.rv-day-cell.rv-day-today{outline:2.5px solid var(--green-deep);outline-offset:-2.5px;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
