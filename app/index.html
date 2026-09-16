@@ -33,12 +33,17 @@ html,body{height:100%;overflow:hidden;}
      arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
      Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé bancaire, jauges de
      seuils…) — le rôle que tenait le lavande avant ce recentrage.
-     #667650 (prélevé à la pipette) jugé trop kaki/vieillot ensuite —
-     retouché en #628551 : même famille, teinte un peu plus fraîche/verte
-     (moins jaune) et légèrement plus claire, sans s'en éloigner. --green2-bg
-     : même principe pâle que --lavender-bg, pour les petites pastilles de
-     texte plutôt que les fonds pleins. */
-  --green2:#628551; --green2-bg:#EAF1E7;
+     Historique : #667650 (pipette) jugé trop kaki/vieillot, puis #628551
+     encore jugé trop "vert gazon" (saturation 24%, teinte trop jaune à
+     100°). Recalé en #5A7C65 pour vraiment rejoindre la famille de
+     --green/--green-deep plutôt que de simplement s'en rapprocher :
+     saturation ramenée à 16% (contre 17%/16% pour --green/--green-deep,
+     quasi identique) et teinte 139° (entre les 128°/136° de --green et
+     --green-deep, plutôt eucalyptus/olivier que gazon), juste plus clair
+     pour rester distinct des bandeaux principaux. --green2-bg : même
+     principe pâle que --lavender-bg, pour les petites pastilles de texte
+     plutôt que les fonds pleins. */
+  --green2:#5A7C65; --green2-bg:#E7F1EA;
   /* Jaune d'accent : réservé au geste qui crée ou télécharge quelque chose
      pour le client (résa, nouvel événement, export PDF/CSV…), jamais aux
      catégories, statuts ou "+ ajouter" génériques des réglages. */
@@ -9313,7 +9318,7 @@ function renderYear(){
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-proj" style="width:${projPct}%;background:#62855144"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:#5A7C6544"></div>
         <div class="yr-gauge-real" style="width:${realPct}%;background:var(--green2)"></div>
       </div>
       <div class="yr-gauge-bot">
