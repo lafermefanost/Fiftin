@@ -19,9 +19,26 @@ html,body{height:100%;overflow:hidden;}
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
   --cream:#EFEEEA; --earth:#1D2820; --green:#354B38; --green-deep:#1D2820; --dark:#2C2C2C;
+  /* Lavande : réservé à la fenêtre assistant (.wbrief) et aux onglets/menus
+     déroulants liés aux événements (filtre Pro/Perso/Fiscal, onglets de
+     jour des consommations d'un événement, bandeau "Événements") — plus
+     aucun autre usage (voir --green2 ci-dessous pour tout le reste). */
   --lavender:#B2BBDA; --lavender-bg:#E7E9F1;
-  /* Jaune d'accent : réservé aux actions du client (résa, création de compte),
-     jamais aux catégories, statuts ou "+ ajouter" génériques des réglages. */
+  /* Contour de .wbrief : même teinte que --lavender, nettement plus saturé
+     pour rester visible en simple contour (le fond, lui, reste --lavender-bg
+     inchangé). */
+  --lavender-strong:#7B94E8;
+  /* Nouveau vert (prélevé à la pipette, #667650) : accent des volets
+     secondaires et des petits éléments graphiques qui ponctuent l'appli
+     (pictos chiffrés départs/arrivées, bandeaux Ménage/Table d'hôtes/Extras
+     du jour, pilules Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé
+     bancaire, jauges de seuils…) — le rôle que tenait le lavande avant ce
+     recentrage. --green2-bg : même principe pâle que --lavender-bg, pour
+     les petites pastilles de texte plutôt que les fonds pleins. */
+  --green2:#667650; --green2-bg:#EDF1E7;
+  /* Jaune d'accent : réservé au geste qui crée ou télécharge quelque chose
+     pour le client (résa, nouvel événement, export PDF/CSV…), jamais aux
+     catégories, statuts ou "+ ajouter" génériques des réglages. */
   --yellow:#DEEB82;
   --gray:#6B6B6B; --light:#E2DFD8; --white:#FFF; --danger:#C0392B; --pending-red:#FF2D2D;
   --shadow:0 2px 10px rgba(0,0,0,.14); --r:6px;
@@ -327,14 +344,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .pt td.c-menage{min-width:110px;max-width:170px;font-size:10px;text-align:center;}
 .pt td.c-event{min-width:150px;max-width:320px;font-size:10px;padding:1px 4px;}
 
-.mtag{display:inline-block;background:var(--lavender-bg);border-radius:3px;
+.mtag{display:inline-block;background:var(--green2-bg);border-radius:3px;
   padding:1px 4px;font-size:9px;font-weight:600;color:var(--earth);margin:1px;}
 .etag{display:inline-block;border-radius:3px;padding:1px 6px;
   font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;
   text-overflow:ellipsis;max-width:125px;cursor:pointer;}
-/* Jour férié : même sobriété que .mtag (fond lavande pâle, texte vert foncé)
+/* Jour férié : même sobriété que .mtag (fond vert pâle, texte vert foncé)
    plutôt que la couleur pleine et propre à chaque événement de .etag. */
-.holiday-tag{display:inline-block;background:var(--lavender-bg);border-radius:3px;
+.holiday-tag{display:inline-block;background:var(--green2-bg);border-radius:3px;
   padding:1px 6px;font-size:10px;font-weight:500;color:var(--earth);}
 
 /* ─── DINNER NIGHT CHIPS ───────────────────────────────────── */
@@ -453,11 +470,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 10px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
 .tsec-hd:active{filter:brightness(.96);}
 .tsec-hd{background:var(--light);color:var(--gray);}
-.tsec-hd.has-items{background:var(--lavender);color:var(--green-deep);}
-/* "Événements du mois"/"de la semaine" (.tsec-panel.ev) : texte + picto
-   blancs plutôt que vert foncé sur ce même fond lavande — l'icône
-   (EVENT_ICON, stroke="currentColor") suit automatiquement. */
-.tsec-panel.ev>.tsec-hd.has-items{color:#fff;}
+/* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire),
+   texte blanc (le vert-deep utilisé avant sur fond lavande n'a plus assez
+   de contraste sur ce fond-ci). Événements reste en lavande ci-dessous
+   (onglet lié aux événements, catégorie à part — voir tokens). */
+.tsec-hd.has-items{background:var(--green2);color:#fff;}
+.tsec-panel.ev>.tsec-hd.has-items{background:var(--lavender);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
 .tsec-count{margin-left:auto;background:#fff;color:var(--dark)!important;border-radius:12px;padding:4px 13px;font-size:15px;font-weight:700;}
@@ -583,6 +601,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    doublerait l'écart avec le bloc suivant (idem .tsec-panel juste
    au-dessus, neutralisé plus bas pour la même raison). */
 .wbrief{display:flex;align-items:flex-start;gap:10px;background:var(--lavender-bg);
+  border:1.5px solid var(--lavender-strong);
   color:var(--earth);border-radius:12px;padding:14px 16px;
   font-size:13px;line-height:1.45;}
 .wbrief svg{margin-top:1px;color:var(--green);}
@@ -610,7 +629,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
-.dep-arr-num.has-val{background:var(--lavender);color:var(--green-deep);}
+.dep-arr-num.has-val{background:var(--green2);color:#fff;}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
@@ -627,7 +646,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .thsum-menu-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .thsum-menu-row:last-child{margin-bottom:0;}
 .thsum-menu-tag{flex:none;width:56px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;
-  letter-spacing:.04em;color:var(--earth);background:var(--lavender-bg);border-radius:6px;padding:4px 2px;}
+  letter-spacing:.04em;color:var(--earth);background:var(--green2-bg);border-radius:6px;padding:4px 2px;}
 .thsum-menu-input{flex:1;min-width:0;border:none;border-bottom:1px solid var(--light);background:transparent;
   font-family:'Jost',sans-serif;font-size:12px;color:var(--dark);padding:4px 2px;outline:none;}
 .thsum-menu-input::placeholder{color:var(--gray);}
@@ -680,7 +699,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .cleaner-btn:hover{background:#EFEBE3;}
 /* Lavande à l'activation, comme les autres indicateurs "rempli" de l'appli
    (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de vert ici. */
-.cleaner-on{background:var(--lavender)!important;color:var(--green-deep)!important;}
+.cleaner-on{background:var(--green2)!important;color:#fff!important;}
 .extras-day-tab{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
@@ -783,10 +802,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-pie-val{font-weight:700;color:var(--dark);flex-shrink:0;width:64px;text-align:right;}
 .mch-group-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding-top:10px;border-top:1px dashed var(--light);}
 .mch-group-hd:first-of-type{margin-top:0;padding-top:0;border-top:none;}
-/* Pilule lavande plutôt qu'un simple libellé gris nu — plus lisible pour
+/* Pilule vert pâle plutôt qu'un simple libellé gris nu — plus lisible pour
    distinguer Ménage / Ajout manuel / Relevé bancaire les uns des autres. */
 .mch-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--green-deep);background:var(--lavender-bg);padding:3px 10px;border-radius:10px;
+  color:var(--green-deep);background:var(--green2-bg);padding:3px 10px;border-radius:10px;
   display:inline-block;}
 .mch-subtotal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);padding:4px 0 0;}
 /* Financial cards row */
@@ -928,7 +947,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);background:var(--white);
   outline:none;transition:border-color .15s;}
 input[type="date"].fi{-webkit-appearance:none;appearance:none;}
-.fi:focus,.fsel:focus{border-color:var(--lavender);}
+.fi:focus,.fsel:focus{border-color:var(--green2);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 /* Aligne les deux champs d'une rangée sur leur INPUT plutôt que sur le haut
    de la cellule — sans ça, dès qu'un des deux libellés est plus long et
@@ -964,7 +983,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gcontact-btn:hover{filter:brightness(.88);}
 .gcontact-btn.wa{background:#25D366;}
 .gcontact-btn.sms{background:#5B8AF0;}
-.gcontact-btn.mail{background:var(--lavender);color:var(--green-deep);}
+.gcontact-btn.mail{background:var(--green2);color:#fff;}
 .gsel-card{display:flex;align-items:stretch;background:#fff;border-radius:8px;
   border:1.5px solid var(--light);overflow:hidden;margin-top:6px;}
 .gsel-bar{width:5px;flex-shrink:0;}
@@ -1060,9 +1079,10 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Jost',sans-serif;font-size:9px;color:var(--gray);cursor:pointer;
   letter-spacing:.03em;text-transform:uppercase;}
-/* Essai : fond lavande plutôt que le beige-gris d'origine (#E8E3DB), pour
-   voir le rendu — à repasser en arrière si ça ne convainc pas. */
-.mbnav-btn.on{color:var(--green);background:var(--lavender-bg);border-radius:10px;}
+/* Nav sélectionnée : fond vert moyen plein (comme les bandeaux principaux,
+   voir tokens --green) plutôt que lavande — la lavande est désormais
+   réservée à l'assistant et aux onglets liés aux événements. */
+.mbnav-btn.on{color:#fff;background:var(--green);border-radius:10px;}
 .mbnav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
 
 @media(max-width:599px){
@@ -1702,7 +1722,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     <div id="contractPrintArea"></div>
     <div class="macts">
       <button class="btn-s" onclick="closeM('modalContract')">Fermer</button>
-      <button class="btn-p" id="contractPdfBtn" onclick="exportContractPDF()">📄 Exporter en PDF (A4)</button>
+      <button class="btn-p btn-add" id="contractPdfBtn" onclick="exportContractPDF()">📄 Exporter en PDF (A4)</button>
     </div>
   </div>
 </div>
@@ -7036,10 +7056,10 @@ function renderSettings(){
 
   // — Export CSV —
   const exportBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Fichiers CSV (compatibles Excel/Google Sheets), un par catégorie de données. « Chiffres » reprend, mois par mois, le même détail que la vue Mois (nuitées, repas, extras, événements, remplissage).</div>
-    <button class="btn-s" style="width:100%;margin-bottom:8px" onclick="exportClientsCSV()">📇 Exporter les clients (CSV)</button>
-    <button class="btn-s" style="width:100%;margin-bottom:8px" onclick="exportBookingsCSV()">🛏️ Exporter les réservations (CSV)</button>
-    <button class="btn-s" style="width:100%;margin-bottom:8px" onclick="exportEventsCSV()">🎉 Exporter les événements (CSV)</button>
-    <button class="btn-s" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>`;
+    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportClientsCSV()">📇 Exporter les clients (CSV)</button>
+    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportBookingsCSV()">🛏️ Exporter les réservations (CSV)</button>
+    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportEventsCSV()">🎉 Exporter les événements (CSV)</button>
+    <button class="btn-p btn-add" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>`;
   h+=settingsPanel('export','Export',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
@@ -9273,8 +9293,8 @@ function renderYear(){
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-proj" style="width:${projPct}%;background:#B2BBDA44"></div>
-        <div class="yr-gauge-real" style="width:${realPct}%;background:var(--lavender)"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:#66765044"></div>
+        <div class="yr-gauge-real" style="width:${realPct}%;background:var(--green2)"></div>
       </div>
       <div class="yr-gauge-bot">
         <span style="font-size:10px;color:var(--gray)">Réalisé <b>${Math.round(realCA).toLocaleString('fr-FR')} €</b></span>
