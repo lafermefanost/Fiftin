@@ -429,9 +429,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-day-cell.sel-start.sel-end{outline:2px solid #354B38;}
 /* Repère du jour du jour lui-même (voir goToday) — contour vert foncé
    bien visible : le 1.5px var(--green) d'origine se voyait trop peu pour
-   repérer la case au premier coup d'œil, surtout occupée par un séjour
-   coloré (.rv-seg) qui couvre presque toute la case. */
-.rv-day-cell.rv-day-today{outline:2.5px solid var(--green-deep);outline-offset:-2.5px;}
+   repérer la case au premier coup d'œil. Un simple outline (essayé
+   d'abord) restait invisible dès que la case est occupée : .rv-seg
+   (ci-dessous, position:absolute) se peint par-dessus le contour de son
+   propre parent — un enfant positionné passe toujours au-dessus des
+   décorations (outline/border/background) du parent dans l'ordre de
+   peinture CSS, quel que soit outline-offset. D'où un ::after positionné
+   explicitement, avec son propre z-index au-dessus de .rv-seg, plutôt
+   qu'un outline sur la case elle-même. */
+.rv-day-cell.rv-day-today::after{content:'';position:absolute;inset:0;
+  border-radius:4px;border:2.5px solid var(--green-deep);
+  pointer-events:none;z-index:2;}
 .rv-seg{position:absolute;inset:0;cursor:pointer;}
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
