@@ -331,7 +331,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:1px 4px;font-size:9px;font-weight:600;color:var(--earth);margin:1px;}
 .etag{display:inline-block;border-radius:3px;padding:1px 6px;
   font-size:10px;font-weight:500;white-space:nowrap;overflow:hidden;
-  text-overflow:ellipsis;max-width:125px;}
+  text-overflow:ellipsis;max-width:125px;cursor:pointer;}
 /* Jour férié : même sobriété que .mtag (fond lavande pâle, texte vert foncé)
    plutôt que la couleur pleine et propre à chaque événement de .etag. */
 .holiday-tag{display:inline-block;background:var(--lavender-bg);border-radius:3px;
@@ -3774,9 +3774,13 @@ function renderGrid(){
     const evs=S.events.filter(ev=>ds>=ev.startDate&&ds<=ev.endDate);
     // Un événement personnel ce jour-là prend le dessus sur le tag du jour
     // férié, à l'identique de la pastille du numéro de jour — pas de mélange.
+    // onclick par tag (pas un seul écouteur sur toute la cellule) : plusieurs
+    // événements peuvent tomber le même jour, chacun doit ouvrir sa propre
+    // fiche — jusqu'ici rien n'était cliquable ici du tout (contrairement à
+    // la pastille du numéro de jour, qui ouvre déjà openDayEvent).
     let evTdHtml=evs.length?evs.map(ev=>{
       const lc=light(ev.color||'#E2DFD8');
-      return`<span class="etag" style="background:${ev.color||'#E2DFD8'};color:${lc?'#2C2C2C':'#FFF'}">${ev.title}</span>`;
+      return`<span class="etag" style="background:${ev.color||'#E2DFD8'};color:${lc?'#2C2C2C':'#FFF'}" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
     }).join(' '):(holidayName?`<span class="holiday-tag">${holidayName}</span>`:'');
     evTd.innerHTML=evTdHtml;
     tr.appendChild(evTd);
