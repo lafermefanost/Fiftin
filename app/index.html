@@ -287,14 +287,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .blk.pending .sdot{background:#8B0000!important;}
 
 /* Day view: simple one-line chip, color shown only as a discrete left bar (like .tcard) */
-/* Contour discret, sans ombre (l'ombre en plus faisait doublon avec le
-   contour — trop appuyé à deux). Gardé ici (contrairement à .tsec-panel
-   plus bas, qui n'en a plus) : cette carte est blanc sur blanc — seule
-   sa fine barre de couleur à gauche (.tbar) ne compte pas comme un fond
-   qui se détache, l'essentiel de la carte reste plate sans lui. */
 .day-chip{background:var(--white);border-radius:8px;display:flex;flex-direction:row;
-  border:1.5px solid var(--light);
-  margin-bottom:6px;overflow:hidden;
+  box-shadow:0 2px 8px rgba(0,0,0,.16);margin-bottom:6px;overflow:hidden;
   cursor:pointer;user-select:none;transition:filter .1s;}
 .day-chip:hover{filter:brightness(.97);}
 .day-chip:last-child{margin-bottom:0;}
@@ -486,18 +480,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:5px 16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--green);
   cursor:pointer;}
 .vnav-now-btn:hover{background:var(--green);color:#fff;}
-/* Ni ombre ni contour par défaut : en Vue Semaine/Mois (Ménage/Table
-   d'hôtes/Extras du jour…), son en-tête (.tsec-hd) est toujours coloré
-   (gris foncé sans donnée, vert sauge ou lavande avec) — ce fond qui se
-   détache déjà de la page rendait un contour autour de toute la carte
-   redondant (double signal de séparation, perturbant à l'œil).
-   .tsec-panel sert aussi de sous-carte simple en Vue Mois/Année (voir
-   subSection : "Taux par chambre", "Répartition des charges"…), avec un
-   titre texte plutôt qu'un bandeau coloré — là, blanc sur blanc, elle a
-   bien besoin d'un contour : voir .tsec-panel-plain ci-dessous plutôt que
-   de rebasculer la règle par défaut (qui casserait Semaine/Mois). */
-.tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;}
-.tsec-panel.tsec-panel-plain{border:1.5px solid var(--light);}
+.tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 /* Padding horizontal aligné sur .tsec-body (10px, pas 14px) : le titre
    d'un volet doit démarrer exactement à la même position que son propre
    contenu juste en dessous. */
@@ -551,9 +534,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:12px;color:var(--gray);cursor:pointer;
   padding:7px 12px;width:100%;transition:all .15s;}
 .tev-add-btn:hover{border-color:var(--green);color:var(--green);}
-/* Contour seul, sans ombre — voir .day-chip pour le détail. */
 .tcard{background:var(--white);border-radius:10px;display:flex;flex-direction:row;
-  border:1.5px solid var(--light);margin-bottom:14px;overflow:hidden;}
+  box-shadow:0 2px 10px rgba(0,0,0,.18);margin-bottom:14px;overflow:hidden;}
 .tbar{width:5px;flex-shrink:0;align-self:stretch;}
 .tcard-content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tcard-header{display:flex;align-items:center;gap:0;padding:0;cursor:pointer;}
@@ -1292,10 +1274,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 #yearWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .yr-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-/* Sans contour (contrairement à .tsec-panel-plain plus bas) : cette carte
-   se détache déjà assez du fond crème par sa taille/son padding — un
-   contour ici faisait doublon plutôt que d'aider à la repérer. */
-.yr-group{background:#fff;border-radius:12px;padding:12px 14px;}
+.yr-group{background:#fff;border-radius:12px;padding:12px 14px;border:1.5px solid var(--light);}
 /* "Activité globale" (voir globalCard dans renderYear) : sort du cartouche
    blanc — on comprend que c'est le total en voyant ensuite les encarts par
    structure (SASU, LMNP…), pas besoin de la boîte en plus pour le dire. */
@@ -8231,7 +8210,7 @@ function renderWeek(){
         <div class="dep-arr-count"><span class="dep-arr-num${items.length?' has-val':''}">${items.length}</span><span class="dep-arr-label">${label}</span></div>
         ${items.length?items.map(renderFn).join(''):''}
       </div>`;
-      h+=`<div class="tsec-panel deparr tsec-panel-plain">
+      h+=`<div class="tsec-panel deparr">
         <div class="tsec-body">
           <div class="dep-arr-cols">
             ${depArrCol('Départs',deps,b=>wMiniChip(b,null,true))}
@@ -8778,7 +8757,7 @@ function renderMonth(){
   // propres chiffres (CA, occupation, taux par chambre, réservations,
   // répartition par source, charges réelles) plutôt qu'un unique bloc
   // mélangeant toutes les structures. ──
-  const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel tsec-panel-plain">
+  const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel">
     <div class="yr-subhd ${titleClass}">${title}</div>
     <div class="tsec-body">${inner}</div>
   </div>`;
@@ -9504,7 +9483,7 @@ function renderYear(){
       }).join('')
       +`</div>`
       :'<div class="yr-chart-nodata">Aucune réservation pour cette structure</div>';
-    const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel tsec-panel-plain">
+    const subSection=(title,inner,titleClass='')=>`<div class="tsec-panel">
       <div class="yr-subhd ${titleClass}">${title}</div>
       <div class="tsec-body">${inner}</div>
     </div>`;
