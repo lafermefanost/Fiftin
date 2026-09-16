@@ -478,12 +478,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    contenu juste en dessous. */
 .tsec-hd{display:flex;align-items:center;gap:8px;padding:11px 10px;cursor:pointer;font-weight:700;font-size:12px;user-select:none;letter-spacing:.04em;text-transform:uppercase;}
 .tsec-hd:active{filter:brightness(.96);}
-.tsec-hd{background:var(--light);color:var(--gray);}
-/* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire),
-   texte vert foncé (--green2 est clair, le blanc n'y a plus assez de
-   contraste — voir le commentaire du token). Événements reste en lavande
-   ci-dessous (onglet lié aux événements, catégorie à part — voir tokens). */
-.tsec-hd.has-items{background:var(--green2);color:var(--green-deep);}
+/* Texte toujours blanc sur ce bandeau, y compris à l'état "sans donnée" —
+   sur demande explicite. Vérifié à l'écran : blanc sur l'ancien fond pâle
+   (--light) était illisible (le "0" des cartouches Départs/Arrivées
+   disparaissait quasiment) — fond repassé en --gray ("gris moyen", tel que
+   décrit) pour que le blanc reste lisible, plutôt que de garder --light et
+   un texte invisible. */
+.tsec-hd{background:var(--gray);color:#fff;}
+/* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire).
+   Texte blanc sur demande explicite (contraste réel ~2.9:1 sur ce fond
+   clair --green2, sous le seuil AA pour du texte de cette taille — à
+   surveiller si la lisibilité pose problème en usage réel). Événements
+   reste en lavande ci-dessous (onglet lié aux événements, catégorie à
+   part — voir tokens). */
+.tsec-hd.has-items{background:var(--green2);color:#fff;}
 .tsec-panel.ev>.tsec-hd.has-items{background:var(--lavender);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
@@ -633,12 +641,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    (Ménage, Table d'hôtes… voir .tsec-hd). */
 .dep-arr-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);}
 /* Même cartouche (arrondi 12px) que .tsec-count désormais — voir plus haut.
-   Placé à gauche du libellé (accolé), plus à droite façon space-between. */
-.dep-arr-num{background:var(--light);color:var(--dark);font-size:18px;font-weight:700;
+   Placé à gauche du libellé (accolé), plus à droite façon space-between.
+   Texte toujours blanc, y compris à 0 — même correctif de fond que
+   .tsec-hd (voir son commentaire : --light pâle rendait le blanc illisible,
+   repassé en --gray). */
+.dep-arr-num{background:var(--gray);color:#fff;font-size:18px;font-weight:700;
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
-.dep-arr-num.has-val{background:var(--green2);color:var(--green-deep);}
+.dep-arr-num.has-val{background:var(--green2);color:#fff;}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
