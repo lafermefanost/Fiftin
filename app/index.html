@@ -33,17 +33,17 @@ html,body{height:100%;overflow:hidden;}
      arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
      Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé bancaire, jauges de
      seuils…) — le rôle que tenait le lavande avant ce recentrage.
-     Historique : #667650 (pipette) jugé trop kaki/vieillot, puis #628551
-     encore jugé trop "vert gazon" (saturation 24%, teinte trop jaune à
-     100°). Recalé en #5A7C65 pour vraiment rejoindre la famille de
-     --green/--green-deep plutôt que de simplement s'en rapprocher :
-     saturation ramenée à 16% (contre 17%/16% pour --green/--green-deep,
-     quasi identique) et teinte 139° (entre les 128°/136° de --green et
-     --green-deep, plutôt eucalyptus/olivier que gazon), juste plus clair
-     pour rester distinct des bandeaux principaux. --green2-bg : même
-     principe pâle que --lavender-bg, pour les petites pastilles de texte
-     plutôt que les fonds pleins. */
-  --green2:#5A7C65; --green2-bg:#E7F1EA;
+     Historique : #667650 (pipette) jugé trop kaki/vieillot, #628551 encore
+     trop "vert gazon", #5A7C65 pas mal mais pas encore ça. Repris tel quel
+     sur #8B9D86, déjà utilisé et validé ailleurs dans l'appli (2e couleur
+     de STRUCTURE_COLORS, visible sur le camembert "Répartition des
+     charges") plutôt que recalculé — HSL 107°/57%L/11%S : nettement plus
+     clair et plus doux que les tentatives précédentes (L=57% contre
+     ~40%), d'où un texte en --green-deep dessus (pas blanc : seulement
+     2.9:1 de contraste sur ce fond clair, contre 5.3:1 en vert foncé).
+     --green2-bg : même principe pâle que --lavender-bg, pour les petites
+     pastilles de texte plutôt que les fonds pleins. */
+  --green2:#8B9D86; --green2-bg:#E9F1E7;
   /* Jaune d'accent : réservé au geste qui crée ou télécharge quelque chose
      pour le client (résa, nouvel événement, export PDF/CSV…), jamais aux
      catégories, statuts ou "+ ajouter" génériques des réglages. */
@@ -480,10 +480,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .tsec-hd:active{filter:brightness(.96);}
 .tsec-hd{background:var(--light);color:var(--gray);}
 /* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire),
-   texte blanc (le vert-deep utilisé avant sur fond lavande n'a plus assez
-   de contraste sur ce fond-ci). Événements reste en lavande ci-dessous
-   (onglet lié aux événements, catégorie à part — voir tokens). */
-.tsec-hd.has-items{background:var(--green2);color:#fff;}
+   texte vert foncé (--green2 est clair, le blanc n'y a plus assez de
+   contraste — voir le commentaire du token). Événements reste en lavande
+   ci-dessous (onglet lié aux événements, catégorie à part — voir tokens). */
+.tsec-hd.has-items{background:var(--green2);color:var(--green-deep);}
 .tsec-panel.ev>.tsec-hd.has-items{background:var(--lavender);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
@@ -638,7 +638,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
-.dep-arr-num.has-val{background:var(--green2);color:#fff;}
+.dep-arr-num.has-val{background:var(--green2);color:var(--green-deep);}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
@@ -708,7 +708,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .cleaner-btn:hover{background:#EFEBE3;}
 /* Nouveau vert à l'activation, comme les autres indicateurs "rempli" de
    l'appli (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de lavande ici. */
-.cleaner-on{background:var(--green2)!important;color:#fff!important;}
+.cleaner-on{background:var(--green2)!important;color:var(--green-deep)!important;}
 .extras-day-tab{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
@@ -1008,7 +1008,7 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gcontact-btn:hover{filter:brightness(.88);}
 .gcontact-btn.wa{background:#25D366;}
 .gcontact-btn.sms{background:#5B8AF0;}
-.gcontact-btn.mail{background:var(--green2);color:#fff;}
+.gcontact-btn.mail{background:var(--green2);color:var(--green-deep);}
 .gsel-card{display:flex;align-items:stretch;background:#fff;border-radius:8px;
   border:1.5px solid var(--light);overflow:hidden;margin-top:6px;}
 .gsel-bar{width:5px;flex-shrink:0;}
@@ -9318,7 +9318,7 @@ function renderYear(){
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-proj" style="width:${projPct}%;background:#5A7C6544"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:#8B9D8644"></div>
         <div class="yr-gauge-real" style="width:${realPct}%;background:var(--green2)"></div>
       </div>
       <div class="yr-gauge-bot">
