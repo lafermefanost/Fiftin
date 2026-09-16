@@ -28,14 +28,17 @@ html,body{height:100%;overflow:hidden;}
      pour rester visible en simple contour (le fond, lui, reste --lavender-bg
      inchangé). */
   --lavender-strong:#7B94E8;
-  /* Nouveau vert (prélevé à la pipette, #667650) : accent des volets
-     secondaires et des petits éléments graphiques qui ponctuent l'appli
-     (pictos chiffrés départs/arrivées, bandeaux Ménage/Table d'hôtes/Extras
-     du jour, pilules Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé
-     bancaire, jauges de seuils…) — le rôle que tenait le lavande avant ce
-     recentrage. --green2-bg : même principe pâle que --lavender-bg, pour
-     les petites pastilles de texte plutôt que les fonds pleins. */
-  --green2:#667650; --green2-bg:#EDF1E7;
+  /* Nouveau vert (vert sauge) : accent des volets secondaires et des petits
+     éléments graphiques qui ponctuent l'appli (pictos chiffrés départs/
+     arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
+     Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé bancaire, jauges de
+     seuils…) — le rôle que tenait le lavande avant ce recentrage.
+     #667650 (prélevé à la pipette) jugé trop kaki/vieillot ensuite —
+     retouché en #628551 : même famille, teinte un peu plus fraîche/verte
+     (moins jaune) et légèrement plus claire, sans s'en éloigner. --green2-bg
+     : même principe pâle que --lavender-bg, pour les petites pastilles de
+     texte plutôt que les fonds pleins. */
+  --green2:#628551; --green2-bg:#EAF1E7;
   /* Jaune d'accent : réservé au geste qui crée ou télécharge quelque chose
      pour le client (résa, nouvel événement, export PDF/CSV…), jamais aux
      catégories, statuts ou "+ ajouter" génériques des réglages. */
@@ -302,10 +305,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #pay-paid.on{background:#E8F3E5;color:#2E5C28;border-color:#7ABF6A;}
 #ts-chip.on{background:#E8F3E5;color:#2E5C28;border-color:#7ABF6A;}
 #ts-chip.on::before{content:'✓ ';}
-/* Type d'événement (Pro/Perso, voir setEvCategory) — même vert "actif" que
-   .evfilter-btn.on plutôt qu'une couleur par statut : ici un simple choix
-   binaire, pas plusieurs états sémantiques distincts comme le paiement. */
-#evcat-pro.on,#evcat-perso.on{background:var(--green);color:#fff;border-color:var(--green);}
+/* Type d'événement (Pro/Perso, voir setEvCategory) — même lavande "actif"
+   que .evfilter-btn.on (menus/onglets liés aux événements) plutôt qu'une
+   couleur par statut : ici un simple choix binaire, pas plusieurs états
+   sémantiques distincts comme le paiement. */
+#evcat-pro.on,#evcat-perso.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
 .src-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .src-chip{padding:5px 12px;border:1.5px solid var(--light);border-radius:20px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
@@ -697,14 +701,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-align:left;
   color:var(--dark);background:#F7F5F1;cursor:pointer;transition:all .15s;}
 .cleaner-btn:hover{background:#EFEBE3;}
-/* Lavande à l'activation, comme les autres indicateurs "rempli" de l'appli
-   (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de vert ici. */
+/* Nouveau vert à l'activation, comme les autres indicateurs "rempli" de
+   l'appli (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de lavande ici. */
 .cleaner-on{background:var(--green2)!important;color:#fff!important;}
 .extras-day-tab{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
   color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;}
 .extras-day-tab:hover{border-color:#aaa;color:var(--dark);}
 .extras-day-tab.on{background:var(--green);color:#fff;border-color:var(--green);}
+/* Onglets de jour des consommations d'un ÉVÉNEMENT (#evExtrasDayTabs) : en
+   lavande, comme tous les autres onglets/menus liés aux événements — ceux
+   d'une réservation (#bExtrasDayTabs, même classe .extras-day-tab) restent
+   en vert moyen juste au-dessus, ce sont deux contextes différents malgré
+   le HTML partagé. */
+#evExtrasDayTabs .extras-day-tab.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
 .cln-hm-row{display:flex;align-items:center;gap:8px;flex:1;min-width:0;justify-content:flex-end;}
 /* Un seul compteur (plus un pour les heures + un pour les minutes) : la
    place gagnée sert à agrandir les boutons +/− pour qu'ils soient faciles
@@ -939,6 +949,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--cream);
   transition:background .15s;flex-shrink:0;}
 .mclose:hover{background:rgba(255,255,255,.25);}
+/* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit),
+   en lavande — comme les onglets/menus déjà liés aux événements ci-dessus
+   (.evfilter-btn.on, #evcat-*.on, #evExtrasDayTabs) — plutôt que le vert
+   moyen commun à tous les autres modaux. Texte/croix en vert foncé (pas
+   cream/blanc) : ce fond est clair, contrairement au vert moyen des autres
+   en-têtes. */
+#modalEvents .mhead,#modalEventEdit .mhead{background:var(--lavender);color:var(--green-deep);}
+#modalEvents .mtitle,#modalEventEdit .mtitle{color:var(--green-deep);}
+#modalEvents .mclose,#modalEventEdit .mclose{background:rgba(29,40,32,.12);color:var(--green-deep);}
+#modalEvents .mclose:hover,#modalEventEdit .mclose:hover{background:rgba(29,40,32,.22);}
 
 .fg{margin-bottom:14px;}
 .fl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
@@ -1304,7 +1324,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 /* Exception à la règle ci-dessus (vert moyen) : "Répartition par source" et
    "Toutes les réservations" restent en gris plutôt qu'en vert, comme
    l'étaient à l'origine les libellés Ménage/Relevé bancaire/Ajout manuel
-   (.mch-group-name, depuis passés en pilule lavande, voir plus bas) — voir
+   (.mch-group-name, depuis passés en pilule vert sauge, voir plus bas) — voir
    subSection(title,inner,'yr-subhd-plain'). */
 .yr-subhd-plain{font-size:11px;font-weight:700;color:var(--gray);}
 .yr-gauge{margin-bottom:10px;}
@@ -8833,7 +8853,7 @@ function renderMonth(){
 
     // Charges de cette structure : ménage, ajout manuel, puis relevé
     // bancaire importé — trois groupes distincts (chacun son libellé en
-    // pilule lavande), plutôt que l'ajout manuel mêlé au relevé bancaire.
+    // pilule vert sauge), plutôt que l'ajout manuel mêlé au relevé bancaire.
     let chargesBody='';
     if(CLEANERS.length){
       chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
@@ -8847,7 +8867,7 @@ function renderMonth(){
     }
     chargesBody+=`<div class="mch-group-hd">
       <span class="mch-group-name">Ajout manuel</span>
-      <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
+      <button class="btn-s" style="padding:4px 10px;font-size:11px;background:var(--yellow);color:var(--green-deep)" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
     </div>`;
     chargesBody+=catRowsHTML(catRowsManual,gid+':manual',true);
     chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total ajout manuel</span><span>${Math.round(bcManual.total).toLocaleString('fr-FR')} €</span></div>`;
@@ -8855,7 +8875,7 @@ function renderMonth(){
       <span class="mch-group-name">Relevé bancaire</span>
       <div style="display:flex;gap:6px">
         <input type="file" id="bankCsvInput-${gid}" accept=".csv" style="display:none" onchange="handleBankFileChange(this,'${gid}')" onclick="event.stopPropagation()">
-        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="event.stopPropagation();byId('bankCsvInput-${gid}').click()">Importer CSV</button>
+        <button class="btn-s" style="padding:4px 10px;font-size:11px;background:var(--yellow);color:var(--green-deep)" onclick="event.stopPropagation();byId('bankCsvInput-${gid}').click()">Importer CSV</button>
       </div>
     </div>`;
     chargesBody+=catRowsHTML(catRows,gid+':bank',false);
@@ -9293,7 +9313,7 @@ function renderYear(){
         <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
       </div>
       <div class="yr-gauge-bar">
-        <div class="yr-gauge-proj" style="width:${projPct}%;background:#66765044"></div>
+        <div class="yr-gauge-proj" style="width:${projPct}%;background:#62855144"></div>
         <div class="yr-gauge-real" style="width:${realPct}%;background:var(--green2)"></div>
       </div>
       <div class="yr-gauge-bot">
