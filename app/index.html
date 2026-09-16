@@ -287,14 +287,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .blk.pending .sdot{background:#8B0000!important;}
 
 /* Day view: simple one-line chip, color shown only as a discrete left bar (like .tcard) */
-/* Contour + ombre très légère plutôt que l'ancienne ombre portée franche
-   (0 2px 8px rgba(0,0,0,.16), effet "carte qui flotte" daté) — voir
-   .tcard/.tsec-panel plus bas, même correctif. Le contour seul (essayé
-   d'abord) rendait la carte un peu plate ; cette ombre-ci est volontairement
-   discrète (flou réduit, opacité très faible) pour donner un peu de relief
-   sans retrouver l'effet d'origine. */
+/* Contour discret, sans ombre (l'ombre en plus faisait doublon avec le
+   contour — trop appuyé à deux). Gardé ici (contrairement à .tsec-panel
+   plus bas, qui n'en a plus) : cette carte est blanc sur blanc — seule
+   sa fine barre de couleur à gauche (.tbar) ne compte pas comme un fond
+   qui se détache, l'essentiel de la carte reste plate sans lui. */
 .day-chip{background:var(--white);border-radius:8px;display:flex;flex-direction:row;
-  border:1.5px solid var(--light);box-shadow:0 1px 3px rgba(0,0,0,.06);
+  border:1.5px solid var(--light);
   margin-bottom:6px;overflow:hidden;
   cursor:pointer;user-select:none;transition:filter .1s;}
 .day-chip:hover{filter:brightness(.97);}
@@ -487,9 +486,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:5px 16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--green);
   cursor:pointer;}
 .vnav-now-btn:hover{background:var(--green);color:#fff;}
-/* Contour + ombre très légère (voir .day-chip pour le détail du choix) —
-   contour seul jugé un peu plat à l'usage. */
-.tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;border:1.5px solid var(--light);box-shadow:0 1px 3px rgba(0,0,0,.06);}
+/* Ni ombre ni contour : son en-tête (.tsec-hd) est toujours coloré (gris
+   foncé sans donnée, vert sauge ou lavande avec) — ce fond qui se détache
+   déjà de la page rendait un contour autour de toute la carte redondant
+   (double signal de séparation, perturbant à l'œil), contrairement à
+   .day-chip/.tcard qui restent blanc sur blanc en dehors de leur fine
+   barre de couleur. */
+.tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;}
 /* Padding horizontal aligné sur .tsec-body (10px, pas 14px) : le titre
    d'un volet doit démarrer exactement à la même position que son propre
    contenu juste en dessous. */
@@ -543,10 +546,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:12px;color:var(--gray);cursor:pointer;
   padding:7px 12px;width:100%;transition:all .15s;}
 .tev-add-btn:hover{border-color:var(--green);color:var(--green);}
-/* Contour + ombre très légère — même correctif que .day-chip/.tsec-panel
-   juste au-dessus. */
+/* Contour seul, sans ombre — voir .day-chip pour le détail. */
 .tcard{background:var(--white);border-radius:10px;display:flex;flex-direction:row;
-  border:1.5px solid var(--light);box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:14px;overflow:hidden;}
+  border:1.5px solid var(--light);margin-bottom:14px;overflow:hidden;}
 .tbar{width:5px;flex-shrink:0;align-self:stretch;}
 .tcard-content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
 .tcard-header{display:flex;align-items:center;gap:0;padding:0;cursor:pointer;}
