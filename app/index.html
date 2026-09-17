@@ -4349,6 +4349,11 @@ function openAddModal(roomId,ds,dsOut){
   renderDinnerList();
   updateModalTotal();
   byId('modalBooking').style.display='flex';
+  // Sans ça, le modal rouvrait parfois là où on l'avait laissé scrollé la
+  // fois précédente (.modal est l'élément qui défile, pas .overlay) — doit
+  // toujours démarrer en haut, quelle que soit la position de la dernière
+  // ouverture.
+  byId('modalBooking').querySelector('.modal').scrollTop=0;
 }
 
 function openEditModal(id,clickedDay){
@@ -4400,6 +4405,7 @@ function openEditModal(id,clickedDay){
   renderDinnerList();
   updateModalTotal();
   byId('modalBooking').style.display='flex';
+  byId('modalBooking').querySelector('.modal').scrollTop=0;
   lockdownModalForPersonnelViewing('modalBooking');
 }
 
