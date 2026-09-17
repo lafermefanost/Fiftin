@@ -2106,7 +2106,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 <div class="overlay" id="modalRecipes" style="display:none" onclick="ovClose(event,'modalRecipes')">
   <div class="modal">
     <div class="mhead">
-      <div class="mtitle">📖 Recettes déjà servies</div>
+      <div class="mtitle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>Carnet de recettes</div>
       <button class="mclose" onclick="closeM('modalRecipes')">✕</button>
     </div>
     <div id="recipesBody"></div>
@@ -2281,6 +2281,10 @@ const BREAKFAST_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="n
 // gardait le picto neutre "●" hérité d'avant que ce volet ne se recentre
 // sur les extras).
 const EXTRA_ICON='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>';
+// Pictogramme livre ouvert (Carnet de recettes, voir openRecipeBook) — même
+// famille visuelle que les autres icônes du planning, à la place de
+// l'émoji 📖 utilisé au premier jet.
+const RECIPE_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;flex-shrink:0"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>';
 // Pictogramme étincelle (résumé du jour, voir renderWeek → wbrief) — ton
 // "assistant" plutôt qu'une simple icône de planning.
 const BRIEF_ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;flex-shrink:0"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.287L3 12l5.8 1.9a2 2 0 0 1 1.287 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.287L21 12l-5.8-1.9a2 2 0 0 1-1.287-1.287L12 3Z"/></svg>';
@@ -5705,7 +5709,7 @@ function renderTHBody(ds){
   bodyHtml+=`<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--light)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
       <div style="font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em">Menu du jour</div>
-      <button type="button" class="catalog-link" onclick="openRecipeBook('${ds}')">📖 Recettes déjà servies</button>
+      <button type="button" class="catalog-link" onclick="openRecipeBook('${ds}')">${RECIPE_ICON_SM} Carnet de recettes</button>
     </div>
     <div class="fg"><label class="fl">Entrée</label><input class="fi" id="th-menu-entree" list="dlEntree" placeholder="—" onchange="setMenuField('${ds}','entree',this.value)"></div>
     <div class="fg"><label class="fl">Plat</label><input class="fi" id="th-menu-plat" list="dlPlat" placeholder="—" onchange="setMenuField('${ds}','plat',this.value)"></div>
@@ -8344,7 +8348,7 @@ function renderWeek(){
     // gauche (comme .mtag) plutôt qu'un libellé au-dessus ou un simple
     // placeholder qui disparaît une fois rempli. Chaque champ propose aussi
     // les plats déjà servis (list=, voir refreshMenuDatalists) et le lien
-    // "Recettes déjà servies" ouvre le livre complet avec les dates
+    // "Carnet de recettes" ouvre le livre complet avec les dates
     // (openRecipeBook) — voir CLAUDE.md/commentaires de setMenuField : ce
     // dernier redessine bien la vue depuis le correctif de mise à jour en
     // direct, donc pas de risque de perdre le volet ouvert en tapant ici.
@@ -8355,7 +8359,7 @@ function renderWeek(){
       <input class="thsum-menu-input" list="${dlFor[field]}" placeholder="—" value="${escAttr(val)}" onchange="setMenuField('${ds}','${field}',this.value)">
     </div>`;
     const thMenuHTML=`<div class="thsum-menu-rows">
-      <button type="button" class="catalog-link" style="display:block;margin:0 0 6px auto" onclick="openRecipeBook('${ds}')">📖 Recettes déjà servies</button>
+      <button type="button" class="catalog-link" style="display:block;margin:0 0 6px auto" onclick="openRecipeBook('${ds}')">${RECIPE_ICON_SM} Carnet de recettes</button>
       ${thMenuRow('Entrée','entree',dm.entree)}
       ${thMenuRow('Plat','plat',dm.plat)}
       ${thMenuRow('Dessert','dessert',dm.dessert)}
