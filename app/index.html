@@ -8316,7 +8316,7 @@ function renderWeek(){
     const thPeople=[
       ...S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds]).map(b=>{
         const g=guest(b.guestId), rm=room(b.roomId);
-        return{name:g?g.name:'?',color:g?g.color:'#999',sub:rm?rm.short:'',n:b.nbPersons||2};
+        return{name:g?g.name:'?',color:g?g.color:'#999',sub:rm?rm.short:'',n:b.nbPersons||2,bid:b.id};
       }),
       ...thExtList.map(e=>{
         const eg=guest(e.guestId);
@@ -8326,7 +8326,12 @@ function renderWeek(){
     const thTotal=thPeople.reduce((s,p)=>s+p.n,0);
     const thHas=thTotal>0||menuHas;
     const thCollapsed=panelCollapsed(ds,'th',true);
-    const thPeopleHTML=thPeople.length?`<div class="thsum-people">${thPeople.map(p=>`<div class="day-chip">
+    // Un client interne (p.bid) a une vraie fiche réservation à ouvrir — pas
+    // un client externe (table d'hôtes seule, aucune chambre/réservation
+    // derrière), qui reste donc non cliquable comme avant (curseur par
+    // défaut plutôt que le "pointer" hérité de .day-chip, sans quoi la
+    // carte aurait l'air cliquable sans l'être).
+    const thPeopleHTML=thPeople.length?`<div class="thsum-people">${thPeople.map(p=>`<div class="day-chip"${p.bid?` onclick="openEditModal('${p.bid}','${ds}')"`:' style="cursor:default"'}>
         <div class="tbar" style="background:${p.color}"></div>
         <div class="day-chip-content">
           <span class="bname">${p.name}</span>
