@@ -1200,10 +1200,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    pas de survol interactif (le calcul reste en lecture seule). */
 .evcard.evcard-holiday{cursor:default;}
 .evcard.evcard-holiday:hover{opacity:1;}
-.evdate-badge{width:40px;border-radius:8px;padding:7px 4px;display:flex;flex-direction:column;
+.evdate-badge{width:40px;border-radius:8px;padding:6px 4px;display:flex;flex-direction:column;
   align-items:center;justify-content:center;flex-shrink:0;}
-.evdate-day{font-size:20px;font-weight:700;line-height:1;}
-.evdate-mon{font-size:8px;text-transform:uppercase;letter-spacing:.07em;margin-top:3px;opacity:.85;}
+.evdate-dow{font-size:8px;font-weight:400;text-transform:uppercase;letter-spacing:.05em;opacity:.7;line-height:1;margin-bottom:1px;}
+.evdate-day{font-size:19px;font-weight:700;line-height:1.1;}
+.evdate-mon{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-top:2px;opacity:.85;}
 .evdate-range{display:flex;align-items:center;gap:5px;flex-shrink:0;}
 .evdate-arrow{font-size:12px;color:var(--gray);}
 .evcard-info{flex:1;min-width:0;}
@@ -4984,6 +4985,7 @@ const evBadge=(ds,col)=>{
   const d=new Date(ds+'T00:00:00');
   const lc=light(col);
   return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+    <div class="evdate-dow">${DOW[d.getDay()]}</div>
     <div class="evdate-day">${d.getDate()}</div>
     <div class="evdate-mon">${MON3[d.getMonth()]}</div>
   </div>`;
@@ -8053,6 +8055,7 @@ function renderWeek(){
     const dd=new Date(dds+'T00:00:00');
     const lc=light(col);
     return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+      <div class="evdate-dow">${DOW[dd.getDay()]}</div>
       <div class="evdate-day">${dd.getDate()}</div>
       <div class="evdate-mon">${MON3[dd.getMonth()]}</div>
     </div>`;
