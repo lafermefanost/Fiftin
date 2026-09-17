@@ -4184,7 +4184,7 @@ function openContractPreview(bkId){
   const bk=S.bookings.find(b=>b.id===bkId);
   if(!bk){alert('Enregistrez la réservation avant de générer le contrat.');return;}
   byId('contractPrintArea').innerHTML=buildContractHTML(bk);
-  byId('modalContract').style.display='flex';
+  openM('modalContract');
 }
 // CSS du contrat, dupliqué ici (plutôt que lu depuis la feuille de style de la
 // page) car le nouvel onglet ouvert par exportContractPDF a son propre
@@ -4348,12 +4348,7 @@ function openAddModal(roomId,ds,dsOut){
   renderBreakfastList();
   renderDinnerList();
   updateModalTotal();
-  byId('modalBooking').style.display='flex';
-  // Sans ça, le modal rouvrait parfois là où on l'avait laissé scrollé la
-  // fois précédente (.modal est l'élément qui défile, pas .overlay) — doit
-  // toujours démarrer en haut, quelle que soit la position de la dernière
-  // ouverture.
-  byId('modalBooking').querySelector('.modal').scrollTop=0;
+  openM('modalBooking');
 }
 
 function openEditModal(id,clickedDay){
@@ -4404,8 +4399,7 @@ function openEditModal(id,clickedDay){
   renderBreakfastList();
   renderDinnerList();
   updateModalTotal();
-  byId('modalBooking').style.display='flex';
-  byId('modalBooking').querySelector('.modal').scrollTop=0;
+  openM('modalBooking');
   lockdownModalForPersonnelViewing('modalBooking');
 }
 
@@ -4781,7 +4775,7 @@ function getDinnerNights(){
 // ═══════════════════════════════════════════════════════════════
 function openGuestsModal(){
   byId('gListSearch').value='';
-  renderGList();byId('modalGuests').style.display='flex';
+  renderGList();openM('modalGuests');
 }
 
 function renderGList(term){
@@ -4840,7 +4834,7 @@ function openGuestEdit(id){
   byId('gDelBtn').style.display=g?'block':'none';
   renderGeContact();
   renderGeHistory(id);
-  closeM('modalGuests');byId('modalGuestEdit').style.display='flex';
+  closeM('modalGuests');openM('modalGuestEdit');
 }
 
 function renderGeContact(){
@@ -4962,7 +4956,7 @@ function openEventsModal(presetKey,presetCategory){
     evOpenMonth=todayD.getFullYear()*12+todayD.getMonth();
   }
   renderEvList();
-  byId('modalEvents').style.display='flex';
+  openM('modalEvents');
 }
 // Changement de filtre : rouvre systématiquement sur le mois en cours (sans
 // objet pour Fiscal, qui n'a pas de volets) — une nouvelle vue à chaque
@@ -5168,7 +5162,7 @@ function openEventEdit(id,prefillDate,prefillCategory){
   renderModalExtrasEv();
   updateEvTotal();
 
-  closeM('modalEvents');byId('modalEventEdit').style.display='flex';
+  closeM('modalEvents');openM('modalEventEdit');
   lockdownModalForPersonnelViewing('modalEventEdit');
 }
 
@@ -5652,7 +5646,7 @@ function openTHModal(ds){
   const days=['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'];
   byId('thModalTitle').innerHTML=`${MEAL_ICON} ${days[d.getDay()]} ${d.getDate()} ${MON3[d.getMonth()]}`;
   renderTHBody(ds);
-  byId('modalTH').style.display='flex';
+  openM('modalTH');
 }
 
 function renderTHBody(ds){
@@ -6129,7 +6123,7 @@ let recipeBookDs=null;
 function openRecipeBook(ds){
   recipeBookDs=ds;
   renderRecipesBody();
-  byId('modalRecipes').style.display='flex';
+  openM('modalRecipes');
 }
 function renderRecipesBody(){
   const book=menuBook();
@@ -6639,7 +6633,7 @@ function openChargeAdd(gid){
   const cats=S.settings.chargeCategories||[];
   byId('mchaCategory').innerHTML=`<option value="">Non catégorisé</option>`+
     cats.map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
-  byId('modalChargeAdd').style.display='flex';
+  openM('modalChargeAdd');
   setTimeout(()=>byId('mchaAmount').focus(),50);
 }
 function saveManualCharge(){
@@ -6661,7 +6655,7 @@ function saveManualCharge(){
 function openSettings(){
   settingsPanelOpen={};
   renderSettings();
-  byId('modalSettings').style.display='flex';
+  openM('modalSettings');
 }
 // Accordéon : ouvrir une section referme celle qui était ouverte — plus
 // facile à lire qu'avoir plusieurs volets dépliés en même temps.
@@ -9197,6 +9191,20 @@ function goToday(){
 // ═══════════════════════════════════════════════════════════════
 //  MODAL UTILS
 // ═══════════════════════════════════════════════════════════════
+// Ouvre un modal en repartant toujours du haut — .modal est l'élément qui
+// défile (pas .overlay), donc sans ce reset il rouvrait parfois là où on
+// l'avait laissé scrollé lors de la précédente ouverture. Utilisé par tous
+// les modaux plutôt que de répéter display+scrollTop à chaque endroit qui
+// en ouvre un (et d'oublier le reset sur un futur modal). Cas particulier
+// .modal-noscroll (modalGuests/modalEvents/modalSettings) : c'est alors
+// .modal-scrollarea, pas .modal lui-même (overflow:hidden dans ce cas),
+// qui défile réellement — reset des deux, le second n'existe pas partout.
+function openM(id){
+  const el=byId(id);
+  el.style.display='flex';
+  el.querySelector('.modal').scrollTop=0;
+  el.querySelector('.modal-scrollarea')?.scrollTo(0,0);
+}
 function closeM(id){
   byId(id).style.display='none';
   // Vue Année laissée en attente pendant que les réglages étaient ouverts
