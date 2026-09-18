@@ -8778,12 +8778,15 @@ function renderMonth(){
     const rooms=getGroupRoomsM(gid);
     const roomIds=new Set(rooms.map(r=>r.id));
     const gbks=S.bookings.filter(bk=>roomIds.has(bk.roomId)&&bk.checkIn<mEndExact&&bk.checkOut>mStart);
-    const realBks=gbks.filter(bk=>bk.checkOut<=today);
-    const realCA=realBks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,mStart,mEndExact),0);
-    const realNights=realBks.reduce((s,bk)=>{
+    // "Réalisé" = nuits déjà passées à ce jour, y compris la part déjà
+    // écoulée d'un séjour en cours — voir la même logique dans groupStats
+    // (vue Année) pour la raison du changement.
+    const realEndM=today<mEndExact?today:mEndExact;
+    const realCA=gbks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,mStart,realEndM),0);
+    const realNights=gbks.reduce((s,bk)=>{
       const oS=bk.checkIn>mStart?bk.checkIn:mStart;
-      const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
-      return s+daysBetween(oS,oE);
+      const oE=bk.checkOut<realEndM?bk.checkOut:realEndM;
+      return s+Math.max(0,daysBetween(oS,oE));
     },0);
     const projCA=gbks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,mStart,mEndExact),0);
     const projNights=gbks.reduce((s,bk)=>{
@@ -9295,12 +9298,17 @@ function renderYear(){
     const bks=S.bookings.filter(bk=>
       roomIds.has(bk.roomId)&&bk.checkIn<yEnd&&bk.checkOut>yStart
     );
-    const realBks=bks.filter(bk=>bk.checkOut<=today);
-    const realCA=realBks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,yStart,yEnd),0);
-    const realNights=realBks.reduce((s,bk)=>{
+    // "Réalisé" = nuits déjà passées à ce jour, y compris la part déjà
+    // écoulée d'un séjour en cours (checkin fait, checkout pas encore passé)
+    // — même logique que yearTotalCA/yearRevenueInsight (résumé assistant),
+    // pour que les deux chiffres se recoupent. Avant, un séjour non terminé
+    // était totalement exclu du CA réalisé, sous-estimant le CA déjà généré.
+    const realEnd=today<yEnd?today:yEnd;
+    const realCA=bks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,yStart,realEnd),0);
+    const realNights=bks.reduce((s,bk)=>{
       const oS=bk.checkIn>yStart?bk.checkIn:yStart;
-      const oE=bk.checkOut<yEnd?bk.checkOut:yEnd;
-      return s+daysBetween(oS,oE);
+      const oE=bk.checkOut<realEnd?bk.checkOut:realEnd;
+      return s+Math.max(0,daysBetween(oS,oE));
     },0);
     const projCA=bks.reduce((s,bk)=>s+getBookingRevForPeriod(bk,yStart,yEnd),0);
     const projNights=bks.reduce((s,bk)=>{
