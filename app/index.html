@@ -862,16 +862,29 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
    — pour que l'écran de connexion porte déjà l'identité de l'appli avant
    même d'y entrer, plutôt qu'un simple formulaire neutre. Dégradé plutôt
-   qu'un aplat : lueur jaune acide diffuse (radial-gradient, coin
-   supérieur droit) qui se fond dans le vert moyen — un effet doux,
-   "céleste", sans jamais éclaircir le centre où vivent le picto et le
-   texte blancs (le jaune reste cantonné au coin, transparent ensuite). */
+   qu'un aplat : lueur jaune acide derrière le picto pour le mettre en
+   valeur — plusieurs radial-gradient superposés, décalés et de tailles
+   différentes (pas un seul ovale propre) pour une forme irrégulière,
+   organique, plutôt qu'un halo trop parfait/artificiel. Le grain (voir
+   ::before ci-dessous) casse encore l'effet trop lisse d'un dégradé CSS. */
 #lockScreen{position:fixed;inset:0;
-  background:radial-gradient(ellipse 70% 50% at 88% 8%,var(--yellow) 0%,transparent 60%),var(--green);
+  background:
+    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(222,235,130,.55) 0%,transparent 68%),
+    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(222,235,130,.4) 0%,transparent 70%),
+    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(222,235,130,.3) 0%,transparent 72%),
+    var(--green);
   z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
+/* Grain photographique discret par-dessus le dégradé (bruit SVG en
+   niveaux de gris, mix-blend-mode:overlay) — z-index négatif : reste
+   au-dessus du fond mais sous le picto/texte (voir logo-tile/lock-sub
+   ci-dessous, non positionnés, qui peignent par-dessus un enfant
+   positionné en z-index négatif). */
+#lockScreen::before,#siteGate::before{content:'';position:absolute;inset:0;z-index:-1;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;opacity:.1;pointer-events:none;}
 /* Cadre carré aux coins arrondis autour du picto, comme le contour d'une
    icône d'app sur l'écran d'accueil d'un téléphone — un simple liseret,
    sans fond, le vert de #lockScreen/#siteGate reste visible à travers. */
@@ -907,7 +920,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    À retirer quand ce n'est plus nécessaire. Recouvre même #lockScreen
    (z-index supérieur) puisqu'il doit passer en premier. */
 #siteGate{position:fixed;inset:0;
-  background:radial-gradient(ellipse 70% 50% at 88% 8%,var(--yellow) 0%,transparent 60%),var(--green);
+  background:
+    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(222,235,130,.55) 0%,transparent 68%),
+    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(222,235,130,.4) 0%,transparent 70%),
+    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(222,235,130,.3) 0%,transparent 72%),
+    var(--green);
   z-index:6000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
