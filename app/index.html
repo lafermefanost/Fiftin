@@ -4422,7 +4422,13 @@ function renderModalExtras(){
   sec.style.display='block';
   const days=[];
   let cur=bk.checkIn;
-  while(cur<bk.checkOut){days.push(cur);cur=addDays(cur,1);}
+  // Jusqu'au jour de départ INCLUS (<=, pas <) : le client peut encore
+  // consommer ce matin-là avant de partir — même logique que "Extras du
+  // jour" en vue Semaine (voir inHouse/deps dans renderWeek), qui permet
+  // déjà d'ajouter des consommations ce jour-là. Sans ça, les extras du
+  // jour de départ existaient bien (visibles dans le récap/total) mais
+  // sans onglet pour les consulter ou les modifier depuis ce modal.
+  while(cur<=bk.checkOut){days.push(cur);cur=addDays(cur,1);}
   if(!days.length)return;
   if(!modalExtrasDay||!days.includes(modalExtrasDay)){
     const today=todayISO();
@@ -4430,7 +4436,8 @@ function renderModalExtras(){
   }
   byId('bExtrasDayTabs').innerHTML=days.map(ds=>{
     const dt=getExtrasDayTotal(bk,ds);
-    return `<button type="button" class="extras-day-tab${ds===modalExtrasDay?' on':''}" onclick="modalExtrasDay='${ds}';renderModalExtras()">${fmtDateShort(ds)}${dt>0?` · ${dt.toLocaleString('fr-FR')}€`:''}</button>`;
+    const dep=ds===bk.checkOut?' (départ)':'';
+    return `<button type="button" class="extras-day-tab${ds===modalExtrasDay?' on':''}" onclick="modalExtrasDay='${ds}';renderModalExtras()">${fmtDateShort(ds)}${dep}${dt>0?` · ${dt.toLocaleString('fr-FR')}€`:''}</button>`;
   }).join('');
   byId('bExtrasDayBody').innerHTML=extrasHTMLFor(bk,modalExtrasDay);
   personnelLockExtrasBody('bExtrasDayBody');
