@@ -58,7 +58,7 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
   display:flex;flex-direction:column;}
 
 /* ─── HEADER ─────────────────────────────────────────────── */
-header{height:var(--hdr);background:var(--green-deep);color:var(--cream);
+header{height:var(--hdr);background:var(--green2);color:var(--cream);
   display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:100;}
 .app-icon{flex-shrink:0;opacity:.92;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
@@ -67,17 +67,17 @@ header{height:var(--hdr);background:var(--green-deep);color:var(--cream);
    applySettings) : Fiftin s'efface derrière le pictogramme, place normale
    pour un outil en marque blanche vis-à-vis du client final. */
 .logo b{font-weight:600;color:#fff;}
-.role-badge{font-size:11px;font-weight:600;background:rgba(255,255,255,.18);
+.role-badge{font-size:11px;font-weight:600;background:rgba(0,0,0,.18);
   padding:2px 8px;border-radius:10px;margin-left:6px;}
 /* Sur mobile, la bar du header est déjà serrée (nom d'établissement +
    icônes) — le badge Staff/Propriétaire est un confort, pas une info dont
    on a besoin en permanence sous les yeux, donc il cède la place en premier. */
 @media(max-width:599px){.role-badge{display:none;}}
 .hbtn{width:34px;height:34px;border:none;border-radius:50%;
-  background:rgba(255,255,255,.1);color:var(--cream);cursor:pointer;
+  background:rgba(0,0,0,.16);color:var(--cream);cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:16px;
   transition:background .15s;}
-.hbtn:hover{background:rgba(255,255,255,.2);}
+.hbtn:hover{background:rgba(0,0,0,.26);}
 .sync-pip{width:8px;height:8px;border-radius:50%;background:#666;flex-shrink:0;}
 .sync-pip.ok{background:#4CAF50;}
 .sync-pip.busy{background:var(--lavender);animation:blink 1s infinite;}
@@ -862,7 +862,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
    — pour que l'écran de connexion porte déjà l'identité de l'appli avant
    même d'y entrer, plutôt qu'un simple formulaire neutre. */
-#lockScreen{position:fixed;inset:0;background:var(--green-deep);z-index:5000;
+#lockScreen{position:fixed;inset:0;background:var(--green2);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
@@ -891,7 +891,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    dans le code source et sans valeur face à quelqu'un de déterminé.
    À retirer quand ce n'est plus nécessaire. Recouvre même #lockScreen
    (z-index supérieur) puisqu'il doit passer en premier. */
-#siteGate{position:fixed;inset:0;background:var(--green-deep);z-index:6000;
+#siteGate{position:fixed;inset:0;background:var(--green2);z-index:6000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #siteGate.gate-hidden{display:none;}
