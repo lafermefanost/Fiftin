@@ -1480,7 +1480,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
       style="text-align:center;font-size:16px;display:none" onkeydown="if(event.key==='Enter')submitAuth()">
     <button class="btn-p" style="width:100%" id="authSubmitBtn" onclick="submitAuth()">Se connecter</button>
     <div class="lock-err" id="lockErr"></div>
-    <div class="lock-switch" id="authSwitch">Pas encore de compte ? <a onclick="toggleAuthMode()">Créez-en un</a></div>
+    <div class="lock-switch" id="authSwitch">Pas encore de compte ? <a onclick="toggleAuthMode()">Créer un compte</a></div>
     <div class="lock-forgot" id="authForgot" onclick="forgotPassword()">Mot de passe oublié ?</div>
   </div>
 </div>
@@ -9743,7 +9743,7 @@ function showLockScreen(mode){
   byId('authSubmitBtn').textContent=authMode==='signup'?'Créer un compte':'Se connecter';
   byId('authSwitch').innerHTML=authMode==='signup'
     ?'Déjà un compte ? <a onclick="toggleAuthMode()">Connectez-vous</a>'
-    :'Pas encore de compte ? <a onclick="toggleAuthMode()">Créez-en un</a>';
+    :'Pas encore de compte ? <a onclick="toggleAuthMode()">Créer un compte</a>';
   byId('authForgot').style.display=authMode==='signup'?'none':'inline-block';
   byId('lockErr').textContent='';
   byId('lockScreen').classList.add('show');
