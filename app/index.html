@@ -861,32 +861,42 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    plus le code d'appareil provisoire d'avant. */
 /* Fond vert sauge (--green2) plutôt que crème — pour que l'écran de
    connexion porte déjà l'identité de l'appli avant même d'y entrer,
-   plutôt qu'un simple formulaire neutre. Dégradé plutôt qu'un aplat :
-   lueur lavande (--lavender-strong, déjà utilisée ailleurs dans l'appli)
-   derrière le picto pour le mettre en valeur — le contraste froid/chaud
-   avec le sauge accentue le côté "céleste". Plusieurs radial-gradient
-   superposés, décalés et de tailles différentes (pas un seul ovale
-   propre) pour une forme irrégulière, organique, plutôt qu'un halo trop
-   parfait/artificiel. Le grain (voir ::before ci-dessous) casse encore
-   l'effet trop lisse d'un dégradé CSS. */
-#lockScreen{position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(123,148,232,.5) 0%,transparent 68%),
-    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(123,148,232,.36) 0%,transparent 70%),
-    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(123,148,232,.28) 0%,transparent 72%),
-    var(--green2);
-  z-index:5000;
+   plutôt qu'un simple formulaire neutre. Le relief vient de .mesh-bg
+   ci-dessous (mesh gradient animé), pas d'un dégradé figé dans ce fond. */
+#lockScreen{position:fixed;inset:0;background:var(--green2);z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
-/* Grain photographique discret par-dessus le dégradé (bruit SVG en
+/* "Mesh gradient" animé façon aurore : plusieurs taches de couleur floues
+   (blur), plus grandes que l'écran, qui dérivent lentement chacune à son
+   rythme (durées différentes, non synchronisées) — un dégradé qui reste
+   vivant plutôt qu'une image figée, sans jamais bouger assez vite pour
+   distraire sur un écran de connexion. La bande "streak" imite le rayon
+   de lumière diagonal typique de ce style. overflow:hidden empêche les
+   taches (volontairement plus grandes que l'écran) de déborder du cadre. */
+.mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;}
+.mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(70px);}
+.mesh-bg .b1{width:62vh;height:62vh;background:var(--lavender-strong);opacity:.5;
+  top:-18%;left:-12%;animation:meshDrift1 24s ease-in-out infinite;}
+.mesh-bg .b2{width:54vh;height:54vh;background:var(--cream);opacity:.32;
+  top:2%;right:-18%;animation:meshDrift2 30s ease-in-out infinite;}
+.mesh-bg .b3{width:66vh;height:66vh;background:var(--green-deep);opacity:.55;
+  bottom:-22%;left:12%;animation:meshDrift3 27s ease-in-out infinite;}
+.mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8%;left:-25%;
+  background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.32) 50%,transparent 58%);
+  filter:blur(25px);transform:rotate(-18deg);animation:meshStreak 20s ease-in-out infinite;}
+@keyframes meshDrift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(9%,10%) scale(1.12);}}
+@keyframes meshDrift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-10%,7%) scale(1.08);}}
+@keyframes meshDrift3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(6%,-9%) scale(1.1);}}
+@keyframes meshStreak{0%,100%{transform:rotate(-18deg) translateY(0);}50%{transform:rotate(-13deg) translateY(8%);}}
+/* Grain photographique discret par-dessus le mesh gradient (bruit SVG en
    niveaux de gris, mix-blend-mode:overlay) — z-index négatif : reste
-   au-dessus du fond mais sous le picto/texte (voir logo-tile/lock-sub
+   au-dessus du fond/mesh mais sous le picto/texte (voir logo-tile/lock-sub
    ci-dessous, non positionnés, qui peignent par-dessus un enfant
    positionné en z-index négatif). */
 #lockScreen::before,#siteGate::before{content:'';position:absolute;inset:0;z-index:-1;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode:overlay;opacity:.1;pointer-events:none;}
+  mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
 /* Cadre carré aux coins arrondis autour du picto, comme le contour d'une
    icône d'app sur l'écran d'accueil d'un téléphone — un simple liseret,
    sans fond, le vert de #lockScreen/#siteGate reste visible à travers. */
@@ -921,13 +931,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    dans le code source et sans valeur face à quelqu'un de déterminé.
    À retirer quand ce n'est plus nécessaire. Recouvre même #lockScreen
    (z-index supérieur) puisqu'il doit passer en premier. */
-#siteGate{position:fixed;inset:0;
-  background:
-    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(123,148,232,.5) 0%,transparent 68%),
-    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(123,148,232,.36) 0%,transparent 70%),
-    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(123,148,232,.28) 0%,transparent 72%),
-    var(--green2);
-  z-index:6000;
+#siteGate{position:fixed;inset:0;background:var(--green2);z-index:6000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #siteGate.gate-hidden{display:none;}
@@ -1480,6 +1484,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      immédiatement, avant tout affichage, si le visiteur l'a déjà passé
      dans cet onglet (sessionStorage) — pour éviter un flash au rechargement. -->
 <div id="siteGate">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="92" height="71" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub">Site en accès restreint pour le moment.</div>
   <div class="lock-box">
@@ -1496,6 +1501,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
      ses propres données (Firestore : accounts/{uid}, protégé par des
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="92" height="71" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
