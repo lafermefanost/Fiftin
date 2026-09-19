@@ -859,20 +859,22 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    tout le reste (z-index supérieur aux modales). Vrai contrôle d'accès
    cette fois (Firebase Authentication + règles Firestore par compte),
    plus le code d'appareil provisoire d'avant. */
-/* Fond vert (couleur de l'en-tête de l'appli, voir --green) plutôt que crème
-   — pour que l'écran de connexion porte déjà l'identité de l'appli avant
-   même d'y entrer, plutôt qu'un simple formulaire neutre. Dégradé plutôt
-   qu'un aplat : lueur vert sauge (--green2) derrière le picto pour le
-   mettre en valeur — plusieurs radial-gradient superposés, décalés et de tailles
-   différentes (pas un seul ovale propre) pour une forme irrégulière,
-   organique, plutôt qu'un halo trop parfait/artificiel. Le grain (voir
-   ::before ci-dessous) casse encore l'effet trop lisse d'un dégradé CSS. */
+/* Fond vert sauge (--green2) plutôt que crème — pour que l'écran de
+   connexion porte déjà l'identité de l'appli avant même d'y entrer,
+   plutôt qu'un simple formulaire neutre. Dégradé plutôt qu'un aplat :
+   lueur lavande (--lavender-strong, déjà utilisée ailleurs dans l'appli)
+   derrière le picto pour le mettre en valeur — le contraste froid/chaud
+   avec le sauge accentue le côté "céleste". Plusieurs radial-gradient
+   superposés, décalés et de tailles différentes (pas un seul ovale
+   propre) pour une forme irrégulière, organique, plutôt qu'un halo trop
+   parfait/artificiel. Le grain (voir ::before ci-dessous) casse encore
+   l'effet trop lisse d'un dégradé CSS. */
 #lockScreen{position:fixed;inset:0;
   background:
-    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(139,157,134,.55) 0%,transparent 68%),
-    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(139,157,134,.4) 0%,transparent 70%),
-    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(139,157,134,.3) 0%,transparent 72%),
-    var(--green);
+    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(123,148,232,.5) 0%,transparent 68%),
+    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(123,148,232,.36) 0%,transparent 70%),
+    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(123,148,232,.28) 0%,transparent 72%),
+    var(--green2);
   z-index:5000;
   display:none;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
@@ -921,10 +923,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    (z-index supérieur) puisqu'il doit passer en premier. */
 #siteGate{position:fixed;inset:0;
   background:
-    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(139,157,134,.55) 0%,transparent 68%),
-    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(139,157,134,.4) 0%,transparent 70%),
-    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(139,157,134,.3) 0%,transparent 72%),
-    var(--green);
+    radial-gradient(ellipse 44% 32% at 45% 27%,rgba(123,148,232,.5) 0%,transparent 68%),
+    radial-gradient(ellipse 36% 28% at 61% 23%,rgba(123,148,232,.36) 0%,transparent 70%),
+    radial-gradient(ellipse 32% 26% at 50% 34%,rgba(123,148,232,.28) 0%,transparent 72%),
+    var(--green2);
   z-index:6000;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
