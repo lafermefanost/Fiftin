@@ -278,8 +278,15 @@
   .plan ul{margin:0; padding:0; list-style:none;}
   .plan li{font-size:14px; line-height:1.5; padding:7px 0 7px 20px; position:relative; color:rgba(46,43,34,0.78);}
   .plan.hi li{color:rgba(245,240,229,0.85);}
-  .plan li::before{content:"—"; position:absolute; left:0; color:var(--terracotta);}
-  .plan.hi li::before{color:var(--terracotta-soft);}
+  /* Repère coloré (au lieu d'un tiret uni) — reprend l'esprit des
+     pastilles de couleur par ligne dans l'app (planning, événements) :
+     chaque ligne a son repère, la liste vit au lieu d'être monochrome. */
+  .plan li::before{content:''; position:absolute; left:0; top:12px; width:5px; height:14px; border-radius:2.5px; background:var(--terracotta);}
+  .plan li:nth-child(5n+1)::before{background:#7B94E8;}
+  .plan li:nth-child(5n+2)::before{background:#C97B5C;}
+  .plan li:nth-child(5n+3)::before{background:#6B8F71;}
+  .plan li:nth-child(5n+4)::before{background:#D88A9A;}
+  .plan li:nth-child(5n+5)::before{background:#DEEB82;}
 
 
 
