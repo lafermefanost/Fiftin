@@ -950,7 +950,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    l'appli (mstat-rev, mfin-card) : le module de connexion porte l'identité
    de l'appli au lieu de flotter en champs blancs nus sur le fond vert foncé. */
 .lock-box{width:100%;max-width:280px;}
-.lock-box .fi{margin-bottom:10px;}
+/* Pilule à contour plutôt que cartouche blanche pleine : le mesh gradient
+   reste visible à travers, cohérent avec le liseret du picto (.logo-tile)
+   plus haut sur cet écran. */
+.lock-box .fi{margin-bottom:10px;border-radius:999px;background:transparent;
+  border:1.5px solid rgba(255,255,255,.55);color:#fff;text-align:center;}
+.lock-box .fi::placeholder{color:rgba(255,255,255,.65);}
+.lock-box .fi:focus{border-color:#fff;}
 .lock-err{color:#FFB4A8;font-size:12px;margin-top:10px;min-height:16px;}
 .lock-switch{font-size:12.5px;color:rgba(255,255,255,.7);margin-top:18px;}
 /* Pastille jaune acide — même traitement que les CTA "+ Ajouter"/"+ Nouveau"
@@ -960,10 +966,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   background:var(--yellow);color:var(--green-deep);font-weight:600;cursor:pointer;}
 .lock-forgot{font-size:12px;color:rgba(255,255,255,.7);margin-top:8px;cursor:pointer;text-decoration:underline;display:inline-block;}
 /* Le bouton .btn-p partagé est vert par défaut — invisible sur un fond
-   maintenant vert lui aussi. Inversé ici pour rester le point le plus
-   visible de l'écran. */
-#lockScreen .btn-p{background:#fff;color:var(--green-deep);}
-#lockScreen .btn-p:hover{filter:brightness(.96);}
+   maintenant vert lui aussi. Même traitement pilule/contour que .fi
+   ci-dessus, plutôt qu'un fond plein — reste le point le plus visible
+   de l'écran grâce au contour blanc plein, pas à un remplissage. */
+#lockScreen .btn-p{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;}
+#lockScreen .btn-p:hover{background:rgba(255,255,255,.12);}
 
 /* ─── VERROU TEMPORAIRE DU SITE ─────────────────────────────────
    Ajouté en plus de l'écran de connexion ci-dessus (#lockScreen), qui
@@ -978,8 +985,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:24px;text-align:center;}
 #siteGate.gate-hidden{display:none;}
-#siteGate .btn-p{background:#fff;color:var(--green-deep);}
-#siteGate .btn-p:hover{filter:brightness(.96);}
+#siteGate .btn-p{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;}
+#siteGate .btn-p:hover{background:rgba(255,255,255,.12);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
 /* Sur mobile, le modal occupe tout l'écran (plus de cartouche flottante à
