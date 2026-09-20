@@ -66,16 +66,14 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
   display:flex;flex-direction:column;}
 
 /* ─── HEADER ─────────────────────────────────────────────── */
-/* Dégradé plutôt qu'un aplat — écho statique du mesh gradient de l'écran
-   de connexion, mais avec ses VRAIES nuances (lavande, jaune acide,
-   sauge, vert profond), pas juste un dégradé linéaire à 2-3 tons trop
-   simple. Chaque teinte est une tache radiale semi-transparente posée
-   sur un fond sombre (vert profond → vert moyen), plutôt qu'une couleur
-   pleine — assez présente pour lire comme un fragment du mesh, assez
-   sombre partout pour ne pas casser le contraste déjà réglé des icônes/
-   badge (voir .hbtn/.role-badge). Statique (pas animé) : une barre
-   regardée en continu pendant des heures de travail n'a pas besoin de
-   bouger comme un écran d'accueil vu un instant. */
+/* Vrai recadrage capturé depuis le mesh gradient de l'écran de connexion
+   (#lockScreen) en fonctionnement, plutôt qu'une composition CSS — même
+   technique que les cartouches de la landing page (assets/bg-card-*.webp) :
+   une tentative précédente de recréer le dégradé à la main (taches
+   radiales sur les variables de couleur) ne rendait pas fidèlement les
+   mêmes nuances. Statique (pas animé) : une barre regardée en continu
+   pendant des heures de travail n'a pas besoin de bouger comme un écran
+   d'accueil vu un instant. */
 /* height/padding-top tiennent compte de la zone sûre (encoche/île
    dynamique en PWA installée) — sans ça, le contenu du header se
    retrouve sous la barre de statut système (horloge/réseau/batterie),
@@ -85,11 +83,8 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
    dépasser : la barre est donc plus haute en zone sûre, mais son
    contenu (align-items:center) reste centré dans les var(--hdr) du bas. */
 header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
-  background:
-    radial-gradient(ellipse 30% 400% at 16% 50%,rgba(123,148,232,.55) 0%,transparent 70%),
-    radial-gradient(ellipse 26% 400% at 52% 50%,rgba(222,235,130,.3) 0%,transparent 70%),
-    radial-gradient(ellipse 34% 400% at 86% 50%,rgba(139,157,134,.4) 0%,transparent 70%),
-    linear-gradient(100deg,var(--green-deep) 0%,var(--green) 100%);
+  background-image:url("../assets/bg-app-header.webp");
+  background-size:cover;background-position:center;
   color:var(--cream);
   display:flex;align-items:center;padding:env(safe-area-inset-top) 14px 0;gap:10px;flex-shrink:0;z-index:100;}
 .app-icon{flex-shrink:0;opacity:.92;}
