@@ -54,6 +54,12 @@ html,body{height:100%;overflow:hidden;}
 }
 
 /* ─── LAYOUT ─────────────────────────────────────────────── */
+/* <html> n'avait pas de fond propre : le navigateur utilise alors celui
+   de <body> (crème) comme couleur de "toile" — visible dans la zone de
+   rebond (overscroll) au-delà du contenu, en particulier la bande de
+   l'indicateur d'accueil en bas d'une PWA installée sur iPhone, qui
+   affichait ce crème/blanc au lieu du fond de l'écran de connexion. */
+html{background:var(--green2);}
 body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
   display:flex;flex-direction:column;}
 
