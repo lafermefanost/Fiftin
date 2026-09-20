@@ -964,7 +964,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    sans fond, le vert de #lockScreen/#siteGate reste visible à travers. */
 .logo-tile{width:136px;height:136px;border-radius:34px;border:1.5px solid rgba(255,255,255,.38);
   display:flex;align-items:center;justify-content:center;margin:0 auto 18px;}
-.lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;}
+.lock-sub{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:22px;max-width:280px;line-height:1.5;white-space:pre-line;}
 /* Cartouche vert moyen — même traitement que les cartouches chiffrées de
    l'appli (mstat-rev, mfin-card) : le module de connexion porte l'identité
    de l'appli au lieu de flotter en champs blancs nus sur le fond vert foncé. */
@@ -1573,7 +1573,8 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
   <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
-  <div class="lock-sub" id="lockSub">Votre activité évolue chaque jour. Restez-y connecté.</div>
+  <div class="lock-sub" id="lockSub">Votre activité évolue chaque jour.
+Restez-y connecté.</div>
   <div class="lock-box">
     <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
       style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')byId('authPassword').focus()">
@@ -9841,7 +9842,7 @@ function showLockScreen(mode){
   authMode=mode||'signin';
   byId('lockSub').textContent=authMode==='signup'
     ?'Créez votre compte et suivez l\'évolution de votre activité.'
-    :'Votre activité évolue chaque jour. Restez-y connecté.';
+    :'Votre activité évolue chaque jour.\nRestez-y connecté.';
   byId('authPasswordConfirm').style.display=authMode==='signup'?'block':'none';
   byId('authSubmitBtn').textContent=authMode==='signup'?'Créer un compte':'Se connecter';
   byId('authSwitch').innerHTML=authMode==='signup'
