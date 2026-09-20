@@ -30,6 +30,11 @@
   body{margin:0; background:var(--cream); color:var(--ink); font-family:'Jost',sans-serif; -webkit-font-smoothing:antialiased;}
 
   section{padding:72px 32px; border-bottom:1px solid var(--line); --section-bg:var(--cream);}
+  /* Pas de padding bas : le contenu (ici le téléphone) touche directement
+     la limite avec la section suivante, pour que la coupure du téléphone
+     coïncide avec le changement de slide plutôt que de laisser un vide
+     de couleur pleine entre les deux. */
+  section.tight-bottom{padding-bottom:0;}
   .inner{max-width:940px; margin:0 auto;}
   .kicker{font-weight:800; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--terracotta); margin-bottom:18px;}
   h2{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(28px,4vw,42px); line-height:1.12; margin:0 0 20px; letter-spacing:-0.01em;}
@@ -444,11 +449,11 @@
 </section>
 
 <!-- VOTRE VRAIE VIE -->
-<section class="dark">
+<section class="dark tight-bottom">
   <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="kicker">Votre vraie vie</div>
-    <h2>Il n'y a pas de bureau.<br><em>Juste votre vie, en continu.</em></h2>
+    <h2>Votre bureau, c'est votre vie.<br><em>Fiftin la simplifie.</em></h2>
     <p class="big">Le téléphone sonne à la buanderie, au marché, en pleine ménage. Fiftin est là, prêt en un geste — pas cantonné à un bureau que vous n'avez jamais.</p>
     <p class="big">Le plombier, la piscine, l'anniversaire qu'on ne déplace pas : ça pèse sur votre planning autant qu'une réservation. Tout au même endroit, pour que les conflits sautent aux yeux avant d'accepter — pas le matin même.</p>
 
