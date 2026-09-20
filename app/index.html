@@ -1596,7 +1596,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub" id="lockSub">Votre activité évolue chaque jour.
-Restez-y connecté.</div>
+Gardez la main.</div>
   <div class="lock-box">
     <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
       style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')byId('authPassword').focus()">
@@ -9864,7 +9864,7 @@ function showLockScreen(mode){
   authMode=mode||'signin';
   byId('lockSub').textContent=authMode==='signup'
     ?'Créez votre compte et suivez l\'évolution de votre activité.'
-    :'Votre activité évolue chaque jour.\nRestez-y connecté.';
+    :'Votre activité évolue chaque jour.\nGardez la main.';
   byId('authPasswordConfirm').style.display=authMode==='signup'?'block':'none';
   byId('authSubmitBtn').textContent=authMode==='signup'?'Créer un compte':'Se connecter';
   byId('authSwitch').innerHTML=authMode==='signup'
