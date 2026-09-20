@@ -13,6 +13,11 @@
   :root{
     --cream:#EFEEEA; --cream-deep:#E4E1D9; --ink:#2E2B22;
     --sauge:#354B38; --sauge-deep:#1D2820;
+    /* Vert sauge clair + lavande vive : mêmes valeurs que app/index.html
+       (--green2 et --lavender-strong), pour le mesh gradient (.mesh-bg
+       plus bas) — fond des grandes zones vertes, repris tel quel de
+       l'écran de connexion. */
+    --sauge-light:#8B9D86; --lavender-strong:#7B94E8;
     --terracotta:#1D2820; --terracotta-soft:#B2BBDA;
     --lavender-bg:#E7E9F1;
     /* Jaune d'accent : réservé aux actions du client (voir app/index.html) —
@@ -32,8 +37,65 @@
   p.big{font-size:18px; line-height:1.65; max-width:640px; color:rgba(46,43,34,0.8); margin:0 0 16px;}
   p.small{font-size:15px; line-height:1.6; color:rgba(46,43,34,0.72); margin:0;}
 
+  /* Mesh gradient — repris exactement de l'écran de connexion
+     (app/index.html, #lockScreen/#siteGate) : mêmes taches, mêmes
+     couleurs, mêmes animations, pour que les grandes zones vertes de la
+     page commerciale (cover/mid/dark/close) vivent dans la même DA que
+     l'app. Fond clair (--sauge-light) plutôt que --sauge-deep : les
+     nuances foncées viennent de b3 (une tache, pas tout le fond). */
+  /* z-index:0 (en plus de position:relative déjà présent) — indispensable :
+     sans contexte d'empilement propre à la section, ses enfants z-index
+     négatif (.mesh-bg, ::before du grain) s'échappent vers le contexte
+     racine de la page et se retrouvent peints SOUS le fond plat de la
+     section au lieu de dessus. #lockScreen évite ce piège grâce à son
+     z-index:5000 déjà présent ; ici il faut le poser explicitement. */
+  .cover, .mid, .dark, .close{background:var(--sauge-light); z-index:0;}
+  /* container-type:size — les taches se dimensionnent en cqmin (mini de la
+     largeur/hauteur RÉELLES de la section), pas en vh comme sur l'écran de
+     connexion (qui fait toujours 1 viewport de haut). Sans ça, sur les
+     sections commerciales très hautes (.cover avec son mockup), les taches
+     calées en vh restaient minuscules par rapport à la zone à couvrir. */
+  .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;container-type:size;}
+  .mesh-bg .blob{position:absolute;border-radius:50%;aspect-ratio:1;filter:blur(60px);}
+  .mesh-bg .b1{width:63cqmin;background:var(--lavender-strong);
+    top:-18%;left:-12%;animation:meshDrift1 18s ease-in-out infinite;}
+  .mesh-bg .b2{width:57cqmin;
+    background:radial-gradient(circle at 50% 45%,#fff 0%,var(--yellow) 42%,transparent 76%);
+    filter:blur(38px);top:6%;right:-16%;animation:meshDrift2 21s ease-in-out infinite -6s;}
+  .mesh-bg .b3{width:72cqmin;background:var(--sauge-deep);filter:blur(54px) saturate(1.2);
+    bottom:-24%;left:7%;animation:meshDrift3 19s ease-in-out infinite -11s;}
+  .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8%;left:-25%;
+    background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
+    filter:blur(25px);animation:meshStreak 18s ease-in-out infinite -4s;}
+  @keyframes meshDrift1{
+    0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.58;}
+    25%{transform:translate(16%,9%) scale(1.35,.68) rotate(18deg);opacity:.7;}
+    50%{transform:translate(21%,14%) scale(1.1,1.3) rotate(-10deg);opacity:.78;}
+    75%{transform:translate(-9%,17%) scale(.7,.92) rotate(6deg);opacity:.38;}
+    100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.58;}}
+  @keyframes meshDrift2{
+    0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.62;}
+    20%{transform:translate(-12%,9%) scale(1.35,.6) rotate(-20deg);opacity:.5;}
+    40%{transform:translate(-18%,15%) scale(.68,.72) rotate(0deg);opacity:.4;}
+    58%{transform:translate(3%,-4%) scale(.62,1.55) rotate(16deg);opacity:.6;}
+    75%{transform:translate(13%,-12%) scale(1.35,1.3) rotate(0deg);opacity:.88;}
+    100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.62;}}
+  @keyframes meshDrift3{
+    0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.76;}
+    28%{transform:translate(13%,-9%) scale(1.4,.75) rotate(12deg);opacity:.8;}
+    50%{transform:translate(16%,-17%) scale(1.05,1.3) rotate(-8deg);opacity:.85;}
+    75%{transform:translate(-11%,11%) scale(.78,.92) rotate(0deg);opacity:.58;}
+    100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.76;}}
+  @keyframes meshStreak{
+    0%{transform:rotate(-18deg) translateY(0);opacity:1;}
+    50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
+    100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
+  .cover::before, .mid::before, .dark::before, .close::before{content:'';position:absolute;inset:0;z-index:-1;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
+
   /* cover */
-  .cover{background:var(--sauge-deep); color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; position:relative;}
+  .cover{color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; position:relative;}
   .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
   /* Détaché du fil du logo, posé dans le coin haut-droit de la section
      plutôt qu'aligné sur la hauteur du mark — .cover est déjà la référence
@@ -99,7 +161,7 @@
   .stat .n{font-family:'Jost',sans-serif; font-weight:800; font-size:42px; line-height:1; color:var(--terracotta); letter-spacing:-0.03em; margin-bottom:10px;}
   .stat .l{font-size:14px; line-height:1.5; color:rgba(46,43,34,0.72);}
 
-  .dark{background:var(--sauge-deep); color:var(--cream); --section-bg:var(--sauge-deep);}
+  .dark{color:var(--cream); --section-bg:var(--sauge-deep); position:relative; overflow:hidden;}
   .dark h2{color:var(--cream);}
   .dark p.big, .dark p.small{color:rgba(245,240,229,0.84);}
   .dark .kicker{color:var(--terracotta-soft);}
@@ -107,7 +169,7 @@
   /* Vert moyen — même famille que .dark (texte crème, kicker lavande) mais
      un ton plus clair, pour qu'une section ne se fonde pas dans le hero
      ou une autre section .dark directement au-dessus/en-dessous. */
-  .mid{background:var(--sauge); color:var(--cream); --section-bg:var(--sauge);}
+  .mid{color:var(--cream); --section-bg:var(--sauge); position:relative; overflow:hidden;}
   .mid h2{color:var(--cream);}
   .mid p.big, .mid p.small{color:rgba(245,240,229,0.88);}
   .mid .kicker{color:var(--terracotta-soft);}
@@ -239,7 +301,7 @@
   /* Sortie de page : exactement les couleurs du hero d'entrée (.cover) —
      fond vert foncé, texte crème, accent lavande sur l'italique. La page
      se referme dans le même décor que celui où elle s'est ouverte. */
-  .close{background:var(--sauge-deep); color:var(--cream); text-align:center; border-bottom:none; padding:104px 32px 112px;}
+  .close{color:var(--cream); text-align:center; border-bottom:none; padding:104px 32px 112px; position:relative; overflow:hidden;}
   .close h2{color:var(--cream); font-size:clamp(38px,6.5vw,66px); margin:0 0 26px; letter-spacing:-0.02em;}
   /* Le mark est déjà pensé pour un fond sombre (comme dans .cover) : posé
      directement, sans disque support. */
@@ -255,6 +317,7 @@
 
 <!-- COVER -->
 <section class="cover">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <nav class="nav-menu">
     <a class="nav-pill ghost" href="mailto:support@fiftin.fr">Support technique</a>
     <a class="nav-pill ghost" href="/app/">Se connecter</a>
@@ -274,6 +337,7 @@
 
 <!-- PROPRIETE DU CLIENT -->
 <section class="mid">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="kicker">Premier constat</div>
     <h2>Sur Booking ou Airbnb, ce client<br>n'est pas le vôtre. <em>Ici, si.</em></h2>
@@ -373,6 +437,7 @@
 
 <!-- PREUVE -->
 <section class="dark">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="kicker">Pourquoi nous</div>
     <p class="quote">Fiftin n'a pas été conçu dans un bureau d'études.<br>Il est né dans une maison d'hôtes familiale de cinq chambres et un gîte, <em>parce qu'aucun outil du marché ne faisait le travail.</em></p>
@@ -396,6 +461,7 @@
 
 <!-- VIE REELLE -->
 <section class="dark">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="kicker">La vraie vie d'une maison</div>
     <h2>Votre planning ne contient pas<br><em>que des clients.</em></h2>
@@ -514,6 +580,7 @@
 
 <!-- CLOSE -->
 <section class="close">
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="close-mark"><img src="data:image/png;base64,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" alt="Fiftin"></div>
     <h2>Reprenez vos 15 %.</h2>
