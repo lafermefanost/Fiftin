@@ -883,12 +883,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    b3 plafonné à .85) pour que l'ensemble ne devienne jamais trop sombre
    quand plusieurs taches sont creuses en même temps. b2 porte son cœur
    blanc/jaune intense directement dans son propre radial-gradient (pas
-   un élément "flare" à part avec sa propre position/timing, essayé
-   avant et jugé trop artificiel, façon spot) — ainsi la zone plus
-   blanche/intense bouge, grossit et s'éclaircit exactement avec b2 lui-
-   même (meshDrift2), collée à son mouvement plutôt que plaquée dessus.
-   overflow:hidden empêche les taches (volontairement plus grandes que
-   l'écran) de déborder du cadre. */
+   un élément "flare" à part) — la zone plus blanche/intense bouge et
+   s'éclaircit avec b2 lui-même. Chaque tache anime scaleX/scaleY
+   INDÉPENDAMMENT (plus une simple scale() uniforme) + une légère
+   rotation : un cercle qui grossit/rétrécit reste un cercle et lit
+   comme un "spot" qui se déplace, alors qu'ici la forme s'aplatit en
+   ligne, s'étire en ovale ou s'arrondit selon le moment — comme des
+   plaques de lumière plus ou moins étendues sur un paysage, pas un
+   projecteur. overflow:hidden empêche les taches (volontairement plus
+   grandes que l'écran) de déborder du cadre. */
 .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;}
 .mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(60px);}
 .mesh-bg .b1{width:63vh;height:63vh;background:var(--lavender-strong);
@@ -907,20 +910,24 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
   filter:blur(25px);animation:meshStreak 18s ease-in-out infinite -4s;}
 @keyframes meshDrift1{
-  0%{transform:translate(0,0) scale(1);opacity:.58;}
-  30%{transform:translate(21%,14%) scale(1.35);opacity:.78;}
-  65%{transform:translate(-9%,17%) scale(.75);opacity:.38;}
-  100%{transform:translate(0,0) scale(1);opacity:.58;}}
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.58;}
+  25%{transform:translate(16%,9%) scale(1.5,.6) rotate(18deg);opacity:.7;}
+  50%{transform:translate(21%,14%) scale(1.1,1.35) rotate(-10deg);opacity:.78;}
+  75%{transform:translate(-9%,17%) scale(.65,.95) rotate(6deg);opacity:.38;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.58;}}
 @keyframes meshDrift2{
-  0%{transform:translate(0,0) scale(1);opacity:.62;}
-  40%{transform:translate(-18%,15%) scale(.7);opacity:.4;}
-  75%{transform:translate(13%,-12%) scale(1.4);opacity:.88;}
-  100%{transform:translate(0,0) scale(1);opacity:.62;}}
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.62;}
+  20%{transform:translate(-12%,9%) scale(1.7,.42) rotate(-22deg);opacity:.5;}
+  40%{transform:translate(-18%,15%) scale(.6,.62) rotate(0deg);opacity:.4;}
+  58%{transform:translate(3%,-4%) scale(.48,1.85) rotate(14deg);opacity:.6;}
+  75%{transform:translate(13%,-12%) scale(1.4,1.4) rotate(0deg);opacity:.88;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.62;}}
 @keyframes meshDrift3{
-  0%{transform:translate(0,0) scale(1);opacity:.76;}
-  35%{transform:translate(16%,-17%) scale(1.3);opacity:.85;}
-  70%{transform:translate(-11%,11%) scale(.84);opacity:.58;}
-  100%{transform:translate(0,0) scale(1);opacity:.76;}}
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.76;}
+  28%{transform:translate(13%,-9%) scale(1.4,.75) rotate(12deg);opacity:.8;}
+  50%{transform:translate(16%,-17%) scale(1.05,1.3) rotate(-8deg);opacity:.85;}
+  75%{transform:translate(-11%,11%) scale(.78,.92) rotate(0deg);opacity:.58;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.76;}}
 @keyframes meshStreak{
   0%{transform:rotate(-18deg) translateY(0);opacity:1;}
   50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
