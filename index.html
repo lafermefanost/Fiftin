@@ -297,12 +297,14 @@
      ailleurs sur la page — recalculé pour la même coupure (juste sous la
      barre des vues) à cette taille. Les captures en situation sont déjà
      recadrées (voir plus haut) pour être centrées nativement : plus
-     besoin d'un décalage optique comme avec l'ancien mockup générique. */
-  .mod-visual .phone2{width:320px;}
-  .mod-visual .phone-stage{height:471px;}
+     besoin d'un décalage optique comme avec l'ancien mockup générique.
+     .phone-stage.lg reprend exactement cette même taille hors carte
+     (section VOTRE VRAIE VIE), pour la même coupure que les 4 cartes. */
+  .mod-visual .phone2, .phone-stage.lg .phone2{width:320px;}
+  .mod-visual .phone-stage, .phone-stage.lg{height:471px;}
   @media (max-width:640px){
-    .mod-visual .phone2{width:280px;}
-    .mod-visual .phone-stage{height:412px;}
+    .mod-visual .phone2, .phone-stage.lg .phone2{width:280px;}
+    .mod-visual .phone-stage, .phone-stage.lg{height:412px;}
   }
 
   /* deuxième façon de couper un écran, pour alterner avec le crop du bas :
@@ -443,7 +445,7 @@
     <p class="big">Le plombier, la piscine, l'anniversaire qu'on ne déplace pas : ça pèse sur votre planning autant qu'une réservation. Tout au même endroit, pour que les conflits sautent aux yeux avant d'accepter — pas le matin même.</p>
 
     <div class="shot-row">
-      <div><div class="phone-stage"><div class="phone2"><img src="assets/shot-evenements.webp" alt="Fiftin — Vos événements, à côté des séjours"></div></div><p class="shot-cap">Vos événements, à côté des séjours</p></div>
+      <div><div class="phone-stage lg"><div class="phone2"><img src="assets/shot-evenements.webp" alt="Fiftin — Vos événements, à côté des séjours"></div></div><p class="shot-cap">Vos événements, à côté des séjours</p></div>
     </div>
   </div>
 </section>
