@@ -544,27 +544,36 @@
     var target = parseFloat(el.getAttribute('data-target'));
     var duration = 1200;
     var start = null;
+    el.dataset.animating = '1';
     function step(ts){
       if (!start) start = ts;
       var p = Math.min((ts - start) / duration, 1);
       var eased = 1 - Math.pow(1 - p, 3);
       el.textContent = (target * eased).toFixed(1).replace('.', ',');
-      if (p < 1) requestAnimationFrame(step);
-      else el.textContent = target.toFixed(1).replace('.', ',');
+      if (p < 1){ requestAnimationFrame(step); }
+      else { el.textContent = target.toFixed(1).replace('.', ','); el.dataset.animating = ''; }
     }
     el.textContent = '0';
     requestAnimationFrame(step);
   }
 
+  /* threshold élevé + rootMargin négatif en bas : la carte doit être
+     franchement dans l'écran, pas juste effleurer le bord, avant que le
+     compteur se déclenche — pour qu'il se joue quand on est vraiment
+     devant, pas une fraction de seconde avant d'y arriver. Rejouable à
+     chaque passage (pas de unobserve) : remis à zéro en sortant de vue
+     tant qu'il n'est pas en cours d'animation. */
   if ('IntersectionObserver' in window){
     var io = new IntersectionObserver(function(entries){
       entries.forEach(function(entry){
+        var el = entry.target;
         if (entry.isIntersecting){
-          animate(entry.target);
-          io.unobserve(entry.target);
+          if (!el.dataset.animating) animate(el);
+        } else if (!el.dataset.animating){
+          el.textContent = '0';
         }
       });
-    }, {threshold:0.5});
+    }, {threshold:0.6, rootMargin:'0px 0px -15% 0px'});
     Array.prototype.forEach.call(counters, function(el){ io.observe(el); });
   } else {
     Array.prototype.forEach.call(counters, animate);
