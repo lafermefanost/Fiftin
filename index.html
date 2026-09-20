@@ -70,8 +70,14 @@
   .mesh-bg .b2{width:57cqmin;
     background:radial-gradient(circle at 50% 45%,#fff 0%,var(--yellow) 42%,transparent 76%);
     filter:blur(38px);top:6vh;right:-16%;animation:meshDrift2 21s ease-in-out infinite -6s;}
+  /* b3 (la plus foncée) était encore calée en bottom:, donc relative au
+     bas du CONTAINER — sans effet pour rapprocher la tache du premier
+     écran sur une section bien plus haute qu'un viewport comme .cover :
+     "bottom" reste ancré au bas de la section entière, aussi loin
+     soit-il. Basculée en top:, comme b1/b2, pour rester groupée dans le
+     premier viewport quelle que soit la hauteur de la section. */
   .mesh-bg .b3{width:72cqmin;background:var(--sauge-deep);filter:blur(54px) saturate(1.3);
-    bottom:-24vh;left:7%;animation:meshDrift3 19s ease-in-out infinite -11s;}
+    top:65vh;left:7%;animation:meshDrift3 19s ease-in-out infinite -11s;}
   .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8vh;left:-25%;
     background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
     filter:blur(25px);animation:meshStreak 18s ease-in-out infinite -4s;}
