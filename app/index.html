@@ -76,14 +76,22 @@ body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
    badge (voir .hbtn/.role-badge). Statique (pas animé) : une barre
    regardée en continu pendant des heures de travail n'a pas besoin de
    bouger comme un écran d'accueil vu un instant. */
-header{height:var(--hdr);
+/* height/padding-top tiennent compte de la zone sûre (encoche/île
+   dynamique en PWA installée) — sans ça, le contenu du header se
+   retrouve sous la barre de statut système (horloge/réseau/batterie),
+   qui le recouvre. Même logique que .mbnav (barre du bas) plus loin,
+   qui gérait déjà env(safe-area-inset-bottom). box-sizing:border-box
+   pour que le padding-top s'ajoute à la hauteur totale plutôt que de la
+   dépasser : la barre est donc plus haute en zone sûre, mais son
+   contenu (align-items:center) reste centré dans les var(--hdr) du bas. */
+header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   background:
     radial-gradient(ellipse 30% 400% at 16% 50%,rgba(123,148,232,.55) 0%,transparent 70%),
     radial-gradient(ellipse 26% 400% at 52% 50%,rgba(222,235,130,.3) 0%,transparent 70%),
     radial-gradient(ellipse 34% 400% at 86% 50%,rgba(139,157,134,.4) 0%,transparent 70%),
     linear-gradient(100deg,var(--green-deep) 0%,var(--green) 100%);
   color:var(--cream);
-  display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;z-index:100;}
+  display:flex;align-items:center;padding:env(safe-area-inset-top) 14px 0;gap:10px;flex-shrink:0;z-index:100;}
 .app-icon{flex-shrink:0;opacity:.92;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
