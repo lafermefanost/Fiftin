@@ -110,7 +110,7 @@
 
   /* cover */
   .cover{color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; position:relative;}
-  .logo{display:flex; align-items:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
+  .logo{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
   /* Détaché du fil du logo, posé dans le coin haut-droit de la section
      plutôt qu'aligné sur la hauteur du mark — .cover est déjà la référence
      de positionnement (position:relative ci-dessus). */
@@ -136,7 +136,7 @@
   .logo-tile.sm{width:90px; height:90px; border-radius:22px; margin:0 auto 34px;}
   @media (max-width:640px){ .logo-tile{width:128px; height:128px; border-radius:32px;} }
   .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(40px,7vw,76px); line-height:1.02; margin:0 0 24px; letter-spacing:-0.02em;}
-  .cover h1 em{font-style:italic; font-weight:500; color:var(--terracotta-soft);}
+  .cover h1 em{font-style:italic; font-weight:500; color:var(--sauge);}
   .cover p{font-size:22px; line-height:1.5; font-weight:500; color:rgba(245,240,229,0.94); max-width:580px; margin:0; letter-spacing:-0.005em;}
 
   /* Sur ordinateur : texte à gauche, téléphone à droite, dans un cadre
@@ -322,6 +322,9 @@
 
   .quote{font-family:'Jost',sans-serif; font-size:clamp(22px,3.2vw,32px); line-height:1.35; font-weight:400; max-width:720px; margin:0;}
   .quote em{font-style:italic; color:var(--terracotta-soft);}
+  /* Variante pour la phrase d'ouverture d'une section (ex : "15, c'est…") —
+     doit se lire comme une accroche, pas comme du texte courant. */
+  .quote-lead{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(30px,4.8vw,46px); line-height:1.22; max-width:760px; margin:0; letter-spacing:-0.01em;}
 
   /* Sortie de page : exactement les couleurs du hero d'entrée (.cover) —
      fond vert foncé, texte crème, accent lavande sur l'italique. La page
@@ -361,7 +364,7 @@
   <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
   <div class="inner">
     <div class="kicker">D'où vient le nom</div>
-    <p class="quote">15, c'est à peu de chose près ce que les plateformes prélèvent aujourd'hui sur chaque réservation.</p>
+    <p class="quote-lead">15, c'est à peu de chose près ce que les plateformes prélèvent aujourd'hui sur chaque réservation.</p>
     <p class="big" style="margin-top:38px;">Fiftin est né dans une maison d'hôtes familiale de cinq chambres et un gîte, tenue par Marine et César — une juriste et un designer graphique partis en quête d'indépendance. Comme beaucoup, on a fait confiance aux plateformes avant de regarder ce que leur commission représentait vraiment. 15 est resté le chiffre-repère : le coût de ne pas être pleinement propriétaire de son activité.</p>
 
     <div class="stat-row" style="margin-top:36px; max-width:480px;">
@@ -370,12 +373,10 @@
         <div class="l">Commission unique hôte Airbnb, 18,6 % TTC, depuis octobre 2026.</div>
       </div>
       <div class="stat">
-        <div class="n">0 %</div>
+        <div class="n" style="color:var(--sauge);">0 %</div>
         <div class="l">Ce que vous payez sur une réservation prise en direct.</div>
       </div>
     </div>
-
-    <p class="quote" style="margin-top:38px;">On l'a construit pour nous.<br><em>Il est prêt pour vous.</em></p>
   </div>
 </section>
 
@@ -383,9 +384,9 @@
 <section>
   <div class="inner">
     <div class="kicker">Le vrai problème</div>
-    <h2>Ce n'est pas un problème de plateformes.<br><em>C'est un problème de visibilité.</em></h2>
+    <h2>Les plateformes n'y sont pour rien.<br><em>C'est un manque de vision d'ensemble.</em></h2>
     <p class="big">Réservations, ménage, clients, extras, TVA, charges, imprévus : une activité d'hôte, ce sont des centaines de détails chaque semaine — un carnet ici, un tableur là, le reste dans la tête.</p>
-    <p class="big">Pas par manque de sérieux : parce que l'activité a grandi plus vite que les outils pour la piloter.</p>
+    <p class="big">Pas un manque de sérieux : un manque de recul sur une information éclatée partout, qui empêche d'en garder vraiment le contrôle.</p>
   </div>
 </section>
 
@@ -521,6 +522,7 @@
       </div>
     </div>
     <p class="small" style="margin-top:22px;">Deux mois offerts en facturation annuelle. Vos données restent exportables à tout moment.</p>
+    <p class="quote" style="margin-top:34px;">On l'a construit pour nous.<br><em style="color:var(--sauge);">Il est prêt pour vous.</em></p>
   </div>
 </section>
 
