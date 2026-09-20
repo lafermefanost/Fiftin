@@ -868,27 +868,32 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   padding:24px;text-align:center;}
 #lockScreen.show{display:flex;}
 /* "Mesh gradient" animé façon aurore : plusieurs taches de couleur floues
-   (blur), plus grandes que l'écran, qui dérivent lentement chacune à son
-   rythme (durées différentes, non synchronisées) — un dégradé qui reste
-   vivant plutôt qu'une image figée, sans jamais bouger assez vite pour
-   distraire sur un écran de connexion. La bande "streak" imite le rayon
-   de lumière diagonal typique de ce style. overflow:hidden empêche les
-   taches (volontairement plus grandes que l'écran) de déborder du cadre. */
+   (blur), plus grandes que l'écran, qui dérivent chacune à son propre
+   rythme (durées différentes, non synchronisées, grande amplitude de
+   déplacement) — un mouvement qui se remarque vraiment plutôt qu'une
+   image quasi figée. b2 (vert acide vif, moins flouté que les autres
+   pour rester vibrant) joue le rôle du soleil qui frappe le feuillage,
+   entre le froid de la lavande (b1) et l'ombre profonde du vert foncé
+   (b3) — plus d'écart entre clairs et foncés que l'ancienne version,
+   plutôt qu'un dégradé trop lissé/uniforme. La bande "streak" imite le
+   rayon de lumière diagonal typique de ce style. overflow:hidden
+   empêche les taches (volontairement plus grandes que l'écran) de
+   déborder du cadre. */
 .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;}
-.mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(70px);}
-.mesh-bg .b1{width:62vh;height:62vh;background:var(--lavender-strong);opacity:.5;
-  top:-18%;left:-12%;animation:meshDrift1 24s ease-in-out infinite;}
-.mesh-bg .b2{width:54vh;height:54vh;background:var(--cream);opacity:.32;
-  top:2%;right:-18%;animation:meshDrift2 30s ease-in-out infinite;}
-.mesh-bg .b3{width:66vh;height:66vh;background:var(--green-deep);opacity:.55;
-  bottom:-22%;left:12%;animation:meshDrift3 27s ease-in-out infinite;}
+.mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(60px);}
+.mesh-bg .b1{width:62vh;height:62vh;background:var(--lavender-strong);opacity:.55;
+  top:-18%;left:-12%;animation:meshDrift1 16s ease-in-out infinite;}
+.mesh-bg .b2{width:56vh;height:56vh;background:var(--yellow);opacity:.62;filter:blur(46px);
+  top:6%;right:-16%;animation:meshDrift2 19s ease-in-out infinite;}
+.mesh-bg .b3{width:68vh;height:68vh;background:var(--green-deep);opacity:.68;
+  bottom:-22%;left:10%;animation:meshDrift3 17s ease-in-out infinite;}
 .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8%;left:-25%;
-  background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.32) 50%,transparent 58%);
-  filter:blur(25px);transform:rotate(-18deg);animation:meshStreak 20s ease-in-out infinite;}
-@keyframes meshDrift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(9%,10%) scale(1.12);}}
-@keyframes meshDrift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-10%,7%) scale(1.08);}}
-@keyframes meshDrift3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(6%,-9%) scale(1.1);}}
-@keyframes meshStreak{0%,100%{transform:rotate(-18deg) translateY(0);}50%{transform:rotate(-13deg) translateY(8%);}}
+  background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
+  filter:blur(25px);transform:rotate(-18deg);animation:meshStreak 14s ease-in-out infinite;}
+@keyframes meshDrift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(18%,16%) scale(1.18);}}
+@keyframes meshDrift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-17%,15%) scale(1.2);}}
+@keyframes meshDrift3{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(15%,-17%) scale(1.15);}}
+@keyframes meshStreak{0%,100%{transform:rotate(-18deg) translateY(0);}50%{transform:rotate(-9deg) translateY(14%);}}
 /* Grain photographique discret par-dessus le mesh gradient (bruit SVG en
    niveaux de gris, mix-blend-mode:overlay) — z-index négatif : reste
    au-dessus du fond/mesh mais sous le picto/texte (voir logo-tile/lock-sub
