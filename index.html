@@ -567,6 +567,11 @@
       var center = r.top + r.height / 2;
       var offset = (center - vh / 2) / vh;
       var shift = Math.max(-30, Math.min(30, offset * 42));
+      var stage = el.closest('.phone-stage, .hero-phone-wrap');
+      if (stage && getComputedStyle(stage).overflowY === 'hidden'){
+        var maxUp = Math.max(0, r.height - stage.clientHeight);
+        shift = Math.max(-maxUp, Math.min(0, shift));
+      }
       el.style.transform = 'translateY(' + shift.toFixed(1) + 'px)';
     });
     ticking = false;
