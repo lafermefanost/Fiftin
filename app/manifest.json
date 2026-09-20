@@ -1,0 +1,16 @@
+{
+  "name": "Fiftin",
+  "short_name": "Fiftin",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#8B9D86",
+  "theme_color": "#8B9D86",
+  "icons": [
+    {
+      "src": "../assets/logo-fiftin-icon-master.png",
+      "sizes": "1024x1024",
+      "type": "image/png"
+    }
+  ]
+}
