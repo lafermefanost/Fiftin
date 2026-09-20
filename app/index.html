@@ -872,49 +872,51 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    rythme (durées différentes + délais négatifs pour désynchroniser
    d'emblée). b2 (vert acide vif, moins flouté que les autres pour
    rester vibrant) joue le rôle du soleil qui frappe le feuillage, entre
-   le froid de la lavande (b1) et l'ombre du bas — b3 est --green-deep
-   (le vert le plus profond/identitaire de l'appli), moins flouté que
-   les autres et à forte opacité tout du long (pas seulement au pic),
-   pour une zone franchement profonde plutôt qu'un ton pâli par le flou
-   et le mélange avec le sauge. Chaque keyframe fait aussi varier
-   l'opacité (pas seulement position/taille), avec des paliers
-   asymétriques et une AMPLITUDE large (translations/échelles/opacités
-   très écartées entre leurs extrêmes, mêmes durées qu'avant — le
-   changement doit se voir, pas juste la vitesse) : selon le moment,
-   c'est tantôt le "ciel" froid (b1/streak) qui domine, tantôt le
-   feuillage (b2/b3) — une vraie respiration entre les zones plutôt
-   qu'un mouvement qui garde le même équilibre de couleurs en
-   permanence. overflow:hidden empêche les taches (volontairement plus
-   grandes que l'écran) de déborder du cadre. */
+   le froid de la lavande (b1) et l'ombre du bas — b3 est --green (le
+   vert principal de l'appli, pas --green-deep) à forte opacité, pour
+   que cette zone se rapproche vraiment de ce vert-là plutôt qu'un ton
+   approché par mélange. Chaque keyframe fait aussi varier l'opacité (pas
+   seulement position/taille), avec des paliers asymétriques (pas juste
+   un aller-retour à 50%) : selon le moment, c'est tantôt le "ciel"
+   froid (b1/streak) qui domine, tantôt le feuillage (b2/b3) — une vraie
+   respiration entre les zones plutôt qu'un mouvement qui garde le même
+   équilibre de couleurs en permanence. overflow:hidden empêche les
+   taches (volontairement plus grandes que l'écran) de déborder du cadre. */
 .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;}
 .mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(60px);}
-.mesh-bg .b1{width:64vh;height:64vh;background:var(--lavender-strong);
+.mesh-bg .b1{width:62vh;height:62vh;background:var(--lavender-strong);
   top:-18%;left:-12%;animation:meshDrift1 18s ease-in-out infinite;}
-.mesh-bg .b2{width:58vh;height:58vh;background:var(--yellow);filter:blur(44px);
+/* background-color (pas juste background) : animable en keyframes, pour
+   que b2 vire vers un jaune quasi blanc à son pic (10%,-9%/75%, voir
+   meshDrift2) — une pointe de luminosité plutôt qu'un jaune acide plat
+   en permanence. */
+.mesh-bg .b2{width:56vh;height:56vh;background-color:var(--yellow);filter:blur(46px);
   top:6%;right:-16%;animation:meshDrift2 21s ease-in-out infinite -6s;}
-.mesh-bg .b3{width:74vh;height:74vh;background:var(--green-deep);filter:blur(48px);
-  bottom:-24%;left:6%;animation:meshDrift3 19s ease-in-out infinite -11s;}
+/* saturate(1.25) en plus du flou : légèrement plus saturé que --green
+   tel quel, qui ressortait un peu fade une fois flouté/mélangé au sauge. */
+.mesh-bg .b3{width:70vh;height:70vh;background:var(--green);filter:blur(60px) saturate(1.25);
+  bottom:-24%;left:8%;animation:meshDrift3 19s ease-in-out infinite -11s;}
 .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8%;left:-25%;
   background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
   filter:blur(25px);animation:meshStreak 18s ease-in-out infinite -4s;}
 @keyframes meshDrift1{
   0%{transform:translate(0,0) scale(1);opacity:.55;}
-  30%{transform:translate(26%,17%) scale(1.42);opacity:.82;}
-  65%{transform:translate(-12%,20%) scale(.68);opacity:.22;}
+  30%{transform:translate(16%,10%) scale(1.28);opacity:.72;}
+  65%{transform:translate(-6%,14%) scale(.82);opacity:.34;}
   100%{transform:translate(0,0) scale(1);opacity:.55;}}
 @keyframes meshDrift2{
-  0%{transform:translate(0,0) scale(1);opacity:.6;}
-  40%{transform:translate(-22%,18%) scale(.62);opacity:.22;}
-  75%{transform:translate(16%,-14%) scale(1.48);opacity:.9;}
-  100%{transform:translate(0,0) scale(1);opacity:.6;}}
+  0%{transform:translate(0,0) scale(1);opacity:.6;background-color:var(--yellow);}
+  40%{transform:translate(-14%,12%) scale(.78);opacity:.36;background-color:var(--yellow);}
+  75%{transform:translate(10%,-9%) scale(1.32);opacity:.8;background-color:#F0F6C7;}
+  100%{transform:translate(0,0) scale(1);opacity:.6;background-color:var(--yellow);}}
 @keyframes meshDrift3{
-  0%{transform:translate(0,0) scale(1);opacity:.86;}
-  35%{transform:translate(19%,-20%) scale(1.38);opacity:.95;}
-  70%{transform:translate(-14%,13%) scale(.8);opacity:.7;}
-  100%{transform:translate(0,0) scale(1);opacity:.86;}}
+  0%{transform:translate(0,0) scale(1);opacity:.8;}
+  35%{transform:translate(12%,-13%) scale(1.22);opacity:.88;}
+  70%{transform:translate(-8%,8%) scale(.88);opacity:.6;}
+  100%{transform:translate(0,0) scale(1);opacity:.8;}}
 @keyframes meshStreak{
   0%{transform:rotate(-18deg) translateY(0);opacity:1;}
-  50%{transform:rotate(-2deg) translateY(24%);opacity:.35;}
+  50%{transform:rotate(-8deg) translateY(15%);opacity:.5;}
   100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
 /* Grain photographique discret par-dessus le mesh gradient (bruit SVG en
    niveaux de gris, mix-blend-mode:overlay) — z-index négatif : reste
