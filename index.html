@@ -114,7 +114,7 @@
     mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
 
   /* cover */
-  .cover{color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; position:relative;}
+  .cover{color:var(--cream); border-bottom:none; padding:110px 32px 0; --section-bg:var(--sauge-deep); overflow:hidden; contain:paint; position:relative;}
   .logo{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:56px; flex-wrap:wrap;}
   /* Détaché du fil du logo, posé dans le coin haut-droit de la section
      plutôt qu'aligné sur la hauteur du mark — .cover est déjà la référence
@@ -150,7 +150,7 @@
      empilé, texte d'abord (voir .hero-flex plus bas), puis le téléphone
      qui déborde et se coupe sur la section suivante comme avant. */
   .hero-flex{display:flex; flex-direction:column; align-items:center;}
-  .hero-phone-wrap{width:550px; height:680px; overflow:hidden; position:relative; flex:none;}
+  .hero-phone-wrap{width:550px; height:680px; overflow:hidden; contain:paint; position:relative; flex:none;}
   .hero-phone-wrap .hero-shot{width:440px; max-width:none; height:auto; display:block; position:relative; z-index:1;}
   /* La capture en situation est déjà centrée nativement (contrairement à
      l'ancien mockup, qui penchait à gauche et nécessitait un décalage
@@ -176,7 +176,7 @@
      l'écran (marges négatives égales au padding) pour rester bien grand,
      et se coupe sur la section suivante plutôt que dans un cadre fixe. */
   @media (max-width:1239px){
-    .hero-phone-wrap{width:auto; height:auto; overflow:visible; margin:6px -18px -34.5vw;}
+    .hero-phone-wrap{width:auto; height:auto; overflow:visible; contain:none; margin:6px -18px -34.5vw;}
     .hero-phone-wrap .hero-shot{width:100%; max-width:none;}
     .hero-shot-offset{position:relative; left:0;}
   }
@@ -305,7 +305,7 @@
   /* le téléphone est tronqué par le bas, juste sous la barre des vues
      (Grille/Location/Semaine/Mois/Année) — coupure franche (overflow:
      hidden, pas de fondu), même repère que le hero. */
-  .phone-stage{position:relative; overflow:hidden; height:383px;}
+  .phone-stage{position:relative; overflow:hidden; contain:paint; height:383px;}
   .phone-stage .phone2, .hero-phone-wrap .hero-shot, .phone-crop-side .phone2{will-change:transform;}
   /* Les 4 cartes .mod-visual ont leur téléphone plus grand que partout
      ailleurs sur la page — recalculé pour la même coupure (juste sous la
@@ -324,7 +324,7 @@
   /* deuxième façon de couper un écran, pour alterner avec le crop du bas :
      le téléphone est tronqué sur son bord extérieur (hors champ), le texte
      restant collé à son bord intact — coupure franche, pas de fondu */
-  .phone-crop-side{position:relative; overflow:hidden; width:143px; flex:none;}
+  .phone-crop-side{position:relative; overflow:hidden; contain:paint; width:143px; flex:none;}
   .phone-crop-side.crop-left .phone2{margin-left:-55px;}
   .phone-crop-side.crop-right .phone2{margin-left:0;}
   @media (max-width:640px){ .phone-crop-side{width:124px;} .phone-crop-side.crop-left .phone2{margin-left:-48px;} }
