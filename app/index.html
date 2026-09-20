@@ -879,10 +879,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    keyframe fait aussi varier l'opacité (pas seulement position/taille),
    avec des paliers asymétriques : selon le moment, c'est tantôt le
    "ciel" froid (b1/streak) qui domine, tantôt le feuillage (b2/b3).
-   Amplitude à mi-chemin entre la version "trop sage" (mouvement à peine
-   perceptible) et la version "trop forte" (mouvement écrasant) essayées
-   avant — un juste milieu. overflow:hidden empêche les taches
-   (volontairement plus grandes que l'écran) de déborder du cadre. */
+   Planchers d'opacité remontés (b1/b2 ne descendent plus sous .35-.4,
+   b3 plafonné à .85) pour que l'ensemble ne devienne jamais trop sombre
+   quand plusieurs taches sont creuses en même temps. .flare est un
+   élément à part, petit et peu flouté, presque invisible la plupart du
+   temps et qui s'allume brièvement (voir meshFlare) — une vraie
+   illumination ponctuelle et localisée dans le jaune, pas juste b2 qui
+   s'éclaircit dans son ensemble (trop diffus/nuageux). overflow:hidden
+   empêche les taches (volontairement plus grandes que l'écran) de
+   déborder du cadre. */
 .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;}
 .mesh-bg .blob{position:absolute;border-radius:50%;filter:blur(60px);}
 .mesh-bg .b1{width:63vh;height:63vh;background:var(--lavender-strong);
@@ -899,25 +904,40 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8%;left:-25%;
   background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
   filter:blur(25px);animation:meshStreak 18s ease-in-out infinite -4s;}
+/* Éclat ponctuel : petit (22vh, contre 57-72vh pour les taches), cœur
+   blanc qui se fond vite dans le jaune puis transparent — localisé et
+   net plutôt qu'un halo diffus. Invisible la majeure partie du cycle,
+   n'apparaît que ~12% du temps (voir meshFlare), pour rester un vrai
+   instant d'illumination plutôt qu'une zone en permanence plus claire. */
+.mesh-bg .flare{position:absolute;width:22vh;height:22vh;border-radius:50%;
+  background:radial-gradient(circle,#fff 0%,var(--yellow) 38%,transparent 72%);
+  filter:blur(16px);top:16%;right:12%;opacity:0;
+  animation:meshFlare 21s ease-in-out infinite -2s;}
 @keyframes meshDrift1{
-  0%{transform:translate(0,0) scale(1);opacity:.55;}
-  30%{transform:translate(21%,14%) scale(1.35);opacity:.77;}
-  65%{transform:translate(-9%,17%) scale(.75);opacity:.28;}
-  100%{transform:translate(0,0) scale(1);opacity:.55;}}
+  0%{transform:translate(0,0) scale(1);opacity:.58;}
+  30%{transform:translate(21%,14%) scale(1.35);opacity:.78;}
+  65%{transform:translate(-9%,17%) scale(.75);opacity:.38;}
+  100%{transform:translate(0,0) scale(1);opacity:.58;}}
 @keyframes meshDrift2{
-  0%{transform:translate(0,0) scale(1);opacity:.6;background-color:var(--yellow);}
-  40%{transform:translate(-18%,15%) scale(.7);opacity:.29;background-color:var(--yellow);}
-  75%{transform:translate(13%,-12%) scale(1.4);opacity:.85;background-color:#F0F6C7;}
-  100%{transform:translate(0,0) scale(1);opacity:.6;background-color:var(--yellow);}}
+  0%{transform:translate(0,0) scale(1);opacity:.62;background-color:var(--yellow);}
+  40%{transform:translate(-18%,15%) scale(.7);opacity:.4;background-color:var(--yellow);}
+  75%{transform:translate(13%,-12%) scale(1.4);opacity:.88;background-color:#F0F6C7;}
+  100%{transform:translate(0,0) scale(1);opacity:.62;background-color:var(--yellow);}}
 @keyframes meshDrift3{
-  0%{transform:translate(0,0) scale(1);opacity:.83;}
-  35%{transform:translate(16%,-17%) scale(1.3);opacity:.92;}
-  70%{transform:translate(-11%,11%) scale(.84);opacity:.65;}
-  100%{transform:translate(0,0) scale(1);opacity:.83;}}
+  0%{transform:translate(0,0) scale(1);opacity:.76;}
+  35%{transform:translate(16%,-17%) scale(1.3);opacity:.85;}
+  70%{transform:translate(-11%,11%) scale(.84);opacity:.58;}
+  100%{transform:translate(0,0) scale(1);opacity:.76;}}
 @keyframes meshStreak{
   0%{transform:rotate(-18deg) translateY(0);opacity:1;}
-  50%{transform:rotate(-5deg) translateY(20%);opacity:.43;}
+  50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
   100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
+@keyframes meshFlare{
+  0%{opacity:0;transform:scale(.6);}
+  44%{opacity:0;transform:scale(.6);}
+  52%{opacity:.85;transform:scale(1.2);}
+  60%{opacity:0;transform:scale(.6);}
+  100%{opacity:0;transform:scale(.6);}}
 /* Grain photographique discret par-dessus le mesh gradient (bruit SVG en
    niveaux de gris, mix-blend-mode:overlay) — z-index négatif : reste
    au-dessus du fond/mesh mais sous le picto/texte (voir logo-tile/lock-sub
@@ -1513,7 +1533,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      immédiatement, avant tout affichage, si le visiteur l'a déjà passé
      dans cet onglet (sessionStorage) — pour éviter un flash au rechargement. -->
 <div id="siteGate">
-  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span><span class="flare"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="92" height="71" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub">Site en accès restreint pour le moment.</div>
   <div class="lock-box">
@@ -1530,7 +1550,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
      bootFirebaseApp / onAuthStateChanged). Chaque compte n'a accès qu'à
      ses propres données (Firestore : accounts/{uid}, protégé par des
      règles qui vérifient request.auth.uid). --><div id="lockScreen">
-  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
+  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span><span class="flare"></span></div>
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="92" height="71" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub" id="lockSub">Connectez-vous pour accéder à votre planning.</div>
   <div class="lock-box">
