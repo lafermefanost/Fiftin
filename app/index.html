@@ -1237,12 +1237,20 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    fond arrondi de l'onglet actif (.mbnav-btn.on) déborde presque sur son
    voisin — on dirait que les deux pastilles se chevauchent en passant de
    l'une à l'autre. */
-.mbnav{display:none;height:54px;background:var(--white);
+/* --mbnav-sab : le padding-bottom réel (zone sûre ou 10px minimum). Comme
+   .mbnav est en box-sizing:border-box (reset global), un padding-bottom
+   qui grandit (barre de geste iPhone, ~34px) rognait directement sur la
+   hauteur fixe de 54px, écrasant l'espace dispo pour l'icône+libellé —
+   pictogrammes coupés. height compense exactement ce que le padding
+   ajoute au-delà des 10px de base, pour que le contenu garde toujours
+   les mêmes 54-4-10=40px, quelle que soit la zone sûre du téléphone. */
+.mbnav{display:none;
+  --mbnav-sab:max(10px,env(safe-area-inset-bottom));
+  height:calc(54px - 10px + var(--mbnav-sab));background:var(--white);
   border-top:1px solid var(--light);flex-shrink:0;gap:6px;
-  padding-top:4px;
+  padding-top:4px;padding-bottom:var(--mbnav-sab);
   padding-left:max(14px,env(safe-area-inset-left));
-  padding-right:max(14px,env(safe-area-inset-right));
-  padding-bottom:max(10px,env(safe-area-inset-bottom));}
+  padding-right:max(14px,env(safe-area-inset-right));}
 .mbnav-btn{flex:1;border:none;background:transparent;display:flex;
   flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Jost',sans-serif;font-size:9px;color:var(--gray);cursor:pointer;
