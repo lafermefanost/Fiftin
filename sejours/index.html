@@ -81,13 +81,17 @@ header.top{
 #feed{padding:10px 14px 100px; display:flex; flex-direction:column; gap:22px;}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;
   box-shadow:0 14px 30px -14px rgba(29,40,32,0.4);}
-.cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
+.cover{position:relative; aspect-ratio:3/2; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
-.cover .cover-photo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
-.cover .grain{position:absolute; inset:0; opacity:.5; mix-blend-mode:overlay;
+.cover .cover-carousel{position:absolute; inset:0; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; z-index:1;}
+.cover .cover-carousel .cc-slide{min-width:100%; height:100%; object-fit:cover; scroll-snap-align:start; flex-shrink:0;}
+.cover .cover-dots{position:absolute; top:58px; left:0; right:0; z-index:5; display:flex; justify-content:center; gap:5px;}
+.cover .cover-dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
+.cover .cover-dots span.on{background:#fff; width:16px; border-radius:3px;}
+.cover .grain{position:absolute; inset:0; opacity:.5; mix-blend-mode:overlay; z-index:2; pointer-events:none;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
-.cover .scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(29,40,32,0) 38%, rgba(20,26,20,.86) 100%);}
-.cover .motif{position:absolute; opacity:.16; color:#fff;}
+.cover .scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(29,40,32,0) 38%, rgba(20,26,20,.86) 100%); z-index:2; pointer-events:none;}
+.cover .motif{position:absolute; opacity:.16; color:#fff; z-index:1;}
 .cover .motif svg{width:100%; height:100%;}
 .save-btn{position:absolute; top:14px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%;
   background:rgba(20,26,20,0.35); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
@@ -156,7 +160,7 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
-.detail-gallery{position:relative; height:340px; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
+.detail-gallery{position:relative; aspect-ratio:3/2; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
 .detail-gallery .slide{min-width:100%; height:100%; scroll-snap-align:start; position:relative; overflow:hidden;}
 .detail-back{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:14px; z-index:10; width:38px; height:38px;
   border-radius:50%; background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
@@ -361,7 +365,7 @@ var MOTIFS = {
 
 var LISTINGS = [
   {id:1, name:"Le Mas des Lavandes", region:"Luberon, Vaucluse", claim:"La garrigue à perte de vue, dès le café du matin.",
-   price:145, distance:8, grad:"clay", motif:"roof", photo:"photos/listing-1.jpg",
+   price:145, distance:8, grad:"clay", motif:"roof", gallery:["photos/listing-1.jpg"],
    amen:["Piscine","Vue campagne","Cuisine équipée","Parking privé","Wifi"],
    desc:"Mas en pierre du XVIIIe restauré au pied du Luberon, entouré de lavande et d'oliviers. Piscine à débordement, terrasse ombragée et cuisine d'été pour les longues soirées de juillet.",
    host:{name:"Isabelle", initial:"I", response:"répond en ~2h", phone:"+33611223344"}, photos:5, avail:["12-18 juil.","2-9 août","23-30 août"]},
@@ -386,24 +390,25 @@ var LISTINGS = [
    desc:"Chalet en épicéa massif construit par un charpentier local, sauna finlandais et bain nordique sur la terrasse. Sentiers de randonnée au départ direct du jardin.",
    host:{name:"Julien", initial:"J", response:"répond en ~1h", phone:"+33655667788"}, photos:6, avail:["19-26 juil.","2-9 août","16-23 août"]},
   {id:6, name:"La Bergerie de Cassagne", region:"Cévennes, Gard", claim:"Les pierres sèches gardent la fraîcheur, même en août.",
-   price:89, distance:41, grad:"stone", motif:"roof", photo:"photos/listing-3.jpg",
+   price:89, distance:41, grad:"stone", motif:"roof", gallery:["photos/listing-3.jpg"],
    amen:["Vue campagne","Animaux acceptés","Cheminée","Wifi"],
    desc:"Ancienne bergerie en pierre sèche restaurée à la chaux, sur un causse isolé des Cévennes. Terrasse en restanque, four à pain d'origine, et les étoiles sans aucune pollution lumineuse.",
    host:{name:"Anaïs", initial:"A", response:"répond en ~5h", phone:"+33666778899"}, photos:5, avail:["5-12 juil.","26 juil.-2 août"]},
   {id:7, name:"Villa Belle Île", region:"Presqu'île de Quiberon", claim:"Les embruns dès la première gorgée de café.",
-   price:210, distance:3, grad:"sea", motif:"waves", photo:"photos/listing-4.jpg",
+   price:210, distance:3, grad:"sea", motif:"waves", gallery:["photos/listing-4.jpg"],
    amen:["Vue mer","Piscine","Jacuzzi","Parking privé","Wifi"],
    desc:"Villa contemporaine posée sur la pointe, accès direct à la plage de sable fin par un sentier privé. Baie vitrée face à l'océan, jacuzzi extérieur chauffé toute l'année.",
    host:{name:"Solène", initial:"S", response:"répond en ~30min", phone:"+33677889900"}, photos:6, avail:["12-19 juil.","9-16 août","23-30 août"]},
-  {id:8, name:"Le Loft du Vieux Port", region:"Marseille, Panier", claim:"Les volets qui claquent sur les ruelles du Panier.",
-   price:118, distance:1, grad:"dune", motif:"roof", photo:"photos/listing-2.jpg",
-   amen:["Vue mer","Cuisine équipée","Wifi","Accès PMR"],
-   desc:"Loft d'artiste au 3e étage sans ascenseur, ancien atelier de tonnelier réhabilité. Terrasse partagée avec vue sur le Vieux-Port et les toits du Panier, à deux pas du MuCEM.",
+  {id:8, name:"Le Petit Fanost", region:"Ferme Fanost", claim:"Le calme de la ferme, à deux pas de la maison.",
+   price:118, distance:1, grad:"dune", motif:"roof",
+   gallery:["photos/petit-fanost-1.jpg","photos/petit-fanost-2.jpg","photos/petit-fanost-3.jpg","photos/petit-fanost-4.jpg","photos/petit-fanost-5.jpg","photos/petit-fanost-6.jpg"],
+   amen:["Jardin","Cuisine équipée","Wifi"],
+   desc:"Chambre confortable et lumineuse au sein de la Ferme Fanost, avec salon cosy, salle d'eau refaite et accès à un grand jardin arboré. Un pied-à-terre simple et chaleureux, à deux pas des bâtiments de la ferme.",
    host:{name:"Karim", initial:"K", response:"répond en ~2h", phone:"+33688990011"}, photos:4, avail:["1-8 juil.","15-22 juil.","5-12 sept."]}
 ];
 
 var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
-  "Cheminée","Sauna","Cuisine équipée","Parking privé","Wifi","Accès PMR"];
+  "Cheminée","Sauna","Jardin","Cuisine équipée","Parking privé","Wifi","Accès PMR"];
 
 var AMEN_ICONS = {
   "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
@@ -415,6 +420,7 @@ var AMEN_ICONS = {
   "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>",
   "Cheminée":"<path d='M8 21V11l4-7 4 7v10z'/><path d='M8 15h8'/>",
   "Sauna":"<path d='M4 20h16M6 20V9l6-5 6 5v11'/>",
+  "Jardin":"<path d='M12 21v-8M12 13c0-4-3-6-7-6 0 4 3 7 7 6zM12 13c0-5 3-8 8-8 0 5-3 9-8 8z'/>",
   "Cuisine équipée":"<path d='M6 3v8a3 3 0 006 0V3M9 11v10M17 3v18M15 3h4'/>",
   "Parking privé":"<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M9 8h3.5a2.5 2.5 0 010 5H9V8zm0 5v4'/>",
   "Wifi":"<path d='M5 12a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0M11.5 19a1.5 1.5 0 011 0'/>",
@@ -476,11 +482,19 @@ function renderResultLine(){
 
 /* ---------------- render: feed ---------------- */
 function coverHtml(l){
+  var shots = l.gallery ? l.gallery.slice(0,3) : null;
+  var mediaHtml;
+  if(shots){
+    mediaHtml = '<div class="cover-carousel" data-cc="'+l.id+'">'+
+      shots.map(function(src){ return '<img class="cc-slide" src="'+src+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
+    '</div>'+
+    (shots.length>1 ? '<div class="cover-dots">'+shots.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '');
+  } else {
+    mediaHtml = '<div class="grad" style="background:'+GRADIENTS[l.grad]+'"></div>'+
+      '<div class="motif" style="width:56%;height:56%;right:-6%;top:6%;"><svg viewBox="0 0 100 100">'+MOTIFS[l.motif]+'</svg></div>';
+  }
   return '<div class="cover">'+
-    (l.photo
-      ? '<img class="cover-photo" src="'+l.photo+'" alt="'+esc(l.name)+'" loading="lazy">'
-      : '<div class="grad" style="background:'+GRADIENTS[l.grad]+'"></div>'+
-        '<div class="motif" style="width:56%;height:56%;right:-6%;top:6%;"><svg viewBox="0 0 100 100">'+MOTIFS[l.motif]+'</svg></div>')+
+    mediaHtml+
     '<div class="grain"></div>'+
     '<div class="scrim"></div>'+
     '<div class="top-badges"><span class="pill-badge">'+l.distance+' km</span><span class="pill-badge">'+l.price+'€ / nuit</span></div>'+
@@ -520,6 +534,15 @@ function renderFeed(){
 }
 
 function wireFeedEvents(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cc]"), function(cc){
+    var dots = cc.parentElement.querySelector(".cover-dots");
+    if(!dots) return;
+    var dotEls = dots.children;
+    cc.addEventListener("scroll", function(){
+      var idx = Math.round(cc.scrollLeft / cc.clientWidth);
+      Array.prototype.forEach.call(dotEls, function(d,i){ d.classList.toggle("on", i===idx); });
+    });
+  });
   Array.prototype.forEach.call(document.querySelectorAll("[data-like]"), function(el){
     el.addEventListener("click", function(e){
       e.stopPropagation();
@@ -608,17 +631,19 @@ function wireQuickReq(id){
 function openDetail(id){
   var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
   var root = document.getElementById("detail-root");
+  var gallery = l.gallery || [];
+  var total = Math.max(l.photos, gallery.length);
   var slides = "";
-  for(var i=0;i<l.photos;i++){
-    if(i===0 && l.photo){
-      slides += '<div class="slide"><img src="'+l.photo+'" alt="'+esc(l.name)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
+  for(var i=0;i<total;i++){
+    if(gallery[i]){
+      slides += '<div class="slide"><img src="'+gallery[i]+'" alt="'+esc(l.name)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
       continue;
     }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
       '<div class="grain" style="position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'2\'/></filter><rect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/></svg>&quot;)"></div></div>';
   }
   var dots = "";
-  for(var j=0;j<l.photos;j++) dots += '<span class="'+(j===0?"on":"")+'"></span>';
+  for(var j=0;j<total;j++) dots += '<span class="'+(j===0?"on":"")+'"></span>';
 
   root.innerHTML = '<div class="detail" id="detail-panel">'+
     '<div class="detail-gallery" id="detail-gallery">'+slides+
