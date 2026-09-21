@@ -81,7 +81,7 @@ header.top{
 #feed{padding:10px 14px 100px; display:flex; flex-direction:column; gap:22px;}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;
   box-shadow:0 14px 30px -14px rgba(29,40,32,0.4);}
-.cover{position:relative; aspect-ratio:3/2; overflow:hidden;}
+.cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
 .cover .cover-carousel{position:absolute; inset:0; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; z-index:1;}
 .cover .cover-carousel .cc-slide{min-width:100%; height:100%; object-fit:cover; scroll-snap-align:start; flex-shrink:0;}
@@ -160,7 +160,7 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
-.detail-gallery{position:relative; aspect-ratio:3/2; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
+.detail-gallery{position:relative; height:340px; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
 .detail-gallery .slide{min-width:100%; height:100%; scroll-snap-align:start; position:relative; overflow:hidden;}
 .detail-back{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:14px; z-index:10; width:38px; height:38px;
   border-radius:50%; background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
