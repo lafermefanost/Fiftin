@@ -4,8 +4,16 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 
 - `index.html` — page de présentation commerciale (fiftin.fr).
 - `app/index.html` — l'outil complet (une seule page, pas de build) : fiftin.fr/app/.
+- `sejours/index.html` — Fiftin Séjours, l'annuaire de réservation directe pour les voyageurs (nouveau projet, prototype) : fiftin.fr/sejours/.
 - Déployé via GitHub Pages sur **fiftin.fr** (voir le fichier `CNAME`).
 - Copie initiale de l'outil basée sur `lafermefanost/ferme-fanost/planning.html`, avec la marque renommée « Fifteen » → « Fiftin ».
+
+## Fiftin Séjours (`sejours/`) — annuaire de réservation directe
+
+Projet frère de l'outil de planning, même marque mais codebase et périmètre séparés (voir `CLAUDE.md`) : un annuaire mobile-first pour que les voyageurs trouvent un hébergement et contactent l'hôte directement (WhatsApp, SMS, appel), sans commission ni intermédiaire — dans l'esprit de Cybevasion, en mieux.
+
+- Prototype statique : données d'hébergements mockées, pas de backend, pas de vraies photos (dégradés stylisés en attendant).
+- À terme : lien avec le calendrier de réservations de l'outil de planning (`app/`), pour que la disponibilité affichée ici soit réelle — pas encore construit.
 
 ## Comptes et données — architecture définitive
 
