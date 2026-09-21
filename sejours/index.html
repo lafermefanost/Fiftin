@@ -11,7 +11,7 @@
 </head>
 <body>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700;800&family=Fraunces:ital,wght@1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@1,400;1,500&display=swap');
 
 :root{
   --cream:#EFEEEA; --cream-deep:#E4E1D9; --ink:#2E2B22;
@@ -55,7 +55,7 @@ header.top{
 .logo-tile img{width:100%; height:100%; display:block; object-fit:cover;}
 .brand-text{display:flex; flex-direction:column; line-height:1.05;}
 .brand-text .title-grad{font-size:23px; font-weight:700; letter-spacing:-0.01em; color:var(--lavender-icon);}
-.brand-text .title-grad .w-light{font-weight:500;}
+.brand-text .title-grad .w-light{font-weight:300;}
 .brand-text > span{font-size:10.5px; letter-spacing:0.05em; text-transform:uppercase; color:var(--gray-mid); font-weight:600; margin-top:3px; white-space:nowrap;}
 .hdr-actions{display:flex; align-items:center; gap:8px;}
 .icon-btn{width:38px; height:38px; border-radius:50%; border:1.5px solid var(--line); background:var(--cream);
@@ -83,6 +83,7 @@ header.top{
   box-shadow:0 14px 30px -14px rgba(29,40,32,0.4);}
 .cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
+.cover .cover-photo{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
 .cover .grain{position:absolute; inset:0; opacity:.5; mix-blend-mode:overlay;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
 .cover .scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(29,40,32,0) 38%, rgba(20,26,20,.86) 100%);}
@@ -360,7 +361,7 @@ var MOTIFS = {
 
 var LISTINGS = [
   {id:1, name:"Le Mas des Lavandes", region:"Luberon, Vaucluse", claim:"La garrigue à perte de vue, dès le café du matin.",
-   price:145, distance:8, grad:"clay", motif:"roof",
+   price:145, distance:8, grad:"clay", motif:"roof", photo:"photos/listing-1.jpg",
    amen:["Piscine","Vue campagne","Cuisine équipée","Parking privé","Wifi"],
    desc:"Mas en pierre du XVIIIe restauré au pied du Luberon, entouré de lavande et d'oliviers. Piscine à débordement, terrasse ombragée et cuisine d'été pour les longues soirées de juillet.",
    host:{name:"Isabelle", initial:"I", response:"répond en ~2h", phone:"+33611223344"}, photos:5, avail:["12-18 juil.","2-9 août","23-30 août"]},
@@ -385,17 +386,17 @@ var LISTINGS = [
    desc:"Chalet en épicéa massif construit par un charpentier local, sauna finlandais et bain nordique sur la terrasse. Sentiers de randonnée au départ direct du jardin.",
    host:{name:"Julien", initial:"J", response:"répond en ~1h", phone:"+33655667788"}, photos:6, avail:["19-26 juil.","2-9 août","16-23 août"]},
   {id:6, name:"La Bergerie de Cassagne", region:"Cévennes, Gard", claim:"Les pierres sèches gardent la fraîcheur, même en août.",
-   price:89, distance:41, grad:"stone", motif:"roof",
+   price:89, distance:41, grad:"stone", motif:"roof", photo:"photos/listing-3.jpg",
    amen:["Vue campagne","Animaux acceptés","Cheminée","Wifi"],
    desc:"Ancienne bergerie en pierre sèche restaurée à la chaux, sur un causse isolé des Cévennes. Terrasse en restanque, four à pain d'origine, et les étoiles sans aucune pollution lumineuse.",
    host:{name:"Anaïs", initial:"A", response:"répond en ~5h", phone:"+33666778899"}, photos:5, avail:["5-12 juil.","26 juil.-2 août"]},
   {id:7, name:"Villa Belle Île", region:"Presqu'île de Quiberon", claim:"Les embruns dès la première gorgée de café.",
-   price:210, distance:3, grad:"sea", motif:"waves",
+   price:210, distance:3, grad:"sea", motif:"waves", photo:"photos/listing-4.jpg",
    amen:["Vue mer","Piscine","Jacuzzi","Parking privé","Wifi"],
    desc:"Villa contemporaine posée sur la pointe, accès direct à la plage de sable fin par un sentier privé. Baie vitrée face à l'océan, jacuzzi extérieur chauffé toute l'année.",
    host:{name:"Solène", initial:"S", response:"répond en ~30min", phone:"+33677889900"}, photos:6, avail:["12-19 juil.","9-16 août","23-30 août"]},
   {id:8, name:"Le Loft du Vieux Port", region:"Marseille, Panier", claim:"Les volets qui claquent sur les ruelles du Panier.",
-   price:118, distance:1, grad:"dune", motif:"roof",
+   price:118, distance:1, grad:"dune", motif:"roof", photo:"photos/listing-2.jpg",
    amen:["Vue mer","Cuisine équipée","Wifi","Accès PMR"],
    desc:"Loft d'artiste au 3e étage sans ascenseur, ancien atelier de tonnelier réhabilité. Terrasse partagée avec vue sur le Vieux-Port et les toits du Panier, à deux pas du MuCEM.",
    host:{name:"Karim", initial:"K", response:"répond en ~2h", phone:"+33688990011"}, photos:4, avail:["1-8 juil.","15-22 juil.","5-12 sept."]}
@@ -476,9 +477,11 @@ function renderResultLine(){
 /* ---------------- render: feed ---------------- */
 function coverHtml(l){
   return '<div class="cover">'+
-    '<div class="grad" style="background:'+GRADIENTS[l.grad]+'"></div>'+
+    (l.photo
+      ? '<img class="cover-photo" src="'+l.photo+'" alt="'+esc(l.name)+'" loading="lazy">'
+      : '<div class="grad" style="background:'+GRADIENTS[l.grad]+'"></div>'+
+        '<div class="motif" style="width:56%;height:56%;right:-6%;top:6%;"><svg viewBox="0 0 100 100">'+MOTIFS[l.motif]+'</svg></div>')+
     '<div class="grain"></div>'+
-    '<div class="motif" style="width:56%;height:56%;right:-6%;top:6%;"><svg viewBox="0 0 100 100">'+MOTIFS[l.motif]+'</svg></div>'+
     '<div class="scrim"></div>'+
     '<div class="top-badges"><span class="pill-badge">'+l.distance+' km</span><span class="pill-badge">'+l.price+'€ / nuit</span></div>'+
     '<button class="save-btn'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'" aria-label="Enregistrer">'+
@@ -607,6 +610,10 @@ function openDetail(id){
   var root = document.getElementById("detail-root");
   var slides = "";
   for(var i=0;i<l.photos;i++){
+    if(i===0 && l.photo){
+      slides += '<div class="slide"><img src="'+l.photo+'" alt="'+esc(l.name)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
+      continue;
+    }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
       '<div class="grain" style="position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'2\'/></filter><rect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/></svg>&quot;)"></div></div>';
   }
