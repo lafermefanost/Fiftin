@@ -114,6 +114,22 @@ header.top{
 
 /* ---------- quick request inline panel ---------- */
 .qr-panel{background:var(--cream-deep); padding:16px; display:flex; flex-direction:column; gap:12px;}
+.cal{background:var(--cream); border:1.5px solid var(--line); border-radius:14px; padding:12px;}
+.cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
+.cal-title{font-size:13.5px; font-weight:700; text-transform:capitalize;}
+.cal-nav{width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--cream);
+  font-size:17px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; line-height:1; padding:0;}
+.cal-weekdays{display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:4px;}
+.cal-weekdays span{text-align:center; font-size:10px; font-weight:700; color:var(--gray-mid); text-transform:uppercase;}
+.cal-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:3px;}
+.cal-cell{aspect-ratio:1; border:none; border-radius:8px; background:none; font-family:'Jost',sans-serif;
+  font-size:12px; font-weight:600; color:rgba(46,43,34,.28); display:flex; align-items:center; justify-content:center;}
+.cal-cell.empty{visibility:hidden;}
+.cal-cell.avail{background:var(--yellow); color:var(--sauge-deep); cursor:pointer;}
+.cal-cell.avail.selected{background:var(--sauge-deep); color:var(--cream);}
+.cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
+.cal-dot{width:8px; height:8px; border-radius:50%; background:rgba(46,43,34,.15); display:inline-block;}
+.cal-dot.avail{background:var(--yellow);}
 .qr-row{display:flex; gap:10px;}
 .qr-field{flex:1; display:flex; flex-direction:column; gap:4px;}
 .qr-field label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge);}
@@ -527,7 +543,7 @@ function renderFeed(){
   }
   feed.innerHTML = list.map(function(l){
     return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
-      '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l)+'</div>'+
+      '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
     '</article>';
   }).join("");
   wireFeedEvents();
@@ -561,17 +577,70 @@ function wireFeedEvents(){
       var id = el.getAttribute("data-quickreq");
       var panel = document.getElementById("qr-"+id);
       panel.hidden = !panel.hidden;
-      wireQuickReq(Number(id));
+      wireQuickReq(Number(id), "qr"+id);
     });
   });
+}
+
+/* ---------------- calendrier de disponibilité ----------------
+   Démo uniquement : dates lues depuis l.avail (chaînes statiques du
+   jeu de données mock), pas de connexion au vrai planning. Voir la
+   note dans CLAUDE.md sur le lien avec app/ — pas encore construit. */
+var MONTH_ABBR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+var MONTH_LONG = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+var DEMO_YEAR = 2026;
+
+function parseAvailStr(str){
+  var m = str.match(/^(\d+)(?:\s+([a-zéû.]+))?-(\d+)\s+([a-zéû.]+)$/i);
+  if(!m) return null;
+  var startMonth = MONTH_ABBR.indexOf(m[2] || m[4]);
+  var endMonth = MONTH_ABBR.indexOf(m[4]);
+  if(startMonth===-1 || endMonth===-1) return null;
+  return {start:new Date(DEMO_YEAR,startMonth,Number(m[1])), end:new Date(DEMO_YEAR,endMonth,Number(m[3]))};
+}
+function getAvailRanges(l){
+  return (l.avail||[]).map(parseAvailStr).filter(Boolean);
+}
+function isDateAvailable(l, date){
+  return getAvailRanges(l).some(function(r){ return date>=r.start && date<=r.end; });
+}
+function defaultMonthFor(l){
+  var ranges = getAvailRanges(l);
+  if(!ranges.length) return new Date().getMonth();
+  return ranges.reduce(function(min,r){ return r.start.getMonth()<min ? r.start.getMonth() : min; }, 11);
+}
+function calendarGridHtml(l, monthIndex){
+  var first = new Date(DEMO_YEAR, monthIndex, 1);
+  var startWeekday = (first.getDay()+6)%7;
+  var daysInMonth = new Date(DEMO_YEAR, monthIndex+1, 0).getDate();
+  var cells = "";
+  for(var i=0;i<startWeekday;i++) cells += '<span class="cal-cell empty"></span>';
+  for(var d=1; d<=daysInMonth; d++){
+    var avail = isDateAvailable(l, new Date(DEMO_YEAR, monthIndex, d));
+    cells += '<button type="button" class="cal-cell'+(avail?' avail':'')+'"'+(avail?' data-day="'+d+'"':' disabled')+'>'+d+'</button>';
+  }
+  return cells;
+}
+function calendarHtml(l, monthIndex, uid){
+  return '<div class="cal" data-cal-listing="'+uid+'" data-cal-month="'+monthIndex+'">'+
+    '<div class="cal-head">'+
+      '<button type="button" class="cal-nav" data-cal-nav="-1" aria-label="Mois précédent">&#8249;</button>'+
+      '<span class="cal-title">'+MONTH_LONG[monthIndex]+' '+DEMO_YEAR+'</span>'+
+      '<button type="button" class="cal-nav" data-cal-nav="1" aria-label="Mois suivant">&#8250;</button>'+
+    '</div>'+
+    '<div class="cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>'+
+    '<div class="cal-grid">'+calendarGridHtml(l, monthIndex)+'</div>'+
+    '<div class="cal-legend"><span class="cal-dot avail"></span>Disponible<span class="cal-dot"></span>Indisponible</div>'+
+  '</div>';
 }
 
 /* ---------------- quick request ---------------- */
 function todayISO(off){ var d=new Date(); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); }
 
-function quickReqHtml(l){
-  var qid = "qr"+l.id;
-  return '<div class="qr-row">'+
+function quickReqHtml(l, uid){
+  var qid = uid;
+  return calendarHtml(l, defaultMonthFor(l), qid)+
+  '<div class="qr-row">'+
     '<div class="qr-field"><label>Arrivée</label><input type="date" id="'+qid+'-in" value="'+todayISO(14)+'"></div>'+
     '<div class="qr-field"><label>Départ</label><input type="date" id="'+qid+'-out" value="'+todayISO(21)+'"></div>'+
   '</div>'+
@@ -582,9 +651,9 @@ function quickReqHtml(l){
   '</div>'+
   '<div class="msg-preview" id="'+qid+'-preview"></div>'+
   '<div class="send-row">'+
-    '<a class="btn send-btn wa" data-send="wa" data-id="'+l.id+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.3c-.2.6-1.4 1.2-1.9 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1-2.5.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.6.3.2.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg><span>WhatsApp</span></a>'+
-    '<a class="btn send-btn sms" data-send="sms" data-id="'+l.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h10M7 13h6"/></svg><span>SMS</span></a>'+
-    '<a class="btn send-btn call" data-send="call" data-id="'+l.id+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A16 16 0 016 5a2 2 0 012-2z"/></svg><span>Appeler</span></a>'+
+    '<a class="btn send-btn wa" data-send="wa" data-id="'+qid+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.3c-.2.6-1.4 1.2-1.9 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1-2.5.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.6.3.2.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg><span>WhatsApp</span></a>'+
+    '<a class="btn send-btn sms" data-send="sms" data-id="'+qid+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h10M7 13h6"/></svg><span>SMS</span></a>'+
+    '<a class="btn send-btn call" data-send="call" data-id="'+qid+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A16 16 0 016 5a2 2 0 012-2z"/></svg><span>Appeler</span></a>'+
   '</div>';
 }
 
@@ -597,14 +666,14 @@ function fmtDate(iso){
   return d.getDate()+" "+mois[d.getMonth()];
 }
 
-function wireQuickReq(id){
+function wireQuickReq(id, uid){
   var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
-  var qid = "qr"+id;
+  var qid = uid;
   var $in = document.getElementById(qid+"-in"), $out = document.getElementById(qid+"-out"), $g = document.getElementById(qid+"-g");
   var $prev = document.getElementById(qid+"-preview");
-  var $waBtn = document.querySelector('[data-send="wa"][data-id="'+id+'"]');
-  var $smsBtn = document.querySelector('[data-send="sms"][data-id="'+id+'"]');
-  var $callBtn = document.querySelector('[data-send="call"][data-id="'+id+'"]');
+  var $waBtn = document.querySelector('[data-send="wa"][data-id="'+qid+'"]');
+  var $smsBtn = document.querySelector('[data-send="sms"][data-id="'+qid+'"]');
+  var $callBtn = document.querySelector('[data-send="call"][data-id="'+qid+'"]');
 
   function update(){
     var guests = Number($g.textContent);
@@ -624,6 +693,40 @@ function wireQuickReq(id){
       $g.textContent = v; update();
     });
   });
+
+  var $cal = document.querySelector('[data-cal-listing="'+qid+'"]');
+  function wireCalDays(){
+    Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.avail"), function(cell){
+      cell.addEventListener("click", function(){
+        var monthIndex = Number($cal.getAttribute("data-cal-month"));
+        var day = Number(cell.getAttribute("data-day"));
+        var start = new Date(DEMO_YEAR, monthIndex, day);
+        var end = new Date(start.getTime()); end.setDate(end.getDate()+7);
+        $in.value = start.toISOString().slice(0,10);
+        $out.value = end.toISOString().slice(0,10);
+        Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.selected"), function(c){ c.classList.remove("selected"); });
+        cell.classList.add("selected");
+        update();
+      });
+    });
+  }
+  function renderCal(monthIndex){
+    $cal.setAttribute("data-cal-month", monthIndex);
+    $cal.querySelector(".cal-title").textContent = MONTH_LONG[monthIndex]+" "+DEMO_YEAR;
+    $cal.querySelector(".cal-grid").innerHTML = calendarGridHtml(l, monthIndex);
+    wireCalDays();
+  }
+  if($cal){
+    Array.prototype.forEach.call($cal.querySelectorAll("[data-cal-nav]"), function(btn){
+      btn.addEventListener("click", function(){
+        var cur = Number($cal.getAttribute("data-cal-month"));
+        var next = cur + Number(btn.getAttribute("data-cal-nav"));
+        if(next<0) next = 11; if(next>11) next = 0;
+        renderCal(next);
+      });
+    });
+    wireCalDays();
+  }
   update();
 }
 
@@ -663,7 +766,7 @@ function openDetail(id){
       '<div class="avail-row">'+l.avail.map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div>'+
       '<div class="section-title" style="margin-top:18px;">Votre hôte</div>'+
       '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b><span>'+l.host.response+'</span></div></div>'+
-      '<div class="qr-panel" style="border-radius:18px;" id="qr-detail-'+l.id+'">'+quickReqHtml(l)+'</div>'+
+      '<div class="qr-panel" style="border-radius:18px;" id="qr-detail-'+l.id+'">'+quickReqHtml(l, "qrd"+l.id)+'</div>'+
     '</div>'+
     '<div class="detail-contact-bar">'+
       '<div class="send-row">'+
@@ -685,7 +788,7 @@ function openDetail(id){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
-  wireQuickReq(l.id);
+  wireQuickReq(l.id, "qrd"+l.id);
   document.body.style.overflow = "hidden";
 }
 function closeDetail(){
