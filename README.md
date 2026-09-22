@@ -19,15 +19,15 @@ Projet frère de l'outil de planning, même marque mais codebase et périmètre 
 
 Un compte connecté (même Firebase Auth que `app/` — voir « Comptes et données » ci-dessous, même projet donc même compte des deux côtés) peut se connecter/s'inscrire directement dans Séjours et déposer une annonce, photos comprises (upload direct vers Firebase Storage). Écrit dans une nouvelle collection Firestore `listings/{id}` avec `status:"pending"` à la création — **jamais publiée automatiquement**.
 
-#### Valider (publier) une annonce déposée — pas encore d'interface dédiée, donc à la main
+#### Valider (publier) une annonce déposée — depuis Séjours, compte admin
 
-1. Aller sur **[console.firebase.google.com/project/fiftin-e30c2/firestore/data](https://console.firebase.google.com/project/fiftin-e30c2/firestore/data)** (se connecter avec le compte Google qui gère le projet Fiftin si demandé).
-2. Dans la liste des collections à gauche, cliquer sur **`listings`**.
-3. Chaque document correspond à une annonce déposée. Ouvrir un document pour voir ses champs : `name`, `region`, `price`, `claim`, `desc`, `phone`, `amen`, `gallery` (liens des photos), `ownerEmail` (pour identifier qui a déposé), `status`.
-4. Pour publier : cliquer sur le champ **`status`**, remplacer la valeur `pending` par `published`, valider. L'annonce reste enregistrée telle quelle si vous préférez la refuser — supprimer le document entier (bouton `⋮` → « Delete document ») pour la retirer définitivement.
-5. Les annonces `listings/` (Firestore, dynamiques, déposées par les hôtes) et `listings.json` (statique, annonces sélectionnées par nous) restent **deux sources séparées pour l'instant** — passer une annonce en `published` ne la fait pas encore apparaître dans le fil public de Séjours. Cette fusion (le fil doit lire les deux sources) reste à construire — à faire quand la première annonce hôte sera prête à passer en ligne.
+Onglet **Profil → Annonces à valider** (visible uniquement pour le ou les comptes listés dans `ADMIN_EMAILS`, voir `sejours/index.html`, et dans la fonction `isAdmin()` des règles Firestore ci-dessous — **les deux listes doivent rester identiques**, sinon l'interface montre le bouton mais Firestore refuse l'action, ou inversement).
 
-Si une interface de validation directement dans l'app (liste des annonces en attente + bouton « Publier ») est préférable à la Firebase Console, c'est possible à construire — ça demande de savoir quel compte (quel e-mail Fiftin) doit avoir ce droit, pour le coder en dur à la fois côté règles Firestore et côté interface.
+Liste des annonces en attente (photo, nom, région, prix, distance, qui l'a déposée), avec deux boutons :
+- **Publier** : passe `status` à `"published"` — l'annonce apparaît **automatiquement** dans le fil public de Séjours dès le prochain chargement de la page par un visiteur (le fil fusionne au chargement les annonces statiques de `listings.json` et les annonces Firestore publiées). Rien à faire ailleurs, ni redéploiement ni fichier à modifier.
+- **Refuser** : supprime définitivement l'annonce.
+
+**⚠️ Adresse admin devinée, pas confirmée.** `ADMIN_EMAILS` contient actuellement `cesarmarandin@gmail.com` — une supposition faite à partir du contexte de session, pas vérifiée comme étant le vrai e-mail du compte Fiftin/Firebase de César. Si ce n'est pas le bon compte, la ligne « Annonces à valider » n'apparaîtra pas dans son Profil, et les règles Firestore refuseront aussi la validation. À corriger dans **les deux endroits** (`sejours/index.html`, variable `ADMIN_EMAILS` ; et la fonction `isAdmin()` des règles Firestore ci-dessous) avec l'e-mail exact du compte utilisé pour se connecter sur Séjours/app.
 
 #### Photos — Firebase Storage
 
@@ -97,6 +97,14 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Compte(s) autorisés à valider/refuser les annonces déposées sur
+    // Fiftin Séjours (Profil → Annonces à valider). À TENIR IDENTIQUE à
+    // ADMIN_EMAILS dans sejours/index.html — les deux listes doivent
+    // toujours contenir les mêmes adresses.
+    function isAdmin(){
+      return request.auth != null && request.auth.token.email in ['cesarmarandin@gmail.com'];
+    }
+
     match /accounts/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
 
@@ -136,17 +144,21 @@ service cloud.firestore {
     // Annonces déposées par les hôtes depuis Fiftin Séjours (onglet Profil
     // → Espace hôtes). Public en lecture uniquement une fois publiée ; le
     // dépôt force status:"pending" (un hôte ne peut pas s'auto-publier) ;
-    // seule la Firebase Console (accès admin, hors règles) peut repasser
-    // status à "published" — pas d'interface pour ça côté application.
+    // seul un compte isAdmin() peut faire passer status à "published" ou
+    // supprimer une annonce d'un autre compte (Profil → Annonces à valider).
     match /listings/{listingId} {
       allow read: if resource.data.status == 'published'
-        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
         && request.resource.data.status == 'pending';
-      allow update, delete: if request.auth != null
-        && resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == resource.data.status;
+      allow update: if isAdmin()
+        || (request.auth != null
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin()
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
     }
   }
 }

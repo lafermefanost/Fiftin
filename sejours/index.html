@@ -344,6 +344,21 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .profile-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); margin:24px 0 4px 2px;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
 
+/* ---------- validation des annonces (admin) ---------- */
+.admin-queue{padding:24px 20px 110px;}
+.admin-back{background:none; border:none; padding:0; font-family:inherit; font-size:13px; font-weight:700; color:var(--sauge-deep); margin-bottom:16px;}
+.admin-queue h2{font-size:19px; font-weight:700; margin:0 0 18px;}
+.admin-card{display:flex; gap:12px; background:var(--cream-deep); border-radius:18px; padding:12px; margin-bottom:12px;}
+.admin-thumb{width:64px; height:64px; border-radius:12px; object-fit:cover; flex-shrink:0; background:var(--line);}
+.admin-thumb-empty{background:var(--line);}
+.admin-card-body{display:flex; flex-direction:column; gap:3px; min-width:0;}
+.admin-card-body b{font-size:14px;}
+.admin-card-body span{font-size:12px; color:var(--sauge); font-weight:600;}
+.admin-owner{color:var(--gray-mid)!important; font-weight:500!important;}
+.admin-actions{display:flex; gap:8px; margin-top:6px;}
+.admin-actions .btn-apply{padding:8px 14px; font-size:12.5px; width:auto;}
+.admin-reject{background:none; border:1.5px solid var(--line); border-radius:20px; padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--danger);}
+
 .empty-state{text-align:center; padding:60px 30px; color:var(--sauge);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
 .empty-state p{font-size:14px; font-weight:600; margin:0;}
@@ -512,6 +527,21 @@ var authState = {ready:false, uid:null, email:null};
 var authMode = "signin";
 var hfSelectedFiles = [];
 
+/* Compte(s) autorisés à valider/refuser les annonces déposées (onglet
+   Profil → Annonces à valider). À CONFIRMER PAR CÉSAR — voir la réponse
+   du chat : e-mail deviné à partir du contexte de session, pas vérifié
+   comme étant le vrai e-mail du compte Fiftin. Doit être répercuté aussi
+   dans les règles Firestore (README.md, fonction isAdmin()) — les deux
+   listes doivent rester identiques. */
+var ADMIN_EMAILS = ["cesarmarandin@gmail.com"];
+function isAdmin(){ return authState.email && ADMIN_EMAILS.indexOf(authState.email)!==-1; }
+
+function idFromString(str){
+  var h = 0;
+  for(var i=0;i<str.length;i++){ h = (Math.imul(31,h) + str.charCodeAt(i))|0; }
+  return 100000 + Math.abs(h % 900000);
+}
+
 var AUTH_ERROR_MESSAGES = {
   "auth/email-already-in-use":"Un compte existe déjà avec cet e-mail — connectez-vous plutôt.",
   "auth/invalid-email":"Adresse e-mail invalide.",
@@ -562,6 +592,40 @@ function bootFirebaseAuth(){
 
 function signOutUser(){
   if(typeof firebase!=="undefined") firebase.auth().signOut();
+}
+
+/* Fusionne dans LISTINGS les annonces d'hôtes publiées (Firestore,
+   listings/{id} status=="published") avec le fil statique (listings.json).
+   Lecture publique déjà autorisée par les règles Firestore pour les
+   annonces publiées — pas besoin d'être connecté pour les voir. */
+function normalizeHostListing(doc){
+  var l = doc.data();
+  var gallery = l.gallery && l.gallery.length ? l.gallery : null;
+  return {
+    id: idFromString(doc.id),
+    name: l.name, region: l.region, claim: l.claim,
+    price: l.price, distance: (typeof l.distance==="number") ? l.distance : 0,
+    grad: "clay", motif: "roof",
+    gallery: gallery,
+    amen: l.amen || [],
+    desc: l.desc,
+    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
+    photos: gallery ? gallery.length : 0,
+    avail: []
+  };
+}
+function fetchPublishedListings(){
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.firestore().collection("listings").where("status","==","published").get().then(function(snap){
+      if(snap.empty) return;
+      LISTINGS = LISTINGS.concat(snap.docs.map(normalizeHostListing));
+      if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
+      if(state.tab==="map") renderMap();
+    }).catch(function(err){
+      /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
+    });
+  });
 }
 
 var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
@@ -981,7 +1045,9 @@ function openSheet(kind){
     inner = '<h3>Déposer une annonce</h3>'+
       '<p class="sheet-sub">Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.</p>'+
       '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. Le Petit Fanost"></div>'+
+      '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim"></div>'+
       '<div class="field-block"><label>Localisation</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous"></div>'+
+      '<div class="field-block"><label>Distance depuis la Ferme Fanost (km)</label><input class="text-input" type="number" min="0" id="hf-distance"></div>'+
       '<div class="field-block"><label>Prix par nuit (€)</label><input class="text-input" type="number" min="1" id="hf-price"></div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4"></textarea></div>'+
@@ -1134,7 +1200,9 @@ function uploadHostPhotos(uid){
 
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
+  var hostName = document.getElementById("hf-hostname").value.trim();
   var region = document.getElementById("hf-region").value.trim();
+  var distance = Number(document.getElementById("hf-distance").value);
   var price = Number(document.getElementById("hf-price").value);
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
@@ -1142,7 +1210,7 @@ function submitHostForm(){
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !region || !price || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !hostName || !region || !price || isNaN(distance) || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
   var btn = document.getElementById("sheet-apply");
   var originalLabel = btn.textContent;
@@ -1150,7 +1218,7 @@ function submitHostForm(){
   uploadHostPhotos(authState.uid).then(function(gallery){
     btn.textContent = "Envoi de l'annonce…";
     return firebase.firestore().collection("listings").add({
-      name:name, region:region, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
+      name:name, hostName:hostName, region:region, distance:distance, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
       gallery:gallery,
       ownerUid:authState.uid, ownerEmail:authState.email,
       status:"pending",
@@ -1262,6 +1330,7 @@ function renderProfile(){
       '</button>'+
     '</div>'+
     '<div class="profile-list">'+
+      (isAdmin() ? '<div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>' : '')+
       '<div class="profile-row">Mes demandes de disponibilité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Moyens de contact préférés<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Notifications<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -1280,6 +1349,64 @@ function renderProfile(){
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   }
+  if(isAdmin()){
+    document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
+  }
+}
+
+/* ---------------- validation des annonces (compte admin uniquement) ---------------- */
+function renderAdminQueue(){
+  var feed = document.getElementById("feed");
+  feed.innerHTML = '<div class="admin-queue">'+
+    '<button type="button" class="admin-back" id="admin-back">&larr; Retour au profil</button>'+
+    '<h2>Annonces à valider</h2>'+
+    '<div id="admin-list"><p class="sheet-sub">Chargement…</p></div>'+
+  '</div>';
+  document.getElementById("admin-back").addEventListener("click", renderProfile);
+
+  firebase.firestore().collection("listings").where("status","==","pending").orderBy("createdAt","desc").get().then(function(snap){
+    var list = document.getElementById("admin-list");
+    if(snap.empty){ list.innerHTML = '<p class="sheet-sub">Aucune annonce en attente pour le moment.</p>'; return; }
+    list.innerHTML = snap.docs.map(function(doc){
+      var l = doc.data();
+      var cover = (l.gallery && l.gallery[0])
+        ? '<img class="admin-thumb" src="'+l.gallery[0]+'" alt="">'
+        : '<div class="admin-thumb admin-thumb-empty"></div>';
+      return '<div class="admin-card">'+cover+
+        '<div class="admin-card-body">'+
+          '<b>'+esc(l.name||"(sans nom)")+'</b>'+
+          '<span>'+esc(l.region||"")+' · '+(l.price!=null?l.price:"?")+'€/nuit · '+(l.distance!=null?l.distance:"?")+' km</span>'+
+          '<span class="admin-owner">Déposée par '+esc(l.hostName||"")+' — '+esc(l.ownerEmail||"")+'</span>'+
+          '<div class="admin-actions">'+
+            '<button type="button" class="btn-apply admin-approve" data-id="'+doc.id+'">Publier</button>'+
+            '<button type="button" class="admin-reject" data-id="'+doc.id+'">Refuser</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    }).join("");
+    Array.prototype.forEach.call(list.querySelectorAll(".admin-approve"), function(btn){
+      btn.addEventListener("click", function(){
+        btn.disabled = true; btn.textContent = "Publication…";
+        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).update({
+          status:"published", publishedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){
+          fetchPublishedListings();
+          renderAdminQueue();
+        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; btn.textContent = "Publier"; });
+      });
+    });
+    Array.prototype.forEach.call(list.querySelectorAll(".admin-reject"), function(btn){
+      btn.addEventListener("click", function(){
+        if(!confirm("Supprimer définitivement cette annonce ?")) return;
+        btn.disabled = true;
+        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).delete()
+          .then(renderAdminQueue)
+          .catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; });
+      });
+    });
+  }).catch(function(err){
+    document.getElementById("admin-list").innerHTML = '<p class="sheet-sub">Erreur de chargement : '+esc(err.message||err.code||"inconnue")+'</p>';
+  });
 }
 
 function switchTab(tab){
@@ -1337,6 +1464,7 @@ fetch("listings.json").then(function(r){
 });
 
 bootFirebaseAuth();
+fetchPublishedListings();
 
 })();
 </script>
