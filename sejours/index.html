@@ -288,7 +288,10 @@ textarea.text-input{resize:vertical; min-height:80px;}
 /* ---------- bottom nav ---------- */
 nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:90;
   background:rgba(239,238,234,0.94); backdrop-filter:blur(10px); border-top:1px solid var(--line);
-  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));}
+  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
+  opacity:0; transform:translateY(14px); pointer-events:none;
+  transition:opacity .32s ease, transform .32s ease;}
+nav.tabbar.visible{opacity:1; transform:translateY(0); pointer-events:auto;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
@@ -465,7 +468,7 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
 
   <main id="feed"></main>
 
-  <nav class="tabbar" id="tabbar" hidden>
+  <nav class="tabbar" id="tabbar">
     <button class="tab active" data-tab="explore">
       <svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>
       <span>Explorer</span>
@@ -1606,7 +1609,7 @@ function switchTab(tab){
     var heroEl = document.getElementById("hero");
     if(heroEl) heroEl.hidden = true;
     var tabbarEl = document.getElementById("tabbar");
-    if(tabbarEl) tabbarEl.hidden = false;
+    if(tabbarEl) tabbarEl.classList.add("visible");
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
     el.classList.toggle("active", el.getAttribute("data-tab")===tab);
@@ -1639,7 +1642,7 @@ document.getElementById("hero-scroll-btn").addEventListener("click", function(){
   var tabbarEl = document.getElementById("tabbar");
   if(!heroEl || !tabbarEl || !window.IntersectionObserver) return;
   heroObserver = new IntersectionObserver(function(entries){
-    tabbarEl.hidden = entries[0].isIntersecting;
+    tabbarEl.classList.toggle("visible", !entries[0].isIntersecting);
   }, {threshold:0.1});
   heroObserver.observe(heroEl);
 })();
