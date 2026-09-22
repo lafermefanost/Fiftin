@@ -298,6 +298,16 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .map-cluster{width:38px; height:38px; border-radius:50%; background:var(--lavender-deep); color:#fff;
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
   box-shadow:0 4px 10px rgba(0,0,0,.25); border:2px solid var(--cream);}
+.map-zone-btn{position:absolute; top:12px; right:12px; z-index:1000; background:var(--cream); border:1.5px solid var(--line);
+  border-radius:20px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
+  box-shadow:0 3px 8px rgba(0,0,0,.18);}
+.map-zone-btn.armed{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
+.map-zone-controls{display:flex; align-items:center; gap:10px; background:var(--cream-deep); border-radius:14px;
+  padding:10px 14px; margin:12px 0; font-size:12.5px; font-weight:600;}
+.map-zone-controls span{flex-shrink:0;}
+.map-zone-controls input[type=range]{flex:1; accent-color:var(--sauge-deep);}
+.map-zone-controls button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
+  color:var(--danger); text-decoration:underline; flex-shrink:0;}
 .map-list{display:flex; flex-direction:column; gap:10px;}
 .map-list-item{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px 12px;}
 .map-list-item .sw{width:44px; height:44px; border-radius:12px; flex-shrink:0;}
@@ -1104,7 +1114,7 @@ function openSheet(kind){
     return;
   }
 
-  document.getElementById("sheet-apply").addEventListener("click", function(){ closeSheet(); persist(); renderFilterBar(); renderFeed(); renderResultLine(); });
+  document.getElementById("sheet-apply").addEventListener("click", function(){ closeSheet(); persist(); renderFilterBar(); renderTabContent(); renderResultLine(); });
 
   if(kind==="loc"){
     document.getElementById("s-loc").addEventListener("input", function(e){ f.q = e.target.value; });
@@ -1125,7 +1135,7 @@ function openSheet(kind){
     });
   } else if(kind==="sort"){
     Array.prototype.forEach.call(root.querySelectorAll("[data-sort]"), function(el){
-      el.addEventListener("click", function(){ state.sort = el.getAttribute("data-sort"); closeSheet(); persist(); renderFilterBar(); renderFeed(); });
+      el.addEventListener("click", function(){ state.sort = el.getAttribute("data-sort"); closeSheet(); persist(); renderFilterBar(); renderTabContent(); });
     });
   }
 }
@@ -1244,30 +1254,51 @@ function renderLikeBadge(){
 }
 
 var mapInstance = null;
+var mapMarkerLayer = null;
+var mapZone = null;
+var mapZoneArmed = false;
+var mapZoneCircleLayer = null;
 
-function renderMap(){
-  var feed = document.getElementById("feed");
-  feed.innerHTML = '<div class="map-view"><div class="map-canvas" id="map-canvas"></div><div class="map-list" id="map-list"></div></div>';
+/* Zone de recherche dessinée à la main sur la carte : un cercle (centre +
+   rayon), pas un polygone libre — plus simple à poser et ajuster d'un
+   doigt sur mobile qu'un tracé à main levée, pour un résultat tout aussi
+   utile ici (chercher "autour de ce point"). */
+function haversineKm(lat1, lng1, lat2, lng2){
+  var R = 6371;
+  var dLat = (lat2-lat1) * Math.PI/180, dLng = (lng2-lng1) * Math.PI/180;
+  var a = Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)*Math.sin(dLng/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
-  document.getElementById("map-list").innerHTML = LISTINGS.map(function(l){
+function mapZoneFilteredListings(){
+  var list = filteredListings();
+  var located = list.filter(function(l){ return l.lat && l.lng; });
+  if(mapZone){
+    located = located.filter(function(l){ return haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
+  }
+  return {all:list, located:located};
+}
+
+function renderMapList(located){
+  var listEl = document.getElementById("map-list");
+  if(!listEl) return;
+  listEl.innerHTML = located.length ? located.map(function(l){
     return '<div class="map-list-item" data-pin-item="'+l.id+'"><div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div><div><b>'+esc(l.name)+'</b><span>'+l.region+' · '+l.price+'€/nuit</span></div></div>';
-  }).join("");
-  Array.prototype.forEach.call(document.querySelectorAll("[data-pin-item]"), function(el){
+  }).join("") : '<p class="sheet-sub" style="margin:4px 0 0;">Aucun hébergement '+(mapZone?"dans cette zone":"à afficher")+'.</p>';
+  Array.prototype.forEach.call(listEl.querySelectorAll("[data-pin-item]"), function(el){
     el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-pin-item"))); });
   });
+}
 
-  if(mapInstance){ mapInstance.remove(); mapInstance = null; }
-  if(!window.L) return;
-
-  var located = LISTINGS.filter(function(l){ return l.lat && l.lng; });
-  if(!located.length) return;
-
-  mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom:19,
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
-  }).addTo(mapInstance);
-
+/* Ré-affiche juste les punaises + le cercle de zone sans recréer la carte
+   ni recadrer la vue — utilisé pendant le glissement du curseur de rayon,
+   pour que la carte ne saute pas à chaque tick. */
+function refreshMapMarkers(){
+  var located = mapZoneFilteredListings().located;
+  renderMapList(located);
+  if(!mapInstance) return;
+  if(mapMarkerLayer){ mapInstance.removeLayer(mapMarkerLayer); mapMarkerLayer = null; }
   var useCluster = !!window.L.markerClusterGroup;
   var clusterGroup = useCluster ? L.markerClusterGroup({
     maxClusterRadius:50,
@@ -1278,9 +1309,8 @@ function renderMap(){
         iconSize:[38,38]
       });
     }
-  }) : null;
-
-  var markers = located.map(function(l){
+  }) : L.layerGroup();
+  located.forEach(function(l){
     var icon = L.divIcon({
       className:"map-pin-icon",
       html:'<div class="map-pin'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'"><div class="dot"><span>'+l.price+'</span></div></div>',
@@ -1288,15 +1318,86 @@ function renderMap(){
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
     marker.on("click", function(){ openDetail(l.id); });
-    if(clusterGroup) clusterGroup.addLayer(marker); else marker.addTo(mapInstance);
-    return marker;
+    clusterGroup.addLayer(marker);
   });
-  if(clusterGroup) mapInstance.addLayer(clusterGroup);
+  mapMarkerLayer = clusterGroup;
+  mapInstance.addLayer(mapMarkerLayer);
+  if(mapZoneCircleLayer) mapZoneCircleLayer.setRadius(mapZone.radiusKm*1000);
+}
 
-  if(markers.length===1){
-    mapInstance.setView([located[0].lat, located[0].lng], 12);
-  }else{
-    mapInstance.fitBounds(L.featureGroup(markers).getBounds(), {padding:[32,32]});
+function renderMap(){
+  var feed = document.getElementById("feed");
+  var f = mapZoneFilteredListings();
+
+  feed.innerHTML = '<div class="map-view">'+
+    '<div class="map-canvas" id="map-canvas">'+
+      '<button type="button" class="map-zone-btn'+(mapZoneArmed?' armed':'')+'" id="map-zone-btn">'+
+        (mapZoneArmed ? "Touchez la carte…" : (mapZone ? "Déplacer la zone" : "Dessiner une zone"))+
+      '</button>'+
+    '</div>'+
+    (mapZone ? '<div class="map-zone-controls">'+
+      '<span>Rayon : <b id="map-zone-radius-label">'+mapZone.radiusKm+' km</b></span>'+
+      '<input type="range" id="map-zone-radius" min="1" max="30" value="'+mapZone.radiusKm+'">'+
+      '<button type="button" id="map-zone-clear">Effacer</button>'+
+    '</div>' : '')+
+    '<div class="map-list" id="map-list"></div>'+
+  '</div>';
+
+  document.getElementById("map-zone-btn").addEventListener("click", function(){
+    mapZoneArmed = !mapZone || !mapZoneArmed;
+    renderMap();
+  });
+  var clearBtn = document.getElementById("map-zone-clear");
+  if(clearBtn) clearBtn.addEventListener("click", function(){
+    mapZone = null; mapZoneArmed = false;
+    renderMap();
+  });
+  var radiusInput = document.getElementById("map-zone-radius");
+  if(radiusInput) radiusInput.addEventListener("input", function(){
+    mapZone.radiusKm = Number(radiusInput.value);
+    document.getElementById("map-zone-radius-label").textContent = mapZone.radiusKm+" km";
+    refreshMapMarkers();
+  });
+
+  if(mapInstance){ mapInstance.remove(); mapInstance = null; mapMarkerLayer = null; mapZoneCircleLayer = null; }
+  if(!window.L){ renderMapList(f.located); return; }
+  if(!f.located.length && !mapZone){ renderMapList(f.located); return; }
+
+  mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom:19,
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
+  }).addTo(mapInstance);
+
+  mapInstance.on("click", function(e){
+    if(!mapZoneArmed) return;
+    mapZone = {lat:e.latlng.lat, lng:e.latlng.lng, radiusKm:(mapZone && mapZone.radiusKm) || 5};
+    mapZoneArmed = false;
+    /* setTimeout : renderMap() détruit puis recrée mapInstance. Le faire
+       de façon synchrone ici casse Leaflet, qui n'a pas fini de traiter
+       cet événement "click" sur l'instance qu'on vient de supprimer. */
+    setTimeout(renderMap, 0);
+  });
+
+  if(mapZone){
+    /* Circle.getBounds() a besoin que la carte ait déjà une vue (centre +
+       zoom) pour projeter son rayon en pixels — sans ça, Leaflet plante
+       en interne. setView ici, avant fitBounds plus bas qui affine le
+       cadrage sur le cercle réel. */
+    mapInstance.setView([mapZone.lat, mapZone.lng], 12);
+    mapZoneCircleLayer = L.circle([mapZone.lat, mapZone.lng], {
+      radius:mapZone.radiusKm*1000, color:"#1D2820", weight:2, fillOpacity:.08
+    }).addTo(mapInstance);
+  }
+
+  refreshMapMarkers();
+
+  if(mapZone){
+    mapInstance.fitBounds(mapZoneCircleLayer.getBounds(), {padding:[20,20]});
+  } else if(f.located.length===1){
+    mapInstance.setView([f.located[0].lat, f.located[0].lng], 12);
+  } else if(f.located.length>1){
+    mapInstance.fitBounds(L.featureGroup(f.located.map(function(l){ return L.marker([l.lat,l.lng]); })).getBounds(), {padding:[32,32]});
   }
 }
 
@@ -1405,6 +1506,10 @@ function renderAdminQueue(){
   });
 }
 
+function renderTabContent(){
+  if(state.tab==="map") renderMap(); else renderFeed();
+}
+
 function switchTab(tab){
   state.tab = tab;
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
@@ -1426,12 +1531,12 @@ function switchTab(tab){
   });
   var filterBar = document.getElementById("filter-bar");
   var resultLine = document.getElementById("result-line");
-  if(tab==="explore" || tab==="likes"){
+  if(tab==="explore" || tab==="likes" || tab==="map"){
     filterBar.hidden=false; resultLine.hidden=false;
-    renderFilterBar(); renderFeed(); renderResultLine();
+    renderFilterBar(); renderTabContent(); renderResultLine();
   } else {
     filterBar.hidden=true; resultLine.hidden=true;
-    if(tab==="map") renderMap(); else renderProfile();
+    renderProfile();
   }
 }
 
