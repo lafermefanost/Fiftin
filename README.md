@@ -17,12 +17,47 @@ Projet frère de l'outil de planning, même marque mais codebase et périmètre 
 
 ### Dépôt d'annonce par un hôte (onglet Profil → Espace hôtes)
 
-Un compte connecté (même Firebase Auth que `app/` — voir « Comptes et données » ci-dessous, même projet donc même compte des deux côtés) peut se connecter/s'inscrire directement dans Séjours et déposer une annonce. Écrit dans une nouvelle collection Firestore `listings/{id}` avec `status:"pending"` à la création — **jamais publiée automatiquement**.
+Un compte connecté (même Firebase Auth que `app/` — voir « Comptes et données » ci-dessous, même projet donc même compte des deux côtés) peut se connecter/s'inscrire directement dans Séjours et déposer une annonce, photos comprises (upload direct vers Firebase Storage). Écrit dans une nouvelle collection Firestore `listings/{id}` avec `status:"pending"` à la création — **jamais publiée automatiquement**.
 
-- Pour publier une annonce déposée : ouvrir Firebase Console → Firestore Database → collection `listings`, repasser son champ `status` à `"published"` à la main. Aucune interface d'administration pour l'instant.
-- Les annonces `listings/` (Firestore, dynamiques, déposées par les hôtes) et `listings.json` (statique, annonces sélectionnées par nous) sont **deux sources séparées pour l'instant** — une annonce publiée dans Firestore n'apparaît pas encore automatiquement dans le fil public. Cette fusion reste à construire.
-- Pas de photos dans le formulaire de dépôt (Firebase Storage n'est pas configuré/vérifié sur ce projet) — à demander à l'hôte séparément une fois l'annonce validée.
-- Aucun paiement : les 3 formules envisagées (dépôt seul / + Fiftin essentiel / + Fiftin avancé) ne peuvent pas être facturées tant que Stripe n'est pas branché (voir « À faire avant un vrai passage en production »). Le dépôt d'annonce est donc gratuit et non genré par formule pour l'instant.
+#### Valider (publier) une annonce déposée — pas encore d'interface dédiée, donc à la main
+
+1. Aller sur **[console.firebase.google.com/project/fiftin-e30c2/firestore/data](https://console.firebase.google.com/project/fiftin-e30c2/firestore/data)** (se connecter avec le compte Google qui gère le projet Fiftin si demandé).
+2. Dans la liste des collections à gauche, cliquer sur **`listings`**.
+3. Chaque document correspond à une annonce déposée. Ouvrir un document pour voir ses champs : `name`, `region`, `price`, `claim`, `desc`, `phone`, `amen`, `gallery` (liens des photos), `ownerEmail` (pour identifier qui a déposé), `status`.
+4. Pour publier : cliquer sur le champ **`status`**, remplacer la valeur `pending` par `published`, valider. L'annonce reste enregistrée telle quelle si vous préférez la refuser — supprimer le document entier (bouton `⋮` → « Delete document ») pour la retirer définitivement.
+5. Les annonces `listings/` (Firestore, dynamiques, déposées par les hôtes) et `listings.json` (statique, annonces sélectionnées par nous) restent **deux sources séparées pour l'instant** — passer une annonce en `published` ne la fait pas encore apparaître dans le fil public de Séjours. Cette fusion (le fil doit lire les deux sources) reste à construire — à faire quand la première annonce hôte sera prête à passer en ligne.
+
+Si une interface de validation directement dans l'app (liste des annonces en attente + bouton « Publier ») est préférable à la Firebase Console, c'est possible à construire — ça demande de savoir quel compte (quel e-mail Fiftin) doit avoir ce droit, pour le coder en dur à la fois côté règles Firestore et côté interface.
+
+#### Photos — Firebase Storage
+
+Le formulaire de dépôt permet maintenant l'upload de photos (6 maximum, 8 Mo chacune), stockées sous `listings/{uid}/...` dans Firebase Storage, avec l'URL de chaque photo dans le champ `gallery` du document Firestore correspondant.
+
+**Point de vigilance réel, pas juste administratif : Firebase Storage nécessite le forfait Blaze (paiement à l'usage) du projet Google Cloud — impossible à activer sur le forfait gratuit Spark.** Ça ne veut pas dire que ça va coûter cher (le forfait Blaze inclut lui-même un palier gratuit généreux — 5 Go de stockage, 1 Go de téléchargement par jour), mais ça veut dire qu'une carte bancaire doit être renseignée sur le projet Google Cloud sous-jacent, même si l'usage réel reste dans le gratuit. À vérifier/activer : Firebase Console → Build → Storage → « Get started » (le assistant de configuration demande explicitement de passer sur Blaze si ce n'est pas déjà fait).
+
+Règles de sécurité Storage à coller (Firebase Console → Build → Storage → Rules — **différent de l'onglet Firestore Database → Règles**, un système de règles séparé) :
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /listings/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+```
+
+Lecture publique (les photos doivent être visibles par n'importe quel visiteur de l'annuaire), écriture réservée au propriétaire du dossier (`uid` = son identifiant Firebase), taille et type de fichier vérifiés côté serveur en plus du contrôle déjà fait côté application.
+
+**Sans le forfait Blaze activé ET ces règles collées, l'upload de photos échoue** (à l'activation de Storage, ou à l'écriture selon lequel des deux manque) — non vérifiable depuis l'environnement de développement (accès réseau à Firebase bloqué), donc c'est le premier vrai dépôt d'annonce avec photos qui validera que tout est branché correctement.
+
+#### Paiement
+
+Aucun paiement : les 3 formules envisagées (dépôt seul / + Fiftin essentiel / + Fiftin avancé) ne peuvent pas être facturées tant que Stripe n'est pas branché (voir « À faire avant un vrai passage en production » — pas encore fait non plus pour `app/`, la création d'entreprise est en cours). Le dépôt d'annonce est donc gratuit et non genré par formule pour l'instant.
 
 ## Comptes et données — architecture définitive
 

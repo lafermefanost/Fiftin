@@ -230,11 +230,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
 .sheet-apply{position:sticky; bottom:0; background:var(--cream); padding-top:10px;}
 .sheet-sub{font-size:13px; color:var(--sauge); font-weight:600; margin:-10px 0 18px; line-height:1.4;}
-.sheet-note{font-size:12px; color:var(--gray-mid); font-weight:500; margin:-8px 0 16px; line-height:1.4;}
 .auth-err{font-size:12.5px; font-weight:600; color:var(--danger); min-height:16px; margin-bottom:8px;}
 .link-btn{display:block; background:none; border:none; padding:0; font-family:inherit; font-size:12.5px; font-weight:700;
   color:var(--sauge-deep); text-decoration:underline; margin-bottom:14px;}
 .host-app-link{display:block; font-size:12.5px; font-weight:600; color:var(--lavender-deep); text-decoration:underline; margin:-6px 0 18px;}
+.btn-photo-add{width:100%; padding:12px; border:1.5px dashed var(--line); border-radius:14px; background:var(--cream-deep);
+  font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge-deep);}
+.hf-photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;}
+.hf-photo-grid:empty{margin-top:0;}
+.hf-photo-thumb{position:relative; aspect-ratio:1/1; border-radius:12px; overflow:hidden;}
+.hf-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.hf-photo-remove{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(20,26,20,.65);
+  color:#fff; border:none; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center;}
 .btn-apply{width:100%; background:var(--sauge-deep); color:var(--cream); padding:15px; border-radius:16px; font-weight:700; font-size:14.5px; border:none;}
 
 /* ---------- detail sheet ---------- */
@@ -503,6 +510,7 @@ var FIFTIN_FIREBASE_CONFIG = {
 };
 var authState = {ready:false, uid:null, email:null};
 var authMode = "signin";
+var hfSelectedFiles = [];
 
 var AUTH_ERROR_MESSAGES = {
   "auth/email-already-in-use":"Un compte existe déjà avec cet e-mail — connectez-vous plutôt.",
@@ -527,7 +535,12 @@ function loadFirebaseSDK(cb){
     s2.onload = function(){
       var s3 = document.createElement("script");
       s3.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js";
-      s3.onload = cb;
+      s3.onload = function(){
+        var s4 = document.createElement("script");
+        s4.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js";
+        s4.onload = cb;
+        document.head.appendChild(s4);
+      };
       document.head.appendChild(s3);
     };
     document.head.appendChild(s2);
@@ -976,9 +989,14 @@ function openSheet(kind){
       '<div class="field-block"><label>Prestations</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
         return '<button type="button" class="amenity-chip" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
       }).join("")+'</div></div>'+
-      '<p class="sheet-note">Les photos ne sont pas encore gérées ici : une fois l\'annonce validée, envoyez-les nous pour qu\'on les ajoute.</p>'+
+      '<div class="field-block"><label>Photos (6 maximum, 8 Mo par photo)</label>'+
+        '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
+        '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
+        '<div class="hf-photo-grid" id="hf-photo-grid"></div>'+
+      '</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
+    hfSelectedFiles = [];
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
@@ -1005,6 +1023,22 @@ function openSheet(kind){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
       el.addEventListener("click", function(){ el.classList.toggle("active"); });
     });
+    document.getElementById("hf-photos-btn").addEventListener("click", function(){
+      document.getElementById("hf-photos-input").click();
+    });
+    document.getElementById("hf-photos-input").addEventListener("change", function(e){
+      var errEl = document.getElementById("hf-err");
+      errEl.textContent = "";
+      Array.prototype.forEach.call(e.target.files, function(file){
+        if(hfSelectedFiles.length>=6){ errEl.textContent = "6 photos maximum."; return; }
+        if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
+        if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
+        hfSelectedFiles.push(file);
+      });
+      e.target.value = "";
+      renderHostPhotoGrid();
+    });
+    renderHostPhotoGrid();
     return;
   }
 
@@ -1066,6 +1100,38 @@ function submitForgotPassword(){
     .then(function(){ errEl.style.color = "var(--sauge-deep)"; errEl.textContent = "E-mail envoyé — vérifiez votre boîte de réception."; })
     .catch(function(err){ errEl.style.color = "var(--danger)"; errEl.textContent = authErrorMessage(err); });
 }
+function renderHostPhotoGrid(){
+  var grid = document.getElementById("hf-photo-grid");
+  if(!grid) return;
+  grid.innerHTML = hfSelectedFiles.map(function(file, i){
+    return '<div class="hf-photo-thumb"><img src="'+URL.createObjectURL(file)+'" alt=""><button type="button" class="hf-photo-remove" data-i="'+i+'">&times;</button></div>';
+  }).join("");
+  Array.prototype.forEach.call(grid.querySelectorAll(".hf-photo-remove"), function(el){
+    el.addEventListener("click", function(){
+      hfSelectedFiles.splice(Number(el.getAttribute("data-i")), 1);
+      renderHostPhotoGrid();
+    });
+  });
+}
+
+function uploadHostPhotos(uid){
+  var btn = document.getElementById("sheet-apply");
+  if(!hfSelectedFiles.length) return Promise.resolve([]);
+  var urls = [];
+  var uploadOne = function(i){
+    if(i>=hfSelectedFiles.length) return Promise.resolve();
+    btn.textContent = "Envoi des photos… ("+(i+1)+"/"+hfSelectedFiles.length+")";
+    var file = hfSelectedFiles[i];
+    var path = "listings/"+uid+"/"+Date.now()+"-"+i+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    var ref = firebase.storage().ref().child(path);
+    return ref.put(file).then(function(snap){ return snap.ref.getDownloadURL(); }).then(function(url){
+      urls.push(url);
+      return uploadOne(i+1);
+    });
+  };
+  return uploadOne(0).then(function(){ return urls; });
+}
+
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var region = document.getElementById("hf-region").value.trim();
@@ -1079,12 +1145,17 @@ function submitHostForm(){
   if(!name || !region || !price || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
   var btn = document.getElementById("sheet-apply");
+  var originalLabel = btn.textContent;
   btn.disabled = true;
-  firebase.firestore().collection("listings").add({
-    name:name, region:region, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
-    ownerUid:authState.uid, ownerEmail:authState.email,
-    status:"pending",
-    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  uploadHostPhotos(authState.uid).then(function(gallery){
+    btn.textContent = "Envoi de l'annonce…";
+    return firebase.firestore().collection("listings").add({
+      name:name, region:region, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
+      gallery:gallery,
+      ownerUid:authState.uid, ownerEmail:authState.email,
+      status:"pending",
+      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
   }).then(function(){
     var root = document.getElementById("sheet-root");
     root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -1098,6 +1169,7 @@ function submitHostForm(){
   }).catch(function(err){
     errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
     btn.disabled = false;
+    btn.textContent = originalLabel;
   });
 }
 
