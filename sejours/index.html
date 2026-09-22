@@ -644,6 +644,8 @@ var AMEN_ICONS = {
 
 /* ---------------- state ---------------- */
 var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true};
+var heroDismissed = false;
+var heroObserver = null;
 try{
   var saved = JSON.parse(localStorage.getItem("fiftin_state")||"{}");
   if(saved.filters) state.filters = saved.filters;
@@ -1405,6 +1407,20 @@ function renderAdminQueue(){
 
 function switchTab(tab){
   state.tab = tab;
+  /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
+     au chargement initial — pas se répéter à chaque retour sur Explorer.
+     Dès qu'on change d'onglet, il est masqué définitivement (et la barre
+     d'onglets reste visible en continu : plus de risque qu'elle se
+     recache si le contenu d'un onglet plus court "clampe" le scroll
+     vers le haut et refait apparaître le hero). */
+  if(!heroDismissed){
+    heroDismissed = true;
+    if(heroObserver) heroObserver.disconnect();
+    var heroEl = document.getElementById("hero");
+    if(heroEl) heroEl.hidden = true;
+    var tabbarEl = document.getElementById("tabbar");
+    if(tabbarEl) tabbarEl.hidden = false;
+  }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
     el.classList.toggle("active", el.getAttribute("data-tab")===tab);
   });
@@ -1427,14 +1443,18 @@ document.getElementById("hero-scroll-btn").addEventListener("click", function(){
 });
 
 /* La barre d'onglets (fixed) reste masquée tant que le hero est à l'écran,
-   sinon elle se superpose au texte "Scroller pour découvrir" en bas du hero. */
+   sinon elle se superpose au texte "Scroller pour découvrir" en bas du hero.
+   Dès qu'on change d'onglet (voir switchTab/heroDismissed), cet observateur
+   est déconnecté pour de bon : la barre d'onglets ne doit plus jamais
+   disparaître ensuite, quel que soit le contenu affiché. */
 (function(){
   var heroEl = document.getElementById("hero");
   var tabbarEl = document.getElementById("tabbar");
   if(!heroEl || !tabbarEl || !window.IntersectionObserver) return;
-  new IntersectionObserver(function(entries){
+  heroObserver = new IntersectionObserver(function(entries){
     tabbarEl.hidden = entries[0].isIntersecting;
-  }, {threshold:0.1}).observe(heroEl);
+  }, {threshold:0.1});
+  heroObserver.observe(heroEl);
 })();
 
 /* ---------------- init ---------------- */
