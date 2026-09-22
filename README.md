@@ -12,8 +12,17 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 
 Projet frère de l'outil de planning, même marque mais codebase et périmètre séparés (voir `CLAUDE.md`) : un annuaire mobile-first pour que les voyageurs trouvent un hébergement et contactent l'hôte directement (WhatsApp, SMS, appel), sans commission ni intermédiaire — dans l'esprit de Cybevasion, en mieux.
 
-- Prototype statique : données d'hébergements mockées, pas de backend, pas de vraies photos (dégradés stylisés en attendant).
+- Prototype statique : les annonces sont dans `sejours/listings.json` (pas dans le HTML, voir plus bas), pas de vraies photos partout (dégradés stylisés en attendant).
 - À terme : lien avec le calendrier de réservations de l'outil de planning (`app/`), pour que la disponibilité affichée ici soit réelle — pas encore construit.
+
+### Dépôt d'annonce par un hôte (onglet Profil → Espace hôtes)
+
+Un compte connecté (même Firebase Auth que `app/` — voir « Comptes et données » ci-dessous, même projet donc même compte des deux côtés) peut se connecter/s'inscrire directement dans Séjours et déposer une annonce. Écrit dans une nouvelle collection Firestore `listings/{id}` avec `status:"pending"` à la création — **jamais publiée automatiquement**.
+
+- Pour publier une annonce déposée : ouvrir Firebase Console → Firestore Database → collection `listings`, repasser son champ `status` à `"published"` à la main. Aucune interface d'administration pour l'instant.
+- Les annonces `listings/` (Firestore, dynamiques, déposées par les hôtes) et `listings.json` (statique, annonces sélectionnées par nous) sont **deux sources séparées pour l'instant** — une annonce publiée dans Firestore n'apparaît pas encore automatiquement dans le fil public. Cette fusion reste à construire.
+- Pas de photos dans le formulaire de dépôt (Firebase Storage n'est pas configuré/vérifié sur ce projet) — à demander à l'hôte séparément une fois l'annonce validée.
+- Aucun paiement : les 3 formules envisagées (dépôt seul / + Fiftin essentiel / + Fiftin avancé) ne peuvent pas être facturées tant que Stripe n'est pas branché (voir « À faire avant un vrai passage en production »). Le dépôt d'annonce est donc gratuit et non genré par formule pour l'instant.
 
 ## Comptes et données — architecture définitive
 
@@ -88,11 +97,29 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid;
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
+
+    // Annonces déposées par les hôtes depuis Fiftin Séjours (onglet Profil
+    // → Espace hôtes). Public en lecture uniquement une fois publiée ; le
+    // dépôt force status:"pending" (un hôte ne peut pas s'auto-publier) ;
+    // seule la Firebase Console (accès admin, hors règles) peut repasser
+    // status à "published" — pas d'interface pour ça côté application.
+    match /listings/{listingId} {
+      allow read: if resource.data.status == 'published'
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update, delete: if request.auth != null
+        && resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == resource.data.status;
+    }
   }
 }
 ```
 
-Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder.
+Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder. Pour `listings/{listingId}`, seul le propriétaire (`ownerUid`) peut créer/modifier/supprimer son annonce, tout le monde peut lire une annonce `published`, et personne côté application ne peut faire passer `status` de `pending` à `published` (règle `update` : le nouveau `status` doit rester égal à l'ancien) — cette bascule se fait uniquement à la main dans la Firebase Console.
+
+**Important : sans ce nouveau bloc `listings/{listingId}` collé dans Firebase Console → Firestore Database → Règles, le dépôt d'annonce échoue silencieusement avec une erreur de permission** — les règles Firestore refusent par défaut tout ce qui n'est pas explicitement autorisé.
 
 ## À faire avant un vrai passage en production
 

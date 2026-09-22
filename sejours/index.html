@@ -224,10 +224,17 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
 .text-input{width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Jost',sans-serif;
   font-size:14px; background:var(--cream-deep); color:var(--ink);}
+textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
 .radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:14px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
 .sheet-apply{position:sticky; bottom:0; background:var(--cream); padding-top:10px;}
+.sheet-sub{font-size:13px; color:var(--sauge); font-weight:600; margin:-10px 0 18px; line-height:1.4;}
+.sheet-note{font-size:12px; color:var(--gray-mid); font-weight:500; margin:-8px 0 16px; line-height:1.4;}
+.auth-err{font-size:12.5px; font-weight:600; color:var(--danger); min-height:16px; margin-bottom:8px;}
+.link-btn{display:block; background:none; border:none; padding:0; font-family:inherit; font-size:12.5px; font-weight:700;
+  color:var(--sauge-deep); text-decoration:underline; margin-bottom:14px;}
+.host-app-link{display:block; font-size:12.5px; font-weight:600; color:var(--lavender-deep); text-decoration:underline; margin:-6px 0 18px;}
 .btn-apply{width:100%; background:var(--sauge-deep); color:var(--cream); padding:15px; border-radius:16px; font-weight:700; font-size:14.5px; border:none;}
 
 /* ---------- detail sheet ---------- */
@@ -327,7 +334,6 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .switch-tile .switch-label{display:flex; align-items:center; gap:5px; width:100%;}
 .switch-tile b{font-size:13.5px; font-weight:700; color:var(--ink);}
 .switch-tile span{font-size:11px; color:var(--sauge); font-weight:600; display:block; margin-top:1px;}
-.switch-tile .switch-ext{width:12px; height:12px; margin-left:auto; opacity:.4; flex-shrink:0;}
 .profile-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); margin:24px 0 4px 2px;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
 
@@ -477,6 +483,73 @@ var MOTIFS = {
    au-delà de quelques dizaines d'annonces, les avoir dans le HTML alourdirait
    le chargement initial de la page pour tout le monde, même hors saison. */
 var LISTINGS = [];
+
+/* ---------------- comptes Fiftin (même Firebase que app/) ----------------
+   Même config, même mécanisme de connexion (email + mot de passe) que
+   app/index.html : un compte créé ou connecté ici est le même compte que
+   sur l'outil de planning, puisque c'est le même projet Firebase. Rien
+   n'est partagé automatiquement entre les deux au-delà du compte lui-même
+   (pas de session déjà ouverte reprise depuis app/ : Firebase Auth persiste
+   par origine+projet mais chaque page doit charger le SDK et écouter
+   onAuthStateChanged elle-même, ce que fait bootFirebaseAuth ci-dessous). */
+var FIFTIN_FIREBASE_CONFIG = {
+  apiKey:"AIzaSyBr0AdydzhN_PLgTVb3yNoFeZC8RQMo854",
+  authDomain:"fiftin-e30c2.firebaseapp.com",
+  projectId:"fiftin-e30c2",
+  storageBucket:"fiftin-e30c2.firebasestorage.app",
+  messagingSenderId:"347369551612",
+  appId:"1:347369551612:web:0b9bc176418261bbb70979",
+  measurementId:"G-4PJLYEPW01"
+};
+var authState = {ready:false, uid:null, email:null};
+var authMode = "signin";
+
+var AUTH_ERROR_MESSAGES = {
+  "auth/email-already-in-use":"Un compte existe déjà avec cet e-mail — connectez-vous plutôt.",
+  "auth/invalid-email":"Adresse e-mail invalide.",
+  "auth/weak-password":"Mot de passe trop court (6 caractères minimum).",
+  "auth/user-not-found":"Aucun compte avec cet e-mail.",
+  "auth/wrong-password":"Mot de passe incorrect.",
+  "auth/invalid-credential":"E-mail ou mot de passe incorrect.",
+  "auth/invalid-login-credentials":"E-mail ou mot de passe incorrect.",
+  "auth/too-many-requests":"Trop de tentatives — réessayez dans quelques minutes.",
+  "auth/network-request-failed":"Problème de connexion internet — réessayez."
+};
+function authErrorMessage(err){ return AUTH_ERROR_MESSAGES[err.code] || ("Erreur : "+(err.message||err.code||"inconnue")); }
+
+function loadFirebaseSDK(cb){
+  if(typeof firebase!=="undefined"){ cb(); return; }
+  var s1 = document.createElement("script");
+  s1.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js";
+  s1.onload = function(){
+    var s2 = document.createElement("script");
+    s2.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js";
+    s2.onload = function(){
+      var s3 = document.createElement("script");
+      s3.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js";
+      s3.onload = cb;
+      document.head.appendChild(s3);
+    };
+    document.head.appendChild(s2);
+  };
+  document.head.appendChild(s1);
+}
+
+function bootFirebaseAuth(){
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.auth().onAuthStateChanged(function(user){
+      authState.ready = true;
+      authState.uid = user ? user.uid : null;
+      authState.email = user ? user.email : null;
+      if(state.tab==="profile") renderProfile();
+    });
+  });
+}
+
+function signOutUser(){
+  if(typeof firebase!=="undefined") firebase.auth().signOut();
+}
 
 var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
   "Cheminée","Sauna","Jardin","Cuisine équipée","Parking privé","Wifi","Accès PMR"];
@@ -882,16 +955,59 @@ function openSheet(kind){
     inner = '<h3>Trier</h3><div class="field-block sort-row">'+opts.map(function(o){
       return '<button class="radio-row'+(state.sort===o[0]?' active':'')+'" data-sort="'+o[0]+'">'+o[1]+'</button>';
     }).join("")+'</div>';
+  } else if(kind==="auth"){
+    inner = '<h3>'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
+      '<p class="sheet-sub">Le même compte que votre espace de gestion Fiftin.</p>'+
+      '<div class="field-block"><label>E-mail</label><input class="text-input" type="email" id="auth-email" autocomplete="email"></div>'+
+      '<div class="field-block"><label>Mot de passe</label><input class="text-input" type="password" id="auth-password" autocomplete="'+(authMode==="signup"?"new-password":"current-password")+'"></div>'+
+      (authMode==="signup" ? '<div class="field-block"><label>Confirmer le mot de passe</label><input class="text-input" type="password" id="auth-password2" autocomplete="new-password"></div>' : '')+
+      '<div class="auth-err" id="auth-err"></div>'+
+      '<button type="button" class="link-btn" id="auth-toggle">'+(authMode==="signup"?"Déjà un compte ? Se connecter":"Pas encore de compte ? En créer un")+'</button>'+
+      (authMode==="signin" ? '<button type="button" class="link-btn" id="auth-forgot">Mot de passe oublié ?</button>' : '');
+  } else if(kind==="hostform"){
+    inner = '<h3>Déposer une annonce</h3>'+
+      '<p class="sheet-sub">Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.</p>'+
+      '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. Le Petit Fanost"></div>'+
+      '<div class="field-block"><label>Localisation</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous"></div>'+
+      '<div class="field-block"><label>Prix par nuit (€)</label><input class="text-input" type="number" min="1" id="hf-price"></div>'+
+      '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie"></div>'+
+      '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4"></textarea></div>'+
+      '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…"></div>'+
+      '<div class="field-block"><label>Prestations</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
+        return '<button type="button" class="amenity-chip" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
+      }).join("")+'</div></div>'+
+      '<p class="sheet-note">Les photos ne sont pas encore gérées ici : une fois l\'annonce validée, envoyez-les nous pour qu\'on les ajoute.</p>'+
+      '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
+      '<div class="auth-err" id="hf-err"></div>';
   }
+
+  var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
+    : kind==="hostform" ? "Envoyer l'annonce"
+    : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
     inner+
-    '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">Voir les résultats</button></div>'+
+    '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">'+footerLabel+'</button></div>'+
   '</div></div></div>';
 
   document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
   document.getElementById("sheet-close").addEventListener("click", closeSheet);
+
+  if(kind==="auth"){
+    document.getElementById("sheet-apply").addEventListener("click", submitAuthSheet);
+    document.getElementById("auth-toggle").addEventListener("click", function(){ authMode = authMode==="signup"?"signin":"signup"; openSheet("auth"); });
+    var forgotBtn = document.getElementById("auth-forgot");
+    if(forgotBtn) forgotBtn.addEventListener("click", submitForgotPassword);
+    return;
+  } else if(kind==="hostform"){
+    document.getElementById("sheet-apply").addEventListener("click", submitHostForm);
+    Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
+      el.addEventListener("click", function(){ el.classList.toggle("active"); });
+    });
+    return;
+  }
+
   document.getElementById("sheet-apply").addEventListener("click", function(){ closeSheet(); persist(); renderFilterBar(); renderFeed(); renderResultLine(); });
 
   if(kind==="loc"){
@@ -918,6 +1034,72 @@ function openSheet(kind){
   }
 }
 function closeSheet(){ document.getElementById("sheet-root").innerHTML = ""; }
+
+/* ---------------- comptes : connexion / inscription / dépôt d'annonce ---------------- */
+function submitAuthSheet(){
+  var email = document.getElementById("auth-email").value.trim();
+  var password = document.getElementById("auth-password").value;
+  var errEl = document.getElementById("auth-err");
+  errEl.style.color = "var(--danger)";
+  errEl.textContent = "";
+  if(!email || !password){ errEl.textContent = "Renseignez e-mail et mot de passe."; return; }
+  if(typeof firebase==="undefined"){ errEl.textContent = "Connexion indisponible pour le moment — réessayez dans un instant."; return; }
+  var btn = document.getElementById("sheet-apply");
+  btn.disabled = true;
+  if(authMode==="signup"){
+    var pw2 = document.getElementById("auth-password2").value;
+    if(password!==pw2){ errEl.textContent = "Les deux mots de passe ne correspondent pas."; btn.disabled = false; return; }
+    firebase.auth().createUserWithEmailAndPassword(email, password)
+      .then(function(){ closeSheet(); renderProfile(); })
+      .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
+  } else {
+    firebase.auth().signInWithEmailAndPassword(email, password)
+      .then(function(){ closeSheet(); renderProfile(); })
+      .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
+  }
+}
+function submitForgotPassword(){
+  var email = document.getElementById("auth-email").value.trim();
+  var errEl = document.getElementById("auth-err");
+  if(!email){ errEl.style.color = "var(--danger)"; errEl.textContent = "Entrez d'abord votre e-mail ci-dessus."; return; }
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(function(){ errEl.style.color = "var(--sauge-deep)"; errEl.textContent = "E-mail envoyé — vérifiez votre boîte de réception."; })
+    .catch(function(err){ errEl.style.color = "var(--danger)"; errEl.textContent = authErrorMessage(err); });
+}
+function submitHostForm(){
+  var name = document.getElementById("hf-name").value.trim();
+  var region = document.getElementById("hf-region").value.trim();
+  var price = Number(document.getElementById("hf-price").value);
+  var claim = document.getElementById("hf-claim").value.trim();
+  var desc = document.getElementById("hf-desc").value.trim();
+  var phone = document.getElementById("hf-phone").value.trim();
+  var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
+  var errEl = document.getElementById("hf-err");
+  errEl.textContent = "";
+  if(!name || !region || !price || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
+  var btn = document.getElementById("sheet-apply");
+  btn.disabled = true;
+  firebase.firestore().collection("listings").add({
+    name:name, region:region, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
+    ownerUid:authState.uid, ownerEmail:authState.email,
+    status:"pending",
+    createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    var root = document.getElementById("sheet-root");
+    root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+      '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+      '<h3>Annonce envoyée</h3><p class="sheet-sub">Merci ! On la vérifie et elle sera mise en ligne prochainement.</p>'+
+      '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
+    '</div></div></div>';
+    document.getElementById("sheet-close").addEventListener("click", closeSheet);
+    document.getElementById("sheet-ok").addEventListener("click", closeSheet);
+    document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
+  }).catch(function(err){
+    errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
+    btn.disabled = false;
+  });
+}
 
 /* ---------------- tabs ---------------- */
 function renderLikeBadge(){
@@ -984,8 +1166,16 @@ function renderMap(){
 
 function renderProfile(){
   var feed = document.getElementById("feed");
+  var connected = !!authState.uid;
+  var initial = connected ? authState.email.charAt(0).toUpperCase() : "?";
+  var nameLine = connected ? esc(authState.email) : "Non connecté";
+  var subLine = connected
+    ? '<a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a>'
+    : "Connectez-vous pour déposer une annonce";
+  var hostSub = connected ? "Déposer une annonce" : "Se connecter pour déposer une annonce";
+
   feed.innerHTML = '<div class="profile-view">'+
-    '<div class="profile-head"><div class="profile-avatar">C</div><div><b style="font-size:17px;">Voyageur Fiftin</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">Membre depuis 2026</div></div></div>'+
+    '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
     '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Envies</span></div><div class="stat-tile"><b>0</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur active" data-switch="voyageur">'+
@@ -993,11 +1183,11 @@ function renderProfile(){
         '<div class="switch-label"><b>Espace voyageur</b></div>'+
         '<span>Vous y êtes</span>'+
       '</button>'+
-      '<a class="switch-tile hotes" href="../" target="_blank" rel="noopener">'+
+      '<button type="button" class="switch-tile hotes" id="btn-host-space">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>'+
-        '<div class="switch-label"><b>Espace hôtes</b><svg class="switch-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></div>'+
-        '<span>Gérer mon planning sur Fiftin</span>'+
-      '</a>'+
+        '<div class="switch-label"><b>Espace hôtes</b></div>'+
+        '<span>'+hostSub+'</span>'+
+      '</button>'+
     '</div>'+
     '<div class="profile-list">'+
       '<div class="profile-row">Mes demandes de disponibilité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -1012,6 +1202,12 @@ function renderProfile(){
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>';
   document.querySelector('[data-switch="voyageur"]').addEventListener("click", function(){ switchTab("explore"); });
+  document.getElementById("btn-host-space").addEventListener("click", function(){
+    openSheet(connected ? "hostform" : "auth");
+  });
+  if(connected){
+    document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+  }
 }
 
 function switchTab(tab){
@@ -1067,6 +1263,8 @@ fetch("listings.json").then(function(r){
   state.loading = false;
   document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
 });
+
+bootFirebaseAuth();
 
 })();
 </script>
