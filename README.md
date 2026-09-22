@@ -27,7 +27,7 @@ Liste des annonces en attente (photo, nom, région, prix, distance, qui l'a dép
 - **Publier** : passe `status` à `"published"` — l'annonce apparaît **automatiquement** dans le fil public de Séjours dès le prochain chargement de la page par un visiteur (le fil fusionne au chargement les annonces statiques de `listings.json` et les annonces Firestore publiées). Rien à faire ailleurs, ni redéploiement ni fichier à modifier.
 - **Refuser** : supprime définitivement l'annonce.
 
-**⚠️ Adresse admin devinée, pas confirmée.** `ADMIN_EMAILS` contient actuellement `cesarmarandin@gmail.com` — une supposition faite à partir du contexte de session, pas vérifiée comme étant le vrai e-mail du compte Fiftin/Firebase de César. Si ce n'est pas le bon compte, la ligne « Annonces à valider » n'apparaîtra pas dans son Profil, et les règles Firestore refuseront aussi la validation. À corriger dans **les deux endroits** (`sejours/index.html`, variable `ADMIN_EMAILS` ; et la fonction `isAdmin()` des règles Firestore ci-dessous) avec l'e-mail exact du compte utilisé pour se connecter sur Séjours/app.
+Comptes admin confirmés : `lafermefanost@gmail.com` et `cesarmarandin@gmail.com` (les deux comptes de César). Comparaison insensible à la casse des deux côtés (JS et règles Firestore), Gmail/Firebase n'imposant pas de casse fixe sur l'e-mail. Pour ajouter/retirer un compte admin plus tard : modifier `ADMIN_EMAILS` dans `sejours/index.html` **et** la fonction `isAdmin()` des règles Firestore ci-dessous — les deux listes doivent rester identiques.
 
 #### Photos — Firebase Storage
 
@@ -97,12 +97,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Compte(s) autorisés à valider/refuser les annonces déposées sur
+    // Comptes autorisés à valider/refuser les annonces déposées sur
     // Fiftin Séjours (Profil → Annonces à valider). À TENIR IDENTIQUE à
     // ADMIN_EMAILS dans sejours/index.html — les deux listes doivent
-    // toujours contenir les mêmes adresses.
+    // toujours contenir les mêmes adresses (en minuscules ici : .lower()
+    // rend la comparaison insensible à la casse de l'e-mail réel).
     function isAdmin(){
-      return request.auth != null && request.auth.token.email in ['cesarmarandin@gmail.com'];
+      return request.auth != null && request.auth.token.email.lower() in ['lafermefanost@gmail.com', 'cesarmarandin@gmail.com'];
     }
 
     match /accounts/{uid} {

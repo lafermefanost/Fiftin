@@ -527,14 +527,14 @@ var authState = {ready:false, uid:null, email:null};
 var authMode = "signin";
 var hfSelectedFiles = [];
 
-/* Compte(s) autorisés à valider/refuser les annonces déposées (onglet
-   Profil → Annonces à valider). À CONFIRMER PAR CÉSAR — voir la réponse
-   du chat : e-mail deviné à partir du contexte de session, pas vérifié
-   comme étant le vrai e-mail du compte Fiftin. Doit être répercuté aussi
+/* Comptes autorisés à valider/refuser les annonces déposées (onglet
+   Profil → Annonces à valider) : les deux comptes de César, confirmés
+   par lui. Comparaison insensible à la casse (Gmail/Firebase Auth
+   n'imposent pas de casse fixe sur l'e-mail). Doit être répercuté aussi
    dans les règles Firestore (README.md, fonction isAdmin()) — les deux
    listes doivent rester identiques. */
-var ADMIN_EMAILS = ["cesarmarandin@gmail.com"];
-function isAdmin(){ return authState.email && ADMIN_EMAILS.indexOf(authState.email)!==-1; }
+var ADMIN_EMAILS = ["lafermefanost@gmail.com", "cesarmarandin@gmail.com"];
+function isAdmin(){ return !!authState.email && ADMIN_EMAILS.indexOf(authState.email.toLowerCase())!==-1; }
 
 function idFromString(str){
   var h = 0;
