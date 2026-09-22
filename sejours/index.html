@@ -192,6 +192,10 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .meta-item{display:flex; flex-direction:column; gap:2px;}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
+.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; margin:-6px 0 18px; border-radius:20px;
+  border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
+.google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
+.google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
 .detail-body p.desc{font-size:14.5px; line-height:1.65; color:#4a4636; margin:0 0 24px;}
 .section-title{font-size:15px; font-weight:700; margin:0 0 14px;}
 .amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-bottom:26px;}
@@ -395,7 +399,7 @@ var LISTINGS = [
    desc:"Villa contemporaine posée sur la pointe, accès direct à la plage de sable fin par un sentier privé. Baie vitrée face à l'océan, jacuzzi extérieur chauffé toute l'année.",
    host:{name:"Solène", initial:"S", response:"répond en ~30min", phone:"+33677889900"}, photos:6, avail:["12-19 juil.","9-16 août","23-30 août"]},
   {id:8, name:"Le Petit Fanost", region:"Essonne, Wissous", claim:"Un esprit de campagne à deux pas de la capitale.",
-   price:118, distance:1, grad:"dune", motif:"roof",
+   price:118, distance:1, grad:"dune", motif:"roof", googleUrl:"https://share.google/hxjinzPeD3yYeZFEh",
    gallery:["photos/petit-fanost-1.jpg","photos/petit-fanost-2.jpg","photos/petit-fanost-3.jpg","photos/petit-fanost-4.jpg","photos/petit-fanost-5.jpg","photos/petit-fanost-6.jpg"],
    amen:["Jardin","Cuisine équipée","Wifi"],
    desc:"Chambre confortable et lumineuse au sein de la Ferme Fanost, avec salon cosy, salle d'eau refaite et accès à un grand jardin arboré. Un pied-à-terre simple et chaleureux, à deux pas des bâtiments de la ferme.",
@@ -738,6 +742,11 @@ function openDetail(id){
       '<h1>'+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       '<div class="meta-row"><div class="meta-item"><b>'+l.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div>'+
+      (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
+        '<span>Voir les avis sur Google</span>'+
+        '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+      '</a>' : '')+
       '<p class="desc">'+esc(l.desc)+'</p>'+
       '<div class="section-title">Prestations</div>'+
       '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul>'+
