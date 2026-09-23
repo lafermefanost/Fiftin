@@ -4,8 +4,60 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 
 - `index.html` — page de présentation commerciale (fiftin.fr).
 - `app/index.html` — l'outil complet (une seule page, pas de build) : fiftin.fr/app/.
+- `sejours/index.html` — Fiftin Séjours, l'annuaire de réservation directe pour les voyageurs (nouveau projet, prototype) : fiftin.fr/sejours/.
 - Déployé via GitHub Pages sur **fiftin.fr** (voir le fichier `CNAME`).
 - Copie initiale de l'outil basée sur `lafermefanost/ferme-fanost/planning.html`, avec la marque renommée « Fifteen » → « Fiftin ».
+
+## Fiftin Séjours (`sejours/`) — annuaire de réservation directe
+
+Projet frère de l'outil de planning, même marque mais codebase et périmètre séparés (voir `CLAUDE.md`) : un annuaire mobile-first pour que les voyageurs trouvent un hébergement et contactent l'hôte directement (WhatsApp, SMS, appel), sans commission ni intermédiaire — dans l'esprit de Cybevasion, en mieux.
+
+- Prototype statique : les annonces sont dans `sejours/listings.json` (pas dans le HTML, voir plus bas), pas de vraies photos partout (dégradés stylisés en attendant).
+- À terme : lien avec le calendrier de réservations de l'outil de planning (`app/`), pour que la disponibilité affichée ici soit réelle — pas encore construit.
+
+### Dépôt d'annonce par un hôte (onglet Profil → Espace hôtes)
+
+Un compte connecté (même Firebase Auth que `app/` — voir « Comptes et données » ci-dessous, même projet donc même compte des deux côtés) peut se connecter/s'inscrire directement dans Séjours et déposer une annonce, photos comprises (upload direct vers Firebase Storage). Écrit dans une nouvelle collection Firestore `listings/{id}` avec `status:"pending"` à la création — **jamais publiée automatiquement**.
+
+#### Valider (publier) une annonce déposée — depuis Séjours, compte admin
+
+Onglet **Profil → Annonces à valider** (visible uniquement pour le ou les comptes listés dans `ADMIN_EMAILS`, voir `sejours/index.html`, et dans la fonction `isAdmin()` des règles Firestore ci-dessous — **les deux listes doivent rester identiques**, sinon l'interface montre le bouton mais Firestore refuse l'action, ou inversement).
+
+Liste des annonces en attente (photo, nom, région, prix, distance, qui l'a déposée), avec deux boutons :
+- **Publier** : passe `status` à `"published"` — l'annonce apparaît **automatiquement** dans le fil public de Séjours dès le prochain chargement de la page par un visiteur (le fil fusionne au chargement les annonces statiques de `listings.json` et les annonces Firestore publiées). Rien à faire ailleurs, ni redéploiement ni fichier à modifier.
+- **Refuser** : supprime définitivement l'annonce.
+
+Comptes admin confirmés : `lafermefanost@gmail.com` et `cesarmarandin@gmail.com` (les deux comptes de César). Comparaison insensible à la casse des deux côtés (JS et règles Firestore), Gmail/Firebase n'imposant pas de casse fixe sur l'e-mail. Pour ajouter/retirer un compte admin plus tard : modifier `ADMIN_EMAILS` dans `sejours/index.html` **et** la fonction `isAdmin()` des règles Firestore ci-dessous — les deux listes doivent rester identiques.
+
+#### Photos — Firebase Storage
+
+Le formulaire de dépôt permet maintenant l'upload de photos (6 maximum, 8 Mo chacune), stockées sous `listings/{uid}/...` dans Firebase Storage, avec l'URL de chaque photo dans le champ `gallery` du document Firestore correspondant.
+
+**Point de vigilance réel, pas juste administratif : Firebase Storage nécessite le forfait Blaze (paiement à l'usage) du projet Google Cloud — impossible à activer sur le forfait gratuit Spark.** Ça ne veut pas dire que ça va coûter cher (le forfait Blaze inclut lui-même un palier gratuit généreux — 5 Go de stockage, 1 Go de téléchargement par jour), mais ça veut dire qu'une carte bancaire doit être renseignée sur le projet Google Cloud sous-jacent, même si l'usage réel reste dans le gratuit. À vérifier/activer : Firebase Console → Build → Storage → « Get started » (le assistant de configuration demande explicitement de passer sur Blaze si ce n'est pas déjà fait).
+
+Règles de sécurité Storage à coller (Firebase Console → Build → Storage → Rules — **différent de l'onglet Firestore Database → Règles**, un système de règles séparé) :
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /listings/{uid}/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 8 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+  }
+}
+```
+
+Lecture publique (les photos doivent être visibles par n'importe quel visiteur de l'annuaire), écriture réservée au propriétaire du dossier (`uid` = son identifiant Firebase), taille et type de fichier vérifiés côté serveur en plus du contrôle déjà fait côté application.
+
+**Sans le forfait Blaze activé ET ces règles collées, l'upload de photos échoue** (à l'activation de Storage, ou à l'écriture selon lequel des deux manque) — non vérifiable depuis l'environnement de développement (accès réseau à Firebase bloqué), donc c'est le premier vrai dépôt d'annonce avec photos qui validera que tout est branché correctement.
+
+#### Paiement
+
+Aucun paiement : les 3 formules envisagées (dépôt seul / + Fiftin essentiel / + Fiftin avancé) ne peuvent pas être facturées tant que Stripe n'est pas branché (voir « À faire avant un vrai passage en production » — pas encore fait non plus pour `app/`, la création d'entreprise est en cours). Le dépôt d'annonce est donc gratuit et non genré par formule pour l'instant.
 
 ## Comptes et données — architecture définitive
 
@@ -45,6 +97,15 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Comptes autorisés à valider/refuser les annonces déposées sur
+    // Fiftin Séjours (Profil → Annonces à valider). À TENIR IDENTIQUE à
+    // ADMIN_EMAILS dans sejours/index.html — les deux listes doivent
+    // toujours contenir les mêmes adresses (en minuscules ici : .lower()
+    // rend la comparaison insensible à la casse de l'e-mail réel).
+    function isAdmin(){
+      return request.auth != null && request.auth.token.email.lower() in ['lafermefanost@gmail.com', 'cesarmarandin@gmail.com'];
+    }
+
     match /accounts/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
 
@@ -80,11 +141,33 @@ service cloud.firestore {
         && request.resource.data.ownerUid == resource.data.ownerUid;
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
+
+    // Annonces déposées par les hôtes depuis Fiftin Séjours (onglet Profil
+    // → Espace hôtes). Public en lecture uniquement une fois publiée ; le
+    // dépôt force status:"pending" (un hôte ne peut pas s'auto-publier) ;
+    // seul un compte isAdmin() peut faire passer status à "published" ou
+    // supprimer une annonce d'un autre compte (Profil → Annonces à valider).
+    match /listings/{listingId} {
+      allow read: if resource.data.status == 'published'
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid)
+        || isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update: if isAdmin()
+        || (request.auth != null
+          && resource.data.ownerUid == request.auth.uid
+          && request.resource.data.status == resource.data.status);
+      allow delete: if isAdmin()
+        || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+    }
   }
 }
 ```
 
-Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder.
+Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder. Pour `listings/{listingId}`, seul le propriétaire (`ownerUid`) peut créer/modifier/supprimer son annonce, tout le monde peut lire une annonce `published`, et personne côté application ne peut faire passer `status` de `pending` à `published` (règle `update` : le nouveau `status` doit rester égal à l'ancien) — cette bascule se fait uniquement à la main dans la Firebase Console.
+
+**Important : sans ce nouveau bloc `listings/{listingId}` collé dans Firebase Console → Firestore Database → Règles, le dépôt d'annonce échoue silencieusement avec une erreur de permission** — les règles Firestore refusent par défaut tout ce qui n'est pas explicitement autorisé.
 
 ## À faire avant un vrai passage en production
 
