@@ -160,14 +160,35 @@ service cloud.firestore {
           && request.resource.data.status == resource.data.status);
       allow delete: if isAdmin()
         || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+
+      // Calendrier simplifié d'une annonce (Espace hôtes → Mon calendrier),
+      // utilisé quand l'hôte n'a pas (ou n'a pas relié) de compte Fiftin
+      // app : juste un nom de client + des dates, jamais de données
+      // comptables. Lecture/écriture réservées au propriétaire de
+      // l'annonce parente — quand l'annonce est reliée à une chambre
+      // Fiftin app, les réservations passent par accounts/{uid} à la
+      // place (déjà couvert par la règle accounts/{uid} ci-dessus).
+      match /bookings/{bookingId} {
+        allow read, write: if request.auth != null
+          && get(/databases/$(database)/documents/listings/$(listingId)).data.ownerUid == request.auth.uid;
+      }
     }
   }
 }
 ```
 
-Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder. Pour `listings/{listingId}`, seul le propriétaire (`ownerUid`) peut créer/modifier/supprimer son annonce, tout le monde peut lire une annonce `published`, et personne côté application ne peut faire passer `status` de `pending` à `published` (règle `update` : le nouveau `status` doit rester égal à l'ancien) — cette bascule se fait uniquement à la main dans la Firebase Console.
+Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder. Pour `listings/{listingId}`, seul le propriétaire (`ownerUid`) peut créer/modifier/supprimer son annonce, tout le monde peut lire une annonce `published`, et personne côté application ne peut faire passer `status` de `pending` à `published` (règle `update` : le nouveau `status` doit rester égal à l'ancien) — cette bascule se fait uniquement à la main dans la Firebase Console. Le champ `linkedRoomId` (Espace hôtes → Mon calendrier, voir plus bas) est un champ comme un autre pour cette règle : le propriétaire peut le modifier librement tant que `status` ne bouge pas.
 
-**Important : sans ce nouveau bloc `listings/{listingId}` collé dans Firebase Console → Firestore Database → Règles, le dépôt d'annonce échoue silencieusement avec une erreur de permission** — les règles Firestore refusent par défaut tout ce qui n'est pas explicitement autorisé.
+**Important : sans ce nouveau bloc `listings/{listingId}` (bookings inclus) collé dans Firebase Console → Firestore Database → Règles, le dépôt d'annonce et le calendrier hôte échouent silencieusement avec une erreur de permission** — les règles Firestore refusent par défaut tout ce qui n'est pas explicitement autorisé.
+
+### Espace hôtes : calendrier simplifié (Profil → Espace hôtes)
+
+Depuis l'onglet Profil, un hôte connecté qui clique sur « Espace hôtes » bascule toute l'application dans un mode hôte : la barre d'onglets affiche **Mes annonces** / **Mon calendrier** / **Espace voyageur** (retour), le bandeau de filtres disparaît. « Mon calendrier » reprend la présentation année (12 mini-mois, numéros de semaine, cases occupées colorées) de la vue Année de `app/`, simplifiée à une seule annonce à la fois et à une interaction minimale : taper une case libre ouvre juste nom du client + dates, taper une case occupée propose de supprimer.
+
+Deux modes, choisis par annonce via le sélecteur « Relier au planning Fiftin app » (visible seulement si l'hôte a un compte `app/`, donc au moins une chambre dans `accounts/{uid}.settings.rooms`) :
+
+- **Non reliée** (par défaut) : les réservations vivent dans `listings/{listingId}/bookings/{bookingId}` (juste `name`, `checkIn`, `checkOut`) — indépendant de tout compte `app/`, c'est le mode « je n'ai que des hébergements, je veux un outil très simple ».
+- **Reliée** à une chambre (`listings/{listingId}.linkedRoomId`) : les réservations sont ajoutées/retirées directement dans `accounts/{uid}.bookings` (même client, même chambre, visibles dans `app/`). Toute écriture y passe exclusivement par `arrayUnion`/`arrayRemove` (jamais `.set()` ni remplacement du tableau) : `app/` fait lui-même un `.set()` plein document sur tout son état local à chaque synchro (`pushToFirebase()`), donc un remplacement de champ depuis Séjours risquerait d'écraser un changement local pas encore synchronisé côté `app/` si les deux étaient ouverts en même temps. `arrayUnion`/`arrayRemove` sont atomiques côté serveur et n'ont pas ce problème ; le pire cas résiduel est le même que deux appareils `app/` ouverts en parallèle (déjà géré par son `onSnapshot` temps réel), pas un risque introduit par Séjours.
 
 ## À faire avant un vrai passage en production
 

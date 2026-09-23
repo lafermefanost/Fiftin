@@ -382,6 +382,32 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
 .empty-state p{font-size:14px; font-weight:600; margin:0;}
 
+/* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
+.host-view{padding:24px 20px 110px;}
+.host-view-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
+.host-listing-name{font-size:16px;}
+.host-listing-select{font-family:'Jost',sans-serif; font-size:14px; font-weight:700; border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; background:var(--cream); flex:1;}
+.host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:20px; white-space:nowrap;}
+.host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
+.host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
+.host-link-row{margin-bottom:18px;}
+.host-link-row label{display:block; font-size:12px; font-weight:700; color:var(--sauge); margin-bottom:6px;}
+.host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
+.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:14px;}
+.cal-year-nav button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px;}
+.cal-year-nav button svg{width:20px; height:20px;}
+.cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
+.cal-year-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px;}
+.cal-mini{background:var(--cream-deep); border-radius:14px; padding:8px;}
+.cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:capitalize; color:var(--ink);}
+.cal-mini-grid{display:grid; grid-template-columns:16px repeat(7,1fr); gap:1px;}
+.cal-mini-wn{font-size:7px; color:var(--gray-mid); display:flex; align-items:center; justify-content:center;}
+.cal-mini-dow{font-size:8px; font-weight:800; color:var(--sauge); text-align:center; padding-bottom:2px;}
+.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:3px; cursor:pointer;}
+.cal-mini-day.empty{visibility:hidden; cursor:default;}
+.cal-mini-day.occ{background:var(--sauge-deep); color:var(--cream); font-weight:800;}
+.cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
+
 /* ─── VERROU TEMPORAIRE DU SITE (page en construction) ───────────────
    Même mot de passe partagé et même clé sessionStorage que le verrou de
    app/index.html (#siteGate, SITE_GATE_PASSWORD) : déverrouiller l'un
@@ -473,25 +499,7 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
 
   <main id="feed"></main>
 
-  <nav class="tabbar" id="tabbar">
-    <button class="tab active" data-tab="explore">
-      <svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>
-      <span>Explorer</span>
-    </button>
-    <button class="tab" data-tab="map">
-      <svg viewBox="0 0 24 24"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>
-      <span>Carte</span>
-    </button>
-    <button class="tab" data-tab="likes">
-      <svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>
-      <span>Envies</span>
-      <span class="badge" id="like-badge" hidden>0</span>
-    </button>
-    <button class="tab" data-tab="profile">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-      <span>Profil</span>
-    </button>
-  </nav>
+  <nav class="tabbar" id="tabbar"></nav>
 
   <div id="sheet-root"></div>
   <div id="detail-root"></div>
@@ -604,6 +612,7 @@ function bootFirebaseAuth(){
       authState.ready = true;
       authState.uid = user ? user.uid : null;
       authState.email = user ? user.email : null;
+      if(!user && state.hostMode) exitHostMode();
       if(state.tab==="profile") renderProfile();
       updateHeroMenu();
     });
@@ -682,8 +691,16 @@ var AMEN_ICONS = {
 };
 
 /* ---------------- state ---------------- */
-var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true};
+var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
+  hostMode:false, hostTab:"listings", hostListingId:null, hostCalYear:(new Date()).getFullYear()};
 var heroDismissed = false;
+/* Espace hôtes : annonces du compte connecté + son compte Fiftin app (pour
+   le lien calendrier), mis en cache le temps de la session hôte. undefined
+   = jamais chargé ; null = chargé, aucun compte Fiftin app. Réinitialisés
+   à chaque entrée dans l'espace hôtes (enterHostMode) pour rester à jour. */
+var hostListingsCache = [];
+var hostAccountCache;
+var hostBookingContext = null;
 try{
   var saved = JSON.parse(localStorage.getItem("fiftin_state")||"{}");
   if(saved.filters) state.filters = saved.filters;
@@ -1141,10 +1158,27 @@ function openSheet(kind){
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     hfSelectedFiles = [];
+  } else if(kind==="hostbooking"){
+    var hbCtx = hostBookingContext;
+    if(hbCtx.mode==="view"){
+      var hbB = hbCtx.booking;
+      var hbName = hbCtx.linked ? hostGuestName(hbB.guestId) : (hbB.name || "Client");
+      inner = '<h3>Réservation</h3>'+
+        '<p class="sheet-sub">'+esc(hbName)+'<br>Du '+esc(hbB.checkIn)+' au '+esc(hbB.checkOut)+'</p>'+
+        '<button type="button" class="admin-reject" id="hb-delete" style="width:100%;">Supprimer cette réservation</button>';
+    } else {
+      inner = '<h3>Nouvelle réservation</h3>'+
+        '<p class="sheet-sub">Bloque ces dates et enregistre le nom du client — c\'est tout ce qu\'il faut ici.</p>'+
+        '<div class="field-block"><label>Nom du client</label><input class="text-input" id="hb-name" placeholder="Ex. Famille Martin"></div>'+
+        '<div class="field-block"><label>Arrivée</label><input class="text-input" type="date" id="hb-checkin" value="'+esc(hbCtx.date||"")+'"></div>'+
+        '<div class="field-block"><label>Départ</label><input class="text-input" type="date" id="hb-checkout"></div>'+
+        '<div class="auth-err" id="hb-err"></div>';
+    }
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
     : kind==="hostform" ? "Envoyer l'annonce"
+    : kind==="hostbooking" ? (hostBookingContext.mode==="view" ? "Fermer" : "Ajouter la réservation")
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -1183,6 +1217,14 @@ function openSheet(kind){
       renderHostPhotoGrid();
     });
     renderHostPhotoGrid();
+    return;
+  } else if(kind==="hostbooking"){
+    if(hostBookingContext.mode==="view"){
+      document.getElementById("sheet-apply").addEventListener("click", closeSheet);
+      document.getElementById("hb-delete").addEventListener("click", submitDeleteBooking);
+    } else {
+      document.getElementById("sheet-apply").addEventListener("click", submitAddBooking);
+    }
     return;
   }
 
@@ -1327,7 +1369,11 @@ function submitHostForm(){
       '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
     '</div></div></div>';
     document.getElementById("sheet-close").addEventListener("click", closeSheet);
-    document.getElementById("sheet-ok").addEventListener("click", closeSheet);
+    document.getElementById("sheet-ok").addEventListener("click", function(){
+      closeSheet();
+      hostListingsCache = []; /* la nouvelle annonce doit apparaître dans Mes annonces */
+      if(state.hostMode && state.hostTab==="listings") renderHostListings();
+    });
     document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
   }).catch(function(err){
     errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
@@ -1339,6 +1385,7 @@ function submitHostForm(){
 /* ---------------- tabs ---------------- */
 function renderLikeBadge(){
   var b = document.getElementById("like-badge");
+  if(!b) return; /* absent en mode hôte, la barre d'onglets est différente */
   if(state.liked.length){ b.hidden=false; b.textContent = state.liked.length; } else b.hidden = true;
 }
 
@@ -1530,7 +1577,7 @@ function renderProfile(){
     '</div></div>';
   document.querySelector('[data-switch="voyageur"]').addEventListener("click", function(){ switchTab("explore"); });
   document.getElementById("btn-host-space").addEventListener("click", function(){
-    openSheet(connected ? "hostform" : "auth");
+    if(connected) enterHostMode(); else openSheet("auth");
   });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
@@ -1625,19 +1672,425 @@ function switchTab(tab){
   }
 }
 
-Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
-  el.addEventListener("click", function(){ switchTab(el.getAttribute("data-tab")); });
-});
+/* ---------------- barre d'onglets : voyageur / hôte ---------------- */
+/* La nav est reconstruite (innerHTML) à chaque bascule de mode plutôt que
+   d'avoir deux <nav> superposées — plus simple, et la hiérarchie de
+   calques (#hero > nav.tabbar > #feed, voir CSS plus haut) reste valable
+   quel que soit le contenu de la barre. */
+var TRAVELER_TABS_HTML =
+  '<button class="tab" data-tab="explore">'+
+    '<svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>'+
+    '<span>Explorer</span>'+
+  '</button>'+
+  '<button class="tab" data-tab="map">'+
+    '<svg viewBox="0 0 24 24"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>'+
+    '<span>Carte</span>'+
+  '</button>'+
+  '<button class="tab" data-tab="likes">'+
+    '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
+    '<span>Envies</span>'+
+    '<span class="badge" id="like-badge" hidden>0</span>'+
+  '</button>'+
+  '<button class="tab" data-tab="profile">'+
+    '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>'+
+    '<span>Profil</span>'+
+  '</button>';
+
+var HOST_TABS_HTML =
+  '<button class="tab" data-host-tab="listings">'+
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'+
+    '<span>Mes annonces</span>'+
+  '</button>'+
+  '<button class="tab" data-host-tab="calendar">'+
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'+
+    '<span>Mon calendrier</span>'+
+  '</button>'+
+  '<button class="tab" data-host-exit="1">'+
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'+
+    '<span>Espace voyageur</span>'+
+  '</button>';
+
+function renderTabbar(){
+  var nav = document.getElementById("tabbar");
+  if(state.hostMode){
+    nav.innerHTML = HOST_TABS_HTML;
+    Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
+      if(el.hasAttribute("data-host-exit")){
+        el.addEventListener("click", exitHostMode);
+      } else {
+        el.classList.toggle("active", el.getAttribute("data-host-tab")===state.hostTab);
+        el.addEventListener("click", function(){ switchHostTab(el.getAttribute("data-host-tab")); });
+      }
+    });
+  } else {
+    nav.innerHTML = TRAVELER_TABS_HTML;
+    Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
+      el.classList.toggle("active", el.getAttribute("data-tab")===state.tab);
+      el.addEventListener("click", function(){ switchTab(el.getAttribute("data-tab")); });
+    });
+    renderLikeBadge();
+  }
+}
+
+/* ---------------- espace hôtes ---------------- */
+/* Bascule déclenchée depuis Profil → Espace hôtes (connecté) : remplace la
+   barre d'onglets et le contenu de #feed, masque le bandeau de filtres
+   (qui n'a pas de sens ici) — sans toucher au reste de la mécanique
+   voyageur (state.tab reste tel quel, on y revient via exitHostMode). */
+function enterHostMode(){
+  if(!authState.uid){ openSheet("auth"); return; }
+  state.hostMode = true;
+  state.hostTab = "listings";
+  state.hostListingId = null;
+  hostListingsCache = [];
+  hostAccountCache = undefined;
+  document.getElementById("filter-bar").hidden = true;
+  document.getElementById("result-line").hidden = true;
+  renderTabbar();
+  renderHostTabContent();
+}
+function exitHostMode(){
+  state.hostMode = false;
+  renderTabbar();
+  switchTab("profile");
+}
+function switchHostTab(tab){
+  state.hostTab = tab;
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
+    el.classList.toggle("active", el.getAttribute("data-host-tab")===tab);
+  });
+  renderHostTabContent();
+}
+function renderHostTabContent(){
+  if(state.hostTab==="calendar") renderHostCalendar(); else renderHostListings();
+}
+
+/* Annonces du compte connecté (ownerUid == authState.uid), quel que soit
+   leur statut (pending/published) — contrairement au fil public, un hôte
+   doit voir ses propres annonces même avant validation. Mis en cache pour
+   la durée de la session hôte (voir enterHostMode). */
+function ensureHostListingsLoaded(cb){
+  if(hostListingsCache && hostListingsCache._loaded){ cb(hostListingsCache); return; }
+  if(!authState.uid || typeof firebase==="undefined"){ cb([]); return; }
+  firebase.firestore().collection("listings").where("ownerUid","==",authState.uid).get().then(function(snap){
+    var list = snap.docs.map(function(doc){ var d = doc.data(); d.id = doc.id; return d; });
+    list._loaded = true;
+    hostListingsCache = list;
+    cb(list);
+  }).catch(function(){ cb([]); });
+}
+
+/* Compte Fiftin app (outil de planning) du même utilisateur, s'il existe —
+   même Firebase, même uid (voir commentaire plus haut sur FIFTIN_FIREBASE_CONFIG).
+   Sert uniquement à savoir si un lien calendrier est possible (chambres
+   disponibles) ; on ne modifie jamais ce document autrement que via
+   arrayUnion/arrayRemove sur bookings/guests (voir submitAddBooking et
+   submitDeleteBooking) — jamais de .set() qui écraserait le document
+   complet d'un client réel de l'outil de planning. */
+function resolveHostAccount(cb){
+  if(hostAccountCache !== undefined){ cb(hostAccountCache); return; }
+  if(!authState.uid || typeof firebase==="undefined"){ hostAccountCache = null; cb(null); return; }
+  firebase.firestore().collection("accounts").doc(authState.uid).get().then(function(doc){
+    hostAccountCache = doc.exists ? doc.data() : null;
+    cb(hostAccountCache);
+  }).catch(function(){ hostAccountCache = null; cb(null); });
+}
+function hostGuestName(guestId){
+  var guests = (hostAccountCache && hostAccountCache.guests) || [];
+  var g = guests.filter(function(x){ return x.id===guestId; })[0];
+  return g ? g.name : "Client";
+}
+
+function renderHostListings(){
+  var feed = document.getElementById("feed");
+  feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Chargement…</p></div>';
+  ensureHostListingsLoaded(function(listings){
+    if(state.hostTab!=="listings") return; /* l'hôte a changé d'onglet pendant le chargement */
+    if(!listings.length){ feed.innerHTML = hostEmptyHtml(); wireHostEmpty(); return; }
+    feed.innerHTML = '<div class="host-view">'+
+      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Nouvelle annonce</button>'+
+      listings.map(hostListingCardHtml).join("")+
+    '</div>';
+    document.getElementById("host-new-listing").addEventListener("click", function(){ openSheet("hostform"); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-host-cal]"), function(btn){
+      btn.addEventListener("click", function(){
+        state.hostListingId = btn.getAttribute("data-host-cal");
+        switchHostTab("calendar");
+      });
+    });
+  });
+}
+function hostListingCardHtml(l){
+  var cover = (l.gallery && l.gallery[0]) ? '<img class="admin-thumb" src="'+l.gallery[0]+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
+  var statusLabel = l.status==="published" ? "Publiée" : "En attente de validation";
+  return '<div class="admin-card">'+cover+
+    '<div class="admin-card-body">'+
+      '<b>'+esc(l.name||"(sans nom)")+'</b>'+
+      '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
+      '<div class="admin-actions"><button type="button" class="btn-apply" data-host-cal="'+esc(l.id)+'">Voir le calendrier</button></div>'+
+    '</div>'+
+  '</div>';
+}
+function hostEmptyHtml(){
+  return '<div class="host-view">'+
+    '<div class="empty-state"><p>Vous n\'avez pas encore d\'annonce sur Fiftin Séjours.</p></div>'+
+    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Déposer une annonce</button>'+
+  '</div>';
+}
+function wireHostEmpty(){
+  var btn = document.getElementById("host-new-listing-empty");
+  if(btn) btn.addEventListener("click", function(){ openSheet("hostform"); });
+}
+
+/* ---------------- calendrier simplifié (année, mini-mois) ---------------- */
+var CAL_MONTH_NAMES = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+var CAL_DOW = ["L","M","M","J","V","S","D"];
+function pad2(n){ return n<10 ? "0"+n : ""+n; }
+function isoDate(y,m,d){ return y+"-"+pad2(m+1)+"-"+pad2(d); }
+function daysInMonth(y,m){ return new Date(y, m+1, 0).getDate(); }
+function mondayIndex(jsDay){ return (jsDay+6)%7; }
+function isoWeekNumber(y,m,d){
+  var date = new Date(Date.UTC(y, m, d));
+  var dayNum = (date.getUTCDay()+6)%7;
+  date.setUTCDate(date.getUTCDate() - dayNum + 3);
+  var firstThursday = new Date(Date.UTC(date.getUTCFullYear(),0,4));
+  var diff = date - firstThursday;
+  return 1 + Math.round(diff/(7*24*3600*1000));
+}
+/* Étale chaque réservation sur ses jours occupés (checkOut exclusif, comme
+   dans Fiftin app — voir activeOn() de app/index.html) pour construire une
+   table date -> réservation directement consultable par le rendu des
+   mini-mois. Les réservations "no" (annulées, côté Fiftin app) ne comptent
+   pas comme occupées. */
+function occupiedDatesFromBookings(bookings){
+  var map = {};
+  bookings.forEach(function(b){
+    if(b.status==="no") return;
+    if(!b.checkIn || !b.checkOut) return;
+    var d = new Date(b.checkIn+"T00:00:00");
+    var end = new Date(b.checkOut+"T00:00:00");
+    while(d < end){
+      map[isoDate(d.getFullYear(), d.getMonth(), d.getDate())] = b;
+      d.setDate(d.getDate()+1);
+    }
+  });
+  return map;
+}
+function monthMiniHtml(year, monthIdx, occMap, todayStr){
+  var nDays = daysInMonth(year, monthIdx);
+  var firstDow = mondayIndex(new Date(year, monthIdx, 1).getDay());
+  var head = '<div class="cal-mini-wn"></div>' + CAL_DOW.map(function(l){ return '<div class="cal-mini-dow">'+l+'</div>'; }).join("");
+  var totalCells = firstDow + nDays;
+  var rows = Math.ceil(totalCells/7);
+  var body = "";
+  var dayCounter = 1 - firstDow;
+  for(var r=0;r<rows;r++){
+    var wnDay = dayCounter<1 ? 1 : (dayCounter>nDays?nDays:dayCounter);
+    body += '<div class="cal-mini-wn">'+isoWeekNumber(year,monthIdx,wnDay)+'</div>';
+    for(var c=0;c<7;c++){
+      if(dayCounter<1 || dayCounter>nDays){
+        body += '<div class="cal-mini-day empty"></div>';
+      } else {
+        var ds = isoDate(year, monthIdx, dayCounter);
+        var occ = occMap[ds];
+        body += '<div class="cal-mini-day'+(occ?' occ':'')+(ds===todayStr?' today':'')+'" data-date="'+ds+'">'+dayCounter+'</div>';
+      }
+      dayCounter++;
+    }
+  }
+  return '<div class="cal-mini"><div class="cal-mini-head">'+CAL_MONTH_NAMES[monthIdx]+'</div>'+
+    '<div class="cal-mini-grid">'+head+body+'</div></div>';
+}
+
+function fetchHostBookings(listing, linked, linkedRoomId, account, cb){
+  if(linked){
+    var all = (account && account.bookings) || [];
+    cb(all.filter(function(b){ return b.roomId===linkedRoomId; }));
+  } else {
+    firebase.firestore().collection("listings").doc(listing.id).collection("bookings").get().then(function(snap){
+      cb(snap.docs.map(function(doc){ var d = doc.data(); d.id = doc.id; return d; }));
+    }).catch(function(){ cb([]); });
+  }
+}
+
+function renderHostCalendar(){
+  var feed = document.getElementById("feed");
+  feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Chargement du calendrier…</p></div>';
+  ensureHostListingsLoaded(function(listings){
+    if(state.hostTab!=="calendar") return;
+    if(!listings.length){ feed.innerHTML = hostEmptyHtml(); wireHostEmpty(); return; }
+    if(!state.hostListingId || !listings.some(function(l){ return l.id===state.hostListingId; })){
+      state.hostListingId = listings[0].id;
+    }
+    var listing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
+    resolveHostAccount(function(account){
+      var rooms = (account && account.settings && account.settings.rooms) || [];
+      var linkedRoomId = listing.linkedRoomId || "";
+      var linked = !!(linkedRoomId && rooms.some(function(r){ return r.id===linkedRoomId; }));
+      fetchHostBookings(listing, linked, linkedRoomId, account, function(bookings){
+        if(state.hostTab!=="calendar") return;
+        renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings);
+      });
+    });
+  });
+}
+
+function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings){
+  var feed = document.getElementById("feed");
+  var occ = occupiedDatesFromBookings(bookings);
+  var year = state.hostCalYear;
+  var now = new Date();
+  var todayStr = isoDate(now.getFullYear(), now.getMonth(), now.getDate());
+  var months = "";
+  for(var m=0;m<12;m++) months += monthMiniHtml(year, m, occ, todayStr);
+
+  var listingSwitchHtml = listings.length>1 ?
+    '<select class="host-listing-select" id="host-listing-select">'+
+      listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
+    '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
+
+  var roomLinkHtml = rooms.length ?
+    '<div class="host-link-row"><label>Relier au planning Fiftin app</label><select id="host-room-link">'+
+      '<option value="">Calendrier simplifié (non relié)</option>'+
+      rooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
+    '</select></div>' : '';
+
+  feed.innerHTML = '<div class="host-view">'+
+    '<div class="host-view-head">'+listingSwitchHtml+
+      '<span class="host-status-badge '+(linked?'linked':'standalone')+'">'+(linked?"Relié à Fiftin app":"Calendrier simplifié")+'</span>'+
+    '</div>'+
+    roomLinkHtml+
+    '<div class="cal-year-nav">'+
+      '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
+      '<b>'+year+'</b>'+
+      '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+    '</div>'+
+    '<button type="button" class="btn-apply" id="cal-add-btn" style="margin-bottom:16px;">+ Réservation</button>'+
+    '<div class="cal-year-grid">'+months+'</div>'+
+  '</div>';
+
+  if(listings.length>1){
+    document.getElementById("host-listing-select").addEventListener("change", function(e){
+      state.hostListingId = e.target.value;
+      renderHostCalendar();
+    });
+  }
+  if(rooms.length){
+    document.getElementById("host-room-link").addEventListener("change", function(e){
+      var newRoomId = e.target.value;
+      var btn = e.target;
+      btn.disabled = true;
+      firebase.firestore().collection("listings").doc(listing.id).update({linkedRoomId:newRoomId}).then(function(){
+        listing.linkedRoomId = newRoomId;
+        renderHostCalendar();
+      }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; });
+    });
+  }
+  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings); });
+  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings); });
+  document.getElementById("cal-add-btn").addEventListener("click", function(){
+    hostBookingContext = {mode:"add", listing:listing, linked:linked, linkedRoomId:linkedRoomId, date:null};
+    openSheet("hostbooking");
+  });
+  Array.prototype.forEach.call(feed.querySelectorAll(".cal-mini-day[data-date]"), function(el){
+    el.addEventListener("click", function(){
+      var ds = el.getAttribute("data-date");
+      var occBooking = occ[ds];
+      if(occBooking){
+        hostBookingContext = {mode:"view", listing:listing, linked:linked, linkedRoomId:linkedRoomId, booking:occBooking};
+      } else {
+        hostBookingContext = {mode:"add", listing:listing, linked:linked, linkedRoomId:linkedRoomId, date:ds};
+      }
+      openSheet("hostbooking");
+    });
+  });
+}
+
+/* Écritures dans accounts/{uid} (Fiftin app, données réelles de clients
+   payants) : toujours arrayUnion/arrayRemove, jamais .set() ni .update()
+   d'un champ entier — un .set() écraserait tout le document si l'app était
+   ouverte en parallèle avec des changements non encore synchronisés (voir
+   pushToFirebase() dans app/index.html, qui fait justement un .set() plein
+   document sur le contenu de son état local). arrayUnion/arrayRemove sont
+   des opérations atomiques côté serveur : elles ne dépendent pas de l'état
+   local de l'autre onglet et ne peuvent pas faire disparaître son travail
+   en cours — au pire, le prochain rafraîchissement temps réel de Fiftin
+   app (onSnapshot déjà en place côté app/) rattrape la réservation ajoutée
+   ici, exactement comme s'il l'avait tapée depuis un autre appareil. */
+function submitAddBooking(){
+  var ctx = hostBookingContext;
+  var name = document.getElementById("hb-name").value.trim();
+  var checkIn = document.getElementById("hb-checkin").value;
+  var checkOut = document.getElementById("hb-checkout").value;
+  var errEl = document.getElementById("hb-err");
+  errEl.textContent = "";
+  if(!name){ errEl.textContent = "Nom du client requis."; return; }
+  if(!checkIn || !checkOut){ errEl.textContent = "Renseignez les deux dates."; return; }
+  if(checkIn >= checkOut){ errEl.textContent = "Le départ doit être après l'arrivée."; return; }
+  if(typeof firebase==="undefined"){ errEl.textContent = "Connexion indisponible — réessayez dans un instant."; return; }
+  var btn = document.getElementById("sheet-apply");
+  btn.disabled = true;
+  if(ctx.linked){
+    var stamp = Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+    var guest = {id:"sj-g-"+stamp, name:name, color:"#8B98D6", phone:"", email:"", notes:"Ajouté depuis Fiftin Séjours"};
+    var booking = {
+      id:"sj-b-"+stamp, roomId:ctx.linkedRoomId, checkIn:checkIn, checkOut:checkOut,
+      arrivalTime:"", status:"ok", nbPersons:2, dinnerNights:{}, noBreakfast:{},
+      notes:"Ajouté depuis Fiftin Séjours", guestId:guest.id, payment:null, depositAmount:0,
+      source:"direct", ghost:false, prixNet:null, taxeSejour:false,
+      createdAt:new Date().toISOString()
+    };
+    firebase.firestore().collection("accounts").doc(authState.uid).update({
+      guests: firebase.firestore.FieldValue.arrayUnion(guest),
+      bookings: firebase.firestore.FieldValue.arrayUnion(booking)
+    }).then(function(){
+      if(hostAccountCache){
+        hostAccountCache.guests = (hostAccountCache.guests||[]).concat([guest]);
+        hostAccountCache.bookings = (hostAccountCache.bookings||[]).concat([booking]);
+      }
+      closeSheet();
+      renderHostCalendar();
+    }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
+  } else {
+    firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").add({
+      name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(function(){
+      closeSheet();
+      renderHostCalendar();
+    }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
+  }
+}
+function submitDeleteBooking(){
+  var ctx = hostBookingContext;
+  if(!confirm("Supprimer cette réservation ?")) return;
+  if(ctx.linked){
+    /* arrayRemove retire l'élément par égalité de valeur exacte : ctx.booking
+       est l'objet tel que reçu du serveur, jamais modifié entre-temps —
+       condition nécessaire pour que le retrait cible la bonne réservation. */
+    firebase.firestore().collection("accounts").doc(authState.uid).update({
+      bookings: firebase.firestore.FieldValue.arrayRemove(ctx.booking)
+    }).then(function(){
+      if(hostAccountCache) hostAccountCache.bookings = (hostAccountCache.bookings||[]).filter(function(b){ return b.id!==ctx.booking.id; });
+      closeSheet();
+      renderHostCalendar();
+    }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+  } else {
+    firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").doc(ctx.booking.id).delete()
+      .then(function(){ closeSheet(); renderHostCalendar(); })
+      .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+  }
+}
+
 document.getElementById("hero-scroll-btn").addEventListener("click", function(){
   document.querySelector(".filters").scrollIntoView({behavior:"smooth", block:"start"});
 });
 
 
 /* ---------------- init ---------------- */
+renderTabbar();
 renderFilterBar();
 renderFeed();
 renderResultLine();
-renderLikeBadge();
 updateHeroMenu();
 
 fetch("listings.json").then(function(r){
