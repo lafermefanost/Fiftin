@@ -1162,10 +1162,12 @@ function openSheet(kind){
     var hbCtx = hostBookingContext;
     if(hbCtx.mode==="view"){
       var hbB = hbCtx.booking;
-      var hbName = hbCtx.linked ? hostGuestName(hbB.guestId) : (hbB.name || "Client");
+      var hbName = hbCtx.isGestion ? hostGuestName(hbB.guestId) : (hbB.name || "Client");
       inner = '<h3>Réservation</h3>'+
-        '<p class="sheet-sub">'+esc(hbName)+'<br>Du '+esc(hbB.checkIn)+' au '+esc(hbB.checkOut)+'</p>'+
-        '<button type="button" class="admin-reject" id="hb-delete" style="width:100%;">Supprimer cette réservation</button>';
+        '<p class="sheet-sub">'+esc(hbName)+'<br>Du '+esc(hbB.checkIn)+' au '+esc(hbB.checkOut)+
+          (hbCtx.isGestion ? '<br><br>Gérée depuis votre Fiftin app — modifiable uniquement là-bas.' : '')+
+        '</p>'+
+        (hbCtx.isGestion ? '' : '<button type="button" class="admin-reject" id="hb-delete" style="width:100%;">Supprimer cette réservation</button>');
     } else {
       inner = '<h3>Nouvelle réservation</h3>'+
         '<p class="sheet-sub">Bloque ces dates et enregistre le nom du client — c\'est tout ce qu\'il faut ici.</p>'+
@@ -1178,7 +1180,7 @@ function openSheet(kind){
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
     : kind==="hostform" ? "Envoyer l'annonce"
-    : kind==="hostbooking" ? (hostBookingContext.mode==="view" ? "Fermer" : "Ajouter la réservation")
+    : kind==="hostbooking" ? ((hostBookingContext.mode==="view" || hostBookingContext.isGestion) ? "Fermer" : "Ajouter la réservation")
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -1221,7 +1223,8 @@ function openSheet(kind){
   } else if(kind==="hostbooking"){
     if(hostBookingContext.mode==="view"){
       document.getElementById("sheet-apply").addEventListener("click", closeSheet);
-      document.getElementById("hb-delete").addEventListener("click", submitDeleteBooking);
+      var hbDeleteBtn = document.getElementById("hb-delete");
+      if(hbDeleteBtn) hbDeleteBtn.addEventListener("click", submitDeleteBooking);
     } else {
       document.getElementById("sheet-apply").addEventListener("click", submitAddBooking);
     }
@@ -1782,11 +1785,9 @@ function ensureHostListingsLoaded(cb){
 
 /* Compte Fiftin app (outil de planning) du même utilisateur, s'il existe —
    même Firebase, même uid (voir commentaire plus haut sur FIFTIN_FIREBASE_CONFIG).
-   Sert uniquement à savoir si un lien calendrier est possible (chambres
-   disponibles) ; on ne modifie jamais ce document autrement que via
-   arrayUnion/arrayRemove sur bookings/guests (voir submitAddBooking et
-   submitDeleteBooking) — jamais de .set() qui écraserait le document
-   complet d'un client réel de l'outil de planning. */
+   Sa seule existence qualifie l'hôte de « compte gestion » (voir le grand
+   commentaire au-dessus de fetchHostBookings) : lu uniquement, jamais
+   modifié — aucune écriture vers accounts/{uid} n'existe dans ce fichier. */
 function resolveHostAccount(cb){
   if(hostAccountCache !== undefined){ cb(hostAccountCache); return; }
   if(!authState.uid || typeof firebase==="undefined"){ hostAccountCache = null; cb(null); return; }
@@ -1902,10 +1903,23 @@ function monthMiniHtml(year, monthIdx, occMap, todayStr){
     '<div class="cal-mini-grid">'+head+body+'</div></div>';
 }
 
-function fetchHostBookings(listing, linked, linkedRoomId, account, cb){
-  if(linked){
+/* Deux catégories d'hôtes, jamais un choix par annonce :
+   - compte simple annonce (pas de document accounts/{uid}, donc pas de
+     compte Fiftin app) : le calendrier de Séjours EST leur seul outil —
+     lecture/écriture complète, stockée dans listings/{id}/bookings.
+   - compte gestion (accounts/{uid} existe — 'essentiel' ou 'pro' sont les
+     deux seuls plans côté Fiftin app, il n'y a pas de palier gratuit, donc
+     "le document existe" suffit à qualifier ce statut) : Séjours affiche
+     en LECTURE SEULE les réservations déjà présentes dans accounts/{uid},
+     pour éviter un double-emploi visuel, mais n'y écrit jamais rien —
+     ajouter/modifier une réservation se fait exclusivement depuis Fiftin
+     app. Aucune écriture dans accounts/{uid} n'existe nulle part dans ce
+     fichier : c'est une garantie structurelle, pas une précaution au cas
+     par cas. */
+function fetchHostBookings(listing, isGestion, linkedRoomId, account, cb){
+  if(isGestion){
     var all = (account && account.bookings) || [];
-    cb(all.filter(function(b){ return b.roomId===linkedRoomId; }));
+    cb(linkedRoomId ? all.filter(function(b){ return b.roomId===linkedRoomId; }) : []);
   } else {
     firebase.firestore().collection("listings").doc(listing.id).collection("bookings").get().then(function(snap){
       cb(snap.docs.map(function(doc){ var d = doc.data(); d.id = doc.id; return d; }));
@@ -1924,18 +1938,18 @@ function renderHostCalendar(){
     }
     var listing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
     resolveHostAccount(function(account){
+      var isGestion = !!account;
       var rooms = (account && account.settings && account.settings.rooms) || [];
       var linkedRoomId = listing.linkedRoomId || "";
-      var linked = !!(linkedRoomId && rooms.some(function(r){ return r.id===linkedRoomId; }));
-      fetchHostBookings(listing, linked, linkedRoomId, account, function(bookings){
+      fetchHostBookings(listing, isGestion, linkedRoomId, account, function(bookings){
         if(state.hostTab!=="calendar") return;
-        renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings);
+        renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings);
       });
     });
   });
 }
 
-function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings){
+function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings){
   var feed = document.getElementById("feed");
   var occ = occupiedDatesFromBookings(bookings);
   var year = state.hostCalYear;
@@ -1949,15 +1963,19 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, 
       listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
     '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
 
-  var roomLinkHtml = rooms.length ?
-    '<div class="host-link-row"><label>Relier au planning Fiftin app</label><select id="host-room-link">'+
-      '<option value="">Calendrier simplifié (non relié)</option>'+
+  var roomLinkHtml = (isGestion && rooms.length) ?
+    '<div class="host-link-row"><label>Afficher les réservations de</label><select id="host-room-link">'+
+      '<option value="">— Choisir une chambre —</option>'+
       rooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
     '</select></div>' : '';
 
+  var actionHtml = isGestion
+    ? '<a class="host-app-link" href="../app/" target="_blank" rel="noopener" style="margin-bottom:16px;">Ajouter ou modifier une réservation dans Fiftin app →</a>'
+    : '<button type="button" class="btn-apply" id="cal-add-btn" style="margin-bottom:16px;">+ Réservation</button>';
+
   feed.innerHTML = '<div class="host-view">'+
     '<div class="host-view-head">'+listingSwitchHtml+
-      '<span class="host-status-badge '+(linked?'linked':'standalone')+'">'+(linked?"Relié à Fiftin app":"Calendrier simplifié")+'</span>'+
+      '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
     '</div>'+
     roomLinkHtml+
     '<div class="cal-year-nav">'+
@@ -1965,7 +1983,7 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, 
       '<b>'+year+'</b>'+
       '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
     '</div>'+
-    '<button type="button" class="btn-apply" id="cal-add-btn" style="margin-bottom:16px;">+ Réservation</button>'+
+    actionHtml+
     '<div class="cal-year-grid">'+months+'</div>'+
   '</div>';
 
@@ -1975,48 +1993,41 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, 
       renderHostCalendar();
     });
   }
-  if(rooms.length){
+  if(isGestion && rooms.length){
     document.getElementById("host-room-link").addEventListener("change", function(e){
       var newRoomId = e.target.value;
-      var btn = e.target;
-      btn.disabled = true;
+      var sel = e.target;
+      sel.disabled = true;
+      /* linkedRoomId ne sert plus qu'à choisir QUOI afficher en lecture
+         seule — jamais un chemin d'écriture, voir commentaire plus haut. */
       firebase.firestore().collection("listings").doc(listing.id).update({linkedRoomId:newRoomId}).then(function(){
         listing.linkedRoomId = newRoomId;
         renderHostCalendar();
-      }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; });
+      }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); sel.disabled = false; });
     });
   }
-  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings); });
-  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, linked, bookings); });
-  document.getElementById("cal-add-btn").addEventListener("click", function(){
-    hostBookingContext = {mode:"add", listing:listing, linked:linked, linkedRoomId:linkedRoomId, date:null};
+  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings); });
+  var addBtn = document.getElementById("cal-add-btn");
+  if(addBtn) addBtn.addEventListener("click", function(){
+    hostBookingContext = {mode:"add", listing:listing, isGestion:false, date:null};
     openSheet("hostbooking");
   });
   Array.prototype.forEach.call(feed.querySelectorAll(".cal-mini-day[data-date]"), function(el){
+    var ds = el.getAttribute("data-date");
+    var occBooking = occ[ds];
+    if(isGestion && !occBooking) return; /* rien à afficher, rien à ajouter depuis ici */
     el.addEventListener("click", function(){
-      var ds = el.getAttribute("data-date");
-      var occBooking = occ[ds];
       if(occBooking){
-        hostBookingContext = {mode:"view", listing:listing, linked:linked, linkedRoomId:linkedRoomId, booking:occBooking};
+        hostBookingContext = {mode:"view", listing:listing, isGestion:isGestion, booking:occBooking};
       } else {
-        hostBookingContext = {mode:"add", listing:listing, linked:linked, linkedRoomId:linkedRoomId, date:ds};
+        hostBookingContext = {mode:"add", listing:listing, isGestion:false, date:ds};
       }
       openSheet("hostbooking");
     });
   });
 }
 
-/* Écritures dans accounts/{uid} (Fiftin app, données réelles de clients
-   payants) : toujours arrayUnion/arrayRemove, jamais .set() ni .update()
-   d'un champ entier — un .set() écraserait tout le document si l'app était
-   ouverte en parallèle avec des changements non encore synchronisés (voir
-   pushToFirebase() dans app/index.html, qui fait justement un .set() plein
-   document sur le contenu de son état local). arrayUnion/arrayRemove sont
-   des opérations atomiques côté serveur : elles ne dépendent pas de l'état
-   local de l'autre onglet et ne peuvent pas faire disparaître son travail
-   en cours — au pire, le prochain rafraîchissement temps réel de Fiftin
-   app (onSnapshot déjà en place côté app/) rattrape la réservation ajoutée
-   ici, exactement comme s'il l'avait tapée depuis un autre appareil. */
 function submitAddBooking(){
   var ctx = hostBookingContext;
   var name = document.getElementById("hb-name").value.trim();
@@ -2030,55 +2041,22 @@ function submitAddBooking(){
   if(typeof firebase==="undefined"){ errEl.textContent = "Connexion indisponible — réessayez dans un instant."; return; }
   var btn = document.getElementById("sheet-apply");
   btn.disabled = true;
-  if(ctx.linked){
-    var stamp = Date.now().toString(36)+Math.random().toString(36).slice(2,8);
-    var guest = {id:"sj-g-"+stamp, name:name, color:"#8B98D6", phone:"", email:"", notes:"Ajouté depuis Fiftin Séjours"};
-    var booking = {
-      id:"sj-b-"+stamp, roomId:ctx.linkedRoomId, checkIn:checkIn, checkOut:checkOut,
-      arrivalTime:"", status:"ok", nbPersons:2, dinnerNights:{}, noBreakfast:{},
-      notes:"Ajouté depuis Fiftin Séjours", guestId:guest.id, payment:null, depositAmount:0,
-      source:"direct", ghost:false, prixNet:null, taxeSejour:false,
-      createdAt:new Date().toISOString()
-    };
-    firebase.firestore().collection("accounts").doc(authState.uid).update({
-      guests: firebase.firestore.FieldValue.arrayUnion(guest),
-      bookings: firebase.firestore.FieldValue.arrayUnion(booking)
-    }).then(function(){
-      if(hostAccountCache){
-        hostAccountCache.guests = (hostAccountCache.guests||[]).concat([guest]);
-        hostAccountCache.bookings = (hostAccountCache.bookings||[]).concat([booking]);
-      }
-      closeSheet();
-      renderHostCalendar();
-    }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
-  } else {
-    firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").add({
-      name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    }).then(function(){
-      closeSheet();
-      renderHostCalendar();
-    }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
-  }
+  /* Toujours listings/{id}/bookings, jamais accounts/{uid} — voir le
+     commentaire au-dessus de fetchHostBookings. */
+  firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").add({
+    name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  }).then(function(){
+    closeSheet();
+    renderHostCalendar();
+  }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
 }
 function submitDeleteBooking(){
   var ctx = hostBookingContext;
+  if(ctx.isGestion) return; /* pas de bouton dans ce cas, filet de sécurité */
   if(!confirm("Supprimer cette réservation ?")) return;
-  if(ctx.linked){
-    /* arrayRemove retire l'élément par égalité de valeur exacte : ctx.booking
-       est l'objet tel que reçu du serveur, jamais modifié entre-temps —
-       condition nécessaire pour que le retrait cible la bonne réservation. */
-    firebase.firestore().collection("accounts").doc(authState.uid).update({
-      bookings: firebase.firestore.FieldValue.arrayRemove(ctx.booking)
-    }).then(function(){
-      if(hostAccountCache) hostAccountCache.bookings = (hostAccountCache.bookings||[]).filter(function(b){ return b.id!==ctx.booking.id; });
-      closeSheet();
-      renderHostCalendar();
-    }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
-  } else {
-    firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").doc(ctx.booking.id).delete()
-      .then(function(){ closeSheet(); renderHostCalendar(); })
-      .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
-  }
+  firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").doc(ctx.booking.id).delete()
+    .then(function(){ closeSheet(); renderHostCalendar(); })
+    .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
 }
 
 document.getElementById("hero-scroll-btn").addEventListener("click", function(){
