@@ -1083,8 +1083,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    voir .modal ci-dessus). */
 .mhead{display:flex;align-items:center;justify-content:space-between;
   background:var(--green);color:var(--cream);
-  margin:-20px -18px 18px;padding:14px 18px;border-radius:0;}
-@media(min-width:600px){.mhead{border-radius:12px 12px 0 0;}}
+  margin:-20px -18px 18px;padding:calc(14px + env(safe-area-inset-top)) 18px 14px;border-radius:0;}
+@media(min-width:600px){.mhead{border-radius:12px 12px 0 0;padding-top:14px;}}
 .mtitle{font-family:'Jost',sans-serif;font-size:21px;font-weight:500;color:var(--cream);
   display:flex;align-items:center;gap:9px;}
 .mtitle svg{flex-shrink:0;opacity:.9;}
