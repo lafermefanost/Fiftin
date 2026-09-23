@@ -162,12 +162,13 @@ service cloud.firestore {
         || (request.auth != null && resource.data.ownerUid == request.auth.uid);
 
       // Calendrier simplifié d'une annonce (Espace hôtes → Mon calendrier),
-      // utilisé quand l'hôte n'a pas (ou n'a pas relié) de compte Fiftin
-      // app : juste un nom de client + des dates, jamais de données
-      // comptables. Lecture/écriture réservées au propriétaire de
-      // l'annonce parente — quand l'annonce est reliée à une chambre
-      // Fiftin app, les réservations passent par accounts/{uid} à la
-      // place (déjà couvert par la règle accounts/{uid} ci-dessus).
+      // utilisé pour les hôtes "compte simple annonce" (pas de document
+      // accounts/{uid}) : juste un nom de client + des dates, jamais de
+      // données comptables. Lecture/écriture réservées au propriétaire de
+      // l'annonce parente. Les hôtes "compte gestion" (accounts/{uid}
+      // existe) ne passent jamais par cette sous-collection : Séjours lit
+      // accounts/{uid} en lecture seule pour eux (règle accounts/{uid}
+      // ci-dessus, déjà limitée au propriétaire) et n'y écrit jamais rien.
       match /bookings/{bookingId} {
         allow read, write: if request.auth != null
           && get(/databases/$(database)/documents/listings/$(listingId)).data.ownerUid == request.auth.uid;
