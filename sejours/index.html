@@ -53,7 +53,7 @@ a{color:inherit; text-decoration:none;}
    Élément de flux normal (pas position:fixed) : le scroll classique
    du navigateur le fait défiler et découvrir le fil en dessous, sans
    JS de "scroll-hijack". */
-#hero{position:relative; min-height:100dvh; display:flex; flex-direction:column;
+#hero{position:relative; z-index:100; min-height:100dvh; display:flex; flex-direction:column;
   align-items:center; justify-content:center; overflow:hidden; background:var(--sauge-light);
   padding:32px 28px; text-align:center;}
 .brand-mesh{position:absolute; inset:0; overflow:hidden; pointer-events:none;}
@@ -285,12 +285,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
   background:var(--cream); border-top:1px solid var(--line); padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
   box-shadow:0 -10px 24px rgba(0,0,0,.08);}
 
-/* ---------- bottom nav ---------- */
-nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:90;
+/* ---------- bottom nav ----------
+   Pas d'apparition animée : la barre est installée à sa place fixe dès
+   le départ, immobile. Ce qui la rend "invisible" au début, c'est
+   uniquement l'empilement des calques (z-index) — le hero (z-index
+   supérieur) la recouvre tant qu'il occupe l'écran ; une fois défilé
+   (flux normal, plus dans le viewport), il n'y a plus rien au-dessus
+   d'elle. Le contenu (fil, carte, profil) reste sous la barre en
+   permanence (z-index inférieur), donc elle ne se fait jamais recouvrir
+   en scrollant dans les annonces. Hiérarchie : #hero > nav.tabbar > #feed. */
+nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:50;
   background:rgba(239,238,234,0.94); backdrop-filter:blur(10px); border-top:1px solid var(--line);
-  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));
-  transform:translateY(100%); pointer-events:none;}
-nav.tabbar.visible{transform:translateY(0); pointer-events:auto;}
+  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
@@ -1597,19 +1603,13 @@ function switchTab(tab){
   state.tab = tab;
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
-     Dès qu'on change d'onglet, il est masqué définitivement (et la barre
-     d'onglets reste visible en continu : plus de risque qu'elle se
-     recache si le contenu d'un onglet plus court "clampe" le scroll
-     vers le haut et refait apparaître le hero). */
+     Dès qu'on change d'onglet, il est masqué définitivement. La barre
+     d'onglets, elle, n'a plus besoin d'être pilotée ici : elle est
+     toujours à sa place (voir la hiérarchie de calques en CSS, plus bas). */
   if(!heroDismissed){
     heroDismissed = true;
     var heroEl = document.getElementById("hero");
     if(heroEl) heroEl.hidden = true;
-    var tabbarEl = document.getElementById("tabbar");
-    if(tabbarEl){
-      tabbarEl.style.transform = ""; tabbarEl.style.pointerEvents = "";
-      tabbarEl.classList.add("visible");
-    }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
     el.classList.toggle("active", el.getAttribute("data-tab")===tab);
@@ -1632,32 +1632,6 @@ document.getElementById("hero-scroll-btn").addEventListener("click", function(){
   document.querySelector(".filters").scrollIntoView({behavior:"smooth", block:"start"});
 });
 
-/* La barre d'onglets est toujours pleinement opaque — pas de fondu.
-   Elle est simplement positionnée sous le bas de l'écran (translateY
-   100%) et glisse pile à la vitesse du scroll manuel, comme si le hero
-   la découvrait en se retirant : à mi-hauteur du hero défilée, elle est
-   à mi-chemin sortie ; hero entièrement défilé, elle est entièrement en
-   place. Dès qu'on change d'onglet (voir switchTab/heroDismissed), ce
-   suivi s'arrête pour de bon : elle reste posée quel que soit le scroll. */
-(function(){
-  var heroEl = document.getElementById("hero");
-  var tabbarEl = document.getElementById("tabbar");
-  if(!heroEl || !tabbarEl) return;
-  var ticking = false;
-  function updateReveal(){
-    ticking = false;
-    if(heroDismissed) return;
-    var rect = heroEl.getBoundingClientRect();
-    var progress = rect.height ? Math.min(1, Math.max(0, -rect.top / rect.height)) : 1;
-    tabbarEl.style.transform = "translateY(" + (100 * (1 - progress)) + "%)";
-    tabbarEl.style.pointerEvents = progress >= 1 ? "auto" : "none";
-  }
-  window.addEventListener("scroll", function(){
-    if(heroDismissed) return;
-    if(!ticking){ ticking = true; requestAnimationFrame(updateReveal); }
-  }, {passive:true});
-  updateReveal();
-})();
 
 /* ---------------- init ---------------- */
 renderFilterBar();
