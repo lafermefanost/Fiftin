@@ -301,7 +301,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .amenity-list li{list-style:none; display:flex; align-items:center; gap:8px; font-size:13.5px;}
 .amenity-list svg{width:16px; height:16px; color:var(--sauge); flex-shrink:0;}
 .unit-list{display:flex; flex-direction:column; gap:10px; margin-bottom:26px;}
-.unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden;}
+.unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden; width:100%; border:none; text-align:left; font-family:inherit; cursor:pointer;}
+.detail-tabs{display:flex; gap:6px; overflow-x:auto; margin:14px 0 4px; padding-bottom:4px; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+.detail-tabs::-webkit-scrollbar{display:none;}
+.detail-tab{flex-shrink:0; padding:8px 15px; border-radius:999px; border:1.5px solid var(--line); background:none; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--sauge-deep); white-space:nowrap;}
+.detail-tab.active{background:var(--sauge-deep); border-color:var(--sauge-deep); color:var(--cream);}
 .unit-thumb{width:56px; height:56px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--line);}
 .unit-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
 .unit-thumb-empty{width:100%; height:100%; background:var(--line);}
@@ -797,7 +801,8 @@ var AMEN_ICONS = {
 
 /* ---------------- state ---------------- */
 var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
-  hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear()};
+  hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
+  detailListingId:null, detailTab:"overview"};
 var heroDismissed = false;
 /* Espace hôtes : annonces du compte connecté + son compte Fiftin app (pour
    le lien calendrier), mis en cache le temps de la session hôte. undefined
@@ -1059,9 +1064,10 @@ function calendarHtml(l, monthIndex, uid){
 /* ---------------- quick request ---------------- */
 function todayISO(off){ var d=new Date(); d.setDate(d.getDate()+off); return d.toISOString().slice(0,10); }
 
-function quickReqHtml(l, uid){
+function quickReqHtml(l, uid, calSource){
   var qid = uid;
-  return calendarHtml(l, defaultMonthFor(l), qid)+
+  calSource = calSource || l;
+  return calendarHtml(calSource, defaultMonthFor(calSource), qid)+
   '<div class="qr-row">'+
     '<div class="qr-field"><label>Arrivée</label><input type="date" id="'+qid+'-in" value="'+todayISO(14)+'"></div>'+
     '<div class="qr-field"><label>Départ</label><input type="date" id="'+qid+'-out" value="'+todayISO(21)+'"></div>'+
@@ -1079,8 +1085,9 @@ function quickReqHtml(l, uid){
   '</div>';
 }
 
-function buildMessage(l, din, dout, guests){
-  return "Bonjour "+l.host.name+", je suis intéressé·e par \""+l.name+"\" ("+l.region+") du "+fmtDate(din)+" au "+fmtDate(dout)+" pour "+guests+" voyageur"+(guests>1?"s":"")+". Ce logement est-il disponible sur ces dates ? Merci ! — via Fiftin";
+function buildMessage(l, din, dout, guests, unitName){
+  var label = unitName ? (l.name+" – "+unitName) : l.name;
+  return "Bonjour "+l.host.name+", je suis intéressé·e par \""+label+"\" ("+l.region+") du "+fmtDate(din)+" au "+fmtDate(dout)+" pour "+guests+" voyageur"+(guests>1?"s":"")+". Ce logement est-il disponible sur ces dates ? Merci ! — via Fiftin";
 }
 function fmtDate(iso){
   var d = new Date(iso+"T00:00:00");
@@ -1088,8 +1095,9 @@ function fmtDate(iso){
   return d.getDate()+" "+mois[d.getMonth()];
 }
 
-function wireQuickReq(id, uid){
+function wireQuickReq(id, uid, unit){
   var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+  var calSource = unit ? {avail: unit.avail||[]} : l;
   var qid = uid;
   var $in = document.getElementById(qid+"-in"), $out = document.getElementById(qid+"-out"), $g = document.getElementById(qid+"-g");
   var $prev = document.getElementById(qid+"-preview");
@@ -1099,7 +1107,7 @@ function wireQuickReq(id, uid){
 
   function update(){
     var guests = Number($g.textContent);
-    var msg = buildMessage(l, $in.value, $out.value, guests);
+    var msg = buildMessage(l, $in.value, $out.value, guests, unit && unit.name);
     $prev.textContent = msg;
     var phone = l.host.phone.replace("+","");
     $waBtn.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
@@ -1135,7 +1143,7 @@ function wireQuickReq(id, uid){
   function renderCal(monthIndex){
     $cal.setAttribute("data-cal-month", monthIndex);
     $cal.querySelector(".cal-title").textContent = MONTH_LONG[monthIndex]+" "+DEMO_YEAR;
-    $cal.querySelector(".cal-grid").innerHTML = calendarGridHtml(l, monthIndex);
+    $cal.querySelector(".cal-grid").innerHTML = calendarGridHtml(calSource, monthIndex);
     wireCalDays();
   }
   if($cal){
@@ -1152,24 +1160,51 @@ function wireQuickReq(id, uid){
   update();
 }
 
-function unitCardHtml(u){
+function unitCardHtml(u, selectable){
   var img = (u.gallery && u.gallery[0]) ? '<img src="'+u.gallery[0]+'" alt="'+esc(u.name)+'" loading="lazy">' : '<div class="unit-thumb-empty"></div>';
-  return '<div class="unit-card">'+
+  var tag = selectable ? 'button type="button" data-select-unit="'+esc(u.id)+'"' : 'div';
+  var closeTag = selectable ? 'button' : 'div';
+  return '<'+tag+' class="unit-card">'+
     '<div class="unit-thumb">'+img+'</div>'+
     '<div class="unit-info"><b>'+esc(u.name)+'</b><span>'+u.price+' € / nuit · '+u.maxPersons+' voyageur'+(u.maxPersons>1?'s':'')+' max</span></div>'+
-  '</div>';
+  '</'+closeTag+'>';
 }
 
 /* ---------------- detail sheet ---------------- */
+/* Annonce à plusieurs chambres (hasTabs) : sous-onglets au niveau du titre
+   ("Vue d'ensemble" + une par chambre) — 1 clic pour voir les photos, les
+   infos et le calendrier propres à une chambre, ou pour revenir à la vue
+   d'ensemble. state.detailTab retient l'onglet actif tant qu'on reste sur
+   la même annonce (state.detailListingId) ; ouvrir une AUTRE annonce
+   retombe sur "Vue d'ensemble". Comportement strictement inchangé pour une
+   annonce sans plusieurs chambres (0 ou 1) : même code qu'avant. */
 function openDetail(id){
   var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
   var root = document.getElementById("detail-root");
-  var gallery = l.gallery || [];
+  var hasTabs = !!(l.units && l.units.length > 1);
+
+  if(state.detailListingId !== id){ state.detailListingId = id; state.detailTab = "overview"; }
+  var activeUnit = null;
+  if(hasTabs && state.detailTab!=="overview"){
+    activeUnit = l.units.filter(function(u){ return u.id===state.detailTab; })[0] || null;
+    if(!activeUnit) state.detailTab = "overview"; // chambre retirée entre-temps -> retombe sur la vue d'ensemble
+  }
+
+  var gallery;
+  if(!hasTabs){
+    gallery = l.gallery || [];
+  } else if(activeUnit){
+    gallery = (activeUnit.gallery && activeUnit.gallery.length) ? activeUnit.gallery : (l.gallery || []);
+  } else {
+    gallery = (l.gallery || []).slice(); // vue d'ensemble : toutes les photos, maison puis chaque chambre
+    l.units.forEach(function(u){ gallery = gallery.concat(u.gallery || []); });
+  }
+  var galleryAlt = activeUnit ? activeUnit.name : l.name;
   var total = Math.max(l.photos, gallery.length);
   var slides = "";
   for(var i=0;i<total;i++){
     if(gallery[i]){
-      slides += '<div class="slide"><img src="'+gallery[i]+'" alt="'+esc(l.name)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
+      slides += '<div class="slide"><img src="'+gallery[i]+'" alt="'+esc(galleryAlt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
       continue;
     }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
@@ -1177,6 +1212,42 @@ function openDetail(id){
   }
   var dots = "";
   for(var j=0;j<total;j++) dots += '<span class="'+(j===0?"on":"")+'"></span>';
+
+  var tabsHtml = !hasTabs ? "" : '<div class="detail-tabs">'+
+      '<button type="button" class="detail-tab'+(!activeUnit?' active':'')+'" data-detail-tab="overview">Vue d\'ensemble</button>'+
+      l.units.map(function(u){ return '<button type="button" class="detail-tab'+(activeUnit&&activeUnit.id===u.id?' active':'')+'" data-detail-tab="'+esc(u.id)+'">'+esc(u.name)+'</button>'; }).join("")+
+    '</div>';
+
+  var metaRowHtml, bodyExtraHtml;
+  if(!activeUnit){
+    // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
+    // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
+    // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
+    metaRowHtml = '<div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div>';
+    bodyExtraHtml =
+      (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
+        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
+        '<span>Voir les avis sur Google</span>'+
+        '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+      '</a>' : '')+
+      '<p class="desc">'+esc(l.desc)+'</p>'+
+      '<div class="section-title">Prestations</div>'+
+      '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul>'+
+      (l.units && l.units.length ? '<div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u, hasTabs); }).join("")+'</div>' : '')+
+      (!hasTabs ? '<div class="section-title">Créneaux libres (aperçu)</div><div class="avail-row">'+(l.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div>' : '');
+  } else {
+    // chambre sélectionnée : ses propres infos, photos (déjà gérées ci-dessus) et son propre planning —
+    // pas la description/Google/liste des chambres de l'établissement, déjà sur la vue d'ensemble.
+    metaRowHtml = '<h2 class="section-title" style="margin-top:0">'+esc(activeUnit.name)+'</h2>'+
+      '<div class="meta-row"><div class="meta-item"><b>'+activeUnit.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+activeUnit.maxPersons+'</b><span>voyageurs max</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div></div>';
+    bodyExtraHtml =
+      '<div class="section-title">Prestations</div>'+
+      '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul>'+
+      '<div class="section-title">Créneaux libres de cette chambre (aperçu)</div>'+
+      '<div class="avail-row">'+(activeUnit.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div>';
+  }
+
+  var qrUid = "qrd"+l.id+(activeUnit ? "-"+activeUnit.id : "");
 
   root.innerHTML = '<div class="detail" id="detail-panel">'+
     '<div class="detail-gallery" id="detail-gallery">'+slides+
@@ -1188,21 +1259,12 @@ function openDetail(id){
       '<div class="region">'+esc(l.region)+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
-      '<div class="meta-row"><div class="meta-item"><b>'+(l.units && l.units.length>1 ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div>'+
-      (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
-        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
-        '<span>Voir les avis sur Google</span>'+
-        '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
-      '</a>' : '')+
-      '<p class="desc">'+esc(l.desc)+'</p>'+
-      '<div class="section-title">Prestations</div>'+
-      '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul>'+
-      (l.units && l.units.length ? '<div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u); }).join("")+'</div>' : '')+
-      '<div class="section-title">Créneaux libres (aperçu)</div>'+
-      '<div class="avail-row">'+l.avail.map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div>'+
+      tabsHtml+
+      metaRowHtml+
+      bodyExtraHtml+
       '<div class="section-title" style="margin-top:18px;">Votre hôte</div>'+
       '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b><span>'+l.host.response+'</span></div></div>'+
-      '<div class="qr-panel" style="border-radius:18px;" id="qr-detail-'+l.id+'">'+quickReqHtml(l, "qrd"+l.id)+'</div>'+
+      '<div class="qr-panel" style="border-radius:18px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>'+
     '</div>'+
     '<div class="detail-contact-bar">'+
       '<div class="send-row">'+
@@ -1219,17 +1281,39 @@ function openDetail(id){
     if(idx===-1) state.liked.push(l.id); else state.liked.splice(idx,1);
     persist(); renderLikeBadge(); openDetail(id);
   });
+  if(hasTabs){
+    // Changer d'onglet ou choisir une chambre depuis la vue d'ensemble tient en 1 clic — la position
+    // de scroll est reprise telle quelle pour un changement d'onglet (pas besoin de rescroller à
+    // chaque fois), remise en haut seulement en entrant fraîchement dans une chambre depuis sa carte.
+    Array.prototype.forEach.call(root.querySelectorAll("[data-detail-tab]"), function(btn){
+      btn.addEventListener("click", function(){
+        var panel = document.getElementById("detail-panel");
+        var scrollY = panel ? panel.scrollTop : 0;
+        state.detailTab = btn.getAttribute("data-detail-tab");
+        openDetail(id);
+        var newPanel = document.getElementById("detail-panel");
+        if(newPanel) newPanel.scrollTop = scrollY;
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("[data-select-unit]"), function(btn){
+      btn.addEventListener("click", function(){
+        state.detailTab = btn.getAttribute("data-select-unit");
+        openDetail(id);
+      });
+    });
+  }
   var gal = document.getElementById("detail-gallery");
   gal.addEventListener("scroll", function(){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
-  wireQuickReq(l.id, "qrd"+l.id);
+  wireQuickReq(l.id, qrUid, activeUnit);
   document.body.style.overflow = "hidden";
 }
 function closeDetail(){
   document.getElementById("detail-root").innerHTML = "";
   document.body.style.overflow = "";
+  state.detailListingId = null; state.detailTab = "overview";
 }
 
 function formulaCardHtml(value,name,price,desc){
