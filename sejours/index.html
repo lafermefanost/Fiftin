@@ -252,6 +252,26 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .field-block-row .field-block{flex:1;}
 .btn-apply{width:100%; background:var(--sauge-deep); color:var(--cream); padding:15px; border-radius:16px; font-weight:700; font-size:14.5px; border:none;}
 
+/* ---------- crop overlay (recadrage carré manuel des photos) ---------- */
+.crop-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
+.crop-head{width:100%; max-width:340px; display:flex; align-items:center; justify-content:space-between;}
+.crop-head button{background:none; border:none; font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--cream); padding:6px 4px;}
+.crop-head .crop-ok{color:var(--yellow);}
+.crop-progress{font-size:12px; font-weight:600; color:rgba(239,238,234,.6);}
+.crop-viewport{position:relative; width:min(78vw,340px); height:min(78vw,340px); border-radius:16px; overflow:hidden; touch-action:none; background:var(--sauge-deep); cursor:grab;}
+.crop-viewport.dragging{cursor:grabbing;}
+.crop-viewport img{position:absolute; top:0; left:0; max-width:none; user-select:none; -webkit-user-drag:none; pointer-events:none;}
+.crop-zoom-row{width:100%; max-width:340px; display:flex; align-items:center; gap:10px;}
+.crop-zoom-row span{font-size:15px; color:var(--cream); flex-shrink:0;}
+.crop-previews{display:flex; gap:16px; align-items:flex-end;}
+.crop-preview{display:flex; flex-direction:column; align-items:center; gap:5px;}
+.crop-preview span{font-size:10px; font-weight:700; color:rgba(239,238,234,.65); text-transform:uppercase; letter-spacing:.02em;}
+.crop-preview-box{position:relative; overflow:hidden; border-radius:8px; background:var(--sauge-deep); border:1px solid rgba(239,238,234,.25);}
+.crop-preview-box img{position:absolute; top:0; left:0; max-width:none; pointer-events:none;}
+.crop-preview-45{width:72px; height:90px;}
+.crop-preview-54{width:90px; height:72px;}
+.crop-hint{font-size:12px; color:rgba(239,238,234,.55); text-align:center; margin:0; max-width:300px;}
+
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
 .detail-gallery{position:relative; height:340px; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
@@ -526,6 +546,27 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
 
   <div id="sheet-root"></div>
   <div id="detail-root"></div>
+
+  <div class="crop-overlay" id="crop-overlay" style="display:none">
+    <div class="crop-head">
+      <button type="button" id="crop-skip">Garder telle quelle</button>
+      <span class="crop-progress" id="crop-progress"></span>
+      <button type="button" class="crop-ok" id="crop-ok">OK</button>
+    </div>
+    <div class="crop-viewport" id="crop-viewport">
+      <img id="crop-img" alt="" draggable="false">
+    </div>
+    <div class="crop-zoom-row">
+      <span>－</span>
+      <input type="range" id="crop-zoom" min="0" max="100" value="0">
+      <span>＋</span>
+    </div>
+    <div class="crop-previews">
+      <div class="crop-preview"><span>Carte (4/5)</span><div class="crop-preview-box crop-preview-45"><img id="crop-preview-45" alt=""></div></div>
+      <div class="crop-preview"><span>Fiche (5/4)</span><div class="crop-preview-box crop-preview-54"><img id="crop-preview-54" alt=""></div></div>
+    </div>
+    <p class="crop-hint">Faites glisser pour cadrer, ajustez le zoom si besoin</p>
+  </div>
 </div>
 
 <script>
@@ -1345,7 +1386,7 @@ function openSheet(kind){
       });
       e.target.value = "";
       if(!accepted.length) return;
-      Promise.all(accepted.map(compressImageFile)).then(function(files){
+      cropAndCompressFiles(accepted).then(function(files){
         files.forEach(function(file){
           if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
           hfSelectedFiles.push({type:"new", file:file});
@@ -1601,7 +1642,7 @@ function renderHostUnits(){
       });
       e.target.value = "";
       if(!accepted.length) return;
-      Promise.all(accepted.map(compressImageFile)).then(function(files){
+      cropAndCompressFiles(accepted).then(function(files){
         files.forEach(function(file){
           if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
           unit.photos.push({type:"new", file:file});
@@ -1645,6 +1686,164 @@ function compressImageFile(file){
     };
     img.onerror = function(){ URL.revokeObjectURL(url); resolve(file); };
     img.src = url;
+  });
+}
+
+/* Recadrage carré manuel avant envoi : le cadrage automatique (object-fit:
+   cover, centré) ne convient pas à toutes les photos selon l'endroit où
+   elles s'affichent (carte du fil en 4/5, fiche détail ~5/4 — deux ratios
+   différents pour la même image) — plutôt que produire deux recadrages
+   distincts par photo, on laisse l'hôte choisir un seul carré qui fait le
+   compromis entre les deux. Le carré démarre centré (même cadrage que le
+   comportement automatique d'avant, pour ne rien changer par défaut), et
+   l'hôte peut glisser/zoomer avant de valider. "Garder telle quelle" saute
+   le recadrage et retombe sur compressImageFile() (ratio d'origine
+   conservé). cropAndCompressFiles() est désormais l'unique point d'entrée
+   utilisé par les deux sélecteurs de photos (maison et chambre) pour
+   transformer les File bruts choisis en entrées prêtes pour
+   hfSelectedFiles/unit.photos — traite les fichiers un par un (queue),
+   jamais en parallèle, pour ne montrer qu'un cadrage à la fois. */
+var CROP_OUTPUT_SIZE = 1600;
+var CROP_ZOOM_MAX_MULT = 3;
+var CROP_PREVIEW_SQUARE = 90; // px — échelle de référence des deux aperçus (carte 4/5, fiche 5/4), proportionnelle au cadre principal
+
+function cropAndCompressFiles(files){
+  var results = [];
+  var runNext = function(i){
+    if(i>=files.length) return Promise.resolve(results);
+    return cropOneFile(files[i], i, files.length).then(function(file){
+      results.push(file);
+      return runNext(i+1);
+    });
+  };
+  return runNext(0);
+}
+
+function cropOneFile(file, index, total){
+  return new Promise(function(resolve){
+    var overlay = document.getElementById("crop-overlay");
+    var imgEl = document.getElementById("crop-img");
+    var viewport = document.getElementById("crop-viewport");
+    var zoomInput = document.getElementById("crop-zoom");
+    var okBtn = document.getElementById("crop-ok");
+    var skipBtn = document.getElementById("crop-skip");
+    var previewImg45 = document.getElementById("crop-preview-45");
+    var previewImg54 = document.getElementById("crop-preview-54");
+    document.getElementById("crop-progress").textContent = total>1 ? ((index+1)+"/"+total) : "";
+
+    var url = URL.createObjectURL(file);
+    var st = null; // {naturalW,naturalH,baseScale,scale,offsetX,offsetY,vpSize}
+    var dragging = false, dragStartX=0, dragStartY=0, startOffX=0, startOffY=0;
+
+    var cleanup = function(){
+      overlay.style.display = "none";
+      URL.revokeObjectURL(url);
+      viewport.removeEventListener("pointerdown", onPointerDown);
+      viewport.removeEventListener("pointermove", onPointerMove);
+      viewport.removeEventListener("pointerup", onPointerUp);
+      viewport.removeEventListener("pointercancel", onPointerUp);
+      zoomInput.oninput = null;
+      okBtn.onclick = null;
+      skipBtn.onclick = null;
+    };
+    var fallback = function(){ cleanup(); compressImageFile(file).then(resolve); };
+
+    var clamp = function(){
+      var minX = st.vpSize - st.naturalW*st.scale, minY = st.vpSize - st.naturalH*st.scale;
+      st.offsetX = Math.min(0, Math.max(minX, st.offsetX));
+      st.offsetY = Math.min(0, Math.max(minY, st.offsetY));
+    };
+    var applyTransform = function(){
+      imgEl.style.width = (st.naturalW*st.scale)+"px";
+      imgEl.style.height = (st.naturalH*st.scale)+"px";
+      imgEl.style.transform = "translate("+st.offsetX+"px,"+st.offsetY+"px)";
+      updatePreviews();
+    };
+    // Aperçus 4/5 (carte) et 5/4 (fiche) : object-fit:cover appliqué à une
+    // image carrée ne rogne qu'un seul axe (centré) — la carte 4/5 ne coupe
+    // que les côtés (elle garde toute la hauteur du carré), la fiche 5/4 ne
+    // coupe que haut/bas (elle garde toute la largeur) — d'où le facteur 0.8
+    // (4/5) appliqué à l'axe qui est effectivement rogné. Même transform que
+    // le cadre principal, juste mise à l'échelle de CROP_PREVIEW_SQUARE et
+    // recentrée pour ce petit rectangle — pas de fichier généré, uniquement
+    // un aperçu visuel de ce que produirait l'affichage réel.
+    var updatePreviews = function(){
+      var sf = CROP_PREVIEW_SQUARE / st.vpSize;
+      var w = st.naturalW*st.scale*sf, h = st.naturalH*st.scale*sf;
+      var ox = st.offsetX*sf, oy = st.offsetY*sf;
+      var shift = CROP_PREVIEW_SQUARE*0.1; // (SQUARE - SQUARE*0.8)/2
+      previewImg45.style.width = w+"px"; previewImg45.style.height = h+"px";
+      previewImg45.style.transform = "translate("+(ox+shift)+"px,"+oy+"px)";
+      previewImg54.style.width = w+"px"; previewImg54.style.height = h+"px";
+      previewImg54.style.transform = "translate("+ox+"px,"+(oy+shift)+"px)";
+    };
+
+    var onPointerDown = function(e){
+      dragging = true;
+      viewport.classList.add("dragging");
+      dragStartX = e.clientX; dragStartY = e.clientY;
+      startOffX = st.offsetX; startOffY = st.offsetY;
+      viewport.setPointerCapture(e.pointerId);
+    };
+    var onPointerMove = function(e){
+      if(!dragging) return;
+      st.offsetX = startOffX + (e.clientX-dragStartX);
+      st.offsetY = startOffY + (e.clientY-dragStartY);
+      clamp();
+      applyTransform();
+    };
+    var onPointerUp = function(){ dragging = false; viewport.classList.remove("dragging"); };
+    viewport.addEventListener("pointerdown", onPointerDown);
+    viewport.addEventListener("pointermove", onPointerMove);
+    viewport.addEventListener("pointerup", onPointerUp);
+    viewport.addEventListener("pointercancel", onPointerUp);
+
+    zoomInput.value = 0;
+    zoomInput.oninput = function(){
+      var t = Number(zoomInput.value)/100;
+      var newScale = st.baseScale * (1 + t*(CROP_ZOOM_MAX_MULT-1));
+      // garde le même point image au centre du cadre pendant le zoom, plutôt que de recentrer au hasard
+      var cx = st.vpSize/2, cy = st.vpSize/2;
+      var imgCx = (cx - st.offsetX)/st.scale, imgCy = (cy - st.offsetY)/st.scale;
+      st.scale = newScale;
+      st.offsetX = cx - imgCx*st.scale;
+      st.offsetY = cy - imgCy*st.scale;
+      clamp();
+      applyTransform();
+    };
+
+    okBtn.onclick = function(){
+      var canvas = document.createElement("canvas");
+      var srcSize = st.vpSize / st.scale;
+      var srcX = -st.offsetX / st.scale, srcY = -st.offsetY / st.scale;
+      var outSize = Math.max(1, Math.round(Math.min(CROP_OUTPUT_SIZE, srcSize)));
+      canvas.width = outSize; canvas.height = outSize;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ fallback(); return; }
+      ctx.drawImage(imgEl, srcX, srcY, srcSize, srcSize, 0, 0, outSize, outSize);
+      canvas.toBlob(function(blob){
+        cleanup();
+        if(!blob){ resolve(file); return; }
+        var name = file.name.replace(/\.[^.\/]+$/, "")+".jpg";
+        resolve(new File([blob], name, {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    skipBtn.onclick = fallback;
+
+    imgEl.onload = function(){
+      var vpSize = viewport.clientWidth;
+      var nw = imgEl.naturalWidth, nh = imgEl.naturalHeight;
+      if(!nw || !nh || !vpSize){ fallback(); return; }
+      var baseScale = vpSize / Math.min(nw, nh);
+      st = {naturalW:nw, naturalH:nh, baseScale:baseScale, scale:baseScale, vpSize:vpSize,
+        offsetX:(vpSize-nw*baseScale)/2, offsetY:(vpSize-nh*baseScale)/2};
+      applyTransform();
+    };
+    imgEl.onerror = function(){ fallback(); };
+    overlay.style.display = "flex"; // avant de charger l'image : le viewport doit avoir sa vraie taille (clientWidth) au moment du onload
+    imgEl.src = url;
+    previewImg45.src = url;
+    previewImg54.src = url;
   });
 }
 
