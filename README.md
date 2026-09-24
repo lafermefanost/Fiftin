@@ -201,6 +201,18 @@ Deux catégories d'hôtes, déterminées par l'existence du document `accounts/{
 - **Compte simple annonce** (pas de document `accounts/{uid}`) : Séjours est le seul outil de planning de cet hôte. Lecture/écriture complète par chambre, réservations stockées dans `listings/{listingId}/bookings/{bookingId}` (`unitId`, `name`, `checkIn`, `checkOut`) — taper une case libre ouvre nom du client + dates pour la chambre affichée, taper une case occupée propose de la supprimer. C'est le mode « je n'ai que des hébergements, je veux un outil très simple ».
 - **Compte gestion** (`accounts/{uid}` existe) : Séjours passe en **lecture seule**. Un sélecteur « Afficher les réservations de » (une chambre parmi `accounts/{uid}.settings.rooms`) permet, pour la chambre Séjours affichée, d'indiquer à quelle chambre `app/` elle correspond (`unit.linkedRoomId`) et d'afficher à titre indicatif ses dates déjà occupées côté `app/` — pour éviter un double-emploi visuel — mais aucune case n'est éditable ni supprimable depuis Séjours, et le bouton d'ajout est remplacé par un lien vers `app/`. **Aucune écriture vers `accounts/{uid}` n'existe nulle part dans `sejours/index.html`** : ni `.set()`, ni `.update()`, ni `arrayUnion`/`arrayRemove` — c'est une garantie structurelle (le code n'a tout simplement pas ce chemin), pas une précaution au cas par cas, précisément parce qu'`accounts/{uid}` porte les données réelles de planning d'un client payant et que `app/` lui-même fait un `.set()` plein document à chaque synchro (`pushToFirebase()`) : n'importe quelle écriture concurrente y créerait un risque de course inutile.
 
+### Modifier une annonce existante
+
+Une annonce déposée sans chambre (`units` vide) affichait auparavant un calendrier bloqué sur « Cette annonce n'a pas encore de chambre » sans aucun moyen d'en ajouter une. Trois points d'entrée ouvrent maintenant le même formulaire de dépôt en **mode édition** (`hostFormEditListing` pointe vers l'annonce concernée au lieu de `null`) :
+
+- Le bouton « Modifier l'annonce pour en ajouter une » affiché directement sur cet écran de calendrier bloqué.
+- Le bouton « Modifier » sur chaque carte de « Mes annonces ».
+- Depuis « Mes annonces » → « + Nouvelle annonce » repasse bien en mode création (`hostFormEditListing = null`), tout comme le bouton « Espace hôtes » de la nav et l'écran vide de l'espace hôtes.
+
+En mode édition, le formulaire est pré-rempli (nom, description, prestations, chambres avec leurs photos) et le bouton d'envoi fait un `.update()` sur le document existant au lieu d'un `.add()` — `status`, `ownerUid` et `createdAt` sont volontairement absents du payload envoyé, donc jamais réécrits (la règle Firestore `status` immuable côté hôte reste respectée par construction, sans code dédié pour la faire respecter).
+
+Les photos déjà en ligne ne sont ni re-uploadées ni perdues : chaque entrée de photo (maison ou chambre) est `{type:"existing", url}` ou `{type:"new", file}` dans le même tableau, que ce soit en création ou en édition. À l'envoi, `resolvePhotoEntries()` sépare les deux, n'uploade que les `"new"`, puis recompose la liste finale dans l'ordre d'origine — modifier une annonce sans toucher aux photos d'une chambre laisse son `gallery` strictement inchangé.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
