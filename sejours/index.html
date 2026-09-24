@@ -1337,14 +1337,21 @@ function openSheet(kind){
     document.getElementById("hf-photos-input").addEventListener("change", function(e){
       var errEl = document.getElementById("hf-err");
       errEl.textContent = "";
+      var accepted = [];
       Array.prototype.forEach.call(e.target.files, function(file){
-        if(hfSelectedFiles.length>=6){ errEl.textContent = "6 photos maximum."; return; }
+        if(hfSelectedFiles.length+accepted.length>=6){ errEl.textContent = "6 photos maximum."; return; }
         if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-        if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-        hfSelectedFiles.push({type:"new", file:file});
+        accepted.push(file);
       });
       e.target.value = "";
-      renderHostPhotoGrid();
+      if(!accepted.length) return;
+      Promise.all(accepted.map(compressImageFile)).then(function(files){
+        files.forEach(function(file){
+          if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
+          hfSelectedFiles.push({type:"new", file:file});
+        });
+        renderHostPhotoGrid();
+      });
     });
     renderHostPhotoGrid();
     document.getElementById("hf-add-unit").addEventListener("click", function(){
@@ -1355,7 +1362,12 @@ function openSheet(kind){
     renderHostUnits();
     resolveHostAccount(function(account){
       hfAvailableRooms = (account && account.settings && account.settings.rooms) || [];
-      if(hfAvailableRooms.length && document.getElementById("hf-units")) renderHostUnits();
+      // Un lien saisi avant que la chambre app correspondante soit supprimée
+      // ne doit pas être ré-enregistré tel quel à l'insu de l'hôte (voir
+      // pruneStaleLinkedRoomIds) — nettoyé ici avant tout re-rendu/envoi.
+      var pruned = pruneStaleLinkedRoomIds(hfUnits, hfAvailableRooms);
+      if(pruned.changed) hfUnits = pruned.units;
+      if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
     });
     return;
   } else if(kind==="hostbooking"){
@@ -1486,6 +1498,17 @@ function renderHostPhotoGrid(){
 }
 
 function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
+/* Tarif actuel d'une chambre Fiftin app pour une capacité donnée — dernière
+   entrée de tariffHistory (triée par date de départ), même logique que
+   addRoomTariff() côté app/. Sert à préremplir le prix/nuit d'une chambre
+   Séjours quand on la relie à cette chambre app (voir .hf-unit-room ci-dessous). */
+function roomCurrentPrice(room, pax){
+  var hist = room && room.tariffHistory;
+  if(!hist || !hist.length) return null;
+  var last = hist.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:0; }).pop();
+  if(!last || !last.prices) return null;
+  return last.prices[pax] != null ? last.prices[pax] : null;
+}
 
 /* Une carte par chambre du formulaire de dépôt, reconstruite entièrement
    à chaque ajout/retrait de chambre ; les champs texte mettent à jour
@@ -1529,7 +1552,28 @@ function renderHostUnits(){
     el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).maxPersons = el.value; });
   });
   Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-room"), function(el){
-    el.addEventListener("change", function(){ findHfUnit(el.getAttribute("data-unit-id")).linkedRoomId = el.value; });
+    el.addEventListener("change", function(){
+      var unit = findHfUnit(el.getAttribute("data-unit-id"));
+      unit.linkedRoomId = el.value;
+      if(!el.value) return;
+      // Relier à une chambre app existante reprend son prix/capacité actuels
+      // comme point de départ (l'hôte reste libre de les retoucher ensuite) —
+      // évite de ressaisir deux fois la même info.
+      var room = hfAvailableRooms.filter(function(r){ return r.id===el.value; })[0];
+      if(!room) return;
+      var card = el.closest(".hf-unit-card");
+      if(room.maxPersons){
+        unit.maxPersons = room.maxPersons;
+        var capInput = card && card.querySelector(".hf-unit-capacity");
+        if(capInput) capInput.value = room.maxPersons;
+      }
+      var price = roomCurrentPrice(room, unit.maxPersons||room.maxPersons||2);
+      if(price != null){
+        unit.price = String(price);
+        var priceInput = card && card.querySelector(".hf-unit-price");
+        if(priceInput) priceInput.value = unit.price;
+      }
+    });
   });
   Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-remove"), function(el){
     el.addEventListener("click", function(){
@@ -1549,17 +1593,61 @@ function renderHostUnits(){
       var unit = findHfUnit(unitId);
       var errEl = document.getElementById("hf-err");
       errEl.textContent = "";
+      var accepted = [];
       Array.prototype.forEach.call(e.target.files, function(file){
-        if(unit.photos.length>=6){ errEl.textContent = "6 photos maximum par chambre."; return; }
+        if(unit.photos.length+accepted.length>=6){ errEl.textContent = "6 photos maximum par chambre."; return; }
         if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-        if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-        unit.photos.push({type:"new", file:file});
+        accepted.push(file);
       });
       e.target.value = "";
-      renderHostUnitPhotoGrid(unitId);
+      if(!accepted.length) return;
+      Promise.all(accepted.map(compressImageFile)).then(function(files){
+        files.forEach(function(file){
+          if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
+          unit.photos.push({type:"new", file:file});
+        });
+        renderHostUnitPhotoGrid(unitId);
+      });
     });
   });
 }
+/* Redimensionne et recompresse une photo côté client avant envoi — les
+   photos de smartphone pèsent souvent 3 à 8 Mo pour une résolution bien
+   supérieure à ce qu'un écran affiche jamais dans cette galerie. Réduit le
+   poids des pages (chargement du fil, des fiches détail) et le coût de
+   stockage/bande passante Firebase, sans perte visible à l'écran : la plus
+   grande dimension est plafonnée à 1920px (au-delà, inutile même en rétina
+   pour cet usage) et recompressée en JPEG qualité 0.85. En cas d'échec
+   (format non décodable par <img>, navigateur sans support canvas…), on
+   renvoie le fichier original tel quel plutôt que de bloquer l'envoi. */
+var PHOTO_MAX_DIM = 1920;
+var PHOTO_JPEG_QUALITY = 0.85;
+function compressImageFile(file){
+  return new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if(!w || !h){ resolve(file); return; }
+      var scale = Math.min(1, PHOTO_MAX_DIM / Math.max(w, h));
+      var tw = Math.max(1, Math.round(w*scale)), th = Math.max(1, Math.round(h*scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ resolve(file); return; }
+      ctx.drawImage(img, 0, 0, tw, th);
+      canvas.toBlob(function(blob){
+        if(!blob || blob.size >= file.size){ resolve(file); return; } // garde l'original si la compression n'a pas aidé
+        var name = file.name.replace(/\.[^.\/]+$/, "")+".jpg";
+        resolve(new File([blob], name, {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 function renderHostUnitPhotoGrid(unitId){
   var grid = document.querySelector('.hf-unit-photo-grid[data-unit-id="'+unitId+'"]');
   if(!grid) return;
@@ -2242,6 +2330,28 @@ function monthMiniHtml(year, monthIdx, occMap, todayStr){
      app. Aucune écriture dans accounts/{uid} n'existe nulle part dans ce
      fichier : c'est une garantie structurelle, pas une précaution au cas
      par cas. */
+/* Nettoie les liens vers une chambre Fiftin app qui n'existe plus (compte
+   gestion, unit.linkedRoomId) — par ex. après suppression de cette chambre
+   côté app/ (delRoom). Un lien qui pointe dans le vide n'empêche rien de
+   fonctionner (fetchHostBookings retombe juste sur une liste vide), mais
+   reste affiché comme "relié" dans le sélecteur sans plus rien signifier ;
+   ceci le réinitialise proprement dès qu'on le détecte. N'écrit rien
+   lui-même : renvoie juste {units, changed} à l'appelant, qui décide quand
+   persister (voir renderHostCalendar et openSheet 'hostform'). */
+function pruneStaleLinkedRoomIds(units, rooms){
+  var roomIds = {};
+  (rooms||[]).forEach(function(r){ roomIds[r.id] = true; });
+  var changed = false;
+  var cleaned = (units||[]).map(function(u){
+    if(u.linkedRoomId && !roomIds[u.linkedRoomId]){
+      changed = true;
+      return Object.assign({}, u, {linkedRoomId:""});
+    }
+    return u;
+  });
+  return {units:cleaned, changed:changed};
+}
+
 function fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, cb){
   if(isGestion){
     var all = (account && account.bookings) || [];
@@ -2280,11 +2390,21 @@ function renderHostCalendar(){
     resolveHostAccount(function(account){
       var isGestion = !!account;
       var rooms = (account && account.settings && account.settings.rooms) || [];
-      var linkedRoomId = unit.linkedRoomId || "";
-      fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, function(bookings){
-        if(state.hostTab!=="calendar") return;
-        renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
-      });
+      var pruned = pruneStaleLinkedRoomIds(units, rooms);
+      var afterPrune = function(){
+        var linkedRoomId = unit.linkedRoomId || "";
+        fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, function(bookings){
+          if(state.hostTab!=="calendar") return;
+          renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
+        });
+      };
+      if(pruned.changed){
+        listing.units = pruned.units;
+        unit = pruned.units.filter(function(u){ return u.id===unit.id; })[0];
+        firebase.firestore().collection("listings").doc(listing.id).update({units:pruned.units}).then(afterPrune).catch(afterPrune);
+      } else {
+        afterPrune();
+      }
     });
   });
 }

@@ -7478,8 +7478,34 @@ function resolveSejoursListings(cb){
 }
 // Appelé à l'ouverture des Paramètres (openSettings) : le temps que l'hôte
 // atteigne le panneau Chambres, la lecture a généralement déjà répondu — pas
-// de re-rendu forcé ici, juste un remplissage du cache en arrière-plan.
-function prefetchSejoursListings(){ resolveSejoursListings(function(){}); }
+// de re-rendu forcé ici sauf si un nettoyage de lien caduc s'impose (voir
+// pruneStaleRoomLinks).
+function prefetchSejoursListings(){
+  resolveSejoursListings(function(listings){
+    if(pruneStaleRoomLinks(listings)){
+      saveSettings();applySettings();
+      if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
+    }
+  });
+}
+// Une chambre reliée (linkedListingId/linkedUnitId, voir addRoomFromListingUnit)
+// dont la chambre Séjours d'origine a été supprimée (annonce entière ou juste
+// cette chambre retirée côté édition) garde sinon un lien qui ne pointe plus
+// sur rien — sans danger immédiat (juste utilisé pour ne pas la reproposer
+// dans roomAddChoiceEntries), mais jamais nettoyé tout seul. Retire le lien
+// dès qu'on constate qu'il ne correspond plus à rien ; ne touche jamais au
+// nom/prix/capacité déjà enregistrés sur la chambre app, seulement au lien.
+function pruneStaleRoomLinks(listings){
+  const validUnitIds=new Set();
+  (listings||[]).forEach(l=>(l.units||[]).forEach(u=>validUnitIds.add(u.id)));
+  let changed=false;
+  (S.settings.rooms||[]).forEach(r=>{
+    if(r.linkedUnitId && !validUnitIds.has(r.linkedUnitId)){
+      delete r.linkedListingId; delete r.linkedUnitId; changed=true;
+    }
+  });
+  return changed;
+}
 
 // Chambres Séjours pas encore reprises comme chambre app (join local, aucune
 // écriture) : exclut celles déjà liées via linkedUnitId sur une chambre
