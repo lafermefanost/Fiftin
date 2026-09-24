@@ -408,6 +408,15 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .cal-mini-day.occ{background:var(--sauge-deep); color:var(--cream); font-weight:800;}
 .cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
 
+/* ---------- choix de formule (inscription hôte) ---------- */
+.formula-picker{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
+.formula-card{text-align:left; background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif;}
+.formula-card.active{border-color:var(--sauge-deep); background:var(--sauge-light);}
+.formula-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;}
+.formula-card-head b{font-size:14px; color:var(--ink);}
+.formula-card-head span{font-size:12.5px; font-weight:700; color:var(--sauge-deep);}
+.formula-card p{font-size:11.5px; color:var(--sauge); font-weight:500; line-height:1.4; margin:0;}
+
 /* ─── VERROU TEMPORAIRE DU SITE (page en construction) ───────────────
    Même mot de passe partagé et même clé sessionStorage que le verrou de
    app/index.html (#siteGate, SITE_GATE_PASSWORD) : déverrouiller l'un
@@ -552,6 +561,12 @@ var FIFTIN_FIREBASE_CONFIG = {
 };
 var authState = {ready:false, uid:null, email:null};
 var authMode = "signin";
+/* authContext pilote l'affichage du choix de formule à l'inscription :
+   "host" quand la connexion/inscription part d'un parcours hôte (Devenir
+   hôte, Espace hôtes), "traveler" sinon — un simple voyageur qui crée un
+   compte n'a aucune raison de voir des formules d'hébergeur. */
+var authContext = "traveler";
+var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
 var hfSelectedFiles = [];
 
 /* Comptes autorisés à valider/refuser les annonces déposées (onglet
@@ -626,10 +641,13 @@ function updateHeroMenu(){
   loginBtn.querySelector("span").textContent = authState.uid ? "Mon compte" : "Se connecter";
   loginBtn.onclick = function(){
     if(authState.uid){ switchTab("profile"); document.getElementById("feed").scrollIntoView({behavior:"smooth"}); }
-    else { openSheet("auth"); }
+    else { authContext = "traveler"; openSheet("auth"); }
   };
   hostBtn.querySelector("span").textContent = authState.uid ? "Déposer une annonce" : "Devenir hôte";
-  hostBtn.onclick = function(){ openSheet(authState.uid ? "hostform" : "auth"); };
+  hostBtn.onclick = function(){
+    if(authState.uid) openSheet("hostform");
+    else { authContext = "host"; openSheet("auth"); }
+  };
 }
 
 function signOutUser(){
@@ -1098,6 +1116,13 @@ function closeDetail(){
   document.body.style.overflow = "";
 }
 
+function formulaCardHtml(value,name,price,desc){
+  return '<button type="button" class="formula-card'+(chosenHostPlan===value?' active':'')+'" data-plan="'+value+'">'+
+    '<div class="formula-card-head"><b>'+name+'</b><span>'+price+'</span></div>'+
+    '<p>'+desc+'</p>'+
+  '</button>';
+}
+
 /* ---------------- filter sheet ---------------- */
 function openSheet(kind){
   var root = document.getElementById("sheet-root");
@@ -1128,8 +1153,18 @@ function openSheet(kind){
       return '<button class="radio-row'+(state.sort===o[0]?' active':'')+'" data-sort="'+o[0]+'">'+o[1]+'</button>';
     }).join("")+'</div>';
   } else if(kind==="auth"){
+    var showFormulaPicker = authMode==="signup" && authContext==="host";
+    if(showFormulaPicker) chosenHostPlan = "simple"; /* repart de zéro à chaque ouverture fraîche */
+    var formulaHtml = !showFormulaPicker ? "" :
+      '<div class="formula-picker">'+
+        formulaCardHtml("simple","Simple annonce","Gratuit","Listez votre hébergement, calendrier simplifié inclus.")+
+        formulaCardHtml("essentiel","Gestion simplifiée","24 €/mois","Planning complet Fiftin app : réservations, fichier client, compta.")+
+        formulaCardHtml("pro","Gestion avancée","47 €/mois","Tout l'Essentiel + plusieurs structures juridiques, accès équipe.")+
+      '</div>'+
+      '<p class="sheet-sub" style="margin-top:-6px;">Paiement pas encore activé : la formule est enregistrée dès maintenant, la facturation viendra ensuite sans rien à refaire.</p>';
     inner = '<h3>'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
       '<p class="sheet-sub">Le même compte que votre espace de gestion Fiftin.</p>'+
+      formulaHtml+
       '<div class="field-block"><label>E-mail</label><input class="text-input" type="email" id="auth-email" autocomplete="email"></div>'+
       '<div class="field-block"><label>Mot de passe</label><input class="text-input" type="password" id="auth-password" autocomplete="'+(authMode==="signup"?"new-password":"current-password")+'"></div>'+
       (authMode==="signup" ? '<div class="field-block"><label>Confirmer le mot de passe</label><input class="text-input" type="password" id="auth-password2" autocomplete="new-password"></div>' : '')+
@@ -1197,6 +1232,14 @@ function openSheet(kind){
     document.getElementById("auth-toggle").addEventListener("click", function(){ authMode = authMode==="signup"?"signin":"signup"; openSheet("auth"); });
     var forgotBtn = document.getElementById("auth-forgot");
     if(forgotBtn) forgotBtn.addEventListener("click", submitForgotPassword);
+    if(authMode==="signup" && authContext==="host"){
+      Array.prototype.forEach.call(root.querySelectorAll(".formula-card"), function(el){
+        el.addEventListener("click", function(){
+          chosenHostPlan = el.getAttribute("data-plan");
+          Array.prototype.forEach.call(root.querySelectorAll(".formula-card"), function(other){ other.classList.toggle("active", other===el); });
+        });
+      });
+    }
     return;
   } else if(kind==="hostform"){
     document.getElementById("sheet-apply").addEventListener("click", submitHostForm);
@@ -1276,6 +1319,24 @@ function openSheet(kind){
 function closeSheet(){ document.getElementById("sheet-root").innerHTML = ""; }
 
 /* ---------------- comptes : connexion / inscription / dépôt d'annonce ---------------- */
+/* Écrit accounts/{uid} pour la toute première fois, juste après la
+   création du compte Firebase Auth dans ce même appel (Espace hôtes →
+   créer un compte + choisir une formule de gestion) : uid tout neuf que
+   Firebase Auth vient de générer, document garanti inexistant avant cet
+   instant — un .set() ici ne peut écraser aucune donnée réelle,
+   contrairement à une écriture sur un compte déjà utilisé (voir les
+   commentaires plus haut sur le calendrier simplifié / compte gestion).
+   Formule purement déclarative pour l'instant, comme S.settings.plan
+   dans app/ (aucun paiement branché) — juste positionnée dès
+   l'inscription pour ne pas avoir à la ressaisir dans app/. */
+function bootstrapHostAccount(uid, plan){
+  return firebase.firestore().collection("accounts").doc(uid).set({
+    settings: {plan: plan},
+    bookings: [], guests: [],
+    createdVia: "sejours-signup",
+    updated: new Date().toISOString()
+  });
+}
 function submitAuthSheet(){
   var email = document.getElementById("auth-email").value.trim();
   var password = document.getElementById("auth-password").value;
@@ -1286,15 +1347,24 @@ function submitAuthSheet(){
   if(typeof firebase==="undefined"){ errEl.textContent = "Connexion indisponible pour le moment — réessayez dans un instant."; return; }
   var btn = document.getElementById("sheet-apply");
   btn.disabled = true;
+  var afterAuth = function(){
+    closeSheet();
+    if(authContext==="host") enterHostMode(); else renderProfile();
+  };
   if(authMode==="signup"){
     var pw2 = document.getElementById("auth-password2").value;
     if(password!==pw2){ errEl.textContent = "Les deux mots de passe ne correspondent pas."; btn.disabled = false; return; }
+    var planToBootstrap = (authContext==="host" && (chosenHostPlan==="essentiel" || chosenHostPlan==="pro")) ? chosenHostPlan : null;
     firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(function(){ closeSheet(); renderProfile(); })
+      .then(function(cred){
+        if(!planToBootstrap) return;
+        return bootstrapHostAccount(cred.user.uid, planToBootstrap);
+      })
+      .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   } else {
     firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(function(){ closeSheet(); renderProfile(); })
+      .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   }
 }
@@ -1580,7 +1650,7 @@ function renderProfile(){
     '</div></div>';
   document.querySelector('[data-switch="voyageur"]').addEventListener("click", function(){ switchTab("explore"); });
   document.getElementById("btn-host-space").addEventListener("click", function(){
-    if(connected) enterHostMode(); else openSheet("auth");
+    if(connected) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
   });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
@@ -1741,7 +1811,19 @@ function renderTabbar(){
    (qui n'a pas de sens ici) — sans toucher au reste de la mécanique
    voyageur (state.tab reste tel quel, on y revient via exitHostMode). */
 function enterHostMode(){
-  if(!authState.uid){ openSheet("auth"); return; }
+  if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
+  /* Jusqu'ici, enterHostMode() n'était atteignable qu'après un clic sur
+     l'onglet Profil, qui masque déjà le hero (voir switchTab). Depuis que
+     "Devenir hôte" peut inscrire puis entrer directement en mode hôte sans
+     jamais passer par un onglet voyageur, il faut le faire ici aussi —
+     sinon le hero (z-index au-dessus de la barre d'onglets) reste affiché
+     par-dessus la nouvelle barre d'onglets hôte, qui devient invisible et
+     inaccessible tant qu'on n'a pas scrollé au moins une fois. */
+  if(!heroDismissed){
+    heroDismissed = true;
+    var heroEl = document.getElementById("hero");
+    if(heroEl) heroEl.hidden = true;
+  }
   state.hostMode = true;
   state.hostTab = "listings";
   state.hostListingId = null;

@@ -6903,18 +6903,18 @@ function renderSettings(){
       <div class="set-card-sub-title">Formule</div>
       <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Le paiement en ligne n'est pas encore actif — ce réglage sert pour l'instant à essayer les deux formules.</div>
       <select class="set-fi" onchange="setPlan(this.value)">
-        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 19 €/mois</option>
-        <option value="pro"${st.plan==='pro'?' selected':''}>Pro — 29 €/mois</option>
+        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 24 €/mois</option>
+        <option value="pro"${st.plan==='pro'?' selected':''}>Avancé — 47 €/mois</option>
       </select>
     </div>`;
   h+=settingsPanel('compte','Compte',accountBody);
 
-  // — Équipe : comptes Personnel à droits limités (formule Pro) — un
+  // — Équipe : comptes Personnel à droits limités (formule Avancé) — un
   // propriétaire seulement, jamais un compte Personnel lui-même.
   if(currentRole==='owner'){
     let teamBody;
     if(st.plan!=='pro'){
-      teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Pro permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
+      teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Avancé permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
     }else{
       teamBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Un compte Staff voit uniquement la Grille, la vue du jour, le Ménage et les Événements — jamais les chiffres, les réglages ni les transactions. 2 comptes inclus, 5 €/mois au-delà.</div>
         <button class="btn-p" style="width:100%" onclick="generateInviteLink()">+ Générer un lien d'invitation</button>
@@ -6970,7 +6970,7 @@ function renderSettings(){
   if(st.plan==='pro'||structsForThr.length<1){
     structBody+=`<button class="set-add" onclick="addStructure()">+ Ajouter une structure</button>`;
   }else{
-    structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro (Réglages → Compte) pour en ajouter d'autres.</div>`;
+    structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Avancé (Réglages → Compte) pour en ajouter d'autres.</div>`;
   }
   h+=settingsPanel('structures','Structures juridiques',structBody);
 
@@ -7512,7 +7512,7 @@ function addStructure(){
   // masqué côté interface dans ce cas — ce garde-fou évite juste un contournement
   // trivial (ex. appel direct de la fonction depuis la console du navigateur).
   if(S.settings.plan!=='pro'&&S.settings.structures.length>=1){
-    alert("La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro pour en ajouter d'autres.");
+    alert("La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Avancé pour en ajouter d'autres.");
     return;
   }
   const n=S.settings.structures.length+1;

@@ -55,9 +55,15 @@ Lecture publique (les photos doivent être visibles par n'importe quel visiteur 
 
 **Sans le forfait Blaze activé ET ces règles collées, l'upload de photos échoue** (à l'activation de Storage, ou à l'écriture selon lequel des deux manque) — non vérifiable depuis l'environnement de développement (accès réseau à Firebase bloqué), donc c'est le premier vrai dépôt d'annonce avec photos qui validera que tout est branché correctement.
 
-#### Paiement
+#### Paiement et choix de formule à l'inscription
 
-Aucun paiement : les 3 formules envisagées (dépôt seul / + Fiftin essentiel / + Fiftin avancé) ne peuvent pas être facturées tant que Stripe n'est pas branché (voir « À faire avant un vrai passage en production » — pas encore fait non plus pour `app/`, la création d'entreprise est en cours). Le dépôt d'annonce est donc gratuit et non genré par formule pour l'instant.
+Aucun paiement réel : Stripe n'est pas branché (voir « À faire avant un vrai passage en production » — pas encore fait non plus pour `app/`, la création d'entreprise est en cours). En revanche, l'architecture des 3 formules existe et est fonctionnelle, purement déclarative en attendant Stripe (comme `S.settings.plan` l'est déjà côté `app/`) :
+
+Sur le parcours hôte de Séjours (Devenir hôte / Espace hôtes, jamais sur l'inscription générale d'un simple voyageur — voir `authContext` dans `sejours/index.html`), l'inscription propose un choix de formule :
+- **Simple annonce** (gratuit) : ne crée rien de plus qu'un compte Firebase Auth. Comportement inchangé, calendrier simplifié en lecture/écriture (`listings/{id}/bookings`).
+- **Gestion simplifiée** (24 €/mois) ou **Gestion avancée** (47 €/mois) : juste après la création du compte Firebase Auth, `sejours/index.html` écrit un tout premier document `accounts/{uid}` avec `settings.plan` déjà positionné (`'essentiel'` ou `'pro'`, mêmes valeurs qu'`app/`) — un `.set()` sur un uid que Firebase Auth vient de générer dans le même appel, donc un document garanti inexistant avant cet instant : aucun risque d'écraser une donnée réelle (voir `bootstrapHostAccount()`). L'hôte bascule alors automatiquement en « compte gestion » (lecture seule sur son calendrier, voir plus bas), même s'il n'a encore jamais ouvert `app/`.
+
+Ce mécanisme ne s'applique qu'à une inscription neuve. Se connecter à un compte existant (le sien, ou celui de quelqu'un d'autre) ne déclenche jamais cette écriture, quelle que soit la formule affichée — aucun chemin de code ne le permet.
 
 ## Comptes et données — architecture définitive
 
