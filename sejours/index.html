@@ -596,7 +596,8 @@ var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
    annonce existante (garder ses photos, en ajouter/en retirer) avec
    exactement le même code que pour une création. */
 var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
-var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[]}]
+var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[], linkedRoomId}]
+var hfAvailableRooms = []; // accounts/{uid}.settings.rooms de l'hôte (compte gestion), lecture seule — pour proposer un lien dès la création d'une chambre
 /* null = dépôt d'une nouvelle annonce ; sinon l'annonce (doc complet, avec
    son id) en cours de modification — submitHostForm() fait un .update()
    sur ce document au lieu d'un .add(). Remis à null par chaque point
@@ -1275,8 +1276,8 @@ function openSheet(kind){
     hfSelectedFiles = (hfEf && hfEf.gallery ? hfEf.gallery : []).map(function(url){ return {type:"existing", url:url}; });
     hfUnits = (hfEf && hfEf.units && hfEf.units.length) ? hfEf.units.map(function(u){
       return {id:u.id, name:u.name||"", price:u.price!=null?String(u.price):"", maxPersons:u.maxPersons!=null?u.maxPersons:2,
-        photos:(u.gallery||[]).map(function(url){ return {type:"existing", url:url}; })};
-    }) : [{id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[]}];
+        photos:(u.gallery||[]).map(function(url){ return {type:"existing", url:url}; }), linkedRoomId:u.linkedRoomId||""};
+    }) : [{id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""}];
   } else if(kind==="hostbooking"){
     var hbCtx = hostBookingContext;
     if(hbCtx.mode==="view"){
@@ -1340,17 +1341,22 @@ function openSheet(kind){
         if(hfSelectedFiles.length>=6){ errEl.textContent = "6 photos maximum."; return; }
         if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
         if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-        hfSelectedFiles.push(file);
+        hfSelectedFiles.push({type:"new", file:file});
       });
       e.target.value = "";
       renderHostPhotoGrid();
     });
     renderHostPhotoGrid();
     document.getElementById("hf-add-unit").addEventListener("click", function(){
-      hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, files:[]});
+      hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
       renderHostUnits();
     });
+    hfAvailableRooms = [];
     renderHostUnits();
+    resolveHostAccount(function(account){
+      hfAvailableRooms = (account && account.settings && account.settings.rooms) || [];
+      if(hfAvailableRooms.length && document.getElementById("hf-units")) renderHostUnits();
+    });
     return;
   } else if(kind==="hostbooking"){
     if(hostBookingContext.mode==="view"){
@@ -1499,6 +1505,10 @@ function renderHostUnits(){
         '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
         '<div class="field-block"><label>Capacité</label><input class="text-input hf-unit-capacity" type="number" min="1" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
       '</div>'+
+      (hfAvailableRooms.length ? '<div class="host-link-row"><label>Relier à une chambre de votre Fiftin app (optionnel)</label><select class="hf-unit-room" data-unit-id="'+u.id+'">'+
+        '<option value="">— Aucun lien —</option>'+
+        hfAvailableRooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===u.linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
+      '</select></div>' : '')+
       '<div class="field-block"><label>Photos de cette chambre</label>'+
         '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
@@ -1517,6 +1527,9 @@ function renderHostUnits(){
   });
   Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-capacity"), function(el){
     el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).maxPersons = el.value; });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-room"), function(el){
+    el.addEventListener("change", function(){ findHfUnit(el.getAttribute("data-unit-id")).linkedRoomId = el.value; });
   });
   Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-remove"), function(el){
     el.addEventListener("click", function(){
@@ -1622,7 +1635,7 @@ function submitHostForm(){
       if(i>=hfUnits.length) return Promise.resolve(doneUnits);
       var u = hfUnits[i];
       return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+u.name.trim()+"…").then(function(unitGallery){
-        doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery});
+        doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery, linkedRoomId:u.linkedRoomId||""});
         return uploadUnit(i+1, doneUnits);
       });
     };
