@@ -7517,6 +7517,7 @@ function roomAddChoiceEntries(){
   listings.forEach(l=>{
     (l.units||[]).forEach(u=>{
       if(linkedIds.has(u.id))return;
+      if(u.linkedRoomId)return; // déjà reliée depuis Séjours (unit.linkedRoomId) -> ne pas la reproposer
       entries.push({listingId:l.id, listingName:l.name||'(sans nom)', unit:u});
     });
   });
@@ -7554,9 +7555,31 @@ function addRoomFromListingUnit(listingId,unitId){
   const max=unit.maxPersons||2;
   const prices=defaultRoomPrices(max);
   if(unit.price) prices[max]=Number(unit.price);
-  S.settings.rooms.push({id:uid(),name:(unit.name||'Chambre '+n).trim()||('Chambre '+n),short:'C'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
+  const newRoomId=uid();
+  S.settings.rooms.push({id:newRoomId,name:(unit.name||'Chambre '+n).trim()||('Chambre '+n),short:'C'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
+  writeBackSejoursLink(listingId,unitId,newRoomId);
+}
+// Referme la boucle du lien créé ci-dessus : écrit unit.linkedRoomId sur
+// l'annonce Séjours d'origine, pour que son calendrier (Espace hôtes,
+// côté Séjours) affiche directement les réservations de cette chambre app
+// sans étape manuelle supplémentaire — avant ce correctif, seul le côté
+// app savait que les deux chambres étaient reliées (linkedListingId/
+// linkedUnitId), le calendrier Séjours restait "non relié". Seul champ
+// touché (le tableau units réécrit en entier, comme le fait déjà Séjours
+// lui-même pour ce même champ) ; jamais status/ownerUid/createdAt, et
+// jamais accounts/{uid} bien sûr. Best-effort : un échec (annonce
+// supprimée entre-temps, etc.) ne doit pas remettre en cause la chambre
+// déjà créée côté app — pas de blocage ni de message d'erreur ici.
+function writeBackSejoursLink(listingId,unitId,roomId){
+  if(!db) return;
+  db.collection('listings').doc(listingId).get().then(doc=>{
+    if(!doc.exists) return;
+    const data=doc.data();
+    const units=(data.units||[]).map(u=>u.id===unitId?Object.assign({},u,{linkedRoomId:roomId}):u);
+    return db.collection('listings').doc(listingId).update({units});
+  }).catch(err=>console.error('[sejours-link] échec de l\'écriture retour',err));
 }
 function delRoom(id){
   if(!confirm('Supprimer cette chambre ? Les réservations associées ne seront pas supprimées.'))return;

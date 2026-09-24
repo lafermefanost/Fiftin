@@ -431,13 +431,23 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .host-link-row{margin-bottom:18px;}
 .host-link-row label{display:block; font-size:12px; font-weight:700; color:var(--sauge); margin-bottom:6px;}
 .host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
-.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin-bottom:14px;}
+.cal-top-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;}
+.cal-top-actions{display:flex; align-items:center; gap:8px;}
+.cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:20px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
+.cal-add-pill{background:var(--yellow); border:none; border-radius:20px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
+.cal-unit-pager{text-align:center; margin-bottom:18px;}
+.cal-unit-pager-count{font-size:11px; font-weight:700; color:var(--sauge); display:block; margin-bottom:2px;}
+.cal-unit-pager-row{display:flex; align-items:center; justify-content:center; gap:14px;}
+.cal-unit-pager-row button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px; flex-shrink:0;}
+.cal-unit-pager-row button svg{width:20px; height:20px;}
+.cal-unit-pager-name{font-size:22px; font-weight:800; letter-spacing:-0.01em;}
+.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin:0;}
 .cal-year-nav button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px;}
 .cal-year-nav button svg{width:20px; height:20px;}
 .cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
 .cal-year-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px;}
 .cal-mini{background:var(--cream-deep); border-radius:14px; padding:8px;}
-.cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:capitalize; color:var(--ink);}
+.cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink);}
 .cal-mini-grid{display:grid; grid-template-columns:16px repeat(7,1fr); gap:1px;}
 .cal-mini-wn{font-size:7px; color:var(--gray-mid); display:flex; align-items:center; justify-content:center;}
 .cal-mini-dow{font-size:8px; font-weight:800; color:var(--sauge); text-align:center; padding-bottom:2px;}
@@ -2692,6 +2702,18 @@ function renderHostCalendar(){
   });
 }
 
+/* Mise en page reprise de la vue "Location" de Fiftin app (grille de mois
+   par 2 avec numéros de semaine — déjà le cas ici — + pagination "n/total"
+   d'une chambre à l'autre + rangée Année/Aujourd'hui/action en haut) : même
+   structure, mais identité visuelle et couleurs Séjours inchangées (sauge/
+   crème, un seul vert sauge pour "occupé" — Séjours reste en lecture seule,
+   pas un outil de gestion multi-sources comme app/). */
+function scrollToCurrentMonthCal(){
+  var now = new Date();
+  var monthEls = document.querySelectorAll(".cal-mini");
+  if(monthEls[now.getMonth()]) monthEls[now.getMonth()].scrollIntoView({block:"center", behavior:"smooth"});
+}
+
 function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings){
   var feed = document.getElementById("feed");
   var units = listing.units || [];
@@ -2707,10 +2729,17 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
       listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
     '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
 
-  var unitSwitchHtml = units.length>1 ?
-    '<div class="host-link-row"><label>Chambre</label><select id="host-unit-select">'+
-      units.map(function(u){ return '<option value="'+esc(u.id)+'"'+(u.id===unit.id?' selected':'')+'>'+esc(u.name||"(sans nom)")+'</option>'; }).join("")+
-    '</select></div>' : '';
+  var unitIndex = units.findIndex(function(u){ return u.id===unit.id; });
+  var unitPagerHtml = units.length>1 ?
+    '<div class="cal-unit-pager">'+
+      '<span class="cal-unit-pager-count">'+(unitIndex+1)+' / '+units.length+'</span>'+
+      '<div class="cal-unit-pager-row">'+
+        '<button type="button" id="cal-unit-prev" aria-label="Chambre précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
+        '<b class="cal-unit-pager-name">'+esc(unit.name||"(sans nom)")+'</b>'+
+        '<button type="button" id="cal-unit-next" aria-label="Chambre suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+      '</div>'+
+    '</div>' :
+    '<b class="cal-unit-pager-name" style="display:block;text-align:center;margin:0 0 18px;">'+esc(unit.name||"(sans nom)")+'</b>';
 
   var roomLinkHtml = (isGestion && rooms.length) ?
     '<div class="host-link-row"><label>Afficher les réservations de</label><select id="host-room-link">'+
@@ -2718,22 +2747,27 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
       rooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
     '</select></div>' : '';
 
-  var actionHtml = isGestion
-    ? '<a class="host-app-link" href="../app/" target="_blank" rel="noopener" style="margin-bottom:16px;">Ajouter ou modifier une réservation dans Fiftin app →</a>'
-    : '<button type="button" class="btn-apply" id="cal-add-btn" style="margin-bottom:16px;">+ Réservation</button>';
+  var actionPillHtml = isGestion
+    ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier →</a>'
+    : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
   feed.innerHTML = '<div class="host-view">'+
     '<div class="host-view-head">'+listingSwitchHtml+
       '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
     '</div>'+
-    unitSwitchHtml+
-    roomLinkHtml+
-    '<div class="cal-year-nav">'+
-      '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
-      '<b>'+year+'</b>'+
-      '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+    '<div class="cal-top-row">'+
+      '<div class="cal-year-nav">'+
+        '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
+        '<b>'+year+'</b>'+
+        '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+      '</div>'+
+      '<div class="cal-top-actions">'+
+        '<button type="button" class="cal-today-btn" id="cal-today-btn">Aujourd\'hui</button>'+
+        actionPillHtml+
+      '</div>'+
     '</div>'+
-    actionHtml+
+    unitPagerHtml+
+    roomLinkHtml+
     '<div class="cal-year-grid">'+months+'</div>'+
   '</div>';
 
@@ -2745,8 +2779,14 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     });
   }
   if(units.length>1){
-    document.getElementById("host-unit-select").addEventListener("change", function(e){
-      state.hostUnitId = e.target.value;
+    document.getElementById("cal-unit-prev").addEventListener("click", function(){
+      var idx = units.findIndex(function(u){ return u.id===unit.id; });
+      state.hostUnitId = units[(idx-1+units.length)%units.length].id;
+      renderHostCalendar();
+    });
+    document.getElementById("cal-unit-next").addEventListener("click", function(){
+      var idx = units.findIndex(function(u){ return u.id===unit.id; });
+      state.hostUnitId = units[(idx+1)%units.length].id;
       renderHostCalendar();
     });
   }
@@ -2769,6 +2809,16 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   }
   document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
   document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-today-btn").addEventListener("click", function(){
+    var currentYear = (new Date()).getFullYear();
+    if(state.hostCalYear!==currentYear){
+      state.hostCalYear = currentYear;
+      renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
+      setTimeout(scrollToCurrentMonthCal, 60);
+    } else {
+      scrollToCurrentMonthCal();
+    }
+  });
   var addBtn = document.getElementById("cal-add-btn");
   if(addBtn) addBtn.addEventListener("click", function(){
     hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:null};
