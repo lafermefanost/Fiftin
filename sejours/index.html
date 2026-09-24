@@ -243,6 +243,13 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .hf-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
 .hf-photo-remove{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(20,26,20,.65);
   color:#fff; border:none; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center;}
+.hf-unit-card{background:var(--cream-deep); border-radius:16px; padding:14px; margin-bottom:12px;}
+.hf-unit-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
+.hf-unit-head span{font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-transform:uppercase; letter-spacing:.02em;}
+.hf-unit-remove{background:none; border:none; color:var(--danger); font-size:20px; line-height:1; padding:2px 4px;}
+.hf-unit-card .field-block{margin-bottom:14px;}
+.field-block-row{display:flex; gap:10px;}
+.field-block-row .field-block{flex:1;}
 .btn-apply{width:100%; background:var(--sauge-deep); color:var(--cream); padding:15px; border-radius:16px; font-weight:700; font-size:14.5px; border:none;}
 
 /* ---------- detail sheet ---------- */
@@ -273,6 +280,13 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-bottom:26px;}
 .amenity-list li{list-style:none; display:flex; align-items:center; gap:8px; font-size:13.5px;}
 .amenity-list svg{width:16px; height:16px; color:var(--sauge); flex-shrink:0;}
+.unit-list{display:flex; flex-direction:column; gap:10px; margin-bottom:26px;}
+.unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden;}
+.unit-thumb{width:56px; height:56px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--line);}
+.unit-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.unit-thumb-empty{width:100%; height:100%; background:var(--line);}
+.unit-info b{display:block; font-size:14px;}
+.unit-info span{font-size:12px; color:var(--sauge); font-weight:600;}
 .host-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:18px; padding:14px; margin-bottom:26px;}
 .host-avatar{width:46px; height:46px; border-radius:50%; background:var(--lavender); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:17px; flex-shrink:0;}
@@ -541,6 +555,15 @@ var MOTIFS = {
    au-delà de quelques dizaines d'annonces, les avoir dans le HTML alourdirait
    le chargement initial de la page pour tout le monde, même hors saison. */
 var LISTINGS = [];
+/* LISTINGS est reconstruit à partir de deux sources chargées en parallèle
+   et indépendamment (listings.json + Firestore, voir fetchPublishedListings) :
+   on les garde dans des tableaux séparés et on ne fait jamais LISTINGS=x
+   directement, sinon la source la plus lente à répondre écrase celle déjà
+   arrivée (arrivait réellement : le fetch Firestore peut répondre avant
+   listings.json et se faire effacer par lui juste après). */
+var staticListings = [];
+var hostFirestoreListings = [];
+function rebuildListings(){ LISTINGS = staticListings.concat(hostFirestoreListings); }
 
 /* ---------------- comptes Fiftin (même Firebase que app/) ----------------
    Même config, même mécanisme de connexion (email + mot de passe) que
@@ -567,7 +590,9 @@ var authMode = "signin";
    compte n'a aucune raison de voir des formules d'hébergeur. */
 var authContext = "traveler";
 var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
-var hfSelectedFiles = [];
+var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
+var hfUnits = []; // chambres du formulaire de dépôt en cours : [{id, name, price, maxPersons, files:[]}]
+function newHfUnitId(){ return "u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
 /* Comptes autorisés à valider/refuser les annonces déposées (onglet
    Profil → Annonces à valider) : les deux comptes de César, confirmés
@@ -661,12 +686,20 @@ function signOutUser(){
 function normalizeHostListing(doc){
   var l = doc.data();
   var gallery = l.gallery && l.gallery.length ? l.gallery : null;
+  var units = l.units || null;
+  /* "price" reste un nombre unique pour tout le code existant (filtre,
+     tri, badge de la carte) : pour une annonce à plusieurs chambres,
+     c'est le prix de la moins chère ("à partir de"). Les annonces
+     statiques de listings.json n'ont pas de units — elles gardent leur
+     prix unique tel quel. */
+  var price = units && units.length ? Math.min.apply(null, units.map(function(u){ return u.price; })) : l.price;
   return {
     id: idFromString(doc.id),
     name: l.name, region: l.region, claim: l.claim,
-    price: l.price, distance: (typeof l.distance==="number") ? l.distance : 0,
+    price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
     grad: "clay", motif: "roof",
     gallery: gallery,
+    units: units,
     amen: l.amen || [],
     desc: l.desc,
     host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
@@ -679,7 +712,8 @@ function fetchPublishedListings(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     firebase.firestore().collection("listings").where("status","==","published").get().then(function(snap){
       if(snap.empty) return;
-      LISTINGS = LISTINGS.concat(snap.docs.map(normalizeHostListing));
+      hostFirestoreListings = snap.docs.map(normalizeHostListing);
+      rebuildListings();
       if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
       if(state.tab==="map") renderMap();
     }).catch(function(err){
@@ -710,7 +744,7 @@ var AMEN_ICONS = {
 
 /* ---------------- state ---------------- */
 var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
-  hostMode:false, hostTab:"listings", hostListingId:null, hostCalYear:(new Date()).getFullYear()};
+  hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear()};
 var heroDismissed = false;
 /* Espace hôtes : annonces du compte connecté + son compte Fiftin app (pour
    le lien calendrier), mis en cache le temps de la session hôte. undefined
@@ -728,6 +762,23 @@ try{
 function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked})); }catch(e){} }
 
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+/* Utilitaires partagés annonces à plusieurs chambres (units) — utilisés
+   côté admin (file d'attente) et côté hôte ("Mes annonces"), là où on lit
+   directement le document Firestore brut plutôt que l'objet normalisé de
+   normalizeHostListing(). */
+function listingCoverUrl(l){
+  if(l.gallery && l.gallery[0]) return l.gallery[0];
+  if(l.units) for(var i=0;i<l.units.length;i++){ if(l.units[i].gallery && l.units[i].gallery[0]) return l.units[i].gallery[0]; }
+  return null;
+}
+function listingPriceLabel(l){
+  if(l.units && l.units.length){
+    var min = Math.min.apply(null, l.units.map(function(u){ return u.price; }));
+    return (l.units.length>1 ? "à partir de " : "") + min + "€/nuit";
+  }
+  return (l.price!=null ? l.price : "?") + "€/nuit";
+}
 
 function filteredListings(){
   var f = state.filters;
@@ -809,7 +860,10 @@ function renderResultLine(){
 
 /* ---------------- render: feed ---------------- */
 function coverHtml(l){
-  var shots = l.gallery ? l.gallery.slice(0,3) : null;
+  var fallbackShots = (!l.gallery || !l.gallery.length) && l.units ?
+    l.units.reduce(function(acc,u){ return acc.concat(u.gallery||[]); }, []) : null;
+  var shots = l.gallery && l.gallery.length ? l.gallery.slice(0,3) : (fallbackShots && fallbackShots.length ? fallbackShots.slice(0,3) : null);
+  var priceLabel = (l.units && l.units.length>1 ? "à partir de " : "") + l.price + "€ / nuit";
   var mediaHtml;
   if(shots){
     mediaHtml = '<div class="cover-carousel" data-cc="'+l.id+'">'+
@@ -824,7 +878,7 @@ function coverHtml(l){
     mediaHtml+
     '<div class="grain"></div>'+
     '<div class="scrim"></div>'+
-    '<div class="top-badges"><span class="pill-badge">'+l.distance+' km</span><span class="pill-badge">'+l.price+'€ / nuit</span></div>'+
+    '<div class="top-badges"><span class="pill-badge">'+l.distance+' km</span><span class="pill-badge">'+priceLabel+'</span></div>'+
     '<button class="save-btn'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'" aria-label="Enregistrer">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<div class="cover-info">'+
@@ -1045,6 +1099,14 @@ function wireQuickReq(id, uid){
   update();
 }
 
+function unitCardHtml(u){
+  var img = (u.gallery && u.gallery[0]) ? '<img src="'+u.gallery[0]+'" alt="'+esc(u.name)+'" loading="lazy">' : '<div class="unit-thumb-empty"></div>';
+  return '<div class="unit-card">'+
+    '<div class="unit-thumb">'+img+'</div>'+
+    '<div class="unit-info"><b>'+esc(u.name)+'</b><span>'+u.price+' € / nuit · '+u.maxPersons+' voyageur'+(u.maxPersons>1?'s':'')+' max</span></div>'+
+  '</div>';
+}
+
 /* ---------------- detail sheet ---------------- */
 function openDetail(id){
   var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
@@ -1073,7 +1135,7 @@ function openDetail(id){
       '<div class="region">'+esc(l.region)+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
-      '<div class="meta-row"><div class="meta-item"><b>'+l.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div>'+
+      '<div class="meta-row"><div class="meta-item"><b>'+(l.units && l.units.length>1 ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div>'+
       (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
         '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
         '<span>Voir les avis sur Google</span>'+
@@ -1082,6 +1144,7 @@ function openDetail(id){
       '<p class="desc">'+esc(l.desc)+'</p>'+
       '<div class="section-title">Prestations</div>'+
       '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul>'+
+      (l.units && l.units.length ? '<div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u); }).join("")+'</div>' : '')+
       '<div class="section-title">Créneaux libres (aperçu)</div>'+
       '<div class="avail-row">'+l.avail.map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div>'+
       '<div class="section-title" style="margin-top:18px;">Votre hôte</div>'+
@@ -1174,25 +1237,29 @@ function openSheet(kind){
   } else if(kind==="hostform"){
     inner = '<h3>Déposer une annonce</h3>'+
       '<p class="sheet-sub">Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.</p>'+
-      '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. Le Petit Fanost"></div>'+
+      '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost"></div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim"></div>'+
       '<div class="field-block"><label>Localisation</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous"></div>'+
       '<div class="field-block"><label>Distance depuis la Ferme Fanost (km)</label><input class="text-input" type="number" min="0" id="hf-distance"></div>'+
-      '<div class="field-block"><label>Prix par nuit (€)</label><input class="text-input" type="number" min="1" id="hf-price"></div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4"></textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…"></div>'+
-      '<div class="field-block"><label>Prestations</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
+      '<div class="field-block"><label>Prestations (communes au logement)</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
         return '<button type="button" class="amenity-chip" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
       }).join("")+'</div></div>'+
-      '<div class="field-block"><label>Photos (6 maximum, 8 Mo par photo)</label>'+
+      '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
         '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
         '<div class="hf-photo-grid" id="hf-photo-grid"></div>'+
       '</div>'+
+      '<div class="field-block"><label>Chambres — chacune avec son prix, sa capacité et ses photos</label>'+
+        '<div id="hf-units"></div>'+
+        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une chambre</button>'+
+      '</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     hfSelectedFiles = [];
+    hfUnits = [{id:newHfUnitId(), name:"", price:"", maxPersons:2, files:[]}];
   } else if(kind==="hostbooking"){
     var hbCtx = hostBookingContext;
     if(hbCtx.mode==="view"){
@@ -1262,6 +1329,11 @@ function openSheet(kind){
       renderHostPhotoGrid();
     });
     renderHostPhotoGrid();
+    document.getElementById("hf-add-unit").addEventListener("click", function(){
+      hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, files:[]});
+      renderHostUnits();
+    });
+    renderHostUnits();
     return;
   } else if(kind==="hostbooking"){
     if(hostBookingContext.mode==="view"){
@@ -1390,15 +1462,98 @@ function renderHostPhotoGrid(){
   });
 }
 
-function uploadHostPhotos(uid){
+function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
+
+/* Une carte par chambre du formulaire de dépôt, reconstruite entièrement
+   à chaque ajout/retrait de chambre ; les champs texte mettent à jour
+   hfUnits directement sur "input" (pas de re-rendu de toute la liste à
+   chaque frappe, sinon le focus/curseur saute). Seule la grille de
+   photos d'une chambre se re-rend isolément (renderHostUnitPhotoGrid). */
+function renderHostUnits(){
+  var wrap = document.getElementById("hf-units");
+  if(!wrap) return;
+  wrap.innerHTML = hfUnits.map(function(u, i){
+    return '<div class="hf-unit-card" data-unit-id="'+u.id+'">'+
+      '<div class="hf-unit-head"><span>Chambre '+(i+1)+'</span>'+
+        (hfUnits.length>1 ? '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette chambre">&times;</button>' : '')+
+      '</div>'+
+      '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Chambre Bleue"></div>'+
+      '<div class="field-block-row">'+
+        '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
+        '<div class="field-block"><label>Capacité</label><input class="text-input hf-unit-capacity" type="number" min="1" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
+      '</div>'+
+      '<div class="field-block"><label>Photos de cette chambre</label>'+
+        '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
+        '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
+        '<div class="hf-photo-grid hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+
+  hfUnits.forEach(function(u){ renderHostUnitPhotoGrid(u.id); });
+
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-name"), function(el){
+    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).name = el.value; });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-price"), function(el){
+    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).price = el.value; });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-capacity"), function(el){
+    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).maxPersons = el.value; });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-remove"), function(el){
+    el.addEventListener("click", function(){
+      var unitId = el.getAttribute("data-unit-id");
+      hfUnits = hfUnits.filter(function(u){ return u.id!==unitId; });
+      renderHostUnits();
+    });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-photos-btn"), function(el){
+    el.addEventListener("click", function(){
+      wrap.querySelector('.hf-unit-photos-input[data-unit-id="'+el.getAttribute("data-unit-id")+'"]').click();
+    });
+  });
+  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-photos-input"), function(el){
+    el.addEventListener("change", function(e){
+      var unitId = el.getAttribute("data-unit-id");
+      var unit = findHfUnit(unitId);
+      var errEl = document.getElementById("hf-err");
+      errEl.textContent = "";
+      Array.prototype.forEach.call(e.target.files, function(file){
+        if(unit.files.length>=6){ errEl.textContent = "6 photos maximum par chambre."; return; }
+        if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
+        if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
+        unit.files.push(file);
+      });
+      e.target.value = "";
+      renderHostUnitPhotoGrid(unitId);
+    });
+  });
+}
+function renderHostUnitPhotoGrid(unitId){
+  var grid = document.querySelector('.hf-unit-photo-grid[data-unit-id="'+unitId+'"]');
+  if(!grid) return;
+  var unit = findHfUnit(unitId);
+  grid.innerHTML = unit.files.map(function(file, i){
+    return '<div class="hf-photo-thumb"><img src="'+URL.createObjectURL(file)+'" alt=""><button type="button" class="hf-photo-remove" data-i="'+i+'">&times;</button></div>';
+  }).join("");
+  Array.prototype.forEach.call(grid.querySelectorAll(".hf-photo-remove"), function(el){
+    el.addEventListener("click", function(){
+      unit.files.splice(Number(el.getAttribute("data-i")), 1);
+      renderHostUnitPhotoGrid(unitId);
+    });
+  });
+}
+
+function uploadPhotoFiles(files, uid, pathPrefix, progressLabel){
   var btn = document.getElementById("sheet-apply");
-  if(!hfSelectedFiles.length) return Promise.resolve([]);
+  if(!files.length) return Promise.resolve([]);
   var urls = [];
   var uploadOne = function(i){
-    if(i>=hfSelectedFiles.length) return Promise.resolve();
-    btn.textContent = "Envoi des photos… ("+(i+1)+"/"+hfSelectedFiles.length+")";
-    var file = hfSelectedFiles[i];
-    var path = "listings/"+uid+"/"+Date.now()+"-"+i+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    if(i>=files.length) return Promise.resolve();
+    btn.textContent = progressLabel+" ("+(i+1)+"/"+files.length+")";
+    var file = files[i];
+    var path = "listings/"+uid+"/"+pathPrefix+"-"+Date.now()+"-"+i+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
     var ref = firebase.storage().ref().child(path);
     return ref.put(file).then(function(snap){ return snap.ref.getDownloadURL(); }).then(function(url){
       urls.push(url);
@@ -1413,26 +1568,44 @@ function submitHostForm(){
   var hostName = document.getElementById("hf-hostname").value.trim();
   var region = document.getElementById("hf-region").value.trim();
   var distance = Number(document.getElementById("hf-distance").value);
-  var price = Number(document.getElementById("hf-price").value);
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
   var phone = document.getElementById("hf-phone").value.trim();
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !hostName || !region || !price || isNaN(distance) || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !hostName || !region || isNaN(distance) || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
+  for(var i=0;i<hfUnits.length;i++){
+    var u = hfUnits[i];
+    if(!u.name.trim() || !u.price || Number(u.price)<=0 || !u.maxPersons || Number(u.maxPersons)<=0){
+      errEl.textContent = "Chaque chambre a besoin d'un nom, d'un prix et d'une capacité.";
+      return;
+    }
+  }
   if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
   var btn = document.getElementById("sheet-apply");
   var originalLabel = btn.textContent;
   btn.disabled = true;
-  uploadHostPhotos(authState.uid).then(function(gallery){
-    btn.textContent = "Envoi de l'annonce…";
-    return firebase.firestore().collection("listings").add({
-      name:name, hostName:hostName, region:region, distance:distance, price:price, claim:claim, desc:desc, phone:phone, amen:amen,
-      gallery:gallery,
-      ownerUid:authState.uid, ownerEmail:authState.email,
-      status:"pending",
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
+  uploadPhotoFiles(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(gallery){
+    var uploadUnit = function(i, doneUnits){
+      if(i>=hfUnits.length) return Promise.resolve(doneUnits);
+      var u = hfUnits[i];
+      return uploadPhotoFiles(u.files, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+u.name.trim()+"…").then(function(unitGallery){
+        doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery});
+        return uploadUnit(i+1, doneUnits);
+      });
+    };
+    return uploadUnit(0, []).then(function(units){
+      btn.textContent = "Envoi de l'annonce…";
+      return firebase.firestore().collection("listings").add({
+        name:name, hostName:hostName, region:region, distance:distance, claim:claim, desc:desc, phone:phone, amen:amen,
+        gallery:gallery,
+        units:units,
+        ownerUid:authState.uid, ownerEmail:authState.email,
+        status:"pending",
+        createdAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
     });
   }).then(function(){
     var root = document.getElementById("sheet-root");
@@ -1675,13 +1848,14 @@ function renderAdminQueue(){
     if(snap.empty){ list.innerHTML = '<p class="sheet-sub">Aucune annonce en attente pour le moment.</p>'; return; }
     list.innerHTML = snap.docs.map(function(doc){
       var l = doc.data();
-      var cover = (l.gallery && l.gallery[0])
-        ? '<img class="admin-thumb" src="'+l.gallery[0]+'" alt="">'
+      var coverUrl = listingCoverUrl(l);
+      var cover = coverUrl
+        ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">'
         : '<div class="admin-thumb admin-thumb-empty"></div>';
       return '<div class="admin-card">'+cover+
         '<div class="admin-card-body">'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-          '<span>'+esc(l.region||"")+' · '+(l.price!=null?l.price:"?")+'€/nuit · '+(l.distance!=null?l.distance:"?")+' km</span>'+
+          '<span>'+esc(l.region||"")+' · '+listingPriceLabel(l)+' · '+(l.distance!=null?l.distance:"?")+' km'+(l.units?' · '+l.units.length+' chambre'+(l.units.length>1?'s':''):'')+'</span>'+
           '<span class="admin-owner">Déposée par '+esc(l.hostName||"")+' — '+esc(l.ownerEmail||"")+'</span>'+
           '<div class="admin-actions">'+
             '<button type="button" class="btn-apply admin-approve" data-id="'+doc.id+'">Publier</button>'+
@@ -1827,6 +2001,7 @@ function enterHostMode(){
   state.hostMode = true;
   state.hostTab = "listings";
   state.hostListingId = null;
+  state.hostUnitId = null;
   hostListingsCache = [];
   hostAccountCache = undefined;
   document.getElementById("filter-bar").hidden = true;
@@ -1898,18 +2073,21 @@ function renderHostListings(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-cal]"), function(btn){
       btn.addEventListener("click", function(){
         state.hostListingId = btn.getAttribute("data-host-cal");
+        state.hostUnitId = null;
         switchHostTab("calendar");
       });
     });
   });
 }
 function hostListingCardHtml(l){
-  var cover = (l.gallery && l.gallery[0]) ? '<img class="admin-thumb" src="'+l.gallery[0]+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
+  var coverUrl = listingCoverUrl(l);
+  var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
   var statusLabel = l.status==="published" ? "Publiée" : "En attente de validation";
   return '<div class="admin-card">'+cover+
     '<div class="admin-card-body">'+
       '<b>'+esc(l.name||"(sans nom)")+'</b>'+
       '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
+      (l.units ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '')+
       '<div class="admin-actions"><button type="button" class="btn-apply" data-host-cal="'+esc(l.id)+'">Voir le calendrier</button></div>'+
     '</div>'+
   '</div>';
@@ -1998,12 +2176,12 @@ function monthMiniHtml(year, monthIdx, occMap, todayStr){
      app. Aucune écriture dans accounts/{uid} n'existe nulle part dans ce
      fichier : c'est une garantie structurelle, pas une précaution au cas
      par cas. */
-function fetchHostBookings(listing, isGestion, linkedRoomId, account, cb){
+function fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, cb){
   if(isGestion){
     var all = (account && account.bookings) || [];
     cb(linkedRoomId ? all.filter(function(b){ return b.roomId===linkedRoomId; }) : []);
   } else {
-    firebase.firestore().collection("listings").doc(listing.id).collection("bookings").get().then(function(snap){
+    firebase.firestore().collection("listings").doc(listing.id).collection("bookings").where("unitId","==",unit.id).get().then(function(snap){
       cb(snap.docs.map(function(doc){ var d = doc.data(); d.id = doc.id; return d; }));
     }).catch(function(){ cb([]); });
   }
@@ -2019,20 +2197,30 @@ function renderHostCalendar(){
       state.hostListingId = listings[0].id;
     }
     var listing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
+    var units = listing.units || [];
+    if(!units.length){
+      feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Cette annonce n\'a pas encore de chambre. Modifiez-la pour en ajouter au moins une.</p></div>';
+      return;
+    }
+    if(!state.hostUnitId || !units.some(function(u){ return u.id===state.hostUnitId; })){
+      state.hostUnitId = units[0].id;
+    }
+    var unit = units.filter(function(u){ return u.id===state.hostUnitId; })[0];
     resolveHostAccount(function(account){
       var isGestion = !!account;
       var rooms = (account && account.settings && account.settings.rooms) || [];
-      var linkedRoomId = listing.linkedRoomId || "";
-      fetchHostBookings(listing, isGestion, linkedRoomId, account, function(bookings){
+      var linkedRoomId = unit.linkedRoomId || "";
+      fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, function(bookings){
         if(state.hostTab!=="calendar") return;
-        renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings);
+        renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
       });
     });
   });
 }
 
-function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings){
+function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings){
   var feed = document.getElementById("feed");
+  var units = listing.units || [];
   var occ = occupiedDatesFromBookings(bookings);
   var year = state.hostCalYear;
   var now = new Date();
@@ -2045,9 +2233,14 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestio
       listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
     '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
 
+  var unitSwitchHtml = units.length>1 ?
+    '<div class="host-link-row"><label>Chambre</label><select id="host-unit-select">'+
+      units.map(function(u){ return '<option value="'+esc(u.id)+'"'+(u.id===unit.id?' selected':'')+'>'+esc(u.name||"(sans nom)")+'</option>'; }).join("")+
+    '</select></div>' : '';
+
   var roomLinkHtml = (isGestion && rooms.length) ?
     '<div class="host-link-row"><label>Afficher les réservations de</label><select id="host-room-link">'+
-      '<option value="">— Choisir une chambre —</option>'+
+      '<option value="">— Choisir une chambre Fiftin app —</option>'+
       rooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
     '</select></div>' : '';
 
@@ -2059,6 +2252,7 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestio
     '<div class="host-view-head">'+listingSwitchHtml+
       '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
     '</div>'+
+    unitSwitchHtml+
     roomLinkHtml+
     '<div class="cal-year-nav">'+
       '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
@@ -2072,6 +2266,13 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestio
   if(listings.length>1){
     document.getElementById("host-listing-select").addEventListener("change", function(e){
       state.hostListingId = e.target.value;
+      state.hostUnitId = null;
+      renderHostCalendar();
+    });
+  }
+  if(units.length>1){
+    document.getElementById("host-unit-select").addEventListener("change", function(e){
+      state.hostUnitId = e.target.value;
       renderHostCalendar();
     });
   }
@@ -2080,19 +2281,23 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestio
       var newRoomId = e.target.value;
       var sel = e.target;
       sel.disabled = true;
-      /* linkedRoomId ne sert plus qu'à choisir QUOI afficher en lecture
-         seule — jamais un chemin d'écriture, voir commentaire plus haut. */
-      firebase.firestore().collection("listings").doc(listing.id).update({linkedRoomId:newRoomId}).then(function(){
-        listing.linkedRoomId = newRoomId;
+      /* linkedRoomId (sur la chambre, dans le tableau units) ne sert qu'à
+         choisir QUOI afficher en lecture seule — jamais un chemin
+         d'écriture, voir commentaire plus haut. On réécrit tout le
+         tableau units (Firestore ne permet pas de modifier un seul élément
+         d'un array par index), jamais accounts/{uid}. */
+      var newUnits = units.map(function(u){ return u.id===unit.id ? Object.assign({}, u, {linkedRoomId:newRoomId}) : u; });
+      firebase.firestore().collection("listings").doc(listing.id).update({units:newUnits}).then(function(){
+        listing.units = newUnits;
         renderHostCalendar();
       }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); sel.disabled = false; });
     });
   }
-  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings); });
-  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
   var addBtn = document.getElementById("cal-add-btn");
   if(addBtn) addBtn.addEventListener("click", function(){
-    hostBookingContext = {mode:"add", listing:listing, isGestion:false, date:null};
+    hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:null};
     openSheet("hostbooking");
   });
   Array.prototype.forEach.call(feed.querySelectorAll(".cal-mini-day[data-date]"), function(el){
@@ -2101,9 +2306,9 @@ function renderHostCalendarBody(listings, listing, rooms, linkedRoomId, isGestio
     if(isGestion && !occBooking) return; /* rien à afficher, rien à ajouter depuis ici */
     el.addEventListener("click", function(){
       if(occBooking){
-        hostBookingContext = {mode:"view", listing:listing, isGestion:isGestion, booking:occBooking};
+        hostBookingContext = {mode:"view", listing:listing, unit:unit, isGestion:isGestion, booking:occBooking};
       } else {
-        hostBookingContext = {mode:"add", listing:listing, isGestion:false, date:ds};
+        hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:ds};
       }
       openSheet("hostbooking");
     });
@@ -2126,7 +2331,7 @@ function submitAddBooking(){
   /* Toujours listings/{id}/bookings, jamais accounts/{uid} — voir le
      commentaire au-dessus de fetchHostBookings. */
   firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").add({
-    name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
+    unitId:ctx.unit.id, name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     closeSheet();
     renderHostCalendar();
@@ -2157,7 +2362,8 @@ fetch("listings.json").then(function(r){
   if(!r.ok) throw new Error("HTTP "+r.status);
   return r.json();
 }).then(function(data){
-  LISTINGS = data;
+  staticListings = data;
+  rebuildListings();
   state.loading = false;
   renderFilterBar(); renderFeed(); renderResultLine();
   if(state.tab==="map") renderMap();
