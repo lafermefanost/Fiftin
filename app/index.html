@@ -2255,6 +2255,24 @@ Gardez la main.</div>
   </div>
 </div>
 
+<!-- ─── NOUVELLE CHAMBRE : proposer de reprendre une chambre Fiftin Séjours ───
+     Ouvert par addRoom() (depuis le panneau Chambres, donc modalSettings déjà
+     affiché) uniquement s'il existe des chambres Séjours pas encore reprises
+     (roomAddChoiceEntries) ; sinon addRoom() crée directement une chambre
+     vierge, comportement inchangé. Placé APRÈS modalSettings dans le
+     document : tous les .overlay partagent le même z-index (empilement par
+     ordre du DOM, voir CSS), donc ce modal doit venir après pour s'afficher
+     au-dessus de celui des Paramètres plutôt que dessous. -->
+<div class="overlay" id="modalRoomAdd" style="display:none" onclick="ovClose(event,'modalRoomAdd')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Nouvelle chambre</div>
+      <button class="mclose" onclick="closeM('modalRoomAdd')">✕</button>
+    </div>
+    <div id="roomAddBody"></div>
+  </div>
+</div>
+
 <!-- ─── RANGE BAR ──────────────────────────────────────────────────── -->
 <div id="rangeBar">
   <span id="rangeLabel"></span>
@@ -6799,6 +6817,7 @@ function openSettings(){
   settingsPanelOpen={};
   renderSettings();
   openM('modalSettings');
+  prefetchSejoursListings();
 }
 // Accordéon : ouvrir une section referme celle qui était ouverte — plus
 // facile à lire qu'avoir plusieurs volets dépliés en même temps.
@@ -7440,11 +7459,76 @@ function updateContractField(field,val){
   saveSettings();
 }
 
+// Lien Fiftin Séjours → app (lecture seule) : à la création d'une chambre,
+// propose de reprendre le nom/capacité/prix d'une chambre déjà déposée sur
+// Séjours plutôt que de repartir d'une chambre vierge. Uniquement une
+// lecture de listings/{id} (même règle Firestore que tout propriétaire lisant
+// sa propre annonce, pending ou publiée) — aucune écriture dans ce sens, et
+// le chemin d'écriture des chambres (saveSettings→pushToFirebase, déjà en
+// place) n'est pas touché : addRoomBlank() et addRoomFromListingUnit()
+// poussent toutes deux dans S.settings.rooms exactement comme avant.
+let sejoursListingsCache; // undefined = pas encore chargé, [] = chargé et vide
+function resolveSejoursListings(cb){
+  if(sejoursListingsCache!==undefined){cb(sejoursListingsCache);return;}
+  if(!db||!currentUid){cb([]);return;}
+  db.collection('listings').where('ownerUid','==',currentUid).get().then(snap=>{
+    sejoursListingsCache=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    cb(sejoursListingsCache);
+  }).catch(()=>{sejoursListingsCache=[];cb([]);});
+}
+// Appelé à l'ouverture des Paramètres (openSettings) : le temps que l'hôte
+// atteigne le panneau Chambres, la lecture a généralement déjà répondu — pas
+// de re-rendu forcé ici, juste un remplissage du cache en arrière-plan.
+function prefetchSejoursListings(){ resolveSejoursListings(function(){}); }
+
+// Chambres Séjours pas encore reprises comme chambre app (join local, aucune
+// écriture) : exclut celles déjà liées via linkedUnitId sur une chambre
+// existante, pour ne jamais proposer deux fois la même chambre Séjours.
+function roomAddChoiceEntries(){
+  const listings=sejoursListingsCache||[];
+  const linkedIds=new Set((S.settings.rooms||[]).map(r=>r.linkedUnitId).filter(Boolean));
+  const entries=[];
+  listings.forEach(l=>{
+    (l.units||[]).forEach(u=>{
+      if(linkedIds.has(u.id))return;
+      entries.push({listingId:l.id, listingName:l.name||'(sans nom)', unit:u});
+    });
+  });
+  return entries;
+}
+function openRoomAddChoice(entries){
+  const body=byId('roomAddBody');
+  body.innerHTML =
+    '<p style="padding:0 2px 12px;color:var(--gray);font-size:13px">Chambres déposées sur Fiftin Séjours pas encore reliées à votre planning — reprendre l\'une d\'elles, ou repartir d\'une chambre vierge :</p>'+
+    entries.map(e=>`<button type="button" class="set-card set-card-row" style="width:100%;text-align:left;cursor:pointer" onclick="addRoomFromListingUnit('${e.listingId}','${e.unit.id}')"><div><b>${escHtml(e.unit.name||'(sans nom)')}</b><div style="font-size:12px;color:var(--gray)">${escHtml(e.listingName)}${e.unit.maxPersons?' · '+e.unit.maxPersons+' pers':''}</div></div></button>`).join('')+
+    '<button type="button" class="set-add" style="width:100%;margin-top:8px" onclick="closeM(\'modalRoomAdd\');addRoomBlank();">+ Chambre vierge</button>';
+  openM('modalRoomAdd');
+}
+
 // Room CRUD
 function addRoom(){
+  const entries=roomAddChoiceEntries();
+  if(!entries.length){ addRoomBlank(); return; }
+  openRoomAddChoice(entries);
+}
+function addRoomBlank(){
   const n=S.settings.rooms.length+1;
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
   S.settings.rooms.push({id:uid(),name:'Chambre '+n,short:'C'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
+  saveSettings();applySettings();renderSettings();renderGrid();
+  refreshRevenueViews();
+}
+function addRoomFromListingUnit(listingId,unitId){
+  const entry=roomAddChoiceEntries().find(e=>e.listingId===listingId&&e.unit.id===unitId);
+  closeM('modalRoomAdd');
+  if(!entry){addRoomBlank();return;}
+  const unit=entry.unit;
+  const n=S.settings.rooms.length+1;
+  const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const max=unit.maxPersons||2;
+  const prices=defaultRoomPrices(max);
+  if(unit.price) prices[max]=Number(unit.price);
+  S.settings.rooms.push({id:uid(),name:(unit.name||'Chambre '+n).trim()||('Chambre '+n),short:'C'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
 }
@@ -9379,7 +9463,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd'];
+  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
   for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
 });
 

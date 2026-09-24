@@ -215,6 +215,12 @@ En mode édition, le formulaire est pré-rempli (nom, description, prestations, 
 
 Les photos déjà en ligne ne sont ni re-uploadées ni perdues : chaque entrée de photo (maison ou chambre) est `{type:"existing", url}` ou `{type:"new", file}` dans le même tableau, que ce soit en création ou en édition. À l'envoi, `resolvePhotoEntries()` sépare les deux, n'uploade que les `"new"`, puis recompose la liste finale dans l'ordre d'origine — modifier une annonce sans toucher aux photos d'une chambre laisse son `gallery` strictement inchangé.
 
+### Créer une chambre `app/` à partir d'une annonce Séjours existante
+
+Symétrique au sélecteur ci-dessus, dans l'autre sens : dans `app/`, « + Ajouter une chambre » (`addRoom()`) lit désormais (`resolveSejoursListings()`, lecture seule sur `listings` où `ownerUid == uid` — même règle Firestore que le propriétaire lisant sa propre annonce, y compris `pending`) les chambres Séjours de l'hôte pas encore reprises (`roomAddChoiceEntries()`, qui exclut celles déjà associées via `room.linkedListingId`/`linkedUnitId`). S'il y en a, une modale (`modalRoomAdd`) propose de reprendre l'une d'elles (nom, capacité, prix repris comme tarif de base) ou de repartir d'une chambre vierge ; **s'il n'y en a aucune, `addRoom()` crée directement une chambre vierge, exactement comme avant** — aucun changement de comportement pour un compte sans présence sur Séjours.
+
+Toujours dans le même sens de prudence que le reste de ce document : cette lecture ne déclenche jamais d'écriture vers `listings/*` (contrairement au sens Séjours→app ci-dessus, qui écrit `unit.linkedRoomId` sur son propre document) — reprendre une chambre passe uniquement par `addRoomFromListingUnit()`, qui pousse dans `S.settings.rooms` exactement comme `addRoom()` le faisait déjà, puis `saveSettings()`/`pushToFirebase()` inchangés. Testé via Playwright (mock Firebase hors-ligne) : proposition correcte pour un compte avec des chambres Séjours non reprises, chambre déjà reprise jamais reproposée, et — le point critique — comportement strictement identique à avant (chambre vierge immédiate, aucune modale) pour un compte sans aucune annonce Séjours.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
