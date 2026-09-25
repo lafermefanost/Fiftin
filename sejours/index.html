@@ -115,9 +115,18 @@ a{color:inherit; text-decoration:none;}
 .hero-menu-link span{text-decoration:underline; text-underline-offset:3px;}
 
 /* ---------- filter bar ---------- */
+/* .chrome-collapsed (voir switchTab()) remplace hidden=true/false sur
+   .filters et .result-line : hidden bascule en display:none, donc
+   #feed (juste en dessous, réutilisé pour Explorer/Carte/Envies/Profil)
+   saute instantanément de sa hauteur (~87px) chaque fois qu'on quitte ou
+   revient sur Profil — visible et gênant, signalé par l'hôte ("la page
+   saute"). max-height+opacity animés à la place : même résultat final,
+   mais la réapparition/disparition se voit glisser plutôt que sauter. */
 .filters{position:sticky; top:0; z-index:70;
   background:var(--cream); border-bottom:1px solid var(--line);
-  padding:calc(10px + env(safe-area-inset-top,0px)) 18px 12px; display:flex; gap:8px; overflow-x:auto; -webkit-overflow-scrolling:touch;}
+  padding:calc(10px + env(safe-area-inset-top,0px)) 18px 12px; display:flex; gap:8px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
+  max-height:80px; opacity:1; transition:max-height .22s ease, opacity .18s ease, padding .22s ease, border-color .22s ease;}
+.filters.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-color:transparent;}
 .chip{flex-shrink:0; display:flex; align-items:center; border-radius:20px; border:1.5px solid var(--line);
   background:var(--cream); white-space:nowrap; transition:all .15s;}
 .chip.active{background:var(--sauge-deep); border-color:var(--sauge-deep);}
@@ -133,7 +142,9 @@ a{color:inherit; text-decoration:none;}
 .chip-reset-all{flex-shrink:0; background:none; border:none; padding:8px 4px; font-family:'Jost',sans-serif;
   font-size:12.5px; font-weight:700; color:var(--danger); white-space:nowrap; text-decoration:underline;}
 
-.result-line{padding:14px 18px 4px; font-size:12.5px; color:var(--sauge); font-weight:600; letter-spacing:.02em;}
+.result-line{padding:14px 18px 4px; font-size:12.5px; color:var(--sauge); font-weight:600; letter-spacing:.02em;
+  max-height:40px; opacity:1; overflow:hidden; transition:max-height .22s ease, opacity .18s ease, padding .22s ease;}
+.result-line.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0;}
 
 /* ---------- feed ---------- */
 #feed{padding:10px 11px 100px; display:flex; flex-direction:column; gap:18px;}
@@ -2437,10 +2448,10 @@ function switchTab(tab){
   var filterBar = document.getElementById("filter-bar");
   var resultLine = document.getElementById("result-line");
   if(tab==="explore" || tab==="likes" || tab==="map"){
-    filterBar.hidden=false; resultLine.hidden=false;
+    filterBar.classList.remove("chrome-collapsed"); resultLine.classList.remove("chrome-collapsed");
     renderFilterBar(); renderTabContent(); renderResultLine();
   } else {
-    filterBar.hidden=true; resultLine.hidden=true;
+    filterBar.classList.add("chrome-collapsed"); resultLine.classList.add("chrome-collapsed");
     renderProfile();
   }
 }
@@ -2530,8 +2541,8 @@ function enterHostMode(){
   state.hostUnitId = null;
   hostListingsCache = [];
   hostAccountCache = undefined;
-  document.getElementById("filter-bar").hidden = true;
-  document.getElementById("result-line").hidden = true;
+  document.getElementById("filter-bar").classList.add("chrome-collapsed");
+  document.getElementById("result-line").classList.add("chrome-collapsed");
   renderTabbar();
   renderHostTabContent();
 }
