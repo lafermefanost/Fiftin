@@ -1959,7 +1959,7 @@ function openSheet(kind){
         '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
         '<div class="hf-photo-grid" id="hf-photo-grid"></div>'+
       '</div>'+
-      '<div class="field-block"><label>Chambres — chacune avec son prix, sa capacité et ses photos</label>'+
+      '<div class="field-block"><label id="hf-units-label">Chambres — chacune avec son prix, sa capacité et ses photos</label>'+
         '<div id="hf-units"></div>'+
         '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une chambre</button>'+
       '</div>'+
@@ -2053,8 +2053,15 @@ function openSheet(kind){
       hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
       renderHostUnits();
     });
+    /* Gîte = logement indépendant loué en bloc, jamais plusieurs chambres à
+       gérer séparément — la notion "+ Ajouter une chambre" n'a pas de sens
+       pour ce type (retour utilisateur). Une seule carte tarif/capacité,
+       créée automatiquement, sans bouton pour en ajouter d'autres ni pour
+       la retirer. Chambre/Chambre+table gardent le comportement multi-
+       chambres inchangé. */
+    document.getElementById("hf-type").addEventListener("change", updateUnitsFraming);
     hfAvailableRooms = [];
-    renderHostUnits();
+    updateUnitsFraming();
     resolveHostAccount(function(account){
       hfAvailableRooms = (account && account.settings && account.settings.rooms) || [];
       // Un lien saisi avant que la chambre app correspondante soit supprimée
@@ -2239,13 +2246,29 @@ function roomCurrentPrice(room, pax){
    hfUnits directement sur "input" (pas de re-rendu de toute la liste à
    chaque frappe, sinon le focus/curseur saute). Seule la grille de
    photos d'une chambre se re-rend isolément (renderHostUnitPhotoGrid). */
+/* Bascule le libellé/bouton de la section chambres selon le type
+   d'hébergement, et garantit une carte tarif/capacité pour un gîte (pas de
+   bouton "+ Ajouter" dans ce mode, donc rien à cliquer pour en avoir une). */
+function updateUnitsFraming(){
+  var typeEl = document.getElementById("hf-type");
+  var isGite = !!typeEl && typeEl.value==="gite";
+  var label = document.getElementById("hf-units-label");
+  var addBtn = document.getElementById("hf-add-unit");
+  if(label) label.textContent = isGite ? "Capacité et tarif du gîte" : "Chambres — chacune avec son prix, sa capacité et ses photos";
+  if(addBtn) addBtn.hidden = isGite;
+  if(isGite && !hfUnits.length){
+    hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
+  }
+  renderHostUnits();
+}
 function renderHostUnits(){
   var wrap = document.getElementById("hf-units");
   if(!wrap) return;
+  var isGite = document.getElementById("hf-type") && document.getElementById("hf-type").value==="gite";
   wrap.innerHTML = hfUnits.map(function(u, i){
     return '<div class="hf-unit-card" data-unit-id="'+u.id+'">'+
-      '<div class="hf-unit-head"><span>Chambre '+(i+1)+'</span>'+
-        (hfUnits.length>1 ? '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette chambre">&times;</button>' : '')+
+      '<div class="hf-unit-head"><span>'+(isGite ? "Capacité et tarif du gîte" : "Chambre "+(i+1))+'</span>'+
+        (!isGite && hfUnits.length>1 ? '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette chambre">&times;</button>' : '')+
       '</div>'+
       '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Chambre Bleue"></div>'+
       '<div class="field-block-row">'+
@@ -2454,11 +2477,17 @@ function cropOneFile(file, index, total){
       var sf = CROP_PREVIEW_SQUARE / st.vpSize;
       var w = st.naturalW*st.scale*sf, h = st.naturalH*st.scale*sf;
       var ox = st.offsetX*sf, oy = st.offsetY*sf;
+      // shift retranche les 2×9px coupés de chaque côté par la fenêtre plus
+      // étroite (72 au lieu de 90) : décaler l'image de -shift (pas +shift,
+      // sens inversé par erreur ci-avant — un carré centré se retrouvait
+      // décalé de 2×9px dans le MAUVAIS sens sur les deux aperçus, rendant
+      // le centrage simultané impossible alors que l'export réel, lui,
+      // recadre correctement au centre via object-fit:cover).
       var shift = CROP_PREVIEW_SQUARE*0.1; // (SQUARE - SQUARE*0.8)/2
       previewImg45.style.width = w+"px"; previewImg45.style.height = h+"px";
-      previewImg45.style.transform = "translate("+(ox+shift)+"px,"+oy+"px)";
+      previewImg45.style.transform = "translate("+(ox-shift)+"px,"+oy+"px)";
       previewImg54.style.width = w+"px"; previewImg54.style.height = h+"px";
-      previewImg54.style.transform = "translate("+ox+"px,"+(oy+shift)+"px)";
+      previewImg54.style.transform = "translate("+ox+"px,"+(oy-shift)+"px)";
     };
 
     var onPointerDown = function(e){
