@@ -445,15 +445,23 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
 .cal-year-nav button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px;}
 .cal-year-nav button svg{width:20px; height:20px;}
 .cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
-.cal-year-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px;}
-.cal-mini{background:var(--cream-deep); border-radius:14px; padding:8px;}
-.cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; color:var(--ink);}
-.cal-mini-grid{display:grid; grid-template-columns:16px repeat(7,1fr); gap:1px;}
-.cal-mini-wn{font-size:7px; color:var(--gray-mid); display:flex; align-items:center; justify-content:center;}
-.cal-mini-dow{font-size:8px; font-weight:800; color:var(--sauge); text-align:center; padding-bottom:2px;}
-.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:3px; cursor:pointer;}
-.cal-mini-day.empty{visibility:hidden; cursor:default;}
-.cal-mini-day.occ{background:var(--sauge-deep); color:var(--cream); font-weight:800;}
+/* Carte blanche enveloppant toute la grille des 12 mois — même principe que
+   .rv-calendar côté app/ (background:#fff, padding, coins arrondis), pour
+   que le calendrier se détache du fond crème de la page comme dans l'app. */
+.cal-card{background:#fff; border-radius:14px; padding:16px 12px;}
+.cal-year-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px 12px;}
+.cal-mini{padding:2px 0;}
+.cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; color:var(--gray-mid);}
+.cal-mini-grid{display:grid; grid-template-columns:14px repeat(7,1fr); gap:2px;}
+.cal-mini-wn{font-size:7px; color:var(--gray-mid); opacity:.6; display:flex; align-items:center; justify-content:center;}
+.cal-mini-dow{font-size:8px; font-weight:800; color:var(--gray-mid); opacity:.6; text-align:center; padding-bottom:2px; text-transform:uppercase;}
+/* Case disponible = grise (comme .rv-day-cell/var(--light) côté app/, même
+   valeur) ; case occupée = un seul vert sauge, mais --sauge (#354B38) et non
+   --sauge-deep (#1D2820, en pratique quasi noir à cette taille — repéré en
+   usage réel comme "les cases occupées sont noires, pas vertes"). */
+.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:4px; cursor:pointer; background:#E2DFD8;}
+.cal-mini-day.empty{visibility:hidden; cursor:default; background:none;}
+.cal-mini-day.occ{background:var(--sauge); color:var(--cream); font-weight:800;}
 .cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
 
 /* ---------- choix de formule (inscription hôte) ---------- */
@@ -2768,7 +2776,7 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     '</div>'+
     unitPagerHtml+
     roomLinkHtml+
-    '<div class="cal-year-grid">'+months+'</div>'+
+    '<div class="cal-card"><div class="cal-year-grid">'+months+'</div></div>'+
   '</div>';
 
   if(listings.length>1){
