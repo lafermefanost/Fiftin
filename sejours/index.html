@@ -295,7 +295,15 @@ textarea.text-input{resize:vertical; min-height:80px;}
    que app/ (vue Année : chaque bloc, chiffres/seuils/graphique, est sa
    propre carte blanche posée sur le fond crème de la page) plutôt que du
    texte qui s'enchaîne à plat. Voir la règle de DA en tête du README. */
-.detail-card{background:#fff; border-radius:16px; padding:16px; margin-bottom:14px;}
+/* Carte globale (.detail-group) qui englobe toutes les petites cartes ci-dessous —
+   reprend .yr-group de app/ à l'identique (fond blanc, bordure 1.5px #E2DFD8
+   = var(--light) côté app/, rayon 12px, padding 12px 14px). Les petites cartes
+   (.detail-card, ex-.tsec-panel de app/) partagent le même fond blanc que ce
+   conteneur : comme une bordure ne se verrait pas sur un fond de même couleur,
+   c'est une ombre portée (0 2px 8px rgba(0,0,0,.12), même valeur que .tsec-panel)
+   qui les détache visuellement les unes des autres, pas un espace sur fond crème. */
+.detail-group{background:#fff; border-radius:12px; padding:12px 14px; border:1.5px solid #E2DFD8; margin-top:10px;}
+.detail-card{background:#fff; border-radius:10px; padding:16px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
 .detail-card>*:last-child{margin-bottom:0;}
 .meta-row{display:flex; gap:18px;}
 .meta-item{display:flex; flex-direction:column; gap:2px;}
@@ -1306,14 +1314,16 @@ function openDetail(id){
       '<h1>'+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       tabsHtml+
-      metaRowHtml+
-      bodyExtraHtml+
-      '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-      '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b><span>'+l.host.response+'</span></div></div></div>'+
-      // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
-      // ici, il n'y a pas de planning général — seulement dans l'onglet de
-      // chaque chambre (voir plus bas, activeUnit).
-      (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:18px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
+      '<div class="detail-group">'+
+        metaRowHtml+
+        bodyExtraHtml+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
+        '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b><span>'+l.host.response+'</span></div></div></div>'+
+        // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
+        // ici, il n'y a pas de planning général — seulement dans l'onglet de
+        // chaque chambre (voir plus bas, activeUnit).
+        (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:18px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
+      '</div>'+
     '</div>'+
     '<div class="detail-contact-bar">'+
       '<div class="send-row">'+
