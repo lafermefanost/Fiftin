@@ -187,6 +187,11 @@ a{color:inherit; text-decoration:none;}
 .cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
 .cal-dot{width:8px; height:8px; border-radius:50%; background:#E2DFD8; display:inline-block;}
 .cal-dot.avail{background:var(--sauge);}
+/* Calendrier sans données (voir calendarHtml) : cases en gris très clair
+   plutôt que la même teinte que "réservé/indisponible" habituelle, pour ne
+   pas laisser croire que tout est pris. */
+.cal-nodata .cal-cell{background:var(--cream); color:rgba(46,43,34,.22);}
+.cal-legend-nodata{font-style:italic;}
 .qr-row{display:flex; gap:10px;}
 .qr-field{flex:1; display:flex; flex-direction:column; gap:4px;}
 .qr-field label{font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge);}
@@ -991,13 +996,8 @@ function coverHtml(l){
       '<h2>'+esc(l.name)+'</h2>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       '<div class="cover-cta">'+
-        (l.units && l.units.length>1
-          // Plusieurs chambres = pas de planning général à vérifier (chaque
-          // chambre a le sien, propre à elle) : seul "Voir plus" a un sens
-          // ici, direct vers la fiche détail et ses onglets par chambre.
-          ? '<button class="btn primary" data-open="'+l.id+'">Voir plus</button>'
-          : '<button class="btn primary" data-quickreq="'+l.id+'">Vérifier la disponibilité</button>'+
-            '<button class="btn ghost-dark" data-open="'+l.id+'">Voir plus</button>')+
+        '<button class="btn primary" data-quickreq="'+l.id+'">Vérifier la disponibilité</button>'+
+        '<button class="btn ghost-dark" data-open="'+l.id+'">Voir plus</button>'+
       '</div>'+
     '</div>'+
   '</div>';
@@ -1021,9 +1021,8 @@ function renderFeed(){
     return;
   }
   feed.innerHTML = list.map(function(l){
-    var hasTabsL = l.units && l.units.length>1;
     return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
-      (hasTabsL ? '' : '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>')+
+      '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
     '</article>';
   }).join("");
   wireFeedEvents();
@@ -1101,8 +1100,17 @@ function calendarGridHtml(l, monthIndex){
   }
   return cells;
 }
+/* Pas de données de disponibilité (annonce dont l'hôte n'a pas renseigné
+   de créneaux, ou plusieurs chambres au niveau du fil où il n'y a pas de
+   planning unique à montrer) : le calendrier ne doit pas laisser croire
+   que tout est indisponible (même grisé que d'habitude) — il passe dans
+   un style neutre très clair, façon "pas de données", et le message
+   d'aide invite à préciser les dates soi-même. Les champs Arrivée/Départ
+   juste en dessous restent inchangés dans tous les cas : c'est par eux
+   que le voyageur indique ses dates pour sa demande.*/
 function calendarHtml(l, monthIndex, uid){
-  return '<div class="cal" data-cal-listing="'+uid+'" data-cal-month="'+monthIndex+'">'+
+  var noData = getAvailRanges(l).length===0;
+  return '<div class="cal'+(noData?' cal-nodata':'')+'" data-cal-listing="'+uid+'" data-cal-month="'+monthIndex+'">'+
     '<div class="cal-head">'+
       '<button type="button" class="cal-nav" data-cal-nav="-1" aria-label="Mois précédent">&#8249;</button>'+
       '<span class="cal-title">'+MONTH_LONG[monthIndex]+' '+DEMO_YEAR+'</span>'+
@@ -1110,7 +1118,9 @@ function calendarHtml(l, monthIndex, uid){
     '</div>'+
     '<div class="cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>'+
     '<div class="cal-grid">'+calendarGridHtml(l, monthIndex)+'</div>'+
-    '<div class="cal-legend"><span class="cal-dot avail"></span>Disponible<span class="cal-dot"></span>Indisponible</div>'+
+    (noData
+      ? '<div class="cal-legend cal-legend-nodata">Disponibilités non communiquées — précisez vos dates dans le message ci-dessous</div>'
+      : '<div class="cal-legend"><span class="cal-dot avail"></span>Disponible<span class="cal-dot"></span>Indisponible</div>')+
   '</div>';
 }
 
