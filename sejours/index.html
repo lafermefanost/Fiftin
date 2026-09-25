@@ -308,14 +308,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden; width:100%; border:none; text-align:left; font-family:inherit; cursor:pointer;}
 /* Onglets façon navigateur plutôt que des pilules isolées ("boudins") : coins
    arrondis seulement en haut, chaque onglet porte sa propre ligne de base
-   (border-bottom) — visible et grise pour un onglet inactif ("fermé", séparé
-   du contenu), invisible (couleur = fond de la page, --cream) pour l'onglet
-   actif, qui se fond ainsi directement dans le contenu juste en dessous —
-   plutôt que de deviner un lien entre onglet et contenu, on le voit. */
+   (border-bottom) — grise et visible pour un onglet inactif ("fermé", séparé
+   du contenu). L'onglet actif, lui, passe en couleur pleine — même
+   convention que app/ pour signaler "l'élément sélectionné" dans une rangée
+   d'onglets/boutons de vue (.mbnav-btn.on / .vtab.on, toutes deux
+   background:var(--green) + texte blanc ; --green et --sauge sont la même
+   couleur, #354B38, juste nommée différemment par produit) — sa ligne de
+   base disparaît (même couleur que son propre fond) pour se fondre
+   directement dans le contenu juste en dessous. */
 .detail-tabs{display:flex; gap:2px; overflow-x:auto; margin:14px 0 0; -webkit-overflow-scrolling:touch; scrollbar-width:none;}
 .detail-tabs::-webkit-scrollbar{display:none;}
 .detail-tab{flex-shrink:0; padding:9px 16px; border-radius:10px 10px 0 0; border:none; border-bottom:2px solid var(--line); background:var(--cream-deep); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--sauge); white-space:nowrap;}
-.detail-tab.active{background:var(--cream); border-bottom-color:var(--cream); color:var(--sauge-deep);}
+.detail-tab.active{background:var(--sauge); border-bottom-color:var(--sauge); color:var(--cream);}
 .unit-thumb{width:56px; height:56px; border-radius:12px; overflow:hidden; flex-shrink:0; background:var(--line);}
 .unit-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
 .unit-thumb-empty{width:100%; height:100%; background:var(--line);}
