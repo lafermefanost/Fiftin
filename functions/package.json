@@ -1,0 +1,13 @@
+{
+  "name": "fiftin-functions",
+  "description": "Cloud Functions Fiftin — republient une projection publique des disponibilités (dates d'arrivée/départ uniquement, jamais de nom ni de donnée financière) à partir des vraies réservations privées, pour le calendrier voyageur de Fiftin Séjours.",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.0",
+    "firebase-functions": "^5.0.0"
+  }
+}

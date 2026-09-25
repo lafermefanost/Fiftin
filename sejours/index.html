@@ -1416,18 +1416,42 @@ function wireFeedEvents(){
       var id = el.getAttribute("data-quickreq");
       var panel = document.getElementById("qr-"+id);
       panel.hidden = !panel.hidden;
-      wireQuickReq(Number(id), "qr"+id);
+      var qrl = LISTINGS.filter(function(x){ return x.id===Number(id); })[0];
+      wireQuickReq(Number(id), "qr"+id, qrl ? soleUnitOf(qrl) : null);
     });
   });
 }
 
 /* ---------------- calendrier de disponibilité ----------------
-   Démo uniquement : dates lues depuis l.avail (chaînes statiques du
-   jeu de données mock), pas de connexion au vrai planning. Voir la
-   note dans CLAUDE.md sur le lien avec app/ — pas encore construit. */
+   Deux modes, sur le même balisage (.cal/.cal-cell/.cal-legend) :
+   - Démo (ci-dessous) : dates lues depuis l.avail/unit.avail (chaînes
+     statiques), année fixe DEMO_YEAR — sert de premier rendu (toujours
+     "pas de données" pour une vraie annonce, avail est toujours vide)
+     et de repli tant qu'aucune donnée réelle n'a été publiée pour la
+     chambre concernée.
+   - Réelle (plus bas, realCalendarGridHtml/isDateOccupied) : bascule
+     asynchrone, câblée dans wireQuickReq(), sur listings/{id}/
+     publicAvail/{unitId} — une projection PUBLIQUE ne contenant que des
+     plages occupées (checkIn/checkOut), republiée côté serveur par les
+     Cloud Functions (functions/index.js) à partir des vraies réservations
+     privées (accounts/{uid} ou listings/{id}/bookings), toutes deux
+     illisibles publiquement — voir README. Vraie année/mois qui avance
+     dans le temps, contrairement au mode démo qui boucle sur DEMO_YEAR. */
 var MONTH_ABBR = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
 var MONTH_LONG = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 var DEMO_YEAR = 2026;
+
+function pad2(n){ return n<10 ? "0"+n : ""+n; }
+function isoDate(y,m,d){ return y+"-"+pad2(m+1)+"-"+pad2(d); }
+/* Une seule chambre sur une annonce : celle à laquelle rattacher un
+   calendrier réel côté fil/fiche sans onglets (où il n'y a aujourd'hui
+   aucune notion de "la" chambre affichée) — sans ambiguïté puisqu'il n'y
+   en a qu'une. Plusieurs chambres : aucune (voir hasTabs/activeUnit dans
+   openDetail, chaque onglet a la sienne, pas de calendrier sur la vue
+   d'ensemble). */
+function soleUnitOf(l){
+  return (l.units && l.units.length===1) ? l.units[0] : null;
+}
 
 function parseAvailStr(str){
   var m = str.match(/^(\d+)(?:\s+([a-zéû.]+))?-(\d+)\s+([a-zéû.]+)$/i);
@@ -1456,7 +1480,7 @@ function calendarGridHtml(l, monthIndex){
   for(var i=0;i<startWeekday;i++) cells += '<span class="cal-cell empty"></span>';
   for(var d=1; d<=daysInMonth; d++){
     var avail = isDateAvailable(l, new Date(DEMO_YEAR, monthIndex, d));
-    cells += '<button type="button" class="cal-cell'+(avail?' avail':'')+'"'+(avail?' data-day="'+d+'"':' disabled')+'>'+d+'</button>';
+    cells += '<button type="button" class="cal-cell'+(avail?' avail':'')+'" data-date="'+isoDate(DEMO_YEAR,monthIndex,d)+'"'+(avail?' data-day="'+d+'"':' disabled')+'>'+d+'</button>';
   }
   return cells;
 }
@@ -1482,6 +1506,28 @@ function calendarHtml(l, monthIndex, uid){
       ? '<div class="cal-legend cal-legend-nodata">Disponibilités non communiquées — précisez vos dates dans le message ci-dessous</div>'
       : '<div class="cal-legend"><span class="cal-dot avail"></span>Disponible<span class="cal-dot"></span>Indisponible</div>')+
   '</div>';
+}
+
+/* Une date est occupée si elle tombe dans [checkIn, checkOut[ d'une des
+   plages publiées — même convention que app/ (activeOn() : la nuit du
+   check-in compte, le jour du check-out est déjà libre). Comparaison en
+   chaînes ISO (YYYY-MM-DD des deux côtés), valide sans parser de Date. */
+function isDateOccupied(ranges, dateStr){
+  return (ranges||[]).some(function(r){ return dateStr>=r.checkIn && dateStr<r.checkOut; });
+}
+function realCalendarGridHtml(year, monthIndex, ranges){
+  var first = new Date(year, monthIndex, 1);
+  var startWeekday = (first.getDay()+6)%7;
+  var daysInMonth = new Date(year, monthIndex+1, 0).getDate();
+  var todayStr = new Date().toISOString().slice(0,10);
+  var cells = "";
+  for(var i=0;i<startWeekday;i++) cells += '<span class="cal-cell empty"></span>';
+  for(var d=1; d<=daysInMonth; d++){
+    var dateStr = isoDate(year, monthIndex, d);
+    var avail = dateStr>=todayStr && !isDateOccupied(ranges, dateStr);
+    cells += '<button type="button" class="cal-cell'+(avail?' avail':'')+'" data-date="'+dateStr+'"'+(avail?'':' disabled')+'>'+d+'</button>';
+  }
+  return cells;
 }
 
 /* ---------------- quick request ---------------- */
@@ -1548,12 +1594,13 @@ function wireQuickReq(id, uid, unit){
   });
 
   var $cal = document.querySelector('[data-cal-listing="'+qid+'"]');
+  /* data-date (ISO complet) plutôt que reconstruire depuis data-day+mois :
+     commun aux deux modes (démo comme réel, voir calendarGridHtml/
+     realCalendarGridHtml), donc pas besoin de savoir dans lequel on est. */
   function wireCalDays(){
     Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.avail"), function(cell){
       cell.addEventListener("click", function(){
-        var monthIndex = Number($cal.getAttribute("data-cal-month"));
-        var day = Number(cell.getAttribute("data-day"));
-        var start = new Date(DEMO_YEAR, monthIndex, day);
+        var start = new Date(cell.getAttribute("data-date")+"T00:00:00");
         var end = new Date(start.getTime()); end.setDate(end.getDate()+7);
         $in.value = start.toISOString().slice(0,10);
         $out.value = end.toISOString().slice(0,10);
@@ -1579,6 +1626,48 @@ function wireQuickReq(id, uid, unit){
       });
     });
     wireCalDays();
+
+    /* Bascule vers le mode réel dès qu'une projection publique existe pour
+       CETTE chambre (listings/{id}/publicAvail/{unitId}, voir plus haut et
+       functions/index.js) — lecture publique, aucune connexion requise.
+       Si le document n'existe pas encore (jamais synchronisé), on reste
+       simplement en mode démo/"pas de données" tel quel : dégradation
+       propre, rien ne casse pour les annonces pas encore concernées. */
+    if(unit && unit.id && l.docId && typeof firebase!=="undefined" && firebase.apps && firebase.apps.length){
+      firebase.firestore().collection("listings").doc(l.docId).collection("publicAvail").doc(unit.id).get().then(function(doc){
+        if(!doc.exists) return;
+        var ranges = doc.data().ranges || [];
+        var today = new Date();
+        var realYear = today.getFullYear(), realMonth = today.getMonth();
+
+        function renderRealMonth(y, m){
+          $cal.classList.remove("cal-nodata");
+          $cal.setAttribute("data-cal-year", y);
+          $cal.setAttribute("data-cal-month", m);
+          $cal.querySelector(".cal-title").textContent = MONTH_LONG[m]+" "+y;
+          $cal.querySelector(".cal-grid").innerHTML = realCalendarGridHtml(y, m, ranges);
+          $cal.querySelector(".cal-legend").outerHTML =
+            '<div class="cal-legend"><span class="cal-dot avail"></span>Disponible<span class="cal-dot"></span>Indisponible</div>';
+          wireCalDays();
+        }
+        // Remplace la navigation démo (bouclée sur DEMO_YEAR) par une
+        // navigation temporelle réelle — cloner/remplacer les boutons
+        // détache proprement les anciens écouteurs (mode démo) pour ne
+        // pas les cumuler avec les nouveaux.
+        Array.prototype.forEach.call($cal.querySelectorAll("[data-cal-nav]"), function(btn){
+          btn.parentNode.replaceChild(btn.cloneNode(true), btn);
+        });
+        Array.prototype.forEach.call($cal.querySelectorAll("[data-cal-nav]"), function(btn){
+          btn.addEventListener("click", function(){
+            var y = Number($cal.getAttribute("data-cal-year")), m = Number($cal.getAttribute("data-cal-month"));
+            m += Number(btn.getAttribute("data-cal-nav"));
+            if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+            renderRealMonth(y, m);
+          });
+        });
+        renderRealMonth(realYear, realMonth);
+      }).catch(function(){ /* silencieux : reste en mode démo/"pas de données" */ });
+    }
   }
   update();
 }
@@ -1745,7 +1834,7 @@ function openDetail(id){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
-  if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit);
+  if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit || soleUnitOf(l));
   document.body.style.overflow = "hidden";
   document.body.classList.add("detail-open");
 }
