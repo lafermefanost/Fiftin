@@ -175,8 +175,8 @@ a{color:inherit; text-decoration:none;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 6px; letter-spacing:-0.01em;}
 .cover-info .tagline{font-size:14.5px; color:rgba(245,240,229,.88); margin:0 0 14px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
-.btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
-  padding:11px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
+.btn{border:none; border-radius:999px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
+  padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
 .btn.primary{background:var(--yellow); color:var(--sauge-deep); flex:1;}
 .btn.ghost-dark{background:rgba(245,240,229,0.14); color:var(--cream); border:1.5px solid rgba(245,240,229,.4);}
 .price-tag b{font-size:15px;}
@@ -252,6 +252,14 @@ a{color:inherit; text-decoration:none;}
 .field-block{margin-bottom:22px;}
 .field-block > label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge); display:block; margin-bottom:10px;}
 .field-hint{font-size:11.5px; color:var(--gray-mid); margin:6px 0 0;}
+/* Suggestions d'adresse (Nominatim), sous le champ adresse du dépôt d'annonce. */
+.hf-address-suggestions{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
+  background:var(--cream); border:1.5px solid var(--line); border-radius:14px; overflow:hidden;
+  box-shadow:0 8px 20px rgba(0,0,0,.14); max-height:220px; overflow-y:auto;}
+.hf-address-suggestion{display:block; width:100%; text-align:left; background:none; border:none;
+  padding:10px 14px; font-family:'Jost',sans-serif; font-size:12.5px; color:var(--ink); border-bottom:1px solid var(--line);}
+.hf-address-suggestion:last-child{border-bottom:none;}
+.hf-address-suggestion:hover, .hf-address-suggestion:active{background:var(--cream-deep);}
 .range-value{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;}
 input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amen-group{margin-bottom:16px;}
@@ -1070,6 +1078,18 @@ function listingDistanceKm(l){
   var o = currentOrigin();
   return Math.round(haversineKm(o.lat, o.lng, l.lat, l.lng));
 }
+/* Ligne de localisation au-dessus du titre (fil et fiche détail) :
+   "Région, Département" à chaque fois qu'ils sont connus, plutôt que
+   l'ancien champ libre l.region — trop hétérogène d'une annonce à l'autre
+   (une ville seule, un département seul, une région seule, selon ce que
+   l'hôte avait tapé). Repli sur l.region pour une annonce plus ancienne
+   sans regionName/deptName renseignés, plutôt que de ne rien afficher. */
+function locationLineFor(l){
+  if(l.regionName && l.deptName) return l.regionName+", "+l.deptName;
+  if(l.regionName) return l.regionName;
+  if(l.deptName) return l.deptName;
+  return l.region || "";
+}
 
 var AMEN_ICONS = {
   "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
@@ -1296,7 +1316,7 @@ function coverHtml(l){
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
     '<div class="cover-info">'+
-      '<div class="region">'+esc(l.region)+'</div>'+
+      '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(l.name)+'</h2>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       '<div class="cover-cta">'+
@@ -1736,7 +1756,7 @@ function openDetail(id){
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
     '<div class="detail-body">'+
-      '<div class="region">'+esc(l.region)+'</div>'+
+      '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       tabsHtml+
@@ -1887,18 +1907,19 @@ function openSheet(kind){
         '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
       '</div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
-      '<div class="field-block"><label>Localisation (affichée aux voyageurs)</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous" value="'+(hfEf?esc(hfEf.region||""):"")+'"></div>'+
-      '<div class="field-block"><label>Région (pour la recherche par lieu)</label><select class="text-input" id="hf-region-name">'+
+      '<div class="field-block" style="position:relative;"><label>Adresse complète du logement</label>'+
+        '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
+        '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
+        '<p class="field-hint">Choisissez une adresse dans la liste proposée : région, département et ville se remplissent tout seuls juste en dessous (modifiables si besoin). Sert aussi à calculer la distance réelle affichée aux voyageurs — jamais montrée telle quelle sur l\'annonce.</p>'+
+      '</div>'+
+      '<div class="field-block"><label>Région</label><select class="text-input" id="hf-region-name">'+
         '<option value="">— Choisir —</option>'+
         FR_REGIONS.map(function(r){ return '<option value="'+esc(r.name)+'"'+(hfEf&&hfEf.regionName===r.name?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
       '</select></div>'+
       '<div class="field-block"><label>Département</label><select class="text-input" id="hf-dept-name">'+
         deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
       '</select></div>'+
-      '<div class="field-block"><label>Ville / quartier / rue (optionnel, précise la recherche)</label><input class="text-input" id="hf-city" placeholder="Ex. Wissous, centre-ville…" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
-      '<div class="field-block"><label>Adresse complète du logement</label><input class="text-input" id="hf-address" placeholder="Numéro, rue, code postal, ville" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
-        '<p class="field-hint">Sert à calculer la distance réelle affichée aux voyageurs (depuis leur position ou le lieu qu\'ils recherchent) — jamais montrée telle quelle sur l\'annonce.</p>'+
-      '</div>'+
+      '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
@@ -1977,6 +1998,7 @@ function openSheet(kind){
     document.getElementById("hf-region-name").addEventListener("change", function(){
       document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(this.value, "");
     });
+    wireHfAddressAutocomplete();
     document.getElementById("hf-photos-btn").addEventListener("click", function(){
       document.getElementById("hf-photos-input").click();
     });
@@ -2554,29 +2576,127 @@ function resolvePhotoEntries(entries, uid, pathPrefix, progressLabel){
   });
 }
 
-/* Géocodage adresse -> lat/lng via Nominatim (OpenStreetMap) : API
-   publique et gratuite, pas de clé ni de coût contrairement à un service
-   comme l'API Géocodage Google. Utilisé UNIQUEMENT au dépôt/à la
-   modification d'une annonce (un hôte à la fois, usage occasionnel) —
+/* Géocodage adresse -> lat/lng + détail (région/département/ville) via
+   Nominatim (OpenStreetMap) : API publique et gratuite, pas de clé ni de
+   coût contrairement à un service comme l'API Géocodage Google. Utilisé
+   au dépôt/à la modification d'une annonce (un hôte à la fois, usage
+   occasionnel) et pour les suggestions d'adresse pendant la saisie —
    jamais côté recherche voyageur, où la distance se recalcule localement
    depuis les coordonnées déjà stockées (voir listingDistanceKm()) : reste
-   largement dans les limites d'usage raisonnable de l'API publique. */
+   largement dans les limites d'usage raisonnable de l'API publique.
+   addressdetails=1 renvoie state/county/city, exploités par
+   matchRegionDept() pour pré-remplir Région/Département/Ville sans que
+   l'hôte ait à les choisir à la main (voir wireHfAddressAutocomplete()). */
 function geocodeAddress(address){
-  var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(address);
+  var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=fr&q="+encodeURIComponent(address);
   return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
     if(!r.ok) throw new Error("geocode-http-"+r.status);
     return r.json();
   }).then(function(results){
     if(!results || !results.length) throw new Error("geocode-not-found");
-    return {lat:Number(results[0].lat), lng:Number(results[0].lon)};
+    return {lat:Number(results[0].lat), lng:Number(results[0].lon), address:results[0].address||{}};
   });
+}
+function searchAddressSuggestions(query){
+  var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=fr&q="+encodeURIComponent(query);
+  return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
+    if(!r.ok) throw new Error("suggest-http-"+r.status);
+    return r.json();
+  }).then(function(results){ return results || []; }).catch(function(){ return []; });
+}
+/* Fait correspondre les state/county renvoyés par Nominatim aux noms
+   officiels de FR_REGIONS/deptsForRegion() — comparaison par inclusion
+   plutôt qu'égalité stricte (Nominatim écrit parfois "Île-de-France" avec
+   une nuance d'accent/tiret différente d'un référentiel à l'autre, ou
+   ajoute des mots). Non trouvé -> chaîne vide, jamais deviné au hasard. */
+function matchRegionDept(addr){
+  addr = addr || {};
+  var stateStr = (addr.state||"").toLowerCase();
+  var countyStr = (addr.county||addr.state_district||"").toLowerCase();
+  var region = FR_REGIONS.filter(function(r){
+    var n = r.name.toLowerCase();
+    return stateStr && (stateStr.indexOf(n)!==-1 || n.indexOf(stateStr)!==-1);
+  })[0] || null;
+  var dept = null;
+  var tryDept = function(r){
+    return r.depts.filter(function(d){
+      var n = d.toLowerCase();
+      return countyStr && (countyStr.indexOf(n)!==-1 || n.indexOf(countyStr)!==-1);
+    })[0];
+  };
+  if(region) dept = tryDept(region) || null;
+  if(!dept && countyStr){
+    FR_REGIONS.some(function(r){
+      var d = tryDept(r);
+      if(d){ dept = d; region = r; return true; }
+      return false;
+    });
+  }
+  var city = addr.city || addr.town || addr.village || addr.municipality || "";
+  return {regionName: region ? region.name : "", deptName: dept || "", city: city};
+}
+
+/* Suggestions d'adresse pendant la saisie (Nominatim), avec pré-remplissage
+   automatique de Région/Département/Ville au clic — l'hôte n'a plus besoin
+   de les choisir à la main dans le cas courant (retour utilisateur : "pas
+   pratique de tout remplir"). Ne réécrit jamais un champ déjà rempli par
+   l'hôte lui-même (voir applySuggestion ci-dessous) : un choix manuel
+   n'est jamais écrasé silencieusement par une suggestion d'adresse
+   ultérieure sur un AUTRE champ, seule Région/Département suit toujours
+   la dernière adresse choisie (ils vont ensemble, contrairement à Ville
+   qui peut être volontairement plus précis que ce que Nominatim renvoie). */
+function wireHfAddressAutocomplete(){
+  var input = document.getElementById("hf-address");
+  var box = document.getElementById("hf-address-suggestions");
+  if(!input || !box) return;
+  var debounceTimer = null;
+  var lastQuery = "";
+
+  function hide(){ box.hidden = true; box.innerHTML = ""; }
+
+  function applySuggestion(result){
+    input.value = result.display_name;
+    hide();
+    var match = matchRegionDept(result.address);
+    if(match.regionName){
+      document.getElementById("hf-region-name").value = match.regionName;
+      document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(match.regionName, match.deptName);
+    }
+    var cityInput = document.getElementById("hf-city");
+    if(match.city && cityInput && !cityInput.value.trim()) cityInput.value = match.city;
+  }
+
+  function renderSuggestions(results){
+    if(!results.length){ hide(); return; }
+    box.innerHTML = results.map(function(r, i){
+      return '<button type="button" class="hf-address-suggestion" data-idx="'+i+'">'+esc(r.display_name)+'</button>';
+    }).join("");
+    box.hidden = false;
+    Array.prototype.forEach.call(box.querySelectorAll(".hf-address-suggestion"), function(btn){
+      btn.addEventListener("click", function(){ applySuggestion(results[Number(btn.getAttribute("data-idx"))]); });
+    });
+  }
+
+  input.addEventListener("input", function(){
+    var q = input.value.trim();
+    if(debounceTimer) clearTimeout(debounceTimer);
+    if(q.length < 5){ hide(); return; }
+    debounceTimer = setTimeout(function(){
+      lastQuery = q;
+      searchAddressSuggestions(q).then(function(results){
+        if(q !== lastQuery) return; // une saisie plus récente a déjà pris le dessus
+        renderSuggestions(results);
+      });
+    }, 400);
+  });
+  // Laisse le temps au clic sur une suggestion de se déclencher avant de la masquer.
+  input.addEventListener("blur", function(){ setTimeout(hide, 150); });
 }
 
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var accomType = document.getElementById("hf-type").value;
   var hostName = document.getElementById("hf-hostname").value.trim();
-  var region = document.getElementById("hf-region").value.trim();
   var regionName = document.getElementById("hf-region-name").value;
   var deptName = document.getElementById("hf-dept-name").value;
   var city = document.getElementById("hf-city").value.trim();
@@ -2589,7 +2709,7 @@ function submitHostForm(){
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !accomType || !hostName || !region || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !accomType || !hostName || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
   for(var i=0;i<hfUnits.length;i++){
     var u = hfUnits[i];
@@ -2606,6 +2726,19 @@ function submitHostForm(){
   btn.disabled = true;
   btn.textContent = "Localisation de l'adresse…";
   geocodeAddress(address).then(function(coords){
+    // Repli si Région/Département/Ville n'ont jamais été remplis (ni via
+    // une suggestion cliquée pendant la saisie, ni à la main) : ce même
+    // géocodage sert aussi à les déduire — jamais de champ déjà rempli
+    // par l'hôte écrasé ici. l.region (libellé affiché aux voyageurs,
+    // voir locationLineFor()) n'est plus saisi à la main : déduit de ces
+    // mêmes valeurs, avec repli sur l'adresse brute si rien n'a matché.
+    if(!regionName || !deptName || !city){
+      var match = matchRegionDept(coords.address);
+      if(!regionName) regionName = match.regionName;
+      if(!deptName) deptName = match.deptName;
+      if(!city) city = match.city;
+    }
+    var region = (city ? city+", " : "") + (deptName || regionName || address);
     return resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(gallery){
       var uploadUnit = function(i, doneUnits){
         if(i>=hfUnits.length) return Promise.resolve(doneUnits);
