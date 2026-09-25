@@ -197,6 +197,12 @@ a{color:inherit; text-decoration:none;}
 .cal-cell{aspect-ratio:1; border:none; border-radius:8px; background:#E2DFD8; font-family:'Jost',sans-serif;
   font-size:12px; font-weight:600; color:rgba(46,43,34,.28); display:flex; align-items:center; justify-content:center;}
 .cal-cell.empty{visibility:hidden; background:none;}
+/* Barre diagonale en plus du gris habituel sur les cases indisponibles —
+   même case, même couleur, juste plus explicite au premier coup d'œil.
+   Pas sur .avail (disponible) ni .cal-nodata (pas "indisponible", on ne
+   sait juste pas : voir calendarHtml/le commentaire plus bas). */
+.cal:not(.cal-nodata) .cal-cell:not(.avail):not(.empty){
+  background-image:linear-gradient(135deg, transparent calc(50% - 1px), rgba(46,43,34,.3) calc(50% - 1px), rgba(46,43,34,.3) calc(50% + 1px), transparent calc(50% + 1px));}
 .cal-cell.avail{background:var(--sauge); color:var(--cream); cursor:pointer;}
 .cal-cell.avail.selected{background:var(--sauge-deep); color:var(--cream);}
 .cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
@@ -331,7 +337,13 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .meta-item{display:flex; flex-direction:column; gap:2px;}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
-.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; margin:-6px 0 18px; border-radius:20px;
+/* .ext-links : conteneur pour le(s) lien(s) externes de l'annonce (site
+   personnel, avis Google) — 0, 1 ou 2 selon ce que l'hôte a renseigné au
+   dépôt de l'annonce (voir le hostform, champs optionnels hf-website/
+   hf-google). Un flex-wrap plutôt qu'un empilement d'ancres à marge
+   négative individuelle : propre à N liens, pas juste 1. */
+.ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:-6px 0 18px;}
+.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:20px;
   border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
 .google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
 .google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
@@ -843,6 +855,7 @@ function normalizeHostListing(doc){
     units: units,
     amen: l.amen || [],
     desc: l.desc,
+    websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
     photos: gallery ? gallery.length : 0,
     avail: []
@@ -1321,11 +1334,18 @@ function openDetail(id){
     metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
-      (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
-        '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
-        '<span>Voir les avis sur Google</span>'+
-        '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
-      '</a>' : '')+
+      ((l.websiteUrl || l.googleUrl) ? '<div class="ext-links">'+
+        (l.websiteUrl ? '<a class="google-link" href="'+l.websiteUrl+'" target="_blank" rel="noopener">'+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z"/></svg>'+
+          '<span>Voir le site</span>'+
+          '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+        '</a>' : '')+
+        (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
+          '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
+          '<span>Voir les avis sur Google</span>'+
+          '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+        '</a>' : '')+
+      '</div>' : '')+
       '<p class="desc">'+esc(l.desc)+'</p>'+
       '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
@@ -1487,6 +1507,8 @@ function openSheet(kind){
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
+      '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
+      '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Prestations (communes au logement)</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
         var hfAmenActive = hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1;
         return '<button type="button" class="amenity-chip'+(hfAmenActive?' active':'')+'" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
@@ -2087,6 +2109,8 @@ function submitHostForm(){
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
   var phone = document.getElementById("hf-phone").value.trim();
+  var websiteUrl = document.getElementById("hf-website").value.trim();
+  var googleUrl = document.getElementById("hf-google").value.trim();
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
@@ -2118,6 +2142,7 @@ function submitHostForm(){
       btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
       var payload = {
         name:name, hostName:hostName, region:region, distance:distance, claim:claim, desc:desc, phone:phone, amen:amen,
+        websiteUrl:websiteUrl, googleUrl:googleUrl,
         gallery:gallery,
         units:units
       };
