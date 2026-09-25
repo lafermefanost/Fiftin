@@ -178,11 +178,21 @@ a{color:inherit; text-decoration:none;}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:6px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 6px; letter-spacing:-0.01em;}
 /* Pictogramme de type d'hébergement (chambre d'hôtes / avec table d'hôtes /
-   gîte) — juste devant le nom, couleur héritée du titre (currentColor) pour
-   fonctionner aussi bien en blanc sur photo (cover-info h2) qu'en encre
-   foncée sur fond crème (detail-body h1). */
-.type-icon{display:inline-flex; vertical-align:-4px; width:20px; height:20px; margin-right:6px; opacity:.92;}
-.type-icon svg{width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
+   gîte), en pastille pleine plutôt qu'en trait nu sur le fond du titre —
+   couleurs explicites (pas currentColor) pour rester lisible aussi bien en
+   blanc sur photo (cover-info h2) qu'en encre foncée sur fond crème
+   (detail-body h1), le fond de la pastille ne changeant jamais. */
+.type-badge{position:relative; display:inline-flex; align-items:center; justify-content:center;
+  width:24px; height:24px; border-radius:50%; background:var(--sauge-mid);
+  vertical-align:-6px; margin-right:7px; flex-shrink:0;}
+.type-badge svg{width:14px; height:14px; stroke:var(--cream); fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;}
+/* Petit badge d'accent (couverts) superposé en bas à droite de la pastille
+   "chambre" pour signaler la table d'hôtes en plus — plutôt que de tout
+   faire tenir dans un seul pictogramme (illisible à cette taille, voir
+   retour utilisateur : "on ne voit que la table"). */
+.type-badge-accent{position:absolute; right:-4px; bottom:-4px; width:13px; height:13px; border-radius:50%;
+  background:var(--yellow); display:flex; align-items:center; justify-content:center; border:1.5px solid var(--cream);}
+.type-badge-accent svg{width:7px; height:7px; stroke:var(--sauge-deep); fill:none; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
 .cover-info .tagline{font-size:14.5px; color:rgba(245,240,229,.88); margin:0 0 14px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
@@ -736,15 +746,25 @@ var MOTIFS = {
    annonce qui ne l'a pas encore renseigné (toute annonce réelle existante
    avant ce champ) n'affiche simplement aucun picto plutôt que d'en deviner
    un — voir typeIconHtml(). */
+/* Icône de base "lit" partagée par chambre/chambretable (même famille —
+   un hébergement dépendant, chez l'habitant), et "table" (fourchette
+   seule, simplifiée à l'extrême : à 7-8px de rendu dans le petit badge
+   d'accent, un couteau en plus ne ferait que brouiller le trait). */
+var BED_ICON = "<path d='M3 17v-4.5A1.5 1.5 0 0 1 4.5 11H10a1.5 1.5 0 0 1 1.5 1.5V14'/><path d='M12.5 14v-1A1.5 1.5 0 0 1 14 11.5h5.5A1.5 1.5 0 0 1 21 13v4'/><path d='M3 14h18'/><path d='M3 17v2.5M21 17v2.5'/>";
+var FORK_ICON = "<path d='M9 4v8M12 4v8M15 4v8M12 12v8'/>";
 var ACCOM_TYPES = {
-  chambre: {label:"Chambre d'hôtes", icon:"<path d='M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6'/><path d='M3 18v2M21 18v2'/><path d='M3 12V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/><path d='M11 12V9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3'/>"},
-  chambretable: {label:"Chambre d'hôtes avec table d'hôtes", icon:"<path d='M7 2v7a2 2 0 0 0 2 2v11'/><path d='M7 2v7M11 2v7'/><path d='M17 2c-1.5 0-2.5 1.8-2.5 5s1 5 2.5 5v10'/>"},
-  gite: {label:"Gîte (hébergement indépendant)", icon:"<path d='M3 11l9-7 9 7'/><path d='M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10'/><path d='M9 21v-6h6v6'/>"}
+  chambre: {label:"Chambre d'hôtes", icon:BED_ICON},
+  chambretable: {label:"Chambre d'hôtes avec table d'hôtes", icon:BED_ICON, accent:FORK_ICON},
+  // Toit simple, même silhouette que le motif "roof" des dégradés de
+  // secours (MOTIFS.roof plus haut) — cohérence avec un repère visuel
+  // déjà utilisé ailleurs dans l'appli plutôt qu'une maison réinventée.
+  gite: {label:"Gîte (hébergement indépendant)", icon:"<path d='M4 11.5 12 5l8 6.5'/><path d='M6 10v9a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-9'/><path d='M10 20v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5'/>"}
 };
 function typeIconHtml(l){
   var t = l.accomType && ACCOM_TYPES[l.accomType];
   if(!t) return "";
-  return '<span class="type-icon" title="'+esc(t.label)+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg></span>';
+  var accent = t.accent ? '<span class="type-badge-accent"><svg viewBox="0 0 24 24">'+t.accent+'</svg></span>' : "";
+  return '<span class="type-badge" title="'+esc(t.label)+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg>'+accent+'</span>';
 }
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
