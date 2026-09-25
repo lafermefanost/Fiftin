@@ -165,13 +165,24 @@ a{color:inherit; text-decoration:none;}
   background:rgba(20,26,20,0.35); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
   display:flex; align-items:center; justify-content:center;}
 .save-btn svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:1.8; transition:all .15s;}
-.save-btn.liked svg{fill:var(--danger); stroke:var(--danger);}
+.save-btn.liked svg{fill:var(--yellow); stroke:var(--yellow);}
+/* Même style que .save-btn (cœur), juste en dessous — 38+8=46px d'offset. */
+.share-btn{position:absolute; top:60px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%;
+  background:rgba(20,26,20,0.35); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
+  display:flex; align-items:center; justify-content:center;}
+.share-btn svg{width:17px; height:17px; stroke:#fff; fill:none; stroke-width:1.8;}
 .top-badges{position:absolute; top:14px; left:14px; z-index:5; display:flex; gap:6px;}
 .pill-badge{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600;
   padding:5px 10px; border-radius:14px; border:1px solid rgba(255,255,255,.2);}
 .cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream);}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:6px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 6px; letter-spacing:-0.01em;}
+/* Pictogramme de type d'hébergement (chambre d'hôtes / avec table d'hôtes /
+   gîte) — juste devant le nom, couleur héritée du titre (currentColor) pour
+   fonctionner aussi bien en blanc sur photo (cover-info h2) qu'en encre
+   foncée sur fond crème (detail-body h1). */
+.type-icon{display:inline-flex; vertical-align:-4px; width:20px; height:20px; margin-right:6px; opacity:.92;}
+.type-icon svg{width:100%; height:100%; stroke:currentColor; fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round;}
 .cover-info .tagline{font-size:14.5px; color:rgba(245,240,229,.88); margin:0 0 14px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
@@ -203,11 +214,15 @@ a{color:inherit; text-decoration:none;}
    sait juste pas : voir calendarHtml/le commentaire plus bas). */
 .cal:not(.cal-nodata) .cal-cell:not(.avail):not(.empty){
   background-image:linear-gradient(135deg, transparent calc(50% - 1px), rgba(46,43,34,.3) calc(50% - 1px), rgba(46,43,34,.3) calc(50% + 1px), transparent calc(50% + 1px));}
-.cal-cell.avail{background:var(--sauge); color:var(--cream); cursor:pointer;}
+/* Disponible : vert acide --yellow, même couleur que le bouton "Contact et
+   disponibilités" (.btn.primary) pour que le calendrier parle le même
+   langage que le bouton qui y mène — texte en --sauge-deep dessus comme
+   ce bouton (blanc/crème serait illisible sur cette teinte claire). */
+.cal-cell.avail{background:var(--yellow); color:var(--sauge-deep); cursor:pointer;}
 .cal-cell.avail.selected{background:var(--sauge-deep); color:var(--cream);}
 .cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
 .cal-dot{width:8px; height:8px; border-radius:50%; background:#E2DFD8; display:inline-block;}
-.cal-dot.avail{background:var(--sauge);}
+.cal-dot.avail{background:var(--yellow);}
 /* Calendrier sans données (voir calendarHtml) : cases en gris très clair
    plutôt que la même teinte que "réservé/indisponible" habituelle, pour ne
    pas laisser croire que tout est pris. */
@@ -226,9 +241,13 @@ a{color:inherit; text-decoration:none;}
 .send-row{display:flex; gap:8px;}
 .send-btn{flex:1; flex-direction:column; gap:4px; padding:10px 6px; border-radius:14px; font-size:11px; font-weight:700;}
 .send-btn svg{width:17px; height:17px;}
-.send-btn.wa{background:#e9f3ea; color:#2f5c33;}
-.send-btn.sms{background:var(--lavender-bg); color:#3c4c99;}
-.send-btn.call{background:#fbe9e2; color:#8a3d24;}
+.send-btn.wa{background:var(--sauge-mid); color:#fff;}
+.send-btn.sms{background:var(--lavender); color:#fff;}
+/* Texte volontairement --sauge-deep et non blanc ici (contrairement aux
+   deux boutons ci-dessus) : --yellow est trop clair (contraste ~1.3:1
+   avec du blanc, illisible) — même choix que .btn.primary, qui utilise
+   déjà --yellow avec un texte foncé pour cette raison. */
+.send-btn.call{background:var(--yellow); color:var(--sauge-deep);}
 
 /* ---------- filter sheet ---------- */
 .sheet-backdrop{position:fixed; inset:0; background:rgba(20,26,20,.5); z-index:150;
@@ -314,6 +333,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
   border-radius:50%; background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
 .detail-back svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2;}
 .detail-save{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); right:14px; z-index:10;}
+.detail-share{position:absolute; top:calc(14px + env(safe-area-inset-top,0px) + 46px); right:14px; z-index:10;}
 .dots{position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:5px; z-index:5;}
 .dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .dots span.on{background:#fff; width:16px; border-radius:3px;}
@@ -418,10 +438,17 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
    hôte notamment), où nav.tabbar doit rester en dessous comme avant. */
 body.detail-open nav.tabbar{z-index:220;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
+/* Encart de sélection carré façon icône d'appli mobile (contrairement à
+   app/ où .mbnav-btn.on colore tout le bouton, rectangle qui suit la
+   largeur flex du bouton) : seul un carré fixe autour du pictogramme
+   passe en vert sauge --sauge (propriétaire, pas --sauge-mid qui sert
+   ailleurs de "vert moyen"), le libellé reste en dehors, coloré seul. */
+.tab-icon{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
 .tab.active{color:var(--sauge-deep);}
-.tab.active svg{fill:var(--sauge-deep); stroke:var(--sauge-deep);}
+.tab.active .tab-icon{background:var(--sauge);}
+.tab.active .tab-icon svg{fill:var(--cream); stroke:var(--cream);}
 .tab .badge{position:absolute; top:2px; right:22%; background:var(--danger); color:#fff; font-size:9px; font-weight:800;
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
@@ -429,6 +456,11 @@ body.detail-open nav.tabbar{z-index:220;}
 .map-view{padding:16px 18px 110px;}
 .map-canvas{position:relative; aspect-ratio:3/4; border-radius:24px; overflow:hidden; background:var(--cream-deep);
   margin-bottom:18px;}
+/* Carte de l'annonce sélectionnée sur la carte (clic sur une punaise ou un
+   item de la liste) — juste en dessous de la carte plutôt qu'un plein
+   écran par-dessus, même carte que le fil (.card, voir coverHtml()). */
+.map-selected{margin-bottom:18px;}
+.map-selected[hidden]{display:none;}
 .map-canvas .leaflet-container{width:100%; height:100%; background:var(--cream-deep); font-family:'Jost',sans-serif;}
 .map-canvas .leaflet-control-attribution{font-size:9.5px; background:rgba(239,238,234,.85);}
 .map-pin-icon{background:none; border:none;}
@@ -696,6 +728,49 @@ var MOTIFS = {
   waves:"<path d='M5 55 Q20 40 35 55 T65 55 T95 55 M5 75 Q20 60 35 75 T65 75 T95 75' fill='none' stroke='currentColor' stroke-width='3'/>"
 };
 
+/* Type d'hébergement : un pictogramme distinct par catégorie, affiché
+   juste devant le nom de l'annonce (fil, carte sélectionnée sur la carte,
+   fiche détail) pour distinguer d'un coup d'œil un hébergement dépendant
+   (chambre chez l'habitant, avec ou sans repas partagé le soir) d'un
+   hébergement indépendant (gîte). Champ optionnel (l.accomType) : une
+   annonce qui ne l'a pas encore renseigné (toute annonce réelle existante
+   avant ce champ) n'affiche simplement aucun picto plutôt que d'en deviner
+   un — voir typeIconHtml(). */
+var ACCOM_TYPES = {
+  chambre: {label:"Chambre d'hôtes", icon:"<path d='M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6'/><path d='M3 18v2M21 18v2'/><path d='M3 12V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/><path d='M11 12V9a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3'/>"},
+  chambretable: {label:"Chambre d'hôtes avec table d'hôtes", icon:"<path d='M7 2v7a2 2 0 0 0 2 2v11'/><path d='M7 2v7M11 2v7'/><path d='M17 2c-1.5 0-2.5 1.8-2.5 5s1 5 2.5 5v10'/>"},
+  gite: {label:"Gîte (hébergement indépendant)", icon:"<path d='M3 11l9-7 9 7'/><path d='M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10'/><path d='M9 21v-6h6v6'/>"}
+};
+function typeIconHtml(l){
+  var t = l.accomType && ACCOM_TYPES[l.accomType];
+  if(!t) return "";
+  return '<span class="type-icon" title="'+esc(t.label)+'"><svg viewBox="0 0 24 24">'+t.icon+'</svg></span>';
+}
+
+var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
+  '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>'+
+  '<line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>';
+/* Lien profond vers une annonce précise (?listing=<id>), pour que le
+   partage propage vraiment CETTE annonce et pas seulement l'accueil du
+   site — voir maybeOpenDeepLink() plus bas, qui ouvre la fiche au
+   chargement si ce paramètre est présent et correspond à une annonce
+   chargée. */
+function shareListing(l){
+  var url = location.origin + location.pathname + "?listing=" + l.id;
+  var text = l.name + (l.claim ? " — " + l.claim : "");
+  if(navigator.share){
+    navigator.share({title:l.name, text:text, url:url}).catch(function(){});
+    return;
+  }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(url).then(function(){
+      alert("Lien copié : "+url);
+    }).catch(function(){ prompt("Copiez ce lien pour le partager :", url); });
+    return;
+  }
+  prompt("Copiez ce lien pour le partager :", url);
+}
+
 /* Les annonces sont chargées depuis listings.json (fetch), pas embarquées ici :
    au-delà de quelques dizaines d'annonces, les avoir dans le HTML alourdirait
    le chargement initial de la page pour tout le monde, même hors saison. */
@@ -864,6 +939,7 @@ function normalizeHostListing(doc){
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
+    accomType: l.accomType || "",
     host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
     photos: gallery ? gallery.length : 0,
     avail: []
@@ -878,6 +954,7 @@ function fetchPublishedListings(){
       rebuildListings();
       if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
       if(state.tab==="map") renderMap();
+      maybeOpenDeepLink();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
     });
@@ -1240,12 +1317,13 @@ function coverHtml(l){
     '<div class="top-badges"><span class="pill-badge">'+listingDistanceKm(l)+' km</span><span class="pill-badge">'+priceLabel+'</span></div>'+
     '<button class="save-btn'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'" aria-label="Enregistrer">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
+    '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
     '<div class="cover-info">'+
       '<div class="region">'+esc(l.region)+'</div>'+
-      '<h2>'+esc(l.name)+'</h2>'+
+      '<h2>'+typeIconHtml(l)+esc(l.name)+'</h2>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       '<div class="cover-cta">'+
-        '<button class="btn primary" data-quickreq="'+l.id+'">Vérifier la disponibilité</button>'+
+        '<button class="btn primary" data-quickreq="'+l.id+'">Contact et disponibilités</button>'+
         '<button class="btn ghost-dark" data-open="'+l.id+'">Voir plus</button>'+
       '</div>'+
     '</div>'+
@@ -1294,8 +1372,20 @@ function wireFeedEvents(){
       var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
       if(!l) return;
       toggleLike(l);
-      renderFeed(); renderLikeBadge();
+      // state.tab==="map" : la carte sélectionnée sous la carte réutilise
+      // ce même markup (voir renderMapSelectedCard) — un renderFeed() ici
+      // écraserait la vue carte par le fil normal. refreshCurrentView()
+      // choisit le bon rafraîchissement selon l'onglet actif.
+      refreshCurrentView(); renderLikeBadge();
       if(state.tab==="likes") renderResultLine();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-share]"), function(el){
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      var id = Number(el.getAttribute("data-share"));
+      var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+      if(l) shareListing(l);
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-open]"), function(el){
@@ -1575,11 +1665,12 @@ function openDetail(id){
     '<div class="detail-gallery" id="detail-gallery">'+slides+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
       '<button class="save-btn detail-save'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
+      '<button class="share-btn detail-share" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
     '<div class="detail-body">'+
       '<div class="region">'+esc(l.region)+'</div>'+
-      '<h1>'+esc(l.name)+'</h1>'+
+      '<h1>'+typeIconHtml(l)+esc(l.name)+'</h1>'+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       tabsHtml+
       '<div class="detail-group"'+(hasTabs?' style="border-radius:0 0 12px 12px"':'')+'>'+
@@ -1607,6 +1698,7 @@ function openDetail(id){
     toggleLike(l);
     renderLikeBadge(); openDetail(id);
   });
+  root.querySelector("[data-share]").addEventListener("click", function(){ shareListing(l); });
   if(hasTabs){
     // Changer d'onglet ou choisir une chambre depuis la vue d'ensemble tient en 1 clic — la position
     // de scroll est reprise telle quelle pour un changement d'onglet (pas besoin de rescroller à
@@ -1728,6 +1820,12 @@ function openSheet(kind){
     inner = '<h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
       '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
       '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
+      '<div class="field-block"><label>Type d\'hébergement</label><select class="text-input" id="hf-type">'+
+        '<option value="">— Choisir —</option>'+
+        Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
+      '</select>'+
+        '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
+      '</div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
       '<div class="field-block"><label>Localisation (affichée aux voyageurs)</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous" value="'+(hfEf?esc(hfEf.region||""):"")+'"></div>'+
       '<div class="field-block"><label>Région (pour la recherche par lieu)</label><select class="text-input" id="hf-region-name">'+
@@ -2387,6 +2485,7 @@ function geocodeAddress(address){
 
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
+  var accomType = document.getElementById("hf-type").value;
   var hostName = document.getElementById("hf-hostname").value.trim();
   var region = document.getElementById("hf-region").value.trim();
   var regionName = document.getElementById("hf-region-name").value;
@@ -2401,7 +2500,7 @@ function submitHostForm(){
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !hostName || !region || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !accomType || !hostName || !region || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
   for(var i=0;i<hfUnits.length;i++){
     var u = hfUnits[i];
@@ -2430,7 +2529,7 @@ function submitHostForm(){
       return uploadUnit(0, []).then(function(units){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
-          name:name, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, amen:amen,
+          name:name, accomType:accomType, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
           websiteUrl:websiteUrl, googleUrl:googleUrl,
@@ -2496,6 +2595,12 @@ var mapMarkerLayer = null;
 var mapZone = null;
 var mapZoneArmed = false;
 var mapZoneCircleLayer = null;
+/* Annonce sélectionnée sur la carte (punaise ou item de liste cliqué) :
+   affichée juste sous la carte via renderMapSelectedCard(), plutôt que
+   d'ouvrir la fiche détail en plein écran par-dessus la carte (comportement
+   précédent, jugé déroutant — on perd la carte des yeux). Pas dans state
+   (pas persisté), remise à zéro en quittant l'onglet Carte. */
+var mapSelectedId = null;
 
 /* Zone de recherche dessinée à la main sur la carte : un cercle (centre +
    rayon), pas un polygone libre — plus simple à poser et ajuster d'un
@@ -2525,8 +2630,33 @@ function renderMapList(located){
     return '<div class="map-list-item" data-pin-item="'+l.id+'"><div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div><div><b>'+esc(l.name)+'</b><span>'+l.region+' · '+l.price+'€/nuit</span></div></div>';
   }).join("") : '<p class="sheet-sub" style="margin:4px 0 0;">Aucun hébergement '+(mapZone?"dans cette zone":"à afficher")+'.</p>';
   Array.prototype.forEach.call(listEl.querySelectorAll("[data-pin-item]"), function(el){
-    el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-pin-item"))); });
+    el.addEventListener("click", function(){ selectMapListing(Number(el.getAttribute("data-pin-item"))); });
   });
+}
+
+/* Affiche, juste sous la carte, la même carte que celle du fil (nom,
+   contact, "Voir plus"...) pour l'annonce sélectionnée — sans recréer
+   l'instance Leaflet (voir refreshCurrentView()). */
+function selectMapListing(id){
+  mapSelectedId = id;
+  renderMapSelectedCard();
+  var container = document.getElementById("map-selected");
+  if(container) container.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function renderMapSelectedCard(){
+  var container = document.getElementById("map-selected");
+  if(!container) return;
+  var l = mapSelectedId!=null ? LISTINGS.filter(function(x){ return x.id===mapSelectedId; })[0] : null;
+  if(!l){
+    mapSelectedId = null;
+    container.hidden = true; container.innerHTML = "";
+    return;
+  }
+  container.hidden = false;
+  container.innerHTML = '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
+    '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
+  '</article>';
+  wireFeedEvents();
 }
 
 /* Ré-affiche juste les punaises + le cercle de zone sans recréer la carte
@@ -2555,7 +2685,7 @@ function refreshMapMarkers(){
       iconSize:[30,30], iconAnchor:[15,36]
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
-    marker.on("click", function(){ openDetail(l.id); });
+    marker.on("click", function(){ selectMapListing(l.id); });
     clusterGroup.addLayer(marker);
   });
   mapMarkerLayer = clusterGroup;
@@ -2573,6 +2703,7 @@ function renderMap(){
         (mapZoneArmed ? "Touchez la carte…" : (mapZone ? "Déplacer la zone" : "Dessiner une zone"))+
       '</button>'+
     '</div>'+
+    '<div class="map-selected" id="map-selected" hidden></div>'+
     (mapZone ? '<div class="map-zone-controls">'+
       '<span>Rayon : <b id="map-zone-radius-label">'+mapZone.radiusKm+' km</b></span>'+
       '<input type="range" id="map-zone-radius" min="1" max="30" value="'+mapZone.radiusKm+'">'+
@@ -2580,6 +2711,7 @@ function renderMap(){
     '</div>' : '')+
     '<div class="map-list" id="map-list"></div>'+
   '</div>';
+  renderMapSelectedCard();
 
   document.getElementById("map-zone-btn").addEventListener("click", function(){
     mapZoneArmed = !mapZone || !mapZoneArmed;
@@ -2748,6 +2880,14 @@ function renderAdminQueue(){
 function renderTabContent(){
   if(state.tab==="map") renderMap(); else renderFeed();
 }
+/* Comme renderTabContent(), mais pour un simple rafraîchissement d'état
+   (like togglé...) qui ne doit pas reconstruire toute la vue : sur la
+   carte, ça évite de détruire/recréer l'instance Leaflet (perte du
+   zoom/pan) juste pour mettre à jour un cœur — seule la carte sélectionnée
+   sous la carte est ré-affichée. */
+function refreshCurrentView(){
+  if(state.tab==="map") renderMapSelectedCard(); else renderFeed();
+}
 
 function switchTab(tab){
   // Cliquer un onglet de la barre du bas pendant qu'une fiche détail est
@@ -2756,6 +2896,7 @@ function switchTab(tab){
   // reste cliquable même fiche ouverte (voir sa règle CSS) précisément
   // pour permettre ça sans repasser par la flèche retour.
   if(state.detailListingId!=null) closeDetail();
+  if(state.tab==="map" && tab!=="map") mapSelectedId = null;
   state.tab = tab;
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
@@ -2788,34 +2929,34 @@ function switchTab(tab){
    quel que soit le contenu de la barre. */
 var TRAVELER_TABS_HTML =
   '<button class="tab" data-tab="explore">'+
-    '<svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg></span>'+
     '<span>Explorer</span>'+
   '</button>'+
   '<button class="tab" data-tab="map">'+
-    '<svg viewBox="0 0 24 24"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg></span>'+
     '<span>Carte</span>'+
   '</button>'+
   '<button class="tab" data-tab="likes">'+
-    '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></span>'+
     '<span>Envies</span>'+
     '<span class="badge" id="like-badge" hidden>0</span>'+
   '</button>'+
   '<button class="tab" data-tab="profile">'+
-    '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
     '<span>Profil</span>'+
   '</button>';
 
 var HOST_TABS_HTML =
   '<button class="tab" data-host-tab="listings">'+
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>'+
     '<span>Mes annonces</span>'+
   '</button>'+
   '<button class="tab" data-host-tab="calendar">'+
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>'+
     '<span>Mon calendrier</span>'+
   '</button>'+
   '<button class="tab" data-host-exit="1">'+
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>'+
     '<span>Espace voyageur</span>'+
   '</button>';
 
@@ -3301,6 +3442,29 @@ document.getElementById("hero-scroll-btn").addEventListener("click", function(){
 
 
 /* ---------------- init ---------------- */
+/* Lien de partage (?listing=<id>, voir shareListing()) : ouvre directement
+   la fiche détail de l'annonce visée si elle est déjà chargée. Appelée
+   après CHAQUE source de données (listings.json, puis Firestore) plutôt
+   qu'une seule fois, parce que l'annonce visée est presque toujours une
+   annonce réelle (Firestore, qui répond après le fichier statique) —
+   deepLinkHandled empêche de rouvrir la fiche une fois trouvée. */
+var deepLinkHandled = false;
+function maybeOpenDeepLink(){
+  if(deepLinkHandled) return;
+  var idParam = new URLSearchParams(location.search).get("listing");
+  if(!idParam) { deepLinkHandled = true; return; }
+  var id = Number(idParam);
+  var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+  if(!l) return; // pas encore trouvée : on retentera à la prochaine source chargée
+  deepLinkHandled = true;
+  if(!heroDismissed){
+    heroDismissed = true;
+    var heroEl = document.getElementById("hero");
+    if(heroEl) heroEl.hidden = true;
+  }
+  openDetail(id);
+}
+
 renderTabbar();
 renderFilterBar();
 renderFeed();
@@ -3316,6 +3480,7 @@ fetch("listings.json").then(function(r){
   state.loading = false;
   renderFilterBar(); renderFeed(); renderResultLine();
   if(state.tab==="map") renderMap();
+  maybeOpenDeepLink();
 }).catch(function(err){
   state.loading = false;
   document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
