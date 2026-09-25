@@ -242,6 +242,7 @@ a{color:inherit; text-decoration:none;}
   display:flex; align-items:center; justify-content:center;}
 .field-block{margin-bottom:22px;}
 .field-block > label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge); display:block; margin-bottom:10px;}
+.field-hint{font-size:11.5px; color:var(--gray-mid); margin:6px 0 0;}
 .range-value{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;}
 input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amen-group{margin-bottom:16px;}
@@ -851,8 +852,11 @@ function normalizeHostListing(doc){
   var price = units && units.length ? Math.min.apply(null, units.map(function(u){ return u.price; })) : l.price;
   return {
     id: idFromString(doc.id),
+    docId: doc.id, // id Firestore réel (string) — le "id" ci-dessus n'est qu'un hash numérique pour homogénéité avec les annonces statiques (listings.json), qui elles n'ont pas de document Firestore. Nécessaire pour cibler le bon document (toggleLike, likeCount).
     name: l.name, region: l.region, claim: l.claim,
     price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
+    lat: (typeof l.lat==="number") ? l.lat : null, lng: (typeof l.lng==="number") ? l.lng : null, address: l.address || "",
+    likeCount: (typeof l.likeCount==="number") ? l.likeCount : 0,
     grad: "clay", motif: "roof",
     gallery: gallery,
     units: units,
@@ -982,6 +986,37 @@ function matchesLocation(l, f){
   return true;
 }
 
+/* ---------------- distance réelle (géolocalisation) ----------------
+   `distance` était jusqu'ici un nombre fixe saisi à la main par l'hôte
+   ("distance depuis la Ferme Fanost"), pas une vraie distance — il n'y
+   avait aucune coordonnée par annonce. Remplacé par un calcul dynamique :
+   chaque annonce porte maintenant lat/lng (géocodées depuis son adresse
+   au dépôt, voir geocodeAddress()/submitHostForm()), et la distance
+   affichée/filtrée/triée se recalcule depuis un point de référence qui
+   peut changer — soit la position réelle du voyageur (state.geoOrigin,
+   posée par "Utiliser ma position" dans le volet Lieu), soit, par défaut
+   tant qu'il ne l'a pas activée, DEFAULT_ORIGIN (les coordonnées de la
+   Ferme Fanost elle-même — même point de référence implicite qu'avant ce
+   chantier, pour ne pas changer l'expérience par défaut). Jamais stockée
+   sur l'annonce : recalculée à chaque rendu, pour rester juste si le
+   voyageur active/désactive sa position en cours de navigation. */
+var DEFAULT_ORIGIN = {lat:48.7370, lng:2.3280}; // La Ferme Fanost (Essonne) — mêmes coordonnées que "Le Petit Fanost" dans listings.json
+// haversineKm() existe déjà plus bas (mapZoneFilteredListings, la zone de
+// recherche dessinée à la main sur la carte) — réutilisée telle quelle,
+// pas redéclarée : une déclaration de fonction est hissée quelle que soit
+// sa position dans le fichier, donc disponible ici sans avoir à la copier.
+function currentOrigin(){ return state.geoOrigin || DEFAULT_ORIGIN; }
+/* Distance en km, arrondie (même format d'affichage qu'avant, "8 km").
+   Annonce sans coordonnées (pas encore géocodée, ou créée avant ce
+   chantier et jamais réenregistrée depuis) : repli sur son ancien nombre
+   fixe `distance`, pour ne rien casser tant que l'hôte n'a pas remis à
+   jour son adresse. */
+function listingDistanceKm(l){
+  if(l.lat==null || l.lng==null) return l.distance || 0;
+  var o = currentOrigin();
+  return Math.round(haversineKm(o.lat, o.lng, l.lat, l.lng));
+}
+
 var AMEN_ICONS = {
   "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
   "Vue mer":"<path d='M3 15q3-3 6 0t6 0 6 0M3 19q3-3 6 0t6 0 6 0'/>",
@@ -1002,7 +1037,8 @@ var AMEN_ICONS = {
 /* ---------------- state ---------------- */
 var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
-  detailListingId:null, detailTab:"overview"};
+  detailListingId:null, detailTab:"overview",
+  geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
 var heroDismissed = false;
 /* Espace hôtes : annonces du compte connecté + son compte Fiftin app (pour
    le lien calendrier), mis en cache le temps de la session hôte. undefined
@@ -1018,6 +1054,30 @@ try{
   if(saved.liked) state.liked = saved.liked;
 }catch(e){}
 function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked})); }catch(e){} }
+
+/* Bascule l'état "favori" d'une annonce, et si c'est une annonce réelle
+   (déposée par un hôte, backée par un vrai document Firestore — voir
+   docId dans normalizeHostListing()) fait aussi évoluer son compteur
+   global likeCount de +1/-1, pour permettre un vrai classement "les plus
+   appréciés" (voir le tri) plutôt qu'un simple état local au visiteur.
+   Une annonce statique (listings.json, pas de docId) reste "aimable"
+   localement mais ne contribue à aucun compteur global — il n'y a pas de
+   document Firestore à incrémenter. Écriture best-effort (même esprit que
+   writeBackSejoursLink côté app/) : un échec réseau ne doit jamais
+   bloquer l'action locale, déjà faite avant l'appel réseau. Nécessite la
+   règle Firestore listings/{listingId} étendue — voir README. */
+function toggleLike(l){
+  var idx = state.liked.indexOf(l.id);
+  var liked;
+  if(idx===-1){ state.liked.push(l.id); liked = true; }
+  else { state.liked.splice(idx,1); liked = false; }
+  persist();
+  if(l.docId && typeof firebase!=="undefined" && firebase.apps && firebase.apps.length){
+    firebase.firestore().collection("listings").doc(l.docId).update({
+      likeCount: firebase.firestore.FieldValue.increment(liked?1:-1)
+    }).catch(function(err){ console.error("[like] échec de la mise à jour du compteur", err); });
+  }
+}
 
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
@@ -1042,14 +1102,15 @@ function filteredListings(){
   var f = state.filters;
   var list = LISTINGS.filter(function(l){
     if(!matchesLocation(l, f)) return false;
-    if(l.distance > f.distance) return false;
+    if(listingDistanceKm(l) > f.distance) return false;
     if(l.price > f.price) return false;
     if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
     return true;
   });
   if(state.tab==="likes") list = list.filter(function(l){ return state.liked.indexOf(l.id)!==-1; });
-  if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return a.distance-b.distance; });
-  else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return b.distance-a.distance; });
+  if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return listingDistanceKm(a)-listingDistanceKm(b); });
+  else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return listingDistanceKm(b)-listingDistanceKm(a); });
+  else if(state.sort==="likes_desc") list = list.slice().sort(function(a,b){ return (b.likeCount||0)-(a.likeCount||0); });
   else if(state.sort==="price_asc") list = list.slice().sort(function(a,b){ return a.price-b.price; });
   else if(state.sort==="price_desc") list = list.slice().sort(function(a,b){ return b.price-a.price; });
   return list;
@@ -1148,7 +1209,7 @@ function coverHtml(l){
     mediaHtml+
     '<div class="grain"></div>'+
     '<div class="scrim"></div>'+
-    '<div class="top-badges"><span class="pill-badge">'+l.distance+' km</span><span class="pill-badge">'+priceLabel+'</span></div>'+
+    '<div class="top-badges"><span class="pill-badge">'+listingDistanceKm(l)+' km</span><span class="pill-badge">'+priceLabel+'</span></div>'+
     '<button class="save-btn'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'" aria-label="Enregistrer">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<div class="cover-info">'+
@@ -1202,9 +1263,10 @@ function wireFeedEvents(){
     el.addEventListener("click", function(e){
       e.stopPropagation();
       var id = Number(el.getAttribute("data-like"));
-      var idx = state.liked.indexOf(id);
-      if(idx===-1) state.liked.push(id); else state.liked.splice(idx,1);
-      persist(); renderFeed(); renderLikeBadge();
+      var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+      if(!l) return;
+      toggleLike(l);
+      renderFeed(); renderLikeBadge();
       if(state.tab==="likes") renderResultLine();
     });
   });
@@ -1446,7 +1508,7 @@ function openDetail(id){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
-    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div></div>';
+    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
       ((l.websiteUrl || l.googleUrl) ? '<div class="ext-links">'+
@@ -1471,7 +1533,7 @@ function openDetail(id){
     // chambre sélectionnée : ses propres infos, photos (déjà gérées ci-dessus) et son propre planning —
     // pas la description/Google/liste des chambres de l'établissement, déjà sur la vue d'ensemble.
     metaRowHtml = '<div class="detail-card"><h2 class="section-title" style="margin-top:0">'+esc(activeUnit.name)+'</h2>'+
-      '<div class="meta-row"><div class="meta-item"><b>'+activeUnit.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+activeUnit.maxPersons+'</b><span>voyageurs max</span></div><div class="meta-item"><b>'+l.distance+' km</b><span>de vous</span></div></div></div>';
+      '<div class="meta-row"><div class="meta-item"><b>'+activeUnit.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+activeUnit.maxPersons+'</b><span>voyageurs max</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div></div></div>';
     bodyExtraHtml =
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul></div>'+
@@ -1514,9 +1576,8 @@ function openDetail(id){
 
   document.getElementById("detail-back").addEventListener("click", closeDetail);
   root.querySelector("[data-like]").addEventListener("click", function(){
-    var idx = state.liked.indexOf(l.id);
-    if(idx===-1) state.liked.push(l.id); else state.liked.splice(idx,1);
-    persist(); renderLikeBadge(); openDetail(id);
+    toggleLike(l);
+    renderLikeBadge(); openDetail(id);
   });
   if(hasTabs){
     // Changer d'onglet ou choisir une chambre depuis la vue d'ensemble tient en 1 clic — la position
@@ -1569,6 +1630,15 @@ function openSheet(kind){
   var inner = "";
   if(kind==="loc"){
     inner = '<h3>Lieu</h3>'+
+      // Mis en avant, tout en haut : la géolocalisation change la référence
+      // de TOUTE distance affichée sur le fil (badges, tri, filtre — voir
+      // listingDistanceKm()/currentOrigin()), pas seulement ce volet.
+      '<div class="field-block"><button type="button" class="btn-photo-add" id="btn-use-geo">'+
+        (state.geoOrigin ? "✓ Position activée — distances calculées depuis vous" : "📍 Utiliser ma position")+
+      '</button>'+
+      (state.geoOrigin ? '<button type="button" class="link-btn" id="btn-clear-geo" style="margin-top:8px;">Revenir à la position par défaut</button>' : '')+
+      '<p class="field-hint" id="geo-err"></p>'+
+      '</div>'+
       '<div class="field-block"><label>Région</label><div class="region-chip-row">'+
         FR_REGIONS.map(function(r){
           return '<button type="button" class="region-chip'+(f.regionName===r.name?' active':'')+'" data-region="'+esc(r.name)+'">'+esc(r.name)+'</button>';
@@ -1597,10 +1667,10 @@ function openSheet(kind){
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
   } else if(kind==="sort"){
-    // Ordre de priorité demandé : distance, (favoris — pas encore un vrai
-    // classement global, voir README), puis prix. "Recommandés" reste le
-    // choix neutre par défaut, en tête, inchangé.
+    // Ordre de priorité demandé : distance, favoris, puis prix.
+    // "Recommandés" reste le choix neutre par défaut, en tête, inchangé.
     var opts = [["reco","Recommandés"],["distance_asc","Distance croissante"],["distance_desc","Distance décroissante"],
+      ["likes_desc","Les plus appréciés"],
       ["price_asc","Prix croissant"],["price_desc","Prix décroissant"]];
     inner = '<h3>Trier</h3><div class="field-block sort-row">'+opts.map(function(o){
       return '<button class="radio-row'+(state.sort===o[0]?' active':'')+'" data-sort="'+o[0]+'">'+o[1]+'</button>';
@@ -1640,7 +1710,9 @@ function openSheet(kind){
         deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
       '</select></div>'+
       '<div class="field-block"><label>Ville / quartier / rue (optionnel, précise la recherche)</label><input class="text-input" id="hf-city" placeholder="Ex. Wissous, centre-ville…" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
-      '<div class="field-block"><label>Distance depuis la Ferme Fanost (km)</label><input class="text-input" type="number" min="0" id="hf-distance" value="'+(hfEf&&hfEf.distance!=null?hfEf.distance:"")+'"></div>'+
+      '<div class="field-block"><label>Adresse complète du logement</label><input class="text-input" id="hf-address" placeholder="Numéro, rue, code postal, ville" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
+        '<p class="field-hint">Sert à calculer la distance réelle affichée aux voyageurs (depuis leur position ou le lieu qu\'ils recherchent) — jamais montrée telle quelle sur l\'annonce.</p>'+
+      '</div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
@@ -1772,6 +1844,30 @@ function openSheet(kind){
   document.getElementById("sheet-apply").addEventListener("click", function(){ closeSheet(); persist(); renderFilterBar(); renderTabContent(); renderResultLine(); });
 
   if(kind==="loc"){
+    document.getElementById("btn-use-geo").addEventListener("click", function(){
+      var geoBtn = this, errP = document.getElementById("geo-err");
+      errP.textContent = "";
+      if(!navigator.geolocation){ errP.textContent = "La géolocalisation n'est pas disponible sur cet appareil/navigateur."; return; }
+      geoBtn.disabled = true;
+      geoBtn.textContent = "Localisation en cours…";
+      navigator.geolocation.getCurrentPosition(function(pos){
+        state.geoOrigin = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+        openSheet("loc"); // reconstruit le volet (bouton "activé") + les distances affichées derrière
+        renderTabContent(); renderResultLine();
+      }, function(err){
+        errP.textContent = err.code===1
+          ? "Position refusée — autorisez la géolocalisation dans les réglages de votre navigateur pour l'utiliser."
+          : "Impossible d'obtenir votre position pour l'instant.";
+        geoBtn.disabled = false;
+        geoBtn.textContent = "📍 Utiliser ma position";
+      }, {timeout:10000});
+    });
+    var clearGeoBtn = document.getElementById("btn-clear-geo");
+    if(clearGeoBtn) clearGeoBtn.addEventListener("click", function(){
+      state.geoOrigin = null;
+      openSheet("loc");
+      renderTabContent(); renderResultLine();
+    });
     document.getElementById("s-loc").addEventListener("input", function(e){ f.q = e.target.value; });
     // Région et département pilotent chacun leur propre champ structuré
     // (f.regionName/f.deptName), indépendant du mot-clé libre (f.q) —
@@ -2243,6 +2339,24 @@ function resolvePhotoEntries(entries, uid, pathPrefix, progressLabel){
   });
 }
 
+/* Géocodage adresse -> lat/lng via Nominatim (OpenStreetMap) : API
+   publique et gratuite, pas de clé ni de coût contrairement à un service
+   comme l'API Géocodage Google. Utilisé UNIQUEMENT au dépôt/à la
+   modification d'une annonce (un hôte à la fois, usage occasionnel) —
+   jamais côté recherche voyageur, où la distance se recalcule localement
+   depuis les coordonnées déjà stockées (voir listingDistanceKm()) : reste
+   largement dans les limites d'usage raisonnable de l'API publique. */
+function geocodeAddress(address){
+  var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(address);
+  return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
+    if(!r.ok) throw new Error("geocode-http-"+r.status);
+    return r.json();
+  }).then(function(results){
+    if(!results || !results.length) throw new Error("geocode-not-found");
+    return {lat:Number(results[0].lat), lng:Number(results[0].lon)};
+  });
+}
+
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var hostName = document.getElementById("hf-hostname").value.trim();
@@ -2250,7 +2364,7 @@ function submitHostForm(){
   var regionName = document.getElementById("hf-region-name").value;
   var deptName = document.getElementById("hf-dept-name").value;
   var city = document.getElementById("hf-city").value.trim();
-  var distance = Number(document.getElementById("hf-distance").value);
+  var address = document.getElementById("hf-address").value.trim();
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
   var phone = document.getElementById("hf-phone").value.trim();
@@ -2259,7 +2373,7 @@ function submitHostForm(){
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !hostName || !region || isNaN(distance) || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !hostName || !region || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
   for(var i=0;i<hfUnits.length;i++){
     var u = hfUnits[i];
@@ -2274,36 +2388,40 @@ function submitHostForm(){
   var btn = document.getElementById("sheet-apply");
   var originalLabel = btn.textContent;
   btn.disabled = true;
-  resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(gallery){
-    var uploadUnit = function(i, doneUnits){
-      if(i>=hfUnits.length) return Promise.resolve(doneUnits);
-      var u = hfUnits[i];
-      return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+u.name.trim()+"…").then(function(unitGallery){
-        doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery, linkedRoomId:u.linkedRoomId||""});
-        return uploadUnit(i+1, doneUnits);
-      });
-    };
-    return uploadUnit(0, []).then(function(units){
-      btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
-      var payload = {
-        name:name, hostName:hostName, region:region, distance:distance, claim:claim, desc:desc, phone:phone, amen:amen,
-        regionName:regionName, deptName:deptName, city:city,
-        websiteUrl:websiteUrl, googleUrl:googleUrl,
-        gallery:gallery,
-        units:units
+  btn.textContent = "Localisation de l'adresse…";
+  geocodeAddress(address).then(function(coords){
+    return resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(gallery){
+      var uploadUnit = function(i, doneUnits){
+        if(i>=hfUnits.length) return Promise.resolve(doneUnits);
+        var u = hfUnits[i];
+        return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+u.name.trim()+"…").then(function(unitGallery){
+          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery, linkedRoomId:u.linkedRoomId||""});
+          return uploadUnit(i+1, doneUnits);
+        });
       };
-      if(editing){
-        /* Ni status, ni ownerUid, ni createdAt dans ce payload : la règle
-           Firestore exige que status ne bouge pas sur un update du
-           propriétaire (voir README), et .update() ne touche que les
-           champs listés — les autres restent tels quels. */
-        return firebase.firestore().collection("listings").doc(editId).update(payload);
-      }
-      payload.ownerUid = authState.uid;
-      payload.ownerEmail = authState.email;
-      payload.status = "pending";
-      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-      return firebase.firestore().collection("listings").add(payload);
+      return uploadUnit(0, []).then(function(units){
+        btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
+        var payload = {
+          name:name, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, amen:amen,
+          regionName:regionName, deptName:deptName, city:city,
+          address:address, lat:coords.lat, lng:coords.lng,
+          websiteUrl:websiteUrl, googleUrl:googleUrl,
+          gallery:gallery,
+          units:units
+        };
+        if(editing){
+          /* Ni status, ni ownerUid, ni createdAt dans ce payload : la règle
+             Firestore exige que status ne bouge pas sur un update du
+             propriétaire (voir README), et .update() ne touche que les
+             champs listés — les autres restent tels quels. */
+          return firebase.firestore().collection("listings").doc(editId).update(payload);
+        }
+        payload.ownerUid = authState.uid;
+        payload.ownerEmail = authState.email;
+        payload.status = "pending";
+        payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+        return firebase.firestore().collection("listings").add(payload);
+      });
     });
   }).then(function(){
     var root = document.getElementById("sheet-root");
@@ -2324,7 +2442,15 @@ function submitHostForm(){
     });
     document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
   }).catch(function(err){
-    errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
+    // Distingue l'échec de géocodage (adresse à corriger, message actionnable)
+    // du reste (upload photo, écriture Firestore...) plutôt qu'un message
+    // générique dans tous les cas — voir geocodeAddress() pour les deux
+    // raisons de rejet possibles (HTTP en échec, ou aucun résultat trouvé).
+    if(err && /^geocode-/.test(err.message||"")){
+      errEl.textContent = "Adresse introuvable — vérifiez qu'elle est complète (numéro, rue, code postal, ville).";
+    } else {
+      errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
+    }
     btn.disabled = false;
     btn.textContent = originalLabel;
   });
@@ -2557,7 +2683,7 @@ function renderAdminQueue(){
       return '<div class="admin-card">'+cover+
         '<div class="admin-card-body">'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-          '<span>'+esc(l.region||"")+' · '+listingPriceLabel(l)+' · '+(l.distance!=null?l.distance:"?")+' km'+(l.units?' · '+l.units.length+' chambre'+(l.units.length>1?'s':''):'')+'</span>'+
+          '<span>'+esc(l.region||"")+' · '+listingPriceLabel(l)+' · '+listingDistanceKm(l)+' km'+(l.units?' · '+l.units.length+' chambre'+(l.units.length>1?'s':''):'')+'</span>'+
           '<span class="admin-owner">Déposée par '+esc(l.hostName||"")+' — '+esc(l.ownerEmail||"")+'</span>'+
           '<div class="admin-actions">'+
             '<button type="button" class="btn-apply admin-approve" data-id="'+doc.id+'">Publier</button>'+

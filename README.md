@@ -97,13 +97,19 @@ Demande initiale en 4 points ; seuls les points sans dépendance externe sont co
 
 **Prestations groupées par catégorie.** Même liste `ALL_AMENITIES` (aucune donnée à migrer), nouveau regroupement `AMEN_GROUPS` (Vue / Loisirs & bien-être / Extérieur & ambiance / Équipement / Accueil) rendu par un helper partagé `amenityGroupsHtml(isActive)`, utilisé à la fois par le volet filtre et par le formulaire de dépôt/édition — un seul endroit qui décide du découpage par catégorie plutôt que deux grilles plates dupliquées.
 
-**Distance : texte corrigé pour ne pas mentir.** L'ancien libellé ("Rayon autour de vous") laissait croire à une vraie distance depuis le voyageur — faux : `l.distance` reste aujourd'hui un nombre fixe saisi par l'hôte (« distance depuis la Ferme Fanost »), pas une coordonnée recalculée. Libellé neutre en attendant ("Distance maximale"), qui ne prétend pas plus que ce que fait réellement ce curseur.
+### Filtres, vague 2/3 — distance réelle (adresse + géolocalisation) et favoris globaux
 
-**Trier : distance en tête, croissant/décroissant sur distance et prix.** Ordre demandé : distance → favoris → prix. `"favoris"` n'est **pas** ajouté au sélecteur de tri dans cette vague : les favoris (`state.liked`) sont purement locaux au navigateur du visiteur aujourd'hui (jamais remontés au serveur), donc "les plus appréciés" n'existe nulle part de façon globale — ajouter l'option maintenant présenterait une fonctionnalité qui ne fait rien de réel. Le sélecteur reste à 2 critères actifs (distance, prix), chacun croissant/décroissant, "Recommandés" gardé en tête comme choix neutre par défaut.
+Les deux points laissés bloqués en vague 1 sont construits.
 
-**Ce qui reste bloqué, et pourquoi (vague 2/3, pas commencé) :**
-- **Distance réellement dynamique** (autour du lieu recherché ou de la géolocalisation du voyageur) suppose des coordonnées lat/lng par annonce — inexistantes aujourd'hui (`distance` est un nombre fixe saisi à la main). Plutôt qu'un service de géocodage payant, coordonnées à faire capter par l'hôte lui-même au dépôt de l'annonce (bouton "Utiliser ma position", même API navigateur `navigator.geolocation` que côté voyageur) — gratuit, mais les annonces déposées avant ce chantier resteront sans coordonnées tant que l'hôte ne les renseigne pas.
-- **"Les plus appréciés" (compteur global de favoris)** suppose un champ Firestore (`likeCount` ou équivalent) incrémentable par **n'importe quel visiteur, y compris non connecté** (le cœur ne demande pas de compte aujourd'hui) — une vraie surface d'abus qu'une règle Firestore resserrée limite sans l'éliminer complètement. Comme pour toutes les règles Firestore de ce projet (voir plus bas), **elles ne se déploient pas depuis ce repo** : il faudrait coller la règle mise à jour à la main dans Firebase Console, sinon la fonctionnalité échoue silencieusement.
+**Adresse par annonce, géocodée, distance recalculée en direct.** Le champ hostform « Distance depuis la Ferme Fanost (km) » (un nombre saisi à la main) est remplacé par « Adresse complète du logement », **obligatoire** — au dépôt/à la modification, `geocodeAddress(address)` interroge l'API publique et gratuite **Nominatim** (OpenStreetMap, pas de clé, pas de coût — contrairement à l'API Géocodage Google) et stocke les coordonnées obtenues (`lat`/`lng`) sur l'annonce ; adresse introuvable/mal formée → message d'erreur actionnable, rien n'est envoyé (`btn.textContent` passe par "Localisation de l'adresse…" pendant l'appel). Plus aucune distance n'est stockée telle quelle sur une annonce désormais : `listingDistanceKm(l)` la recalcule à CHAQUE rendu (badge du fil, tri, filtre, fiche détail) depuis `currentOrigin()` — soit `state.geoOrigin` (la position réelle du voyageur, activée via le bouton dédié, voir plus bas), soit, par défaut, `DEFAULT_ORIGIN` (les coordonnées de la Ferme Fanost elle-même, même repère implicite qu'avant ce chantier). Une annonce plus ancienne sans coordonnées (jamais réenregistrée depuis) retombe sur son ancien `distance` fixe — dégradation propre, rien ne casse. `haversineKm()` existait déjà (zone de recherche dessinée à la main sur la carte, `mapZoneFilteredListings()`) : réutilisée telle quelle, pas redéclarée.
+
+**"Utiliser ma position", mis en avant dans le volet Lieu.** Bouton en tout premier (avant même Région), parce qu'il change la référence de TOUTES les distances affichées sur le fil, pas seulement ce volet. `navigator.geolocation.getCurrentPosition()` — refus/erreur affiché en clair (permission refusée vs position indisponible), jamais silencieux. Position **jamais persistée** (pas dans `localStorage`, contrairement au reste de `state`) : redemandée à chaque session, plus respectueux de la vie privée qu'un consentement mémorisé indéfiniment. Un bouton "Revenir à la position par défaut" apparaît une fois activée, pour revenir à `DEFAULT_ORIGIN` sans re-râfraîchir la page.
+
+**Trier : "Les plus appréciés" ajouté, entre distance et prix.** Le cœur (bouton favori) fait maintenant évoluer un compteur global `likeCount` sur l'annonce elle-même (`toggleLike()`, `FieldValue.increment(±1)`), en plus de l'état local au visiteur (`state.liked`, pour l'onglet Envies) — pas seulement pour une annonce statique de démo (`listings.json`, pas de document Firestore réel, voir `docId` dans `normalizeHostListing()` : le like y reste purement local, il n'y a rien à incrémenter). Écriture best-effort, jamais bloquante (même esprit que `writeBackSejoursLink()` côté `app/`). **Nécessite la règle Firestore `listings/{listingId}` étendue ci-dessous — sans elle la fonctionnalité échoue silencieusement, comme prévenu en vague 1.** Risque d'abus assumé (le cœur ne demande pas de compte, n'importe quel visiteur peut écrire) : la règle est resserrée au maximum possible sans infrastructure serveur (voir plus bas) mais n'élimine pas un script qui enverrait de nombreuses petites écritures répétées — accepté sciemment, pas de solution complète sans App Check ou Cloud Function, absentes de ce projet.
+
+**Distance : texte corrigé, maintenant honnête.** Le libellé "Rayon autour de vous" (vague 1 l'avait neutralisé en "Distance maximale", faute d'un vrai calcul) redevient exact maintenant que la distance est réellement recalculée depuis la position du voyageur ou, par défaut, la Ferme Fanost.
+
+**Point d'attention, pas un bug — à trancher si besoin :** les annonces statiques de démonstration (`listings.json` : Le Mas des Lavandes, La Bergerie de Cassagne, Villa Belle Île) portaient déjà de vraies coordonnées GPS (pour la fonctionnalité carte existante), mais un ancien champ `distance` fictif, sans rapport avec leur position réelle, à des centaines de kilomètres de la Ferme Fanost (Luberon, Cévennes, Presqu'île de Quiberon). Avec la distance désormais réellement calculée, ces trois annonces démo sortent du rayon par défaut (100 km, plafond du curseur) et **n'apparaissent plus dans le fil tant que le voyageur n'active pas sa position ou ne recherche pas cette région précisément** — comportement mécaniquement correct (une annonce à 650 km ne devrait pas apparaître par défaut), mais un vrai changement visible pour qui connaissait la démo. Les annonces réelles déposées jusqu'ici (Essonne) ne sont pas concernées. À signaler si la démo doit rester "tout est proche" par construction — pas tranché ici.
 
 ## Comptes et données — architecture définitive
 
@@ -203,7 +209,26 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (request.auth != null
           && resource.data.ownerUid == request.auth.uid
-          && request.resource.data.status == resource.data.status);
+          && request.resource.data.status == resource.data.status)
+        // Compteur global de favoris (bouton cœur, Fiftin Séjours) : le
+        // classement "Les plus appréciés" (voir README, section Séjours)
+        // suppose que N'IMPORTE QUEL visiteur, même non connecté (le cœur
+        // ne demande pas de compte), puisse faire évoluer likeCount — donc
+        // pas de condition request.auth != null ici, volontairement.
+        // Resserré au maximum : le seul champ qui peut bouger est
+        // likeCount, et seulement de +1 ou -1 par écriture (jamais un saut
+        // arbitraire) — resource.data.get('likeCount', 0) tolère une
+        // annonce plus ancienne qui n'a pas encore ce champ. Ça limite les
+        // dégâts d'un script isolé mais n'empêche pas un abus par de
+        // nombreuses petites écritures répétées : il n'y a pas d'App Check
+        // ni de Cloud Function dans ce projet pour aller plus loin.
+        || (
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+          && (
+            request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
+            || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
+          )
+        );
       allow delete: if isAdmin()
         || (request.auth != null && resource.data.ownerUid == request.auth.uid);
 
