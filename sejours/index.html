@@ -24,6 +24,10 @@
   --line:rgba(46,43,34,0.14);
   --danger:#B2543B;
   --gray-mid:#9A9789;
+  /* Hauteur réelle de nav.tabbar (icône 21px + gap 3px + libellé ~12px de
+     contenu, padding 8px haut/bas + la zone iOS en bas) — sert à empiler
+     .detail-contact-bar juste au-dessus plutôt que de deviner un offset. */
+  --tabbar-h:calc(64px + env(safe-area-inset-bottom,0px));
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
@@ -353,8 +357,14 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .avail-row{display:flex; gap:7px; overflow-x:auto; margin-bottom:8px;}
 .avail-chip{flex-shrink:0; font-size:11.5px; font-weight:700; padding:7px 11px; border-radius:12px; background:var(--yellow); color:var(--sauge-deep);}
 
-.detail-contact-bar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:210;
-  background:var(--cream); border-top:1px solid var(--line); padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));
+/* Reste au-dessus de nav.tabbar (voir plus bas), qui elle-même reste
+   visible même quand la fiche détail est ouverte (z-index supérieur à
+   .detail) — pour ne pas obliger à remonter jusqu'à la flèche retour en
+   haut de la fiche : Explorer/Carte/Envies/Profil restent à portée de
+   pouce, et cliquer sur un onglet referme la fiche au passage (voir
+   switchTab()). */
+.detail-contact-bar{position:fixed; bottom:var(--tabbar-h); left:0; right:0; max-width:520px; margin:0 auto; z-index:210;
+  background:var(--cream); border-top:1px solid var(--line); padding:12px 16px;
   box-shadow:0 -10px 24px rgba(0,0,0,.08);}
 
 /* ---------- bottom nav ----------
@@ -365,10 +375,21 @@ textarea.text-input{resize:vertical; min-height:80px;}
    (flux normal, plus dans le viewport), il n'y a plus rien au-dessus
    d'elle. Le contenu (fil, carte, profil) reste sous la barre en
    permanence (z-index inférieur), donc elle ne se fait jamais recouvrir
-   en scrollant dans les annonces. Hiérarchie : #hero > nav.tabbar > #feed. */
+   en scrollant dans les annonces. Hiérarchie normale : hero > sheet/modal
+   (.sheet-backdrop, z-index 150) > fiche détail (.detail, 200) >
+   .detail-contact-bar (210) > nav.tabbar (50) > #feed. */
 nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:50;
   background:rgba(239,238,234,0.94); backdrop-filter:blur(10px); border-top:1px solid var(--line);
   display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));}
+/* Exception, seulement pendant que la fiche détail est ouverte
+   (body.detail-open, posé par openDetail()/retiré par closeDetail()) :
+   nav.tabbar remonte au-dessus de .detail pour qu'Explorer/Carte/Envies/
+   Profil restent cliquables sans passer par la flèche retour tout en
+   haut de la fiche — cliquer un onglet referme la fiche au passage (voir
+   switchTab()). Ciblée à ce seul état pour ne pas passer devant les
+   sheets/modales (.sheet-backdrop, 150) sur les autres écrans (espace
+   hôte notamment), où nav.tabbar doit rester en dessous comme avant. */
+body.detail-open nav.tabbar{z-index:220;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
@@ -1379,10 +1400,12 @@ function openDetail(id){
   });
   if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit);
   document.body.style.overflow = "hidden";
+  document.body.classList.add("detail-open");
 }
 function closeDetail(){
   document.getElementById("detail-root").innerHTML = "";
   document.body.style.overflow = "";
+  document.body.classList.remove("detail-open");
   state.detailListingId = null; state.detailTab = "overview";
 }
 
@@ -2391,6 +2414,12 @@ function renderTabContent(){
 }
 
 function switchTab(tab){
+  // Cliquer un onglet de la barre du bas pendant qu'une fiche détail est
+  // ouverte doit ramener naturellement au fil (ou à l'onglet visé) plutôt
+  // que de laisser la fiche ouverte par-dessus le nouvel onglet — nav.tabbar
+  // reste cliquable même fiche ouverte (voir sa règle CSS) précisément
+  // pour permettre ça sans repasser par la flèche retour.
+  if(state.detailListingId!=null) closeDetail();
   state.tab = tab;
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
