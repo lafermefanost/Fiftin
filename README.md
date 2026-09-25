@@ -105,7 +105,7 @@ Les deux points laissés bloqués en vague 1 sont construits.
 
 **"Utiliser ma position", mis en avant dans le volet Lieu.** Bouton en tout premier (avant même Région), parce qu'il change la référence de TOUTES les distances affichées sur le fil, pas seulement ce volet. `navigator.geolocation.getCurrentPosition()` — refus/erreur affiché en clair (permission refusée vs position indisponible), jamais silencieux. Position **jamais persistée** (pas dans `localStorage`, contrairement au reste de `state`) : redemandée à chaque session, plus respectueux de la vie privée qu'un consentement mémorisé indéfiniment. Un bouton "Revenir à la position par défaut" apparaît une fois activée, pour revenir à `DEFAULT_ORIGIN` sans re-râfraîchir la page.
 
-**Trier : "Les plus appréciés" ajouté, entre distance et prix.** Le cœur (bouton favori) fait maintenant évoluer un compteur global `likeCount` sur l'annonce elle-même (`toggleLike()`, `FieldValue.increment(±1)`), en plus de l'état local au visiteur (`state.liked`, pour l'onglet Envies) — pas seulement pour une annonce statique de démo (`listings.json`, pas de document Firestore réel, voir `docId` dans `normalizeHostListing()` : le like y reste purement local, il n'y a rien à incrémenter). Écriture best-effort, jamais bloquante (même esprit que `writeBackSejoursLink()` côté `app/`). **Nécessite la règle Firestore `listings/{listingId}` étendue ci-dessous — sans elle la fonctionnalité échoue silencieusement, comme prévenu en vague 1.** Risque d'abus assumé (le cœur ne demande pas de compte, n'importe quel visiteur peut écrire) : la règle est resserrée au maximum possible sans infrastructure serveur (voir plus bas) mais n'élimine pas un script qui enverrait de nombreuses petites écritures répétées — accepté sciemment, pas de solution complète sans App Check ou Cloud Function, absentes de ce projet.
+**Trier : "Les plus appréciés" ajouté, entre distance et prix — like réel, compte requis.** Première version (voir historique) : compteur `likeCount` incrémenté sans exiger de compte — un vrai risque d'abus (script anonyme), assumé puis reconsidéré. Reconstruit sur un modèle plus solide : **AJOUTER un favori exige désormais un compte** (`toggleLike()` ouvre la connexion — `openSheet("auth")` — au lieu de liker si le visiteur n'est pas connecté), et le like devient un document par (annonce, compte) dans `listings/{id}/likes/{uid}` plutôt qu'un simple compteur — `writeLikeState()` écrit ce document ET incrémente/décrémente `likeCount` dans le **même batch** (`db.batch()`), atomique : jamais l'un sans l'autre. RETIRER un favori reste possible sans connexion, y compris un ancien favori local ajouté anonymement avant ce changement (aucune purge rétroactive, seul l'ajout est bloqué) — mais dans ce cas rien n'est écrit côté serveur (`writeLikeState()` n'est appelée que si `authState.uid` existe). Une annonce statique de démo (`listings.json`, pas de `docId`, voir `normalizeHostListing()`) reste "aimable" localement sans jamais toucher Firestore, il n'y a pas de document à incrémenter. **Nécessite la règle Firestore `listings/{listingId}` étendue ci-dessous (compteur + sous-collection `likes`) — sans elle la fonctionnalité échoue silencieusement.** Le document `likes/{uid}` fait foi : la règle du compteur n'autorise +1 que si ce document vient d'être créé et -1 que s'il vient d'être supprimé (`exists()`/`existsAfter()`) — un double-like (même personne, deux appareils) ne peut donc pas gonfler le compteur, contrairement à la première version. Reste un vrai compte requis pour l'abus le plus grossier, pas une protection absolue contre des comptes jetables créés en masse — pas de solution complète sans App Check ou Cloud Function, absentes de ce projet.
 
 **Distance : texte corrigé, maintenant honnête.** Le libellé "Rayon autour de vous" (vague 1 l'avait neutralisé en "Distance maximale", faute d'un vrai calcul) redevient exact maintenant que la distance est réellement recalculée depuis la position du voyageur ou, par défaut, la Ferme Fanost.
 
@@ -210,27 +210,49 @@ service cloud.firestore {
         || (request.auth != null
           && resource.data.ownerUid == request.auth.uid
           && request.resource.data.status == resource.data.status)
-        // Compteur global de favoris (bouton cœur, Fiftin Séjours) : le
-        // classement "Les plus appréciés" (voir README, section Séjours)
-        // suppose que N'IMPORTE QUEL visiteur, même non connecté (le cœur
-        // ne demande pas de compte), puisse faire évoluer likeCount — donc
-        // pas de condition request.auth != null ici, volontairement.
-        // Resserré au maximum : le seul champ qui peut bouger est
-        // likeCount, et seulement de +1 ou -1 par écriture (jamais un saut
-        // arbitraire) — resource.data.get('likeCount', 0) tolère une
-        // annonce plus ancienne qui n'a pas encore ce champ. Ça limite les
-        // dégâts d'un script isolé mais n'empêche pas un abus par de
-        // nombreuses petites écritures répétées : il n'y a pas d'App Check
-        // ni de Cloud Function dans ce projet pour aller plus loin.
+        // Compteur global de favoris (bouton cœur, Fiftin Séjours) : un
+        // like exige désormais un compte (voir toggleLike() — plus
+        // d'écriture anonyme) et likeCount ne peut bouger que de pair avec
+        // le document listings/{listingId}/likes/{request.auth.uid} qui
+        // fait foi (voir plus bas) : monter de +1 exige que CE document
+        // vienne d'être créé (n'existait pas avant, existe après), et
+        // descendre de -1 qu'il vienne d'être supprimé (existait avant,
+        // n'existe plus après). Un double-like (même personne, deux
+        // appareils, ou double-écriture) ne peut donc pas gonfler le
+        // compteur : le document ne peut passer qu'une fois d'un état à
+        // l'autre. resource.data.get('likeCount', 0) tolère une annonce
+        // plus ancienne qui n'a pas encore ce champ. Reste un vrai compte
+        // requis pour l'abus le plus grossier (script anonyme), pas une
+        // protection absolue contre des comptes jetables créés en masse —
+        // il n'y a pas d'App Check ni de Cloud Function dans ce projet
+        // pour aller plus loin.
         || (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
+          request.auth != null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount'])
           && (
-            request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
-            || request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
+            (request.resource.data.likeCount == resource.data.get('likeCount', 0) + 1
+              && !exists(/databases/$(database)/documents/listings/$(listingId)/likes/$(request.auth.uid))
+              && existsAfter(/databases/$(database)/documents/listings/$(listingId)/likes/$(request.auth.uid)))
+            || (request.resource.data.likeCount == resource.data.get('likeCount', 0) - 1
+              && exists(/databases/$(database)/documents/listings/$(listingId)/likes/$(request.auth.uid))
+              && !existsAfter(/databases/$(database)/documents/listings/$(listingId)/likes/$(request.auth.uid)))
           )
         );
       allow delete: if isAdmin()
         || (request.auth != null && resource.data.ownerUid == request.auth.uid);
+
+      // Un document par (annonce, compte) qui a liké — la vraie source de
+      // vérité derrière likeCount ci-dessus (voir son commentaire). Chacun
+      // ne peut créer/supprimer QUE son propre document (id = son uid) :
+      // impossible de liker au nom de quelqu'un d'autre, et le document
+      // étant unique par uid, un double-like ne crée jamais un deuxième
+      // enregistrement. Pas de update : on crée ou on supprime, jamais on
+      // modifie un like existant.
+      match /likes/{uid} {
+        allow read: if request.auth != null;
+        allow create, delete: if request.auth != null && request.auth.uid == uid;
+        allow update: if false;
+      }
 
       // Calendrier simplifié d'une annonce (Espace hôtes → Mon calendrier),
       // utilisé pour les hôtes "compte simple annonce" (pas de document

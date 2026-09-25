@@ -1055,28 +1055,56 @@ try{
 }catch(e){}
 function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked})); }catch(e){} }
 
-/* Bascule l'état "favori" d'une annonce, et si c'est une annonce réelle
-   (déposée par un hôte, backée par un vrai document Firestore — voir
-   docId dans normalizeHostListing()) fait aussi évoluer son compteur
-   global likeCount de +1/-1, pour permettre un vrai classement "les plus
-   appréciés" (voir le tri) plutôt qu'un simple état local au visiteur.
-   Une annonce statique (listings.json, pas de docId) reste "aimable"
-   localement mais ne contribue à aucun compteur global — il n'y a pas de
-   document Firestore à incrémenter. Écriture best-effort (même esprit que
-   writeBackSejoursLink côté app/) : un échec réseau ne doit jamais
-   bloquer l'action locale, déjà faite avant l'appel réseau. Nécessite la
-   règle Firestore listings/{listingId} étendue — voir README. */
+/* Bascule l'état "favori" d'une annonce. AJOUTER un favori exige un
+   compte (pas de simple heuristique locale) : ouvre la connexion au lieu
+   de liker si le visiteur n'est pas connecté — un like compte désormais
+   pour de vrai dans un classement global ("Les plus appréciés", voir le
+   tri), donc doit être rattaché à une vraie personne, pas juste à un
+   navigateur. RETIRER un favori reste toujours possible localement sans
+   connexion, y compris un ancien favori ajouté anonymement avant ce
+   changement (aucune purge rétroactive) — seul l'AJOUT est bloqué.
+   L'écriture serveur (writeLikeState) ne part que si le visiteur est
+   connecté ET que l'annonce est réelle (docId, voir normalizeHostListing) —
+   une annonce statique de démo (listings.json) reste "aimable" localement
+   sans jamais toucher Firestore, il n'y a pas de document à incrémenter. */
 function toggleLike(l){
   var idx = state.liked.indexOf(l.id);
-  var liked;
-  if(idx===-1){ state.liked.push(l.id); liked = true; }
-  else { state.liked.splice(idx,1); liked = false; }
-  persist();
-  if(l.docId && typeof firebase!=="undefined" && firebase.apps && firebase.apps.length){
-    firebase.firestore().collection("listings").doc(l.docId).update({
-      likeCount: firebase.firestore.FieldValue.increment(liked?1:-1)
-    }).catch(function(err){ console.error("[like] échec de la mise à jour du compteur", err); });
+  var liked = idx===-1;
+  if(liked && !authState.uid){
+    authContext = "traveler";
+    openSheet("auth");
+    return;
   }
+  if(liked) state.liked.push(l.id); else state.liked.splice(idx,1);
+  persist();
+  if(authState.uid) writeLikeState(l, liked);
+}
+
+/* Écrit l'état "favori" côté serveur : un document par (annonce, compte)
+   dans listings/{id}/likes/{uid} — plutôt qu'un simple compteur qu'on
+   incrémente à l'aveugle, ça permet à la règle Firestore de vérifier
+   qu'un like ne peut être compté qu'une fois par personne (voir README) :
+   likeCount ne peut monter que si CE document vient d'être créé, et
+   descendre que s'il vient d'être supprimé — un doublon (même personne,
+   deux appareils, ou double-clic) ne peut donc pas gonfler le compteur.
+   set()/delete() + update() du compteur partent dans le MÊME batch,
+   atomique : jamais l'un sans l'autre. Best-effort (même esprit que
+   writeBackSejoursLink côté app/) : un échec réseau ne bloque jamais
+   l'action locale, déjà faite avant cet appel. */
+function writeLikeState(l, liked){
+  if(!l.docId || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
+  var db = firebase.firestore();
+  var listingRef = db.collection("listings").doc(l.docId);
+  var likeRef = listingRef.collection("likes").doc(authState.uid);
+  var batch = db.batch();
+  if(liked){
+    batch.set(likeRef, {uid:authState.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+    batch.update(listingRef, {likeCount: firebase.firestore.FieldValue.increment(1)});
+  } else {
+    batch.delete(likeRef);
+    batch.update(listingRef, {likeCount: firebase.firestore.FieldValue.increment(-1)});
+  }
+  batch.commit().catch(function(err){ console.error("[like] échec de l'écriture", err); });
 }
 
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
