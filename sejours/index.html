@@ -244,6 +244,9 @@ a{color:inherit; text-decoration:none;}
 .field-block > label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge); display:block; margin-bottom:10px;}
 .range-value{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;}
 input[type=range]{width:100%; accent-color:var(--sauge-deep);}
+.amen-group{margin-bottom:16px;}
+.amen-group:last-child{margin-bottom:0;}
+.amen-group-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sauge); margin-bottom:8px;}
 .amenity-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
 .amenity-chip{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; font-size:12.5px; font-weight:600;
   display:flex; align-items:center; gap:8px;}
@@ -856,6 +859,7 @@ function normalizeHostListing(doc){
     amen: l.amen || [],
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
+    regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
     host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
     photos: gallery ? gallery.length : 0,
     avail: []
@@ -879,6 +883,105 @@ function fetchPublishedListings(){
 var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
   "Cheminée","Sauna","Jardin","Cuisine équipée","Parking privé","Wifi","Accès PMR"];
 
+/* Regroupement des prestations par catégorie — même liste ALL_AMENITIES
+   (aucune donnée existante à migrer, c'est juste l'affichage du volet
+   filtre + du formulaire de dépôt qui se lit maintenant par groupe au
+   lieu d'une seule grille plate). */
+var AMEN_GROUPS = [
+  {title:"Vue", items:["Vue mer","Vue montagne","Vue campagne","Vue eau"]},
+  {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna"]},
+  {title:"Extérieur & ambiance", items:["Jardin","Cheminée"]},
+  {title:"Équipement", items:["Cuisine équipée","Parking privé","Wifi","Accès PMR"]},
+  {title:"Accueil", items:["Animaux acceptés"]}
+];
+/* Grille de prestations par groupe — utilisée à la fois par le volet
+   filtre (kind==="amen") et par le formulaire de dépôt/édition d'annonce,
+   pour ne pas dupliquer le découpage par catégorie à deux endroits.
+   isActive(nomPrestation) -> bool décide qui porte la classe "active". */
+function amenityGroupsHtml(isActive){
+  return AMEN_GROUPS.map(function(g){
+    return '<div class="amen-group"><div class="amen-group-title">'+esc(g.title)+'</div><div class="amenity-grid">'+
+      g.items.map(function(a){
+        return '<button type="button" class="amenity-chip'+(isActive(a)?' active':'')+'" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
+      }).join("")+
+    '</div></div>';
+  }).join("");
+}
+
+/* ---------------- régions / départements (France) ----------------
+   Référentiel statique (13 régions métropolitaines + 5 régions/DROM
+   d'outre-mer, subdivisées en départements) pour le filtre Lieu à 3
+   niveaux (région -> département -> recherche libre). Volontairement
+   complet (toute la liste officielle), pas seulement les régions où il y
+   a déjà des annonces — l'ancien comportement ("Régions avec des
+   annonces", généré depuis LISTINGS) donnait un filtre pauvre tant que
+   peu d'hôtes avaient déposé une annonce. Le matching contre une annonce
+   reste tolérant : structuré (regionName/deptName, renseignés depuis ce
+   référentiel dans le hostform) si disponible, sinon recherche du nom en
+   sous-chaîne dans l'ancien champ libre `region` — voir matchesLocation(). */
+var FR_REGIONS = [
+  {name:"Auvergne-Rhône-Alpes", depts:["Ain","Allier","Ardèche","Cantal","Drôme","Isère","Loire","Haute-Loire","Puy-de-Dôme","Rhône","Savoie","Haute-Savoie"]},
+  {name:"Bourgogne-Franche-Comté", depts:["Côte-d'Or","Doubs","Jura","Nièvre","Haute-Saône","Saône-et-Loire","Yonne","Territoire de Belfort"]},
+  {name:"Bretagne", depts:["Côtes-d'Armor","Finistère","Ille-et-Vilaine","Morbihan"]},
+  {name:"Centre-Val de Loire", depts:["Cher","Eure-et-Loir","Indre","Indre-et-Loire","Loir-et-Cher","Loiret"]},
+  {name:"Corse", depts:["Corse-du-Sud","Haute-Corse"]},
+  {name:"Grand Est", depts:["Ardennes","Aube","Marne","Haute-Marne","Meurthe-et-Moselle","Meuse","Moselle","Bas-Rhin","Haut-Rhin","Vosges"]},
+  {name:"Hauts-de-France", depts:["Aisne","Nord","Oise","Pas-de-Calais","Somme"]},
+  {name:"Île-de-France", depts:["Paris","Seine-et-Marne","Yvelines","Essonne","Hauts-de-Seine","Seine-Saint-Denis","Val-de-Marne","Val-d'Oise"]},
+  {name:"Normandie", depts:["Calvados","Eure","Manche","Orne","Seine-Maritime"]},
+  {name:"Nouvelle-Aquitaine", depts:["Charente","Charente-Maritime","Corrèze","Creuse","Dordogne","Gironde","Landes","Lot-et-Garonne","Pyrénées-Atlantiques","Deux-Sèvres","Vienne","Haute-Vienne"]},
+  {name:"Occitanie", depts:["Ariège","Aude","Aveyron","Gard","Haute-Garonne","Gers","Hérault","Lot","Lozère","Hautes-Pyrénées","Pyrénées-Orientales","Tarn","Tarn-et-Garonne"]},
+  {name:"Pays de la Loire", depts:["Loire-Atlantique","Maine-et-Loire","Mayenne","Sarthe","Vendée"]},
+  {name:"Provence-Alpes-Côte d'Azur", depts:["Alpes-de-Haute-Provence","Hautes-Alpes","Alpes-Maritimes","Bouches-du-Rhône","Var","Vaucluse"]},
+  {name:"Guadeloupe", depts:["Guadeloupe"]},
+  {name:"Martinique", depts:["Martinique"]},
+  {name:"Guyane", depts:["Guyane"]},
+  {name:"La Réunion", depts:["La Réunion"]},
+  {name:"Mayotte", depts:["Mayotte"]}
+];
+function deptsForRegion(regionName){
+  var r = FR_REGIONS.filter(function(x){ return x.name===regionName; })[0];
+  return r ? r.depts : [];
+}
+/* Options <option> du sélecteur Département du hostform, à partir d'une
+   région choisie — vide (juste "Toute la région") tant qu'aucune région
+   n'est sélectionnée. Réutilisé au premier rendu du formulaire ET quand
+   la région change (voir le wiring de #hf-region-name). */
+function deptOptionsHtml(regionName, selectedDept){
+  var depts = deptsForRegion(regionName);
+  if(!depts.length) return '<option value="">— Choisir une région d\'abord —</option>';
+  return '<option value="">Toute la région</option>'+
+    depts.map(function(d){ return '<option value="'+esc(d)+'"'+(selectedDept===d?' selected':'')+'>'+esc(d)+'</option>'; }).join("");
+}
+/* Une annonce matche une région/département choisis si regionName/deptName
+   (nouveau champ structuré, voir hostform) correspond exactement, ou --
+   pour les annonces plus anciennes qui n'ont que l'ancien champ libre
+   `region` -- si le nom cherché apparaît dedans (sous-chaîne, insensible
+   à la casse). Pour une RÉGION, l'ancien champ libre dit presque toujours
+   son département ou sa ville ("Luberon, Vaucluse"), jamais le nom
+   officiel de la région ("Provence-Alpes-Côte d'Azur") : le nom de
+   n'IMPORTE LEQUEL des départements de cette région est donc aussi
+   essayé, pas seulement le nom de la région elle-même — sinon aucune
+   annonce plus ancienne ne matcherait jamais une région choisie. Un
+   mot-clé libre (f.q) élargit la recherche à peu près partout où un lieu
+   peut se lire sur une annonce : nom, région/département structurés,
+   ancien champ libre, ville/adresse si un jour renseignée. */
+function matchesLocation(l, f){
+  if(f.regionName && l.regionName!==f.regionName){
+    var legacyR = (l.region||"").toLowerCase();
+    var okR = legacyR.indexOf(f.regionName.toLowerCase())!==-1 ||
+      deptsForRegion(f.regionName).some(function(d){ return legacyR.indexOf(d.toLowerCase())!==-1; });
+    if(!okR) return false;
+  }
+  if(f.deptName && l.deptName!==f.deptName && (l.region||"").toLowerCase().indexOf(f.deptName.toLowerCase())===-1) return false;
+  if(f.q){
+    var q = f.q.toLowerCase();
+    var hay = [l.name, l.region, l.regionName, l.deptName, l.city].filter(Boolean).join(" ").toLowerCase();
+    if(hay.indexOf(q)===-1) return false;
+  }
+  return true;
+}
+
 var AMEN_ICONS = {
   "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
   "Vue mer":"<path d='M3 15q3-3 6 0t6 0 6 0M3 19q3-3 6 0t6 0 6 0'/>",
@@ -897,7 +1000,7 @@ var AMEN_ICONS = {
 };
 
 /* ---------------- state ---------------- */
-var state = {tab:"explore", filters:{q:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview"};
 var heroDismissed = false;
@@ -938,15 +1041,16 @@ function listingPriceLabel(l){
 function filteredListings(){
   var f = state.filters;
   var list = LISTINGS.filter(function(l){
-    if(f.q && (l.region.toLowerCase().indexOf(f.q.toLowerCase())===-1 && l.name.toLowerCase().indexOf(f.q.toLowerCase())===-1)) return false;
+    if(!matchesLocation(l, f)) return false;
     if(l.distance > f.distance) return false;
     if(l.price > f.price) return false;
     if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
     return true;
   });
   if(state.tab==="likes") list = list.filter(function(l){ return state.liked.indexOf(l.id)!==-1; });
-  if(state.sort==="price_asc") list = list.slice().sort(function(a,b){ return a.price-b.price; });
-  else if(state.sort==="distance") list = list.slice().sort(function(a,b){ return a.distance-b.distance; });
+  if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return a.distance-b.distance; });
+  else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return b.distance-a.distance; });
+  else if(state.sort==="price_asc") list = list.slice().sort(function(a,b){ return a.price-b.price; });
   else if(state.sort==="price_desc") list = list.slice().sort(function(a,b){ return b.price-a.price; });
   return list;
 }
@@ -960,13 +1064,24 @@ var FILTER_ICONS = {
   sort:"<path d='M4 6h16M4 12h10M4 18h6'/>"
 };
 
+/* Libellé de la puce Lieu : le plus précis des trois niveaux renseignés
+   (mot-clé libre > département > région), sinon "Lieu". Les trois peuvent
+   être combinés (voir matchesLocation()) mais un seul s'affiche pour ne
+   pas surcharger le bandeau. */
+function locChipLabel(f){
+  if(f.q) return esc(f.q);
+  if(f.deptName) return esc(f.deptName);
+  if(f.regionName) return esc(f.regionName);
+  return "Lieu";
+}
 function renderFilterBar(){
   var f = state.filters;
   var activeAmenCount = f.amen.length;
   var bar = document.getElementById("filter-bar");
-  var anyActive = !!f.q || f.distance<100 || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
+  var locActive = !!(f.q || f.regionName || f.deptName);
+  var anyActive = locActive || f.distance<100 || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
   bar.innerHTML = [
-    chipHtml("loc", (f.q? esc(f.q) : "Lieu"), !!f.q),
+    chipHtml("loc", locChipLabel(f), locActive),
     chipHtml("distance", "Distance · "+f.distance+" km", f.distance<100),
     chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
@@ -981,7 +1096,7 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", distance:100, price:300, amen:[]};
+    state.filters = {q:"", regionName:"", deptName:"", distance:100, price:300, amen:[]};
     state.sort = "reco";
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
   });
@@ -1000,7 +1115,7 @@ function chipHtml(k,label,active){
    supprimer"). */
 function clearFilter(k){
   var f = state.filters;
-  if(k==="loc") f.q = "";
+  if(k==="loc"){ f.q = ""; f.regionName = ""; f.deptName = ""; }
   else if(k==="distance") f.distance = 100;
   else if(k==="price") f.price = 300;
   else if(k==="amen") f.amen = [];
@@ -1453,26 +1568,40 @@ function openSheet(kind){
   var f = state.filters;
   var inner = "";
   if(kind==="loc"){
-    var regions = LISTINGS.reduce(function(acc,l){ if(l.region && acc.indexOf(l.region)===-1) acc.push(l.region); return acc; }, []);
     inner = '<h3>Lieu</h3>'+
-      (regions.length ? '<div class="field-block"><label>Régions avec des annonces</label><div class="region-chip-row">'+
-        regions.map(function(r){
-          return '<button type="button" class="region-chip'+(f.q===r?' active':'')+'" data-region="'+esc(r)+'">'+esc(r)+'</button>';
+      '<div class="field-block"><label>Région</label><div class="region-chip-row">'+
+        FR_REGIONS.map(function(r){
+          return '<button type="button" class="region-chip'+(f.regionName===r.name?' active':'')+'" data-region="'+esc(r.name)+'">'+esc(r.name)+'</button>';
+        }).join("")+
+      '</div></div>'+
+      (f.regionName ? '<div class="field-block" id="loc-dept-block"><label>Département</label><div class="region-chip-row">'+
+        '<button type="button" class="region-chip'+(!f.deptName?' active':'')+'" data-dept="">Toute la région</button>'+
+        deptsForRegion(f.regionName).map(function(d){
+          return '<button type="button" class="region-chip'+(f.deptName===d?' active':'')+'" data-dept="'+esc(d)+'">'+esc(d)+'</button>';
         }).join("")+
       '</div></div>' : '')+
-      '<div class="field-block"><label>Ou recherchez librement</label><input class="text-input" id="s-loc" placeholder="Région, ville…" value="'+esc(f.q)+'"></div>';
+      '<div class="field-block"><label>Recherche libre</label><input class="text-input" id="s-loc" placeholder="Nom, ville, quartier, rue…" value="'+esc(f.q)+'"></div>';
   } else if(kind==="distance"){
-    inner = '<h3>Distance</h3><div class="field-block"><div class="range-value"><span>Rayon autour de vous</span><span>'+f.distance+' km</span></div>'+
+    // "Rayon autour de vous"/"autour du lieu recherché" serait faux tant
+    // que `distance` reste un nombre fixe saisi par l'hôte (depuis la
+    // Ferme Fanost), pas une vraie distance recalculée depuis le lieu
+    // choisi ou la géolocalisation — ce chantier (coordonnées lat/lng par
+    // annonce + géolocalisation navigateur) n'est pas encore fait, voir
+    // README. Libellé neutre en attendant, qui ne prétend pas plus que ce
+    // que fait réellement ce curseur aujourd'hui.
+    inner = '<h3>Distance</h3><div class="field-block"><div class="range-value"><span>Distance maximale</span><span>'+f.distance+' km</span></div>'+
       '<input type="range" id="s-distance" min="1" max="100" value="'+f.distance+'"></div>';
   } else if(kind==="price"){
     inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+f.price+' € / nuit</span></div>'+
       '<input type="range" id="s-price" min="20" max="300" step="5" value="'+f.price+'"></div>';
   } else if(kind==="amen"){
-    inner = '<h3>Prestations</h3><div class="field-block"><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
-      return '<button class="amenity-chip'+(f.amen.indexOf(a)!==-1?' active':'')+'" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
-    }).join("")+'</div></div>';
+    inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
   } else if(kind==="sort"){
-    var opts = [["reco","Recommandés"],["distance","Distance croissante"],["price_asc","Prix croissant"],["price_desc","Prix décroissant"]];
+    // Ordre de priorité demandé : distance, (favoris — pas encore un vrai
+    // classement global, voir README), puis prix. "Recommandés" reste le
+    // choix neutre par défaut, en tête, inchangé.
+    var opts = [["reco","Recommandés"],["distance_asc","Distance croissante"],["distance_desc","Distance décroissante"],
+      ["price_asc","Prix croissant"],["price_desc","Prix décroissant"]];
     inner = '<h3>Trier</h3><div class="field-block sort-row">'+opts.map(function(o){
       return '<button class="radio-row'+(state.sort===o[0]?' active':'')+'" data-sort="'+o[0]+'">'+o[1]+'</button>';
     }).join("")+'</div>';
@@ -1502,17 +1631,22 @@ function openSheet(kind){
       '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
       '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
-      '<div class="field-block"><label>Localisation</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous" value="'+(hfEf?esc(hfEf.region||""):"")+'"></div>'+
+      '<div class="field-block"><label>Localisation (affichée aux voyageurs)</label><input class="text-input" id="hf-region" placeholder="Ex. Essonne, Wissous" value="'+(hfEf?esc(hfEf.region||""):"")+'"></div>'+
+      '<div class="field-block"><label>Région (pour la recherche par lieu)</label><select class="text-input" id="hf-region-name">'+
+        '<option value="">— Choisir —</option>'+
+        FR_REGIONS.map(function(r){ return '<option value="'+esc(r.name)+'"'+(hfEf&&hfEf.regionName===r.name?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
+      '</select></div>'+
+      '<div class="field-block"><label>Département</label><select class="text-input" id="hf-dept-name">'+
+        deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
+      '</select></div>'+
+      '<div class="field-block"><label>Ville / quartier / rue (optionnel, précise la recherche)</label><input class="text-input" id="hf-city" placeholder="Ex. Wissous, centre-ville…" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '<div class="field-block"><label>Distance depuis la Ferme Fanost (km)</label><input class="text-input" type="number" min="0" id="hf-distance" value="'+(hfEf&&hfEf.distance!=null?hfEf.distance:"")+'"></div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
       '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Prestations (communes au logement)</label><div class="amenity-grid">'+ALL_AMENITIES.map(function(a){
-        var hfAmenActive = hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1;
-        return '<button type="button" class="amenity-chip'+(hfAmenActive?' active':'')+'" data-a="'+esc(a)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
-      }).join("")+'</div></div>'+
+      '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; })+'</div>'+
       '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
         '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
@@ -1582,6 +1716,9 @@ function openSheet(kind){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
       el.addEventListener("click", function(){ el.classList.toggle("active"); });
     });
+    document.getElementById("hf-region-name").addEventListener("change", function(){
+      document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(this.value, "");
+    });
     document.getElementById("hf-photos-btn").addEventListener("click", function(){
       document.getElementById("hf-photos-input").click();
     });
@@ -1635,21 +1772,26 @@ function openSheet(kind){
   document.getElementById("sheet-apply").addEventListener("click", function(){ closeSheet(); persist(); renderFilterBar(); renderTabContent(); renderResultLine(); });
 
   if(kind==="loc"){
-    var $loc = document.getElementById("s-loc");
-    $loc.addEventListener("input", function(e){
-      f.q = e.target.value;
-      Array.prototype.forEach.call(root.querySelectorAll(".region-chip"), function(rc){
-        rc.classList.toggle("active", rc.getAttribute("data-region")===f.q);
-      });
-    });
-    Array.prototype.forEach.call(root.querySelectorAll(".region-chip"), function(rc){
+    document.getElementById("s-loc").addEventListener("input", function(e){ f.q = e.target.value; });
+    // Région et département pilotent chacun leur propre champ structuré
+    // (f.regionName/f.deptName), indépendant du mot-clé libre (f.q) —
+    // avant, une seule variable (f.q) servait aux deux, ce qui empêchait
+    // de combiner "Occitanie" ET "Wissous" par exemple. Choisir une région
+    // réinitialise le département (plus valide dans la nouvelle région) et
+    // rouvre le volet pour reconstruire la liste de départements.
+    Array.prototype.forEach.call(root.querySelectorAll("[data-region]"), function(rc){
       rc.addEventListener("click", function(){
         var region = rc.getAttribute("data-region");
-        var already = rc.classList.contains("active");
-        f.q = already ? "" : region;
-        $loc.value = f.q;
-        Array.prototype.forEach.call(root.querySelectorAll(".region-chip"), function(other){
-          other.classList.toggle("active", other===rc && !already);
+        f.regionName = (f.regionName===region) ? "" : region;
+        f.deptName = "";
+        openSheet("loc");
+      });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll("[data-dept]"), function(dc){
+      dc.addEventListener("click", function(){
+        f.deptName = dc.getAttribute("data-dept");
+        Array.prototype.forEach.call(root.querySelectorAll("[data-dept]"), function(other){
+          other.classList.toggle("active", other===dc);
         });
       });
     });
@@ -2105,6 +2247,9 @@ function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var hostName = document.getElementById("hf-hostname").value.trim();
   var region = document.getElementById("hf-region").value.trim();
+  var regionName = document.getElementById("hf-region-name").value;
+  var deptName = document.getElementById("hf-dept-name").value;
+  var city = document.getElementById("hf-city").value.trim();
   var distance = Number(document.getElementById("hf-distance").value);
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
@@ -2142,6 +2287,7 @@ function submitHostForm(){
       btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
       var payload = {
         name:name, hostName:hostName, region:region, distance:distance, claim:claim, desc:desc, phone:phone, amen:amen,
+        regionName:regionName, deptName:deptName, city:city,
         websiteUrl:websiteUrl, googleUrl:googleUrl,
         gallery:gallery,
         units:units
