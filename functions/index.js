@@ -26,7 +26,7 @@
 
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore} = require("firebase-admin/firestore");
+const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 
 initializeApp();
 const db = getFirestore();
@@ -86,5 +86,64 @@ exports.syncPublicAvailFromListingBookings = onDocumentWritten(
       .where("unitId", "==", unitId).get();
     const bookings = bookingsSnap.docs.map(function (d) { return d.data(); });
     await writePublicAvail(listingId, unitId, toPublicRanges(bookings));
+  }
+);
+
+/* Taux de conversion demandes -> séjours d'une annonce (Fiftin Séjours,
+ * Envies -> Demandes, voir sejours/index.html), affiché uniquement à
+ * l'hôte propriétaire dans sa propre fiche détail (conversionLabelFor()).
+ *
+ * contactLog/{uid}/entries est strictement privé à son auteur (voir
+ * règles Firestore) : aucun client, pas même un compte admin, ne peut
+ * lire les demandes des AUTRES voyageurs pour calculer ce taux
+ * lui-même. Seule cette fonction, avec le SDK Admin qui contourne les
+ * règles, peut agréger across tous les voyageurs — même principe que
+ * syncPublicAvailFromAccount ci-dessus pour la disponibilité.
+ *
+ * Volontairement incrémental (FieldValue.increment sur listings/{id}.
+ * stats.demandeCount / .confirmedCount) plutôt que de tout recompter à
+ * chaque écriture : pas besoin de relire toutes les demandes de tous les
+ * voyageurs pour une annonce (ça exigerait une requête collectionGroup
+ * sur "entries", donc un index composite en plus à créer), l'événement
+ * reçu (création/mise à jour de statut/suppression) suffit à lui seul à
+ * savoir de combien bouger chaque compteur. */
+exports.syncListingContactStats = onDocumentWritten(
+  "contactLog/{uid}/entries/{entryId}",
+  async (event) => {
+    const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+    const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+
+    const wasConfirmed = !!(before && before.status === "confirmed");
+    const isConfirmed = !!(after && after.status === "confirmed");
+
+    let listingId = null;
+    let demandeDelta = 0;
+    let confirmedDelta = 0;
+
+    if (!before && after) {
+      // nouvelle demande
+      listingId = after.listingId;
+      demandeDelta = 1;
+      confirmedDelta = isConfirmed ? 1 : 0;
+    } else if (before && !after) {
+      // demande supprimée (déclinée par le voyageur, voir declineContactLogEntry())
+      listingId = before.listingId;
+      demandeDelta = -1;
+      confirmedDelta = wasConfirmed ? -1 : 0;
+    } else if (before && after && !wasConfirmed && isConfirmed) {
+      // confirmée par le voyageur (confirmContactLogEntry()) — listingId ne change jamais sur une mise à jour
+      listingId = after.listingId;
+      confirmedDelta = 1;
+    }
+
+    if (!listingId || (!demandeDelta && !confirmedDelta)) return;
+
+    const fields = {};
+    if (demandeDelta) fields["stats.demandeCount"] = FieldValue.increment(demandeDelta);
+    if (confirmedDelta) fields["stats.confirmedCount"] = FieldValue.increment(confirmedDelta);
+
+    await db.collection("listings").doc(listingId).update(fields).catch(function () {
+      // l'annonce a pu être supprimée entre-temps : rien de plus à corriger.
+    });
   }
 );

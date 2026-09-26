@@ -149,9 +149,10 @@ Le calendrier voyageur (fil, fiche détail) lisait jusqu'ici uniquement `l.avail
 
 **Architecture retenue : une projection publique, minimale, republiée côté serveur.**
 
-- `functions/index.js` (nouveau dossier, Cloud Functions v2) : deux déclencheurs, un par source de réservations existante —
+- `functions/index.js` (nouveau dossier, Cloud Functions v2) : trois déclencheurs —
   - `syncPublicAvailFromAccount`, sur écriture de `accounts/{uid}` (compte gestion — `bookings` y est un **tableau sur le document**, pas une sous-collection) : retrouve les annonces Séjours de ce propriétaire ayant une chambre liée (`unit.linkedRoomId`) et republie, pour chacune, les dates de LA chambre `app/` à laquelle elle est liée.
   - `syncPublicAvailFromListingBookings`, sur écriture de `listings/{id}/bookings/{bookingId}` (compte simple annonce, sous-collection propre à Séjours) : republie les dates de la chambre concernée (`unitId`), sans notion de lien — une réservation y appartient déjà directement à une chambre.
+  - `syncListingContactStats`, sur écriture de `contactLog/{uid}/entries/{entryId}` : maintient `listings/{listingId}.stats.{demandeCount,confirmedCount}` par incrément — voir « Séjours → conversion » plus bas.
   - Les deux écrivent dans `listings/{id}/publicAvail/{unitId}` **uniquement** `{ranges:[{checkIn,checkOut}], updatedAt}` — jamais de nom de client, jamais de prix, jamais aucun autre champ (`toPublicRanges()`, testé isolément : voir le nettoyage des champs). Écrit avec le SDK Admin (qui contourne les règles Firestore), ce qui permet à la règle `publicAvail` d'interdire toute écriture cliente (`allow write: if false`, voir règles plus bas) — même le propriétaire connecté ne peut pas y écrire directement, seule la fonction le peut.
 - **Lecture, côté client** (`sejours/index.html`, `wireQuickReq()`) : une fois le panneau de demande rapide affiché, si la chambre concernée a un `id` réel (`l.docId`), lecture ponctuelle (pas d'écoute temps réel) de `listings/{id}/publicAvail/{unitId}` — publique, aucune connexion requise. Si le document existe, le calendrier bascule du mode démo vers un mode réel : `.cal-nodata` est retiré, la navigation passe d'une année fixe qui boucle (`DEMO_YEAR`) à une vraie année/mois qui avance dans le temps (`realCalendarGridHtml()`/`isDateOccupied()`), une date est disponible si elle n'est dans aucune plage occupée ET pas déjà passée. Si le document n'existe pas encore (jamais synchronisé), rien ne change : le calendrier reste en mode démo/« pas de données » — dégradation propre, aucune annonce n'est cassée par l'absence de données réelles.
 - **Quelle chambre ?** Une annonce à plusieurs chambres (`hasTabs`) : chaque onglet a la sienne (`activeUnit`), déjà le cas pour l'ancien système `unit.avail`. Une annonce à une seule chambre (`!hasTabs`, la majorité des cas) : jusqu'ici son calendrier ne pointait vers AUCUNE chambre précise (retombait sur `l`) — `soleUnitOf(l)` comble ce trou (la chambre unique d'une annonce ne peut être que celle-là), à la fois pour le calendrier du fil (`wireFeedEvents()`) et celui de la fiche détail.
@@ -221,6 +222,14 @@ Volontairement laissés en dehors de cette passe : les cercles (`border-radius:5
 **Affichage.** `renderContactLog()` (lecture triée par date décroissante, limitée à 100 entrées) rend chaque ligne avec `contactLogRowHtml()` — réutilise `.map-list`/`.map-list-item` (même besoin visuel que la liste sous la carte : icône + nom + sous-texte, pas de raison d'inventer un style différent), avec un nouveau `.log-icon` par canal repris des couleurs de `.send-icon` (même logique de reconnaissance immédiate "c'est le même bouton qui a déclenché ça"). Une ligne est cliquable (ouvre la fiche détail) seulement si l'annonce visée est encore chargée dans `LISTINGS` — une annonce supprimée depuis reste affichée dans l'historique (avec son nom capturé au clic) mais n'ouvre plus rien, dégradation propre plutôt qu'un lien mort.
 
 **Correctif WhatsApp : normalisation du numéro (`waPhoneDigits()`).** Bug préexistant, sans rapport avec Demandes, repéré à cette occasion : le lien `wa.me/<numéro>` exige des chiffres purs en format international (aucun `+`, espace ou ponctuation), contrairement à `tel:`/`sms:` qui tolèrent la saisie humaine telle quelle car c'est l'appli native qui la relit. Le code construisait ce lien avec un simple `.replace("+","")`, donc tout numéro saisi au format français local (`06 12 34 56 78`, avec ou sans points/espaces) produisait un lien `wa.me` invalide — WhatsApp ne trouvait personne à l'autre bout. Nouvelle fonction `waPhoneDigits(phone)` (juste après `buildMessage()`), utilisée uniquement pour le lien WhatsApp (`tel:`/`sms:` inchangés, ils n'en ont pas besoin) : retire tout sauf chiffres et `+`, convertit un `0` initial en `33`, et corrige le cas `+33 (0)6...` (le zéro entre parenthèses, convention française courante, donnerait sinon un `330...` invalide — un vrai numéro français ne peut jamais avoir de second `0` juste après le `33`). Testé sur 6 formats réels (`+33 6 12 34 56 78`, `+33612345678`, `06 12 34 56 78`, `0612345678`, `+33 (0)6 12 34 56 78`, `06.12.34.56.78`) → tous produisent `https://wa.me/33612345678`. Aucune action requise côté hôte : le champ téléphone reste en saisie libre, la normalisation est automatique.
+
+**Demandes : confirmer un séjour ou déclencher une annonce sans suite.** Retour utilisateur : chaque ligne de Demandes doit permettre de dire ce qu'il est advenu du contact — deux boutons carrés à droite (`.log-actions`), repris du même langage visuel que `.log-icon`/`.send-icon` (icône seule dans un carré coloré). Coché (`.log-action.confirm`, vert sauge) : `confirm("Avez-vous bien été au bout de votre réservation ?")` natif — même idiome que le reste du fichier (`admin-reject`, suppression d'une réservation), pas de modale maison à inventer pour ça. Sur "OK", `confirmContactLogEntry()` ajoute `status:"confirmed"` et `confirmedAt` (timestamp serveur) au document — jamais l'inverse, une seule transition possible (voir la règle Firestore ci-dessous), après quoi les deux boutons disparaissent (rien de plus à décider sur cette ligne) et la ligne se résorbe dans le compteur **Séjours** du profil (`loadSejoursCount()`, un `where("status","==","confirmed")` sur sa propre sous-collection — un compte, pas une liste, recalculé à chaque ouverture du profil plutôt que stocké quelque part, pas la peine de dupliquer une donnée aussi bon marché à relire). Croix (`.log-action.decline`) : `confirm("La demande n'a malheureusement pas donné suite ?")`, sur "OK" `declineContactLogEntry()` supprime purement et simplement le document (déjà permis par la règle `delete` existante, aucun changement de règle nécessaire pour ce bouton-là). Les deux boutons appellent `e.stopPropagation()` : sans ça, leur clic remonterait jusqu'à `.log-body` (le clic "dérouler l'annonce", resté sur le bloc icône+texte seulement, plus sur toute la ligne — voir le commentaire de `contactLogRowHtml()`) et ouvrirait la fiche détail en même temps que la confirmation.
+
+**Séjours → conversion : ce que l'hôte peut savoir, ce qu'il ne peut pas.** Demande initiale : afficher, dans le détail d'une annonce, le pourcentage de demandes qui ont donné suite à un vrai séjour. Contrainte réelle rencontrée : `contactLog/{uid}/entries` est **strictement privé à son auteur** (voir plus haut, "pas même un compte isAdmin()") — c'est le choix de sécurité qui rend cette collection sûre sans écriture publique, mais il interdit du même coup à QUICONQUE côté client, y compris l'hôte lui-même, de lire les demandes des autres voyageurs pour calculer ce taux. Seule une Cloud Function (SDK Admin, qui contourne les règles) peut agréger across tous les voyageurs — même raisonnement, déjà appliqué dans ce projet, que la projection publique de disponibilité (`publicAvail`, voir plus bas). Nouveau déclencheur `syncListingContactStats` (`functions/index.js`), sur écriture de `contactLog/{uid}/entries/{entryId}` : incrémente/décrémente `listings/{listingId}.stats.demandeCount` et `.confirmedCount` (`FieldValue.increment`, jamais un recomptage complet — évite une requête `collectionGroup` sur `entries`, qui aurait exigé un index composite en plus à créer côté Firebase Console). **Nécessite un nouveau déploiement Cloud Functions que toi seul peux faire** (`firebase deploy --only functions`, voir plus bas) — sans lui, `stats` ne bougera jamais et le pourcentage n'apparaîtra pas.
+
+Affichage : `conversionLabelFor(l)` (juste après `logContact()`), un 3ᵉ `.meta-item` dans le bandeau prix/distance de la fiche détail (`openDetail()`, vue d'ensemble uniquement — le taux est au niveau de l'annonce, pas d'une chambre) — **visible uniquement quand `authState.uid === l.ownerUid`**, décision volontaire : c'est une donnée business pour l'hôte, pas un argument à exposer aux voyageurs (un pourcentage bas, souvent sur un échantillon minuscule, découragerait des réservations légitimes sans raison). `null` tant qu'aucune demande n'a jamais été enregistrée (pas de "0%" trompeur — 0% de conversion et "personne n'a encore contacté" sont deux informations différentes). Champ `stats` ajouté à `normalizeHostListing()` avec `ownerUid` (tous deux absents jusqu'ici), et verrouillé côté règles Firestore : un propriétaire ne peut pas fabriquer lui-même un taux flatteur en modifiant son annonce (voir la règle `listings/{listingId}` étendue ci-dessous — `.update(payload)` depuis le formulaire hôte ne touche jamais `stats`, donc cette égalité reste vraie pour toute vraie modification, et ne bloque que la triche).
+
+**Carte et cartes de liste — retours utilisateur.** `.map-canvas` (onglet Carte) passe de `aspect-ratio:3/4` à `1/1` : la carte prenait trop de hauteur sur mobile, empêchait de scroller jusqu'à la liste en dessous. `.map-list-item` (liste sous la carte, ET Demandes qui réutilise le même style) passe de `background:var(--cream-deep)` à `#fff`, et sa vignette `.sw` de 44px à 56px — retour utilisateur, plus lisible.
 
 ## Comptes et données — architecture définitive
 
@@ -320,7 +329,16 @@ service cloud.firestore {
       allow update: if isAdmin()
         || (request.auth != null
           && resource.data.ownerUid == request.auth.uid
-          && request.resource.data.status == resource.data.status)
+          && request.resource.data.status == resource.data.status
+          // stats (compteur de conversion demandes -> séjours, voir plus
+          // bas et functions/index.js) : écrit UNIQUEMENT par la Cloud
+          // Function syncListingContactStats (SDK Admin, hors règles) —
+          // un propriétaire modifiant sa propre annonce via le formulaire
+          // hôte ne touche jamais ce champ (.update(payload) préserve les
+          // champs non listés dans payload), donc cette égalité reste vraie
+          // pour toute vraie modification et bloque seulement une
+          // tentative de fabriquer soi-même un taux de conversion flatteur.
+          && request.resource.data.get('stats', null) == resource.data.get('stats', null))
         // Compteur global de favoris (bouton cœur, Fiftin Séjours) : un
         // like exige désormais un compte (voir toggleLike() — plus
         // d'écriture anonyme) et likeCount ne peut bouger que de pair avec
@@ -416,7 +434,19 @@ service cloud.firestore {
         && request.resource.data.listingName is string
         && request.resource.data.createdAt == request.time
         && request.resource.data.keys().hasOnly(['listingId', 'listingName', 'channel', 'createdAt']);
-      allow update: if false;
+      // Seule mise à jour permise : confirmer un séjour (Envies -> Demandes,
+      // bouton "validé", confirmContactLogEntry()) — une transition à SENS
+      // UNIQUE, pending (pas de champ status) -> confirmed, jamais l'inverse
+      // et jamais une seconde fois (resource.data.get('status', null) doit
+      // être absent avant l'écriture : une fois confirmée, la règle refuse
+      // toute nouvelle mise à jour, cohérent avec l'UI qui retire les
+      // boutons d'action une fois confirmé). confirmedAt vérifié comme un
+      // vrai timestamp serveur, même principe que createdAt à la création.
+      allow update: if request.auth != null && request.auth.uid == uid
+        && resource.data.get('status', null) == null
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.confirmedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']);
     }
   }
 }

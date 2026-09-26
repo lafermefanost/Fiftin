@@ -483,7 +483,7 @@ body.detail-open nav.tabbar{z-index:220;}
    Avec le contexte d'empilement, .map-canvas dans son ensemble ne vaut que
    0 pour le reste de la page : il ne peut plus jamais repasser au-dessus
    d'un sheet, quels que soient les z-index internes de Leaflet. */
-.map-canvas{position:relative; z-index:0; aspect-ratio:3/4; border-radius:26px; overflow:hidden; background:var(--cream-deep);
+.map-canvas{position:relative; z-index:0; aspect-ratio:1/1; border-radius:26px; overflow:hidden; background:var(--cream-deep);
   margin-bottom:18px;}
 /* Carte de l'annonce sélectionnée sur la carte (clic sur une punaise ou un
    item de la liste) — juste en dessous de la carte plutôt qu'un plein
@@ -513,11 +513,21 @@ body.detail-open nav.tabbar{z-index:220;}
 .map-zone-controls button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
 .map-list{display:flex; flex-direction:column; gap:10px;}
-.map-list-item{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px 12px;}
-.map-list-item .sw{width:44px; height:44px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
+.map-list-item{display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px; padding:10px 12px;}
+.map-list-item .sw{width:56px; height:56px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
 .map-list-item b{font-size:13.5px; display:block;}
 .map-list-item span{font-size:11.5px; color:var(--sauge); font-weight:600;}
-.map-list-item[data-open-log]{cursor:pointer;}
+/* Onglet Envies → Demandes uniquement : .log-body porte le clic "dérouler
+   l'annonce" (comme avant), désormais distinct de .log-actions (à droite,
+   voir plus bas) puisque la ligne entière n'est plus cliquable une fois
+   les deux boutons d'action ajoutés. */
+.log-body{display:flex; align-items:center; gap:12px; flex:1; min-width:0;}
+.log-body[data-open-log]{cursor:pointer;}
+.log-actions{display:flex; gap:6px; flex-shrink:0;}
+.log-action{width:32px; height:32px; border-radius:10px; border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.log-action svg{width:16px; height:16px;}
+.log-action.confirm{background:var(--sauge); color:var(--cream);}
+.log-action.decline{background:var(--cream-deep); color:var(--danger);}
 
 /* ---------- Envies : Favoris / Demandes ---------- */
 .likes-toggle{display:flex; gap:8px; margin:0 0 14px;}
@@ -987,6 +997,8 @@ function normalizeHostListing(doc){
   return {
     id: idFromString(doc.id),
     docId: doc.id, // id Firestore réel (string) — le "id" ci-dessus n'est qu'un hash numérique pour homogénéité avec les annonces statiques (listings.json), qui elles n'ont pas de document Firestore. Nécessaire pour cibler le bon document (toggleLike, likeCount).
+    ownerUid: l.ownerUid || "", // pour n'afficher le taux de conversion (voir conversionLabelFor()) qu'au propriétaire connecté, jamais aux autres voyageurs.
+    stats: l.stats || null, // {demandeCount, confirmedCount} — écrit uniquement par la Cloud Function syncListingContactStats (functions/index.js), jamais par un client (voir la règle Firestore listings/{listingId}).
     name: l.name, region: l.region, claim: l.claim,
     price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
     lat: (typeof l.lat==="number") ? l.lat : null, lng: (typeof l.lng==="number") ? l.lng : null, address: l.address || "",
@@ -1288,6 +1300,23 @@ function logContact(l, channel, unitName){
   }).catch(function(err){ console.error("[contactLog] échec de l'écriture", err); });
 }
 
+/* Taux de conversion demandes -> séjours d'une annonce, visible UNIQUEMENT
+   par son propriétaire dans sa propre fiche détail (voir openDetail()) :
+   une donnée business, pas un argument marketing à exposer aux voyageurs
+   (afficher un pourcentage bas découragerait des réservations légitimes
+   sur un échantillon souvent minuscule — décision volontaire, à
+   reconsidérer si un jour l'hôte veut l'afficher publiquement). l.stats
+   n'existe que si la Cloud Function syncListingContactStats a déjà tourné
+   au moins une fois (voir functions/index.js) ; null tant qu'aucune
+   demande n'a jamais été enregistrée pour cette annonce — pas de "0%"
+   trompeur (0% de conversion et "personne n'a encore contacté" sont deux
+   informations différentes). */
+function conversionLabelFor(l){
+  if(!l.stats || !l.stats.demandeCount) return null;
+  var pct = Math.round((l.stats.confirmedCount||0) / l.stats.demandeCount * 100);
+  return pct+"%";
+}
+
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
 /* Utilitaires partagés annonces à plusieurs chambres (units) — utilisés
@@ -1564,20 +1593,72 @@ function fmtContactDate(ts){
    pas encore chargée reste affichée mais inerte plutôt que de mener nulle
    part. Réutilise .map-list/.map-list-item (voir la carte) : même besoin
    visuel (icône/vignette + nom + sous-texte), pas de raison d'inventer
-   un style de liste différent. */
-function contactLogRowHtml(entry){
+   un style de liste différent. Le clic "dérouler l'annonce" est porté par
+   .log-body (nom + icône), pas par la ligne entière, pour laisser la
+   place aux deux boutons d'action à droite (voir .log-actions) sans que
+   les cliquer ouvre aussi la fiche détail.
+   Une fois confirmée (entry.status==="confirmed", voir
+   confirmContactLogEntry()), les boutons disparaissent : il n'y a plus
+   rien à décider sur cette ligne, seulement un rappel qu'un séjour en a
+   résulté. */
+function contactLogRowHtml(entryId, entry){
   var meta = CONTACT_CHANNEL_META[entry.channel] || CONTACT_CHANNEL_META.mail;
   var numericId = entry.listingId ? idFromString(entry.listingId) : null;
   var openable = numericId!=null && LISTINGS.some(function(l){ return l.id===numericId; });
-  return '<div class="map-list-item"'+(openable?' data-open-log="'+numericId+'"':'')+'>'+
-    '<span class="log-icon '+entry.channel+'"><svg viewBox="0 0 24 24" fill="'+(meta.fill?"currentColor":"none")+'" stroke="currentColor" stroke-width="1.8">'+meta.svg+'</svg></span>'+
-    '<div><b>'+esc(entry.listingName||"Annonce")+'</b><span>'+meta.label+' · '+fmtContactDate(entry.createdAt)+'</span></div>'+
+  var confirmed = entry.status === "confirmed";
+  return '<div class="map-list-item demande-row">'+
+    '<div class="log-body"'+(openable?' data-open-log="'+numericId+'"':'')+'>'+
+      '<span class="log-icon '+entry.channel+'"><svg viewBox="0 0 24 24" fill="'+(meta.fill?"currentColor":"none")+'" stroke="currentColor" stroke-width="1.8">'+meta.svg+'</svg></span>'+
+      '<div><b>'+esc(entry.listingName||"Annonce")+'</b><span>'+meta.label+' · '+fmtContactDate(entry.createdAt)+(confirmed?' · Séjour confirmé':'')+'</span></div>'+
+    '</div>'+
+    (confirmed ? '' :
+      '<div class="log-actions">'+
+        '<button type="button" class="log-action confirm" data-log-confirm="'+esc(entryId)+'" aria-label="Confirmer le séjour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></button>'+
+        '<button type="button" class="log-action decline" data-log-decline="'+esc(entryId)+'" aria-label="Supprimer cette demande"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+      '</div>'
+    )+
   '</div>';
 }
 function wireContactLogRows(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-open-log]"), function(el){
     el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-open-log"))); });
   });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-log-confirm]"), function(el){
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      if(!confirm("Avez-vous bien été au bout de votre réservation ?")) return;
+      confirmContactLogEntry(el.getAttribute("data-log-confirm"));
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-log-decline]"), function(el){
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      if(!confirm("La demande n'a malheureusement pas donné suite ?")) return;
+      declineContactLogEntry(el.getAttribute("data-log-decline"));
+    });
+  });
+}
+/* Bascule une demande en "confirmée" : ajoute une unité au compteur
+   Séjours du profil (renderProfile() la recompte en direct, voir
+   loadSejoursCount()) et déclenche, côté serveur, l'incrément du
+   compteur de conversion de l'annonce (Cloud Functions,
+   syncListingContactStats — voir functions/index.js), affiché à l'hôte
+   dans sa propre fiche détail. Règle Firestore : une transition à sens
+   unique, pending -> confirmed uniquement (voir README), donc pas besoin
+   de vérifier ici l'état courant, la règle refuse toute seconde écriture. */
+function confirmContactLogEntry(entryId){
+  if(!authState.uid) return;
+  firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
+    .update({status:"confirmed", confirmedAt: firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){ renderContactLog(); })
+    .catch(function(err){ console.error("[contactLog] échec de la confirmation", err); });
+}
+function declineContactLogEntry(entryId){
+  if(!authState.uid) return;
+  firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
+    .delete()
+    .then(function(){ renderContactLog(); })
+    .catch(function(err){ console.error("[contactLog] échec de la suppression", err); });
 }
 function renderContactLog(){
   var feed = document.getElementById("feed");
@@ -1600,7 +1681,7 @@ function renderContactLog(){
           body = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
             '<p>Aucune demande enregistrée pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
         } else {
-          body = '<div class="map-list">'+snap.docs.map(function(d){ return contactLogRowHtml(d.data()); }).join("")+'</div>';
+          body = '<div class="map-list">'+snap.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
         }
         feed.innerHTML = toggle + body;
         wireLikesToggle();
@@ -1968,7 +2049,10 @@ function openDetail(id){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
-    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div></div></div>';
+    var convLabel = (authState.uid && l.ownerUid && l.ownerUid===authState.uid) ? conversionLabelFor(l) : null;
+    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div>'+
+      (convLabel ? '<div class="meta-item"><b>'+convLabel+'</b><span>demandes &rarr; séjours</span></div>' : '')+
+    '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
       ((l.websiteUrl || l.googleUrl) ? '<div class="ext-links">'+
@@ -3280,7 +3364,7 @@ function renderProfile(){
 
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
-    '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Envies</span></div><div class="stat-tile"><b>0</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
+    '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Envies</span></div><div class="stat-tile"><b id="stat-sejours">'+(connected?"…":"0")+'</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur active" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
@@ -3312,10 +3396,28 @@ function renderProfile(){
   });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+    loadSejoursCount();
   }
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
   }
+}
+
+/* Nombre de demandes que CE voyageur a lui-même confirmées (voir
+   confirmContactLogEntry()) — juste une lecture, aucune donnée dérivée
+   stockée côté client : re-comptée à chaque ouverture du profil. Un seul
+   where() sur un champ, pas de tri croisé avec un autre champ : ne
+   nécessite pas d'index composite Firestore (contrairement à un
+   collectionGroup, voir la Cloud Function functions/index.js). */
+function loadSejoursCount(){
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries")
+      .where("status", "==", "confirmed").get().then(function(snap){
+        var el = document.getElementById("stat-sejours");
+        if(el) el.textContent = String(snap.size);
+      }).catch(function(err){ console.error("[contactLog] échec du comptage des séjours", err); });
+  });
 }
 
 /* ---------------- validation des annonces (compte admin uniquement) ---------------- */
