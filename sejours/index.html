@@ -3009,7 +3009,16 @@ function submitAuthSheet(){
   btn.disabled = true;
   var afterAuth = function(){
     closeSheet();
-    if(authContext==="host") enterHostMode(); else renderProfile();
+    // switchTab("profile"), pas renderProfile() directement : renderProfile()
+    // ne fait que réécrire #feed, sans jamais toucher #filter-bar/#result-line
+    // (seul switchTab() les masque, voir son else) ni state.tab/le surlignage
+    // de l'onglet actif. Se connecter depuis Explorer/Carte/Mes séjours (où
+    // la barre de filtres est visible) laissait donc ces chrome-là affichés
+    // par-dessus le Profil fraîchement rendu — mise en page cassée signalée
+    // par l'hôte, capture d'écran à l'appui. enterHostMode() gérait déjà
+    // correctement son propre chrome, d'où ce bug invisible tant que seul
+    // "Devenir hôte" déclenchait cette connexion.
+    if(authContext==="host") enterHostMode(); else switchTab("profile");
   };
   if(authMode==="signup"){
     var pw2 = document.getElementById("auth-password2").value;
