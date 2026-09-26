@@ -752,19 +752,21 @@ var MOTIFS = {
   waves:"<path d='M5 55 Q20 40 35 55 T65 55 T95 55 M5 75 Q20 60 35 75 T65 75 T95 75' fill='none' stroke='currentColor' stroke-width='3'/>"
 };
 
-/* Type d'hébergement (chambre d'hôtes / avec table d'hôtes / gîte),
-   choisi par l'hôte au dépôt de l'annonce (hf-type -> accomType). Affiché
-   en texte (voir .type-label) plutôt qu'en pictogramme (essayé puis
-   retiré, retour utilisateur) — juste avant l'accroche (claim), à la fois
-   sur la carte du fil et sur la fiche détail (typeLabelHtml(), voir
-   plus bas), pour que ce soit visible dès le début plutôt que noyé plus
-   bas dans la description. Champ optionnel : une annonce qui ne l'a pas
-   encore renseigné (toute annonce réelle existante avant ce champ)
-   n'affiche simplement rien plutôt que d'en deviner un. */
+/* Type d'hébergement (chambre d'hôtes / gîte), choisi par l'hôte au dépôt
+   de l'annonce (hf-type -> accomType). Affiché en texte (voir .type-label)
+   plutôt qu'en pictogramme (essayé puis retiré, retour utilisateur) —
+   juste avant l'accroche (claim), à la fois sur la carte du fil et sur la
+   fiche détail (typeLabelHtml(), voir plus bas), pour que ce soit visible
+   dès le début plutôt que noyé plus bas dans la description. Champ
+   optionnel : une annonce qui ne l'a pas encore renseigné (toute annonce
+   réelle existante avant ce champ) n'affiche simplement rien plutôt que
+   d'en deviner un. "Chambre d'hôtes avec table d'hôtes" retiré (retour
+   utilisateur) : une annonce déjà enregistrée avec accomType:"chambretable"
+   n'affiche simplement plus de libellé, même dégradation propre que pour
+   un type absent — ACCOM_TYPES[l.accomType] ne matche plus rien. */
 var ACCOM_TYPES = {
   chambre: {label:"Chambre d'hôtes"},
-  chambretable: {label:"Chambre d'hôtes avec table d'hôtes"},
-  gite: {label:"Gîte (hébergement indépendant)"}
+  gite: {label:"Gîte"}
 };
 function typeLabelHtml(l){
   return (l.accomType && ACCOM_TYPES[l.accomType]) ? '<p class="type-label">'+esc(ACCOM_TYPES[l.accomType].label)+'</p>' : "";
