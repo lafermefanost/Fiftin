@@ -514,9 +514,19 @@ body.detail-open nav.tabbar{z-index:220;}
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
 .map-list{display:flex; flex-direction:column; gap:10px;}
 .map-list-item{display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px; padding:10px 12px;}
-.map-list-item .sw{width:56px; height:56px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
+.map-list-item .sw{width:68px; height:68px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
 .map-list-item b{font-size:13.5px; display:block;}
-.map-list-item span{font-size:11.5px; color:var(--sauge); font-weight:600;}
+/* display:block (pas inline, par défaut pour un <span>) : dans Envies →
+   Demandes, contactLogRowHtml() empile désormais DEUX span (région/prix,
+   puis moyen de contact + date/heure) sous le nom — sans ce display:block
+   elles se suivraient côte à côte au lieu de former deux lignes. Sans
+   effet ailleurs (la carte n'a qu'un seul span par item). */
+.map-list-item span{font-size:11.5px; color:var(--sauge); font-weight:600; display:block;}
+/* En-tête d'un groupe de demandes portant sur les mêmes dates de séjour
+   (voir groupedContactLogHtml()/stayPeriodLabel()) — même rôle que
+   .profile-section-label (étiquette au-dessus d'une liste) mais un cran
+   plus discret : c'est un sous-groupe, pas une section de premier niveau. */
+.log-period-label{font-size:12.5px; font-weight:700; color:var(--ink); margin:14px 0 6px 2px;}
 /* Onglet Envies → Demandes uniquement : .log-body porte le clic "dérouler
    l'annonce" (comme avant), désormais distinct de .log-actions (à droite,
    voir plus bas) puisque la ligne entière n'est plus cliquable une fois
@@ -534,16 +544,6 @@ body.detail-open nav.tabbar{z-index:220;}
 .likes-toggle-btn{flex:1; background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:10px;
   font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge);}
 .likes-toggle-btn.active{background:var(--sauge-deep); border-color:var(--sauge-deep); color:var(--cream);}
-/* .log-icon : même principe que .send-icon (icône seule dans un carré
-   coloré, voir le panneau de demande rapide) — mêmes couleurs par canal,
-   pour que l'icône d'une demande dans cette liste se reconnaisse
-   immédiatement comme "le même bouton" que celui qui l'a déclenchée. */
-.log-icon{width:36px; height:36px; border-radius:12px; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-.log-icon svg{width:18px; height:18px;}
-.log-icon.mail{background:var(--sauge); color:var(--cream);}
-.log-icon.wa{background:var(--sauge-mid); color:#fff;}
-.log-icon.sms{background:var(--lavender); color:#fff;}
-.log-icon.call{background:var(--yellow); color:var(--sauge-deep);}
 
 /* ---------- profile ---------- */
 .profile-view{padding:24px 0 110px;}
@@ -1289,13 +1289,21 @@ function writeLikeState(l, liked){
    connexion juste pour cliquer un bouton de contact (friction inutile
    sur le geste principal du site). Best-effort, comme writeLikeState() :
    un échec réseau ne bloque jamais l'action réelle, déjà en cours
-   (l'appel/SMS/mail part indépendamment de cette écriture). */
-function logContact(l, channel, unitName){
+   (l'appel/SMS/mail part indépendamment de cette écriture).
+   checkIn/checkOut : les dates sélectionnées dans le panneau de demande
+   au moment du clic ($in.value/$out.value, voir wireQuickReq()) —
+   toujours renseignées (préremplies par défaut, voir quickReqHtml()),
+   jamais vides. Permet de regrouper les demandes par séjour visé dans
+   Envies → Demandes (groupedContactLogHtml()), même entre annonces
+   différentes contactées pour les mêmes dates. */
+function logContact(l, channel, unitName, checkIn, checkOut){
   if(!authState.uid || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").add({
     listingId: l.docId || String(l.id),
     listingName: unitName ? (l.name+" – "+unitName) : l.name,
     channel: channel,
+    checkIn: checkIn,
+    checkOut: checkOut,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   }).catch(function(err){ console.error("[contactLog] échec de l'écriture", err); });
 }
@@ -1574,42 +1582,61 @@ function refreshLikesChrome(){
   if(!hideChrome) renderResultLine();
 }
 
+/* Plus qu'un libellé texte : la vignette photo de l'annonce a remplacé
+   l'icône colorée par canal dans contactLogRowHtml() (voir CSS .sw) —
+   les pictogrammes SVG par canal, devenus inutiles ici, restaient
+   définis ailleurs dans le fichier (panneau de demande rapide, .send-btn). */
 var CONTACT_CHANNEL_META = {
-  mail: {label:"Mail", svg:'<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>'},
-  wa: {label:"WhatsApp", fill:true, svg:'<path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.3c-.2.6-1.4 1.2-1.9 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1-2.5.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.6.3.2.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/>'},
-  sms: {label:"SMS", svg:'<rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h10M7 13h6"/>'},
-  call: {label:"Appeler", svg:'<path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A16 16 0 016 5a2 2 0 012-2z"/>'}
+  mail: {label:"Mail"}, wa: {label:"WhatsApp"}, sms: {label:"SMS"}, call: {label:"Appeler"}
 };
 function fmtContactDate(ts){
   if(!ts) return "";
   var d = typeof ts.toDate==="function" ? ts.toDate() : new Date(ts);
   if(isNaN(d.getTime())) return "";
   var mois = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
-  return d.getDate()+" "+mois[d.getMonth()]+" "+d.getFullYear();
+  var hh = ("0"+d.getHours()).slice(-2), mm = ("0"+d.getMinutes()).slice(-2);
+  return d.getDate()+" "+mois[d.getMonth()]+" "+d.getFullYear()+" · "+hh+":"+mm;
 }
-/* Une ligne cliquable seulement si l'annonce visée est encore chargée
-   dans LISTINGS (idFromString(listingId) retombe sur le même id que
-   normalizeHostListing() pour ce même docId) — une annonce supprimée ou
-   pas encore chargée reste affichée mais inerte plutôt que de mener nulle
-   part. Réutilise .map-list/.map-list-item (voir la carte) : même besoin
-   visuel (icône/vignette + nom + sous-texte), pas de raison d'inventer
-   un style de liste différent. Le clic "dérouler l'annonce" est porté par
-   .log-body (nom + icône), pas par la ligne entière, pour laisser la
-   place aux deux boutons d'action à droite (voir .log-actions) sans que
-   les cliquer ouvre aussi la fiche détail.
-   Une fois confirmée (entry.status==="confirmed", voir
-   confirmContactLogEntry()), les boutons disparaissent : il n'y a plus
-   rien à décider sur cette ligne, seulement un rappel qu'un séjour en a
-   résulté. */
+/* Un séjour demandé (checkIn/checkOut, capturés au clic — voir logContact())
+   regroupé sous un même intitulé, même si plusieurs annonces différentes
+   ont été contactées pour ces mêmes dates — voir groupedContactLogHtml().
+   fmtDate() (déjà utilisé pour le message pré-rempli) inclut le mois,
+   donc un intervalle à cheval sur deux mois reste lisible. */
+function stayPeriodLabel(checkIn, checkOut){
+  if(!checkIn || !checkOut) return "Dates non précisées";
+  var year = new Date(checkOut+"T00:00:00").getFullYear();
+  return "Séjour du "+fmtDate(checkIn)+" au "+fmtDate(checkOut)+" "+year;
+}
+/* Réutilise EXACTEMENT le principe visuel de .map-list-item de la carte
+   (vignette photo + nom + région/prix, voir renderMapList()) — seule
+   différence demandée : une 3e ligne (moyen de contact + date/heure du
+   clic). .map-list-item span est en display:block (voir CSS) pour que ces
+   deux sous-lignes s'empilent au lieu de se suivre côte à côte.
+   Le clic "dérouler l'annonce" (.log-body) n'ouvre plus directement la
+   fiche détail : il affiche la grande vignette juste au-dessus de la
+   liste (selectDemandeListing(), même mécanisme que le clic sur un item
+   de liste dans l'onglet Carte, voir selectMapListing()) — depuis cette
+   grande vignette, "Voir plus" mène à la fiche détail complète. Reste
+   inerte (pas de data-open-log) si l'annonce visée n'est plus chargée
+   dans LISTINGS (supprimée, ou pas encore chargée). Une fois confirmée
+   (entry.status==="confirmed", voir confirmContactLogEntry()), les deux
+   boutons d'action disparaissent : il n'y a plus rien à décider ici. */
 function contactLogRowHtml(entryId, entry){
   var meta = CONTACT_CHANNEL_META[entry.channel] || CONTACT_CHANNEL_META.mail;
   var numericId = entry.listingId ? idFromString(entry.listingId) : null;
-  var openable = numericId!=null && LISTINGS.some(function(l){ return l.id===numericId; });
+  var l = numericId!=null ? LISTINGS.filter(function(x){ return x.id===numericId; })[0] : null;
   var confirmed = entry.status === "confirmed";
+  var thumb = l ? listingThumbUrl(l) : null;
+  var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">'
+    : '<div class="sw" style="background:'+(l ? GRADIENTS[l.grad] : "var(--cream-deep)")+'"></div>';
+  var subLine = l ? (l.region+' · '+listingPriceLabel(l)) : "";
   return '<div class="map-list-item demande-row">'+
-    '<div class="log-body"'+(openable?' data-open-log="'+numericId+'"':'')+'>'+
-      '<span class="log-icon '+entry.channel+'"><svg viewBox="0 0 24 24" fill="'+(meta.fill?"currentColor":"none")+'" stroke="currentColor" stroke-width="1.8">'+meta.svg+'</svg></span>'+
-      '<div><b>'+esc(entry.listingName||"Annonce")+'</b><span>'+meta.label+' · '+fmtContactDate(entry.createdAt)+(confirmed?' · Séjour confirmé':'')+'</span></div>'+
+    '<div class="log-body"'+(l?' data-open-log="'+numericId+'"':'')+'>'+
+      swHtml+
+      '<div><b>'+esc(entry.listingName||"Annonce")+'</b>'+
+        (subLine ? '<span>'+esc(subLine)+'</span>' : '')+
+        '<span>'+meta.label+' · '+fmtContactDate(entry.createdAt)+(confirmed?' · Séjour confirmé':'')+'</span>'+
+      '</div>'+
     '</div>'+
     (confirmed ? '' :
       '<div class="log-actions">'+
@@ -1619,22 +1646,81 @@ function contactLogRowHtml(entryId, entry){
     )+
   '</div>';
 }
+/* Groupe les demandes non confirmées par séjour demandé (mêmes
+   checkIn/checkOut — voir stayPeriodLabel()), dans l'ordre où elles
+   apparaissent (docs déjà triés par createdAt décroissant, donc les
+   groupes les plus récemment actifs remontent naturellement en premier).
+   Les séjours confirmés restent à part, en bas : rien à trier là, ils
+   sont réglés — voir la demande initiale de l'utilisateur (séparer
+   confirmé / en cours avant tout). */
+function groupedContactLogHtml(docs){
+  var pending = [], confirmed = [];
+  docs.forEach(function(d){ (d.data().status==="confirmed" ? confirmed : pending).push(d); });
+  var html = "";
+  if(pending.length){
+    html += '<div class="profile-section-label" style="margin-top:0;">En cours</div>';
+    var order = [], byKey = {};
+    pending.forEach(function(d){
+      var e = d.data();
+      var key = (e.checkIn||"?")+"_"+(e.checkOut||"?");
+      if(!byKey[key]){ byKey[key] = {checkIn:e.checkIn, checkOut:e.checkOut, docs:[]}; order.push(byKey[key]); }
+      byKey[key].docs.push(d);
+    });
+    order.forEach(function(g){
+      html += '<div class="log-period-label">'+esc(stayPeriodLabel(g.checkIn, g.checkOut))+'</div>'+
+        '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+    });
+  }
+  if(confirmed.length){
+    html += '<div class="profile-section-label"'+(pending.length?'':' style="margin-top:0;"')+'>Séjours confirmés</div>'+
+      '<div class="map-list">'+confirmed.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+  }
+  return html;
+}
+/* Grande vignette d'une demande (même mécanisme que selectMapListing() sur
+   la carte, délibérément dupliqué plutôt que factorisé : les deux gardent
+   leur propre variable d'état — mapSelectedId / demandeSelectedId — sans
+   rapport l'une avec l'autre, deux onglets différents). "Voir plus" sur
+   cette grande carte (déjà câblé par wireFeedEvents(), voir data-open)
+   mène à la fiche détail complète. */
+var demandeSelectedId = null;
+function selectDemandeListing(id){
+  demandeSelectedId = id;
+  renderDemandeSelectedCard();
+  var container = document.getElementById("demandes-selected");
+  if(container) container.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function renderDemandeSelectedCard(){
+  var container = document.getElementById("demandes-selected");
+  if(!container) return;
+  var l = demandeSelectedId!=null ? LISTINGS.filter(function(x){ return x.id===demandeSelectedId; })[0] : null;
+  if(!l){
+    demandeSelectedId = null;
+    container.hidden = true; container.innerHTML = "";
+    return;
+  }
+  container.hidden = false;
+  container.innerHTML = '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
+    '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
+  '</article>';
+  wireFeedEvents();
+}
 function wireContactLogRows(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-open-log]"), function(el){
-    el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-open-log"))); });
+    el.addEventListener("click", function(){ selectDemandeListing(Number(el.getAttribute("data-open-log"))); });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-log-confirm]"), function(el){
     el.addEventListener("click", function(e){
       e.stopPropagation();
-      if(!confirm("Avez-vous bien été au bout de votre réservation ?")) return;
-      confirmContactLogEntry(el.getAttribute("data-log-confirm"));
+      var entryId = el.getAttribute("data-log-confirm");
+      openConfirmSheet("Ce séjour a-t-il bien eu lieu ?", "Oui, séjour confirmé", function(){ confirmContactLogEntry(entryId); });
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-log-decline]"), function(el){
     el.addEventListener("click", function(e){
       e.stopPropagation();
-      if(!confirm("La demande n'a malheureusement pas donné suite ?")) return;
-      declineContactLogEntry(el.getAttribute("data-log-decline"));
+      var entryId = el.getAttribute("data-log-decline");
+      openConfirmSheet("Cette demande n'a pas donné suite ?", "Oui, supprimer", function(){ declineContactLogEntry(entryId); });
     });
   });
 }
@@ -1663,6 +1749,7 @@ function declineContactLogEntry(entryId){
 function renderContactLog(){
   var feed = document.getElementById("feed");
   var toggle = likesViewToggleHtml();
+  demandeSelectedId = null; // la grande vignette d'un précédent affichage ne doit pas survivre à un re-rendu (confirmation/déclin, changement d'onglet)
   if(!authState.uid){
     feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
       '<p>Connectez-vous pour retrouver ici l\'historique de vos demandes.</p></div>';
@@ -1681,7 +1768,7 @@ function renderContactLog(){
           body = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
             '<p>Aucune demande enregistrée pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
         } else {
-          body = '<div class="map-list">'+snap.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+          body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedContactLogHtml(snap.docs);
         }
         feed.innerHTML = toggle + body;
         wireLikesToggle();
@@ -1888,15 +1975,30 @@ function wireQuickReq(id, uid, unit){
     $smsBtn.href = "sms:"+l.host.phone+(/iPhone|iPad|iPod/.test(navigator.userAgent)? "&":"?") +"body="+encodeURIComponent(msg);
     $callBtn.href = "tel:"+l.host.phone;
   }
+  /* wireFeedEvents() rappelle wireQuickReq() à CHAQUE ouverture/fermeture
+     du panneau (voir [data-quickreq] plus haut), pas seulement à son
+     premier rendu — sans cette garde, les écouteurs ci-dessous (boutons
+     d'envoi, dates, stepper, calendrier) s'empilaient à chaque
+     réouverture : un panneau rouvert 3 fois écrivait alors 3 fois dans
+     contactLog pour un seul clic sur WhatsApp. Latent depuis toujours
+     (update() réécrit juste les mêmes liens, inoffensif), rendu réel par
+     logContact(). $prev.dataset.wired marque un panneau déjà câblé —
+     update() continue de tourner à chaque appel (gratuit, garde le
+     message/les liens à jour), seuls les addEventListener ne le sont
+     qu'une fois par panneau (réinitialisé automatiquement si le panneau
+     est re-rendu ailleurs, ex. selectMapListing()/selectDemandeListing()
+     : c'est alors un nouveau nœud DOM, sans le flag). */
+  if($prev.dataset.wired){ update(); return; }
+  $prev.dataset.wired = "1";
   /* Historique perso du voyageur (voir logContact()) : câblé sur le clic
      réel des boutons d'envoi, pas sur update() — un seul enregistrement
      par contact effectivement initié, pas à chaque frappe dans le
      formulaire (qui appelle update() en continu). */
   var unitName = unit && unit.name;
-  if($mailBtn) $mailBtn.addEventListener("click", function(){ logContact(l, "mail", unitName); });
-  $waBtn.addEventListener("click", function(){ logContact(l, "wa", unitName); });
-  $smsBtn.addEventListener("click", function(){ logContact(l, "sms", unitName); });
-  $callBtn.addEventListener("click", function(){ logContact(l, "call", unitName); });
+  if($mailBtn) $mailBtn.addEventListener("click", function(){ logContact(l, "mail", unitName, $in.value, $out.value); });
+  $waBtn.addEventListener("click", function(){ logContact(l, "wa", unitName, $in.value, $out.value); });
+  $smsBtn.addEventListener("click", function(){ logContact(l, "sms", unitName, $in.value, $out.value); });
+  $callBtn.addEventListener("click", function(){ logContact(l, "call", unitName, $in.value, $out.value); });
   $in.addEventListener("change", update);
   $out.addEventListener("change", update);
   Array.prototype.forEach.call(document.querySelectorAll('.stepper button[data-target="'+qid+'-g"]'), function(btn){
@@ -2470,6 +2572,30 @@ function openSheet(kind){
   }
 }
 function closeSheet(){ document.getElementById("sheet-root").innerHTML = ""; }
+
+/* Confirmation à deux vrais boutons "Oui"/"Non" — volontairement séparée
+   du dispatch par "kind" d'openSheet() ci-dessus (spécifique aux volets
+   filtres/formulaires, pas adapté à un message + un callback arbitraire).
+   Remplace window.confirm() pour les actions Envies → Demandes : un
+   confirm() natif n'affiche que "OK"/"Annuler" (aucune API pour
+   relabelliser ces boutons), ce qui ne correspondait pas au texte "Oui/
+   Non" affiché — undéfini pour l'utilisateur ce que "Annuler" voulait
+   dire face à une question formulée en oui/non. */
+function openConfirmSheet(title, yesLabel, onYes){
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+    '<h3>'+esc(title)+'</h3>'+
+    '<div class="sheet-apply">'+
+      '<button type="button" class="btn-apply" id="sheet-confirm-yes">'+esc(yesLabel)+'</button>'+
+      '<button type="button" class="link-btn" id="sheet-confirm-no" style="width:100%; text-align:center; margin:12px 0 0;">Non</button>'+
+    '</div>'+
+  '</div></div></div>';
+  document.getElementById("sheet-close").addEventListener("click", closeSheet);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
+  document.getElementById("sheet-confirm-no").addEventListener("click", closeSheet);
+  document.getElementById("sheet-confirm-yes").addEventListener("click", function(){ closeSheet(); onYes(); });
+}
 
 /* ---------------- comptes : connexion / inscription / dépôt d'annonce ---------------- */
 /* Écrit accounts/{uid} pour la toute première fois, juste après la
