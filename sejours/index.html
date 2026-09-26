@@ -18,7 +18,7 @@
 
 :root{
   --cream:#EFEEEA; --cream-deep:#E4E1D9; --ink:#2E2B22;
-  --sauge:#354B38; --sauge-deep:#1D2820; --sauge-light:#8B9D86; --sauge-mid:#4E6F53;
+  --sauge:#354B38; --sauge-deep:#1D2820; --sauge-light:#8B9D86; --sauge-mid:#4E6F53; --sauge-bg:#E5E9E4;
   --lavender:#7B94E8; --lavender-bg:#E7E9F1; --lavender-soft:#B2BBDA; --lavender-deep:#4E67BC; --lavender-icon:#829AD0;
   --yellow:#DEEB82; --yellow-deep:#C7D65E;
   --line:rgba(46,43,34,0.14);
@@ -610,8 +610,13 @@ body.detail-open nav.tabbar{z-index:220;}
    renderProfile()/renderHostProfile() sur l'autre tuile) : fond clair de
    la même famille de couleur + contour assorti, plutôt que le même fond
    plein que l'espace actif. Spécificité (3 classes) l'emporte sur les
-   règles .voyageur/.hotes/b/span ci-dessus sans dépendre de l'ordre. */
-.switch-tile.voyageur:not(.current){background:var(--sauge-light); border-color:var(--sauge);}
+   règles .voyageur/.hotes/b/span ci-dessus sans dépendre de l'ordre.
+   --sauge-bg (pas --sauge-light, essayé d'abord) : --sauge-light est un
+   vert moyen, pas un vert pâle — à côté du --lavender-bg très clair de
+   l'autre tuile, le duo paraissait déséquilibré/terne (retour
+   utilisateur). --sauge-bg mélange --sauge à ~13% sur blanc, même
+   dérivation que --lavender-bg à partir de --lavender-deep. */
+.switch-tile.voyageur:not(.current){background:var(--sauge-bg); border-color:var(--sauge);}
 .switch-tile.voyageur:not(.current) b{color:var(--sauge-deep);}
 .switch-tile.voyageur:not(.current) span{color:var(--sauge-mid);}
 .switch-tile.voyageur:not(.current) .switch-icon{background:rgba(53,75,56,.14); color:var(--sauge-deep);}
