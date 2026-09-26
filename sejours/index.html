@@ -152,6 +152,15 @@ a{color:inherit; text-decoration:none;}
    ajustement demandé, pour une vision un peu plus aérée sur Explorer —
    qui se propage donc à l'identique partout. */
 #feed{padding:10px 14px 100px; display:flex; flex-direction:column; gap:18px;}
+/* Fil Explorer uniquement (retour utilisateur, "façon feed Instagram") :
+   cartes pleine largeur, coins droits — .cover garde son aspect-ratio
+   4:5 inchangé, rien d'autre ne bouge (typos, dégradé, boutons). Classe
+   posée/retirée sur #feed par switchTab() (et le tout premier rendu, au
+   boot) — jamais sur Favoris, la carte sélectionnée de la Carte ni la
+   grande vignette de Mes séjours, qui réutilisent .card sans hériter de
+   ce style. */
+#feed.feed-explore{padding-left:0; padding-right:0;}
+#feed.feed-explore .card{border-radius:0;}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
 .cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
@@ -3743,6 +3752,14 @@ function switchTab(tab){
   // périmés (confirmées/déclinées depuis un autre appareil, par exemple).
   if(state.tab==="likes" && tab!=="likes") contactLogCache = null;
   state.tab = tab;
+  /* Fil Explorer uniquement (retour utilisateur, "façon feed Instagram") :
+     cartes pleine largeur, coins droits — voir #feed.feed-explore en CSS.
+     Basculé ici plutôt que dans renderFeed() (qui gère aussi Favoris, à
+     ne pas toucher) pour ne jamais laisser la classe traîner sur #feed
+     quand on part vers Carte/Profil, qui réutilisent .card ailleurs
+     (carte sélectionnée, grande vignette Mes séjours) sans devoir hériter
+     de ce style. */
+  document.getElementById("feed").classList.toggle("feed-explore", tab==="explore");
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
      Dès qu'on change d'onglet, il est masqué définitivement. La barre
@@ -4396,6 +4413,7 @@ if(state.hostMode){
 } else {
   renderTabbar();
   renderFilterBar();
+  document.getElementById("feed").classList.toggle("feed-explore", state.tab==="explore"); // voir switchTab() : state.tab vaut "explore" par défaut ici, jamais passé par switchTab() au tout premier rendu
   renderFeed();
   renderResultLine();
 }
