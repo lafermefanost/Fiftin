@@ -190,7 +190,21 @@ a{color:inherit; text-decoration:none;}
    switchTab() (et le tout premier rendu, au boot) — jamais sur Favoris,
    la carte sélectionnée de la Carte ni la grande vignette de Mes
    séjours, qui réutilisent .card sans hériter de ce style. */
-#feed.feed-explore{padding-left:0; padding-right:0; gap:6px; background:#fff;}
+/* padding-top/bottom resserrés (retour utilisateur, "trop de blanc en haut
+   et en bas du feed, juste avant les menus") — les 10px/100px hérités de
+   #feed de base créaient un vide plat, disproportionné à côté du gap de
+   6px entre cartes. padding-bottom recalculé plutôt qu'une valeur fixe
+   plus petite : nav.tabbar (fixe, en bas) mesure exactement
+   34px (.tab-icon) + 3px (gap) + ~12px (.tab span, 10px/1.2) + 12px
+   (.tab, padding 6+6) + 16px (nav.tabbar, padding 8+8) = 77px, plus
+   l'encoche de l'appareil (env(safe-area-inset-bottom)) que nav.tabbar
+   absorbe déjà dans son propre padding. En dessous de cette valeur, le
+   bas de la dernière carte se retrouverait masqué en permanence par la
+   barre, même une fois complètement défilé — jamais vérifié avant
+   puisque le 100px fixe d'origine ne comptait pas la marge de sécurité
+   côté appareil. 85px (77 + 8px de respiration) + l'encoche : réduit le
+   vide sur la plupart des appareils, sans jamais recouvrir la carte. */
+#feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(85px + env(safe-area-inset-bottom, 0px)); gap:6px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
 /* Onglet Carte uniquement (retour utilisateur) : fond derrière la carte/
    la liste distinct de #app/--cream (qui reste tel quel pour la barre de
@@ -601,7 +615,18 @@ body.detail-open nav.tabbar{z-index:220;}
    Les 3 tuiles profile-stats d'origine (Favoris/Séjours/Demandes
    envoyées) ont depuis été retirées du Profil, devenues redondantes
    avec ce bandeau-ci — .stat-tile ne sert donc plus qu'ici. */
-.stat-tile.active{background:var(--sauge);}
+/* Retour utilisateur : la tuile active doit "aller jusqu'à la ligne" (le
+   border-bottom de .profile-stats, voir plus bas) pour bien montrer quel
+   onglet est ouvert — comme un onglet de dossier qui rejoint le contenu en
+   dessous, les deux autres restant visiblement "fermés" au-dessus de la
+   ligne. padding-bottom +14px (28px au lieu de 14px) fait grandir la
+   tuile active de 14px ; margin-bottom:-14px annule cette même valeur
+   côté mise en page (la ligne de tuiles ne grandit pas, les deux autres
+   ne bougent pas) — seul le fond de la tuile active "déborde" dans le
+   padding bas de .profile-stats (14px, exactement la même valeur) pour
+   affleurer pile sur la ligne. Coins bas carrés (border-radius) : elle ne
+   doit pas s'arrondir juste avant de toucher la ligne. */
+.stat-tile.active{background:var(--sauge); border-radius:16px 16px 0 0; padding-bottom:28px; margin-bottom:-14px;}
 .stat-tile.active b, .stat-tile.active span{color:var(--cream);}
 
 /* ---------- profile ---------- */
