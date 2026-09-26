@@ -540,12 +540,13 @@ body.detail-open nav.tabbar{z-index:220;}
 .log-action.decline{background:var(--cream-deep); color:var(--danger);}
 
 /* ---------- Mes séjours : Favoris / Demandes / Séjours ----------
-   .stat-tile (voir plus bas, "profile") réutilisé tel quel comme bouton
-   d'onglet — demande explicite : "dans le style de la vue profil...
-   des onglets avec des gros chiffres". .active n'existe pas sur les
-   stat-tile du profil (simples compteurs, pas cliquables) : ajouté ici
-   uniquement, sans rien changer à leur usage profil. */
-.stat-tile.active{background:var(--sauge-deep);}
+   .stat-tile (défini plus bas, historiquement pour profile-stats)
+   réutilisé tel quel comme bouton d'onglet — demande explicite : "dans
+   le style de la vue profil... des onglets avec des gros chiffres".
+   Les 3 tuiles profile-stats d'origine (Favoris/Séjours/Demandes
+   envoyées) ont depuis été retirées du Profil, devenues redondantes
+   avec ce bandeau-ci — .stat-tile ne sert donc plus qu'ici. */
+.stat-tile.active{background:var(--sauge);}
 .stat-tile.active b, .stat-tile.active span{color:var(--cream);}
 
 /* ---------- profile ---------- */
@@ -556,21 +557,32 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-stats{display:flex; gap:10px; margin-bottom:26px;}
 .stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
 .stat-tile b{display:block; font-size:22px; font-weight:800; color:var(--sauge-deep);}
-.stat-tile span{font-size:11px; color:var(--sauge); font-weight:600;}
+.stat-tile span{font-size:13px; color:var(--sauge); font-weight:600;}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
 .profile-row svg{width:16px; height:16px; opacity:.5;}
 .profile-switch{display:flex; gap:10px; margin-bottom:26px;}
+/* Fond plein (pas juste une bordure comme avant) — retour utilisateur :
+   voyageur toujours vert sauge, hôtes toujours lavande, que le tuile soit
+   "active" (vous y êtes) ou cliquable (pour y aller) : les deux tuiles
+   affichent laquelle mène où, la légende ("Vous y êtes" / "Déposer une
+   annonce"/"Gérer mes annonces") reste le seul signal de laquelle est
+   active, plus la peine d'une bordure en plus. */
 .switch-tile{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:14px; border-radius:16px;
-  border:1.5px solid var(--line); background:var(--cream-deep); text-align:left; font-family:inherit; cursor:pointer;}
-.switch-tile.active{border-color:var(--sauge-deep);}
-.switch-tile .switch-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center;}
+  border:none; text-align:left; font-family:inherit; cursor:pointer;}
+/* Profil hôte (renderHostProfile()) : la tuile "vous y êtes" (Espace
+   hôtes) y est disabled plutôt que cliquable, rien à y faire — sans
+   cette règle, le style disabled par défaut du navigateur l'aurait
+   ternie, alors qu'elle doit rester aussi nette que l'autre tuile. */
+.switch-tile:disabled{cursor:default; opacity:1;}
+.switch-tile.voyageur{background:var(--sauge);}
+.switch-tile.hotes{background:var(--lavender-deep);}
+.switch-tile .switch-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  background:rgba(255,255,255,.2); color:#fff;}
 .switch-tile .switch-icon svg{width:17px; height:17px;}
-.switch-tile.voyageur .switch-icon{background:var(--sauge-light); color:var(--sauge-deep);}
-.switch-tile.hotes .switch-icon{background:var(--lavender-bg); color:var(--lavender-deep);}
 .switch-tile .switch-label{display:flex; align-items:center; gap:5px; width:100%;}
-.switch-tile b{font-size:13.5px; font-weight:700; color:var(--ink);}
-.switch-tile span{font-size:11px; color:var(--sauge); font-weight:600; display:block; margin-top:1px;}
+.switch-tile b{font-size:13.5px; font-weight:700; color:#fff;}
+.switch-tile span{font-size:11px; color:rgba(255,255,255,.8); font-weight:600; display:block; margin-top:1px;}
 .profile-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); margin:24px 0 4px 2px;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
 
@@ -882,6 +894,19 @@ var authMode = "signin";
    compte n'a aucune raison de voir des formules d'hébergeur. */
 var authContext = "traveler";
 var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
+/* Les 3 formules hôte, partagées entre le sélecteur à l'inscription
+   (openSheet("auth")) et leur affichage en lecture seule dans le profil
+   hôte (renderHostProfile()) — une seule liste, pas deux copies à tenir
+   synchronisées. "simple" = pas de compte de gestion Fiftin app associé
+   (voir bootstrapHostAccount(), jamais appelé pour cette valeur) ;
+   "essentiel"/"pro" correspondent exactement aux mêmes valeurs que
+   S.settings.plan dans app/ — mêmes noms, mêmes prix, un seul et même
+   concept vu des deux côtés. */
+var HOST_FORMULAS = [
+  {value:"simple", name:"Formule Hôte", price:"Gratuit", desc:"Listez votre hébergement, calendrier simplifié inclus."},
+  {value:"essentiel", name:"Formule Gestion simplifiée", price:"24 €/mois", desc:"Planning complet Fiftin app : réservations, fichier client, compta."},
+  {value:"pro", name:"Formule Gestion avancée", price:"47 €/mois", desc:"Tout l'Essentiel + plusieurs structures juridiques, accès équipe."}
+];
 /* Chaque entrée de photo est {type:"existing", url} (déjà en ligne, juste
    affichée/retirable) ou {type:"new", file} (à uploader à l'envoi) — les
    deux cohabitent dans le même tableau pour permettre de modifier une
@@ -1762,9 +1787,9 @@ function wireContactLogRows(){
   });
 }
 /* Bascule une demande en "confirmée" : ajoute une unité au compteur
-   Séjours du profil (renderProfile() la recompte en direct, voir
-   loadSejoursCount()) et déclenche, côté serveur, l'incrément du
-   compteur de conversion de l'annonce (Cloud Functions,
+   Séjours du bandeau Mes séjours (voir loadLikesCounts()) et déclenche,
+   côté serveur, l'incrément du compteur de conversion de l'annonce
+   (Cloud Functions,
    syncListingContactStats — voir functions/index.js), affiché à l'hôte
    dans sa propre fiche détail. Règle Firestore : une transition à sens
    unique, pending -> confirmed uniquement (voir README), donc pas besoin
@@ -2348,6 +2373,18 @@ function formulaCardHtml(value,name,price,desc){
     '<p>'+desc+'</p>'+
   '</button>';
 }
+/* Même carte, mais un <div>, jamais un <button> : affichage en LECTURE
+   SEULE de la formule courante dans le profil hôte (renderHostProfile())
+   — contrairement au sélecteur à l'inscription, ce fichier n'écrit
+   jamais dans un accounts/{uid} déjà existant (voir resolveHostAccount()),
+   donc pas question de la rendre cliquable ici sans un vrai mécanisme de
+   changement de formule à construire côté serveur. */
+function formulaCardReadOnlyHtml(f, active){
+  return '<div class="formula-card'+(active?' active':'')+'">'+
+    '<div class="formula-card-head"><b>'+f.name+'</b><span>'+f.price+'</span></div>'+
+    '<p>'+f.desc+'</p>'+
+  '</div>';
+}
 
 /* ---------------- filter sheet ---------------- */
 function openSheet(kind){
@@ -2406,9 +2443,7 @@ function openSheet(kind){
     if(showFormulaPicker) chosenHostPlan = "simple"; /* repart de zéro à chaque ouverture fraîche */
     var formulaHtml = !showFormulaPicker ? "" :
       '<div class="formula-picker">'+
-        formulaCardHtml("simple","Simple annonce","Gratuit","Listez votre hébergement, calendrier simplifié inclus.")+
-        formulaCardHtml("essentiel","Gestion simplifiée","24 €/mois","Planning complet Fiftin app : réservations, fichier client, compta.")+
-        formulaCardHtml("pro","Gestion avancée","47 €/mois","Tout l'Essentiel + plusieurs structures juridiques, accès équipe.")+
+        HOST_FORMULAS.map(function(f){ return formulaCardHtml(f.value, f.name, f.price, f.desc); }).join("")+
       '</div>'+
       '<p class="sheet-sub" style="margin-top:-6px;">Paiement pas encore activé : la formule est enregistrée dès maintenant, la facturation viendra ensuite sans rien à refaire.</p>';
     inner = '<h3>'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
@@ -3575,9 +3610,8 @@ function renderProfile(){
 
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
-    '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Favoris</span></div><div class="stat-tile"><b id="stat-sejours">'+(connected?"…":"0")+'</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
     '<div class="profile-switch">'+
-      '<button type="button" class="switch-tile voyageur active" data-switch="voyageur">'+
+      '<button type="button" class="switch-tile voyageur" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
         '<div class="switch-label"><b>Espace voyageur</b></div>'+
         '<span>Vous y êtes</span>'+
@@ -3590,9 +3624,6 @@ function renderProfile(){
     '</div>'+
     '<div class="profile-list">'+
       (isAdmin() ? '<div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>' : '')+
-      '<div class="profile-row">Mes demandes de disponibilité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-      '<div class="profile-row">Moyens de contact préférés<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-      '<div class="profile-row">Notifications<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div>'+
     '<div class="profile-section-label">Informations légales</div>'+
@@ -3607,28 +3638,10 @@ function renderProfile(){
   });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
-    loadSejoursCount();
   }
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
   }
-}
-
-/* Nombre de demandes que CE voyageur a lui-même confirmées (voir
-   confirmContactLogEntry()) — juste une lecture, aucune donnée dérivée
-   stockée côté client : re-comptée à chaque ouverture du profil. Un seul
-   where() sur un champ, pas de tri croisé avec un autre champ : ne
-   nécessite pas d'index composite Firestore (contrairement à un
-   collectionGroup, voir la Cloud Function functions/index.js). */
-function loadSejoursCount(){
-  loadFirebaseSDK(function(){
-    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
-    firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries")
-      .where("status", "==", "confirmed").get().then(function(snap){
-        var el = document.getElementById("stat-sejours");
-        if(el) el.textContent = String(snap.size);
-      }).catch(function(err){ console.error("[contactLog] échec du comptage des séjours", err); });
-  });
 }
 
 /* ---------------- validation des annonces (compte admin uniquement) ---------------- */
@@ -3776,6 +3789,16 @@ var HOST_TABS_HTML =
   '<button class="tab" data-host-exit="1">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>'+
     '<span>Espace voyageur</span>'+
+  '</button>'+
+  /* Profil reste accessible en mode hôte, comme demandé — même icône que
+     TRAVELER_TABS_HTML, en dernière position. Contenu différent de la
+     vue voyageur (renderHostProfile(), pas renderProfile()) : formules
+     hôte à la place des lignes "Mes demandes de disponibilité"/
+     "Notifications"/"Moyens de contact préférés", retirées des deux
+     côtés (n'ont jamais eu de contenu réel derrière). */
+  '<button class="tab" data-host-tab="profile">'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
+    '<span>Profil</span>'+
   '</button>';
 
 function renderTabbar(){
@@ -3843,7 +3866,66 @@ function switchHostTab(tab){
   renderHostTabContent();
 }
 function renderHostTabContent(){
-  if(state.hostTab==="calendar") renderHostCalendar(); else renderHostListings();
+  if(state.hostTab==="calendar") renderHostCalendar();
+  else if(state.hostTab==="profile") renderHostProfile();
+  else renderHostListings();
+}
+/* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
+   (data-switch="voyageur" y mène désormais à exitHostMode() plutôt qu'à
+   switchTab("explore"), seule différence de câblage), mais des lignes
+   différentes en dessous : les formules hôte (HOST_FORMULAS) plutôt que
+   les réglages voyageur, qui n'ont pas de sens ici. Formules affichées en
+   LECTURE SEULE (formulaCardReadOnlyHtml()) : la vraie formule vient de
+   accounts/{uid}.settings.plan côté Fiftin app (resolveHostAccount(), déjà
+   utilisé ailleurs pour le calendrier) — "simple" par défaut si aucun
+   compte de gestion n'existe (hôte "compte simple annonce"). Ce fichier
+   n'écrivant jamais sur un accounts/{uid} existant (voir le commentaire
+   de resolveHostAccount()), changer de formule reste à faire depuis
+   Fiftin app (Réglages → Compte), pas d'ici. */
+function renderHostProfile(){
+  var feed = document.getElementById("feed");
+  var initial = authState.email ? authState.email.charAt(0).toUpperCase() : "?";
+  feed.innerHTML = '<div class="profile-view">'+
+    '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+esc(authState.email||"")+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;"><a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a></div></div></div>'+
+    '<div class="profile-switch">'+
+      '<button type="button" class="switch-tile voyageur" id="btn-exit-host">'+
+        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
+        '<div class="switch-label"><b>Espace voyageur</b></div>'+
+        '<span>Retourner explorer</span>'+
+      '</button>'+
+      '<button type="button" class="switch-tile hotes" disabled>'+
+        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>'+
+        '<div class="switch-label"><b>Espace hôtes</b></div>'+
+        '<span>Vous y êtes</span>'+
+      '</button>'+
+    '</div>'+
+    '<div class="profile-list">'+
+      (isAdmin() ? '<div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>' : '')+
+      '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+    '</div>'+
+    '<div class="profile-section-label">Votre formule</div>'+
+    '<div class="formula-picker" id="host-formulas">'+
+      HOST_FORMULAS.map(function(f){ return formulaCardReadOnlyHtml(f, f.value==="simple"); }).join("")+
+    '</div>'+
+    '<p class="sheet-sub">Changement de formule depuis Fiftin app (Réglages → Compte) — paiement pas encore activé.</p>'+
+    '<div class="profile-section-label">Informations légales</div>'+
+    '<div class="profile-list legal">'+
+      '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+    '</div></div>';
+  document.getElementById("btn-exit-host").addEventListener("click", exitHostMode);
+  document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+  if(isAdmin()){
+    document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
+  }
+  resolveHostAccount(function(account){
+    if(state.hostTab!=="profile") return; // a changé d'onglet pendant la lecture
+    var plan = (account && account.settings && account.settings.plan) || "simple";
+    var container = document.getElementById("host-formulas");
+    if(!container) return;
+    container.innerHTML = HOST_FORMULAS.map(function(f){ return formulaCardReadOnlyHtml(f, f.value===plan); }).join("");
+  });
 }
 
 /* Annonces du compte connecté (ownerUid == authState.uid), quel que soit
