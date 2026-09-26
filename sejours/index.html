@@ -523,7 +523,7 @@ body.detail-open nav.tabbar{z-index:220;}
    effet ailleurs (la carte n'a qu'un seul span par item). */
 .map-list-item span{font-size:11.5px; color:var(--sauge); font-weight:600; display:block;}
 /* En-tête d'un groupe de demandes portant sur les mêmes dates de séjour
-   (voir groupedContactLogHtml()/stayPeriodLabel()) — même rôle que
+   (voir groupedDemandesHtml()/stayPeriodLabel()) — même rôle que
    .profile-section-label (étiquette au-dessus d'une liste) mais un cran
    plus discret : c'est un sous-groupe, pas une section de premier niveau. */
 .log-period-label{font-size:12.5px; font-weight:700; color:var(--ink); margin:14px 0 6px 2px;}
@@ -539,11 +539,14 @@ body.detail-open nav.tabbar{z-index:220;}
 .log-action.confirm{background:var(--sauge); color:var(--cream);}
 .log-action.decline{background:var(--cream-deep); color:var(--danger);}
 
-/* ---------- Envies : Favoris / Demandes ---------- */
-.likes-toggle{display:flex; gap:8px; margin:0 0 14px;}
-.likes-toggle-btn{flex:1; background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:10px;
-  font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge);}
-.likes-toggle-btn.active{background:var(--sauge-deep); border-color:var(--sauge-deep); color:var(--cream);}
+/* ---------- Mes séjours : Favoris / Demandes / Séjours ----------
+   .stat-tile (voir plus bas, "profile") réutilisé tel quel comme bouton
+   d'onglet — demande explicite : "dans le style de la vue profil...
+   des onglets avec des gros chiffres". .active n'existe pas sur les
+   stat-tile du profil (simples compteurs, pas cliquables) : ajouté ici
+   uniquement, sans rien changer à leur usage profil. */
+.stat-tile.active{background:var(--sauge-deep);}
+.stat-tile.active b, .stat-tile.active span{color:var(--cream);}
 
 /* ---------- profile ---------- */
 .profile-view{padding:24px 0 110px;}
@@ -551,7 +554,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-avatar{width:60px; height:60px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px;}
 .profile-stats{display:flex; gap:10px; margin-bottom:26px;}
-.stat-tile{flex:1; background:var(--cream-deep); border-radius:16px; padding:14px; text-align:center;}
+.stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
 .stat-tile b{display:block; font-size:22px; font-weight:800; color:var(--sauge-deep);}
 .stat-tile span{font-size:11px; color:var(--sauge); font-weight:600;}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
@@ -1296,7 +1299,7 @@ function writeLikeState(l, liked){
    null sinon, même si le panneau affichait des dates par défaut
    (préremplies, jamais vides visuellement, voir quickReqHtml()) que
    personne n'a choisies. Permet de regrouper les demandes par séjour
-   visé dans Envies → Demandes (groupedContactLogHtml()/stayPeriodLabel()),
+   visé dans Mes séjours → Demandes (groupedDemandesHtml()/stayPeriodLabel()),
    sans faire semblant qu'un contact où les dates n'ont jamais été
    regardées vise un séjour précis. */
 function logContact(l, channel, unitName, checkIn, checkOut){
@@ -1348,6 +1351,15 @@ function listingPriceLabel(l){
 }
 
 function filteredListings(){
+  /* Favoris (onglet Mes séjours) : les filtres Lieu/Distance/Prix/
+     Prestations/Trier sont masqués sur toute cette vue (voir
+     refreshLikesChrome()) — les ignorer ici aussi, sinon un favori
+     resterait invisible à cause d'un filtre laissé actif depuis Explorer,
+     sans aucun moyen de le voir ni de le lever sur cet onglet. Tous les
+     favoris, dans l'ordre naturel de LISTINGS, un point c'est tout. */
+  if(state.tab==="likes"){
+    return LISTINGS.filter(function(l){ return state.liked.indexOf(l.id)!==-1; });
+  }
   var f = state.filters;
   var list = LISTINGS.filter(function(l){
     if(!matchesLocation(l, f)) return false;
@@ -1356,7 +1368,6 @@ function filteredListings(){
     if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
     return true;
   });
-  if(state.tab==="likes") list = list.filter(function(l){ return state.liked.indexOf(l.id)!==-1; });
   if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return listingDistanceKm(a)-listingDistanceKm(b); });
   else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return listingDistanceKm(b)-listingDistanceKm(a); });
   else if(state.sort==="likes_desc") list = list.slice().sort(function(a,b){ return (b.likeCount||0)-(a.likeCount||0); });
@@ -1485,12 +1496,12 @@ function renderFeed(){
   if(!list.length){
     if(state.tab==="likes"){
       feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
-        '<p>Aucune envie enregistrée pour l\'instant.<br>Touchez le cœur sur un hébergement pour le garder de côté.</p></div>';
+        '<p>Aucun favori enregistré pour l\'instant.<br>Touchez le cœur sur un hébergement pour le garder de côté.</p></div>';
     } else {
       feed.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
         '<p>Aucun hébergement ne correspond à ces filtres.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
     }
-    if(state.tab==="likes") wireLikesToggle();
+    if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
     return;
   }
   feed.innerHTML = toggle + list.map(function(l){
@@ -1498,7 +1509,7 @@ function renderFeed(){
       '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
     '</article>';
   }).join("");
-  if(state.tab==="likes") wireLikesToggle();
+  if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
   wireFeedEvents();
 }
 
@@ -1524,7 +1535,6 @@ function wireFeedEvents(){
       // écraserait la vue carte par le fil normal. refreshCurrentView()
       // choisit le bon rafraîchissement selon l'onglet actif.
       refreshCurrentView(); renderLikeBadge();
-      if(state.tab==="likes") renderResultLine();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-share]"), function(el){
@@ -1549,18 +1559,31 @@ function wireFeedEvents(){
   });
 }
 
-/* ---------------- Envies : sous-onglets Favoris / Demandes ----------------
-   "Demandes" (state.likesView) est l'historique personnel du voyageur
-   (voir logContact()) — regroupé avec Favoris parce que ce sont les deux
-   seules listes propres à SON compte (par opposition au fil, qui montre
-   les annonces de tout le monde). Rendu comme un petit bandeau à 2
-   segments en tête de #feed, dans renderFeed()/renderContactLog() plutôt
-   que comme un élément fixe séparé — plus simple que d'ajouter une
-   troisième zone à la hiérarchie de calques déjà documentée. */
+/* ---------------- Mes séjours : sous-onglets Favoris / Demandes / Séjours ----------------
+   Les trois regroupés ici parce que ce sont les seules listes propres au
+   compte du voyageur (par opposition au fil, qui montre les annonces de
+   tout le monde) : Favoris (state.liked), Demandes en cours et Séjours
+   confirmés (les deux derniers tirés de contactLog, voir logContact()).
+   Rendu comme un bandeau à 3 segments en tête de #feed, dans
+   renderFeed()/renderContactLog() plutôt que comme un élément fixe séparé.
+   Chaque segment réutilise .stat-tile (voir CSS, "dans le style de la vue
+   profil" — demande explicite) : Favoris est synchrone (state.liked.length,
+   déjà en mémoire) ; Demandes/Séjours viennent d'une lecture Firestore
+   partagée (loadContactLogEntries()/contactLogCache) — "…" tant qu'elle
+   n'a pas répondu, patché ensuite par loadLikesCounts() sans devoir
+   attendre pour afficher Favoris. */
+function contactLogCounts(docs){
+  var enCours = 0, confirmed = 0;
+  docs.forEach(function(d){ if(d.data().status==="confirmed") confirmed++; else enCours++; });
+  return {enCours:enCours, confirmed:confirmed};
+}
 function likesViewToggleHtml(){
-  return '<div class="likes-toggle">'+
-    '<button type="button" class="likes-toggle-btn'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris">Favoris</button>'+
-    '<button type="button" class="likes-toggle-btn'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes">Demandes</button>'+
+  var loaded = !authState.uid || contactLogCache!=null;
+  var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
+  return '<div class="profile-stats">'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+state.liked.length+'</b><span>Favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Demandes</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Séjours</span></button>'+
   '</div>';
 }
 function wireLikesToggle(){
@@ -1571,14 +1594,35 @@ function wireLikesToggle(){
     });
   });
 }
-/* Affiché seulement sur Envies (le filtre Lieu/Distance/Prix, comme le
-   compteur "X hébergements trouvés", n'a pas de sens sur une liste
-   chronologique de contacts) — appelée à la fois par switchTab() (première
-   entrée sur l'onglet) et par le clic sur le bandeau Favoris/Demandes. */
+/* Patch les deux compteurs de droite une fois la lecture Firestore
+   revenue — ne fait rien si déjà en cache (déjà rendus avec les vrais
+   nombres par likesViewToggleHtml()) ni si non connecté (0/0 déjà
+   rendus, pas de lecture possible sans compte). En cas d'échec, laisse
+   "…" plutôt que d'afficher un faux 0 — l'erreur est déjà journalisée
+   par loadContactLogEntries(). */
+function loadLikesCounts(){
+  if(!authState.uid || contactLogCache) return;
+  loadContactLogEntries(function(err, docs){
+    if(err) return;
+    var counts = contactLogCounts(docs);
+    var elD = document.getElementById("stat-count-demandes");
+    var elS = document.getElementById("stat-count-sejours");
+    if(elD) elD.textContent = String(counts.enCours);
+    if(elS) elS.textContent = String(counts.confirmed);
+  });
+}
+/* Filtres Lieu/Distance/Prix/Prestations/Trier et compteur "X hébergements
+   trouvés" masqués sur TOUTE la vue Mes séjours (Favoris compris — retour
+   utilisateur), pas seulement Demandes/Séjours comme avant : un filtre
+   resté actif depuis Explorer, invisible ici, pourrait sinon faire
+   disparaître un favori sans aucun moyen de comprendre pourquoi (voir
+   filteredListings(), qui ignore désormais state.filters/state.sort sur
+   cette vue pour la même raison). Appelée à la fois par switchTab()
+   (première entrée sur l'onglet) et par le clic sur le bandeau. */
 function refreshLikesChrome(){
   var filterBar = document.getElementById("filter-bar");
   var resultLine = document.getElementById("result-line");
-  var hideChrome = state.tab==="likes" && state.likesView==="demandes";
+  var hideChrome = state.tab==="likes";
   filterBar.classList.toggle("chrome-collapsed", hideChrome);
   resultLine.classList.toggle("chrome-collapsed", hideChrome);
   renderTabContent();
@@ -1602,7 +1646,7 @@ function fmtContactDate(ts){
 }
 /* Un séjour demandé (checkIn/checkOut, capturés au clic — voir logContact())
    regroupé sous un même intitulé, même si plusieurs annonces différentes
-   ont été contactées pour ces mêmes dates — voir groupedContactLogHtml().
+   ont été contactées pour ces mêmes dates — voir groupedDemandesHtml().
    fmtDate() (déjà utilisé pour le message pré-rempli) inclut le mois,
    donc un intervalle à cheval sur deux mois reste lisible. */
 function stayPeriodLabel(checkIn, checkOut){
@@ -1649,36 +1693,26 @@ function contactLogRowHtml(entryId, entry){
     )+
   '</div>';
 }
-/* Groupe les demandes non confirmées par séjour demandé (mêmes
-   checkIn/checkOut — voir stayPeriodLabel()), dans l'ordre où elles
-   apparaissent (docs déjà triés par createdAt décroissant, donc les
-   groupes les plus récemment actifs remontent naturellement en premier).
-   Les séjours confirmés restent à part, en bas : rien à trier là, ils
-   sont réglés — voir la demande initiale de l'utilisateur (séparer
-   confirmé / en cours avant tout). */
-function groupedContactLogHtml(docs){
-  var pending = [], confirmed = [];
-  docs.forEach(function(d){ (d.data().status==="confirmed" ? confirmed : pending).push(d); });
-  var html = "";
-  if(pending.length){
-    html += '<div class="profile-section-label" style="margin-top:0;">En cours</div>';
-    var order = [], byKey = {};
-    pending.forEach(function(d){
-      var e = d.data();
-      var key = (e.checkIn||"?")+"_"+(e.checkOut||"?");
-      if(!byKey[key]){ byKey[key] = {checkIn:e.checkIn, checkOut:e.checkOut, docs:[]}; order.push(byKey[key]); }
-      byKey[key].docs.push(d);
-    });
-    order.forEach(function(g){
-      html += '<div class="log-period-label">'+esc(stayPeriodLabel(g.checkIn, g.checkOut))+'</div>'+
-        '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
-    });
-  }
-  if(confirmed.length){
-    html += '<div class="profile-section-label"'+(pending.length?'':' style="margin-top:0;"')+'>Séjours confirmés</div>'+
-      '<div class="map-list">'+confirmed.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
-  }
-  return html;
+/* Groupe les demandes en cours par séjour visé (mêmes checkIn/checkOut —
+   voir stayPeriodLabel()), dans l'ordre où elles apparaissent (docs déjà
+   triés par createdAt décroissant, donc les groupes les plus récemment
+   actifs remontent naturellement en premier). Ne reçoit plus que des
+   demandes en cours : les confirmées vivent désormais dans leur propre
+   sous-onglet Séjours (voir renderContactLog()), plus la peine de les
+   séparer ici — pas de "En cours"/"Séjours confirmés" en tête non plus,
+   redondant avec l'onglet où l'on se trouve déjà. */
+function groupedDemandesHtml(pendingDocs){
+  var order = [], byKey = {};
+  pendingDocs.forEach(function(d){
+    var e = d.data();
+    var key = (e.checkIn||"?")+"_"+(e.checkOut||"?");
+    if(!byKey[key]){ byKey[key] = {checkIn:e.checkIn, checkOut:e.checkOut, docs:[]}; order.push(byKey[key]); }
+    byKey[key].docs.push(d);
+  });
+  return order.map(function(g, i){
+    return '<div class="log-period-label"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(stayPeriodLabel(g.checkIn, g.checkOut))+'</div>'+
+      '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+  }).join("");
 }
 /* Grande vignette d'une demande (même mécanisme que selectMapListing() sur
    la carte, délibérément dupliqué plutôt que factorisé : les deux gardent
@@ -1739,49 +1773,84 @@ function confirmContactLogEntry(entryId){
   if(!authState.uid) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
     .update({status:"confirmed", confirmedAt: firebase.firestore.FieldValue.serverTimestamp()})
-    .then(function(){ renderContactLog(); })
+    .then(function(){ contactLogCache = null; renderContactLog(); })
     .catch(function(err){ console.error("[contactLog] échec de la confirmation", err); });
 }
 function declineContactLogEntry(entryId){
   if(!authState.uid) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
     .delete()
-    .then(function(){ renderContactLog(); })
+    .then(function(){ contactLogCache = null; renderContactLog(); })
     .catch(function(err){ console.error("[contactLog] échec de la suppression", err); });
 }
+/* Lecture Firestore partagée entre les 3 segments de Mes séjours (le
+   bandeau Favoris/Demandes/Séjours a besoin des 3 nombres à la fois, quel
+   que soit celui affiché) et le corps de Demandes/Séjours lui-même — une
+   seule lecture par visite de l'onglet plutôt qu'une par sous-onglet ou
+   par re-rendu du bandeau. cb(err, docs). Mise en cache dans
+   contactLogCache (docs Firestore bruts, pas encore filtrés/groupés) ;
+   invalidée en quittant l'onglet (switchTab()) et après toute écriture
+   (confirmContactLogEntry()/declineContactLogEntry()) pour ne jamais
+   servir un état périmé. */
+var contactLogCache = null;
+function loadContactLogEntries(cb){
+  if(contactLogCache){ cb(null, contactLogCache); return; }
+  if(!authState.uid){ contactLogCache = []; cb(null, contactLogCache); return; }
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries")
+      .orderBy("createdAt", "desc").limit(100).get().then(function(snap){
+        contactLogCache = snap.docs;
+        cb(null, contactLogCache);
+      }).catch(function(err){
+        console.error("[contactLog] échec de la lecture", err);
+        cb(err, null);
+      });
+  });
+}
+/* Corps de Demandes (state.likesView==="demandes", en cours uniquement,
+   groupées par séjour visé — groupedDemandesHtml()) et de Séjours
+   (state.likesView==="sejours", confirmés uniquement, liste simple) :
+   même source (loadContactLogEntries()), filtrée côté client selon le
+   sous-onglet actif plutôt que deux lectures Firestore séparées. */
 function renderContactLog(){
   var feed = document.getElementById("feed");
   var toggle = likesViewToggleHtml();
+  var wantConfirmed = state.likesView==="sejours";
   demandeSelectedId = null; // la grande vignette d'un précédent affichage ne doit pas survivre à un re-rendu (confirmation/déclin, changement d'onglet)
   if(!authState.uid){
     feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
-      '<p>Connectez-vous pour retrouver ici l\'historique de vos demandes.</p></div>';
+      '<p>Connectez-vous pour retrouver ici '+(wantConfirmed?"vos séjours":"l'historique de vos demandes")+'.</p></div>';
     wireLikesToggle();
     return;
   }
   feed.innerHTML = toggle + '<div class="empty-state"><p>Chargement…</p></div>';
   wireLikesToggle();
-  loadFirebaseSDK(function(){
-    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
-    firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries")
-      .orderBy("createdAt", "desc").limit(100).get().then(function(snap){
-        if(state.tab!=="likes" || state.likesView!=="demandes") return; // a changé d'onglet pendant le chargement
-        var body;
-        if(snap.empty){
-          body = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
-            '<p>Aucune demande enregistrée pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
-        } else {
-          body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedContactLogHtml(snap.docs);
-        }
-        feed.innerHTML = toggle + body;
-        wireLikesToggle();
-        wireContactLogRows();
-      }).catch(function(err){
-        console.error("[contactLog] échec de la lecture", err);
-        feed.innerHTML = toggle + '<div class="empty-state"><p>Impossible de charger vos demandes pour le moment.</p></div>';
-        wireLikesToggle();
-      });
+  loadContactLogEntries(function(err, docs){
+    if(state.tab!=="likes" || (state.likesView!=="demandes" && state.likesView!=="sejours")) return; // a changé d'onglet pendant le chargement
+    if(err){
+      feed.innerHTML = toggle + '<div class="empty-state"><p>Impossible de charger '+(wantConfirmed?"vos séjours":"vos demandes")+' pour le moment.</p></div>';
+      wireLikesToggle();
+      return;
+    }
+    var filtered = docs.filter(function(d){ return (d.data().status==="confirmed")===wantConfirmed; });
+    var body;
+    if(!filtered.length){
+      body = wantConfirmed
+        ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
+          '<p>Aucun séjour confirmé pour l\'instant.<br>Confirmez une demande depuis l\'onglet Demandes une fois le séjour effectué (ou prévu).</p></div>'
+        : '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
+          '<p>Aucune demande en cours pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
+    } else if(wantConfirmed){
+      body = '<div class="map-selected" id="demandes-selected" hidden></div><div class="map-list">'+filtered.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+    } else {
+      body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedDemandesHtml(filtered);
+    }
+    feed.innerHTML = toggle + body;
+    wireLikesToggle();
+    wireContactLogRows();
   });
+  loadLikesCounts();
 }
 
 /* ---------------- calendrier de disponibilité ----------------
@@ -3506,7 +3575,7 @@ function renderProfile(){
 
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
-    '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Envies</span></div><div class="stat-tile"><b id="stat-sejours">'+(connected?"…":"0")+'</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
+    '<div class="profile-stats"><div class="stat-tile"><b>'+state.liked.length+'</b><span>Favoris</span></div><div class="stat-tile"><b id="stat-sejours">'+(connected?"…":"0")+'</b><span>Séjours</span></div><div class="stat-tile"><b>0</b><span>Demandes envoyées</span></div></div>'+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur active" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
@@ -3620,7 +3689,7 @@ function renderAdminQueue(){
 
 function renderTabContent(){
   if(state.tab==="map") renderMap();
-  else if(state.tab==="likes" && state.likesView==="demandes") renderContactLog();
+  else if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
   else renderFeed();
 }
 /* Comme renderTabContent(), mais pour un simple rafraîchissement d'état
@@ -3630,7 +3699,7 @@ function renderTabContent(){
    sous la carte est ré-affichée. */
 function refreshCurrentView(){
   if(state.tab==="map") renderMapSelectedCard();
-  else if(state.tab==="likes" && state.likesView==="demandes") renderContactLog();
+  else if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
   else renderFeed();
 }
 
@@ -3642,6 +3711,11 @@ function switchTab(tab){
   // pour permettre ça sans repasser par la flèche retour.
   if(state.detailListingId!=null) closeDetail();
   if(state.tab==="map" && tab!=="map") mapSelectedId = null;
+  // Quitter Mes séjours invalide le cache de contactLog (voir
+  // loadContactLogEntries()) : une prochaine visite doit relire l'état
+  // réel plutôt que de re-servir des nombres/demandes potentiellement
+  // périmés (confirmées/déclinées depuis un autre appareil, par exemple).
+  if(state.tab==="likes" && tab!=="likes") contactLogCache = null;
   state.tab = tab;
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
@@ -3682,7 +3756,7 @@ var TRAVELER_TABS_HTML =
   '</button>'+
   '<button class="tab" data-tab="likes">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></span>'+
-    '<span>Envies</span>'+
+    '<span>Mes séjours</span>'+
     '<span class="badge" id="like-badge" hidden>0</span>'+
   '</button>'+
   '<button class="tab" data-tab="profile">'+
