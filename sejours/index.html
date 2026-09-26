@@ -1119,6 +1119,11 @@ function fetchPublishedListings(){
       rebuildListings();
       if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
       if(state.tab==="map") renderMap();
+      // validLikedCount() dépend de LISTINGS : au tout premier rendu du
+      // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
+      // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
+      // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
+      renderLikeBadge();
       maybeOpenDeepLink();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
@@ -1339,6 +1344,23 @@ function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({fi
    connecté ET que l'annonce est réelle (docId, voir normalizeHostListing) —
    une annonce statique de démo (listings.json) reste "aimable" localement
    sans jamais toucher Firestore, il n'y a pas de document à incrémenter. */
+/* Nombre de favoris à AFFICHER (bandeau Mes séjours, badge de l'onglet) —
+   distinct de state.liked.length. Retour utilisateur (bug) : le chiffre
+   restait gonflé par des annonces supprimées depuis longtemps. Cause :
+   toggleLike() ajoute/retire un id de state.liked, mais rien ne le retire
+   quand l'annonce elle-même disparaît de LISTINGS (suppression) — l'id
+   reste indéfiniment dans state.liked/localStorage. filteredListings()
+   ignore déjà ces ids fantômes pour la LISTE de Favoris (LISTINGS.filter),
+   seul le chiffre ne suivait pas. Ne PRUNE pas state.liked lui-même
+   (aucune écriture ici) : une annonce simplement dépubliée temporairement
+   (pas supprimée) disparaît aussi un temps de LISTINGS sans devoir perdre
+   son statut de favori pour de bon — elle recomptera dès qu'elle
+   revient. */
+function validLikedCount(){
+  var ids = {};
+  LISTINGS.forEach(function(l){ ids[l.id] = true; });
+  return state.liked.filter(function(id){ return ids[id]; }).length;
+}
 function toggleLike(l){
   var idx = state.liked.indexOf(l.id);
   var liked = idx===-1;
@@ -1679,8 +1701,9 @@ function wireFeedEvents(){
    Rendu comme un bandeau à 3 segments en tête de #feed, dans
    renderFeed()/renderContactLog() plutôt que comme un élément fixe séparé.
    Chaque segment réutilise .stat-tile (voir CSS, "dans le style de la vue
-   profil" — demande explicite) : Favoris est synchrone (state.liked.length,
-   déjà en mémoire) ; Demandes/Séjours viennent d'une lecture Firestore
+   profil" — demande explicite) : Favoris est synchrone (validLikedCount(),
+   voir plus haut — déjà en mémoire, juste filtré contre LISTINGS) ;
+   Demandes/Séjours viennent d'une lecture Firestore
    partagée (loadContactLogEntries()/contactLogCache) — "…" tant qu'elle
    n'a pas répondu, patché ensuite par loadLikesCounts() sans devoir
    attendre pour afficher Favoris. */
@@ -1693,7 +1716,7 @@ function likesViewToggleHtml(){
   var loaded = !authState.uid || contactLogCache!=null;
   var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
   return '<div class="profile-stats">'+
-    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+state.liked.length+'</b><span>Favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+validLikedCount()+'</b><span>Favoris</span></button>'+
     '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Demandes</span></button>'+
     '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Séjours</span></button>'+
   '</div>';
@@ -3485,7 +3508,8 @@ function submitHostForm(){
 function renderLikeBadge(){
   var b = document.getElementById("like-badge");
   if(!b) return; /* absent en mode hôte, la barre d'onglets est différente */
-  if(state.liked.length){ b.hidden=false; b.textContent = state.liked.length; } else b.hidden = true;
+  var n = validLikedCount();
+  if(n){ b.hidden=false; b.textContent = n; } else b.hidden = true;
 }
 
 var mapInstance = null;
@@ -4507,6 +4531,7 @@ fetch("listings.json").then(function(r){
   state.loading = false;
   renderFilterBar(); renderFeed(); renderResultLine();
   if(state.tab==="map") renderMap();
+  renderLikeBadge(); // voir commentaire de validLikedCount() : LISTINGS était vide au tout premier rendu du badge
   maybeOpenDeepLink();
 }).catch(function(err){
   state.loading = false;
