@@ -208,6 +208,18 @@ firebase deploy --only functions     # depuis la racine du dépôt
 
 Volontairement laissés en dehors de cette passe : les cercles (`border-radius:50%` — avatars, boutons-icônes ronds, points de pagination), `#siteGate` et `.hero-menu-link` (écran d'accueil/mot de passe, où le style pleinement arrondi — `999px` — fait partie d'un langage visuel volontairement différent de l'appli elle-même), et `.detail-tab` (forme à coins arrondis seulement en haut, façon onglet de navigateur, déjà un cas particulier documenté).
 
+### Envies → Demandes : l'historique personnel des contacts du voyageur
+
+**Ce que c'est, et ce que ça n'est PAS.** Demande initiale : un onglet "Mes demandes" listant, pour chaque annonce, qui a contacté l'hôte et quand. Repensé en cours de route une fois le vrai besoin clarifié : ce n'est PAS un tableau de bord pour l'hôte (voir plus bas pourquoi ça aurait été une mauvaise idée), c'est un **historique personnel pour le voyageur** — puisque le contact réel se fait par SMS/WhatsApp/appel/mail, en dehors du site, le voyageur n'a ensuite aucun moyen de retrouver "quand ai-je contacté quelle annonce, et par quel moyen ?". Nouveau sous-onglet **Demandes**, à côté de **Favoris** dans l'onglet du bas Envies (bandeau à 2 segments, `.likes-toggle`, en tête de `#feed` — pas un 6ᵉ onglet dans la barre du bas : Favoris et Demandes sont les deux seules listes propres au compte du voyageur, contrairement au fil qui montre les annonces de tout le monde, donc les regrouper au même endroit a du sens).
+
+**Limite technique réelle, assumée et documentée dans le code.** Il est impossible de savoir si un SMS/appel/mail a réellement abouti : les liens `sms:`/`tel:`/`mailto:` font sortir le navigateur vers l'appli native (Messages/Téléphone/Mail), et aucune API web ne renvoie ensuite de confirmation — sur aucun navigateur, c'est une limite du système. Ce qui EST mesurable de façon fiable, c'est l'intention : le moment où le voyageur a *appuyé* sur le bouton, juste avant la bascule vers l'appli native. C'est cette intention qui est enregistrée, jamais présentée comme une confirmation d'envoi.
+
+**Pourquoi pas un inbox côté hôte (l'idée de départ).** Pour qu'un hôte voie "qui m'a contacté", il aurait fallu que **n'importe quel visiteur, même non connecté**, puisse écrire dans Firestore au clic — la plupart des voyageurs ne se connectent jamais juste pour contacter un hôte. Une écriture Firestore ouverte à tout le monde est une porte au spam/abus (de fausses demandes, un coût d'usage qui grimpe), sans solution complète possible sans App Check (absent du projet, comme déjà noté pour les favoris). Trancher entre couverture complète (risque de spam) et compte obligatoire (couverture partielle) était un vrai choix à faire — fait explicitement avec l'utilisateur avant de coder : compte obligatoire. La version "historique perso du voyageur" retombe sur cette même décision mais pour une bonne raison structurelle cette fois : cet historique n'a de sens que rattaché à SON compte de toute façon (sinon, aucun moyen de le retrouver plus tard), donc plus besoin d'écriture publique du tout — chaque voyageur n'écrit que dans sa propre sous-collection, comme pour les favoris. Beaucoup plus sûr, sans compromis de couverture par rapport à l'inbox côté hôte (qui, de toute façon, aurait raté la majorité des contacts anonymes).
+
+**Modèle de données.** Nouvelle sous-collection `contactLog/{uid}/entries/{entryId}` (à la racine, sans rapport avec `listings/{listingId}` — ce n'est pas une donnée sur l'annonce ni sur l'hôte), un document par clic sur un bouton d'envoi : `{listingId, listingName, channel: "mail"|"wa"|"sms"|"call", createdAt}`. `logContact(l, channel, unitName)` (nouveau, appelé depuis `wireQuickReq()` sur le clic réel des 4 boutons d'envoi, pas sur `update()` qui tourne en continu pendant la saisie) — écrit UNIQUEMENT si connecté ; sans compte, rien ne se passe, silencieusement (pas de connexion forcée juste pour cliquer un bouton de contact, ce serait de la friction sur le geste principal du site). `listingName` est capturé au moment du clic (pas juste un id) pour que l'historique reste lisible même si l'annonce est renommée ou supprimée depuis. Règle Firestore : lecture/écriture strictement réservées à son propre `uid`, champs bornés à la création (canal parmi une liste fixe, `createdAt` vérifié comme un vrai timestamp serveur — jamais une valeur fournie par le client). **Nécessite la règle Firestore étendue ci-dessous (`match /contactLog/{uid}/entries/{entryId}`) — sans elle l'écriture échoue silencieusement** (best-effort, comme `writeLikeState()` : un échec réseau ne bloque jamais l'appel/SMS/mail lui-même, déjà en cours indépendamment de cette écriture).
+
+**Affichage.** `renderContactLog()` (lecture triée par date décroissante, limitée à 100 entrées) rend chaque ligne avec `contactLogRowHtml()` — réutilise `.map-list`/`.map-list-item` (même besoin visuel que la liste sous la carte : icône + nom + sous-texte, pas de raison d'inventer un style différent), avec un nouveau `.log-icon` par canal repris des couleurs de `.send-icon` (même logique de reconnaissance immédiate "c'est le même bouton qui a déclenché ça"). Une ligne est cliquable (ouvre la fiche détail) seulement si l'annonce visée est encore chargée dans `LISTINGS` — une annonce supprimée depuis reste affichée dans l'historique (avec son nom capturé au clic) mais n'ouvre plus rien, dégradation propre plutôt qu'un lien mort.
+
 ## Comptes et données — architecture définitive
 
 Fiftin est multi-comptes : chaque client crée son propre compte (e-mail + mot de passe) et ne voit jamais les données d'un autre compte.
@@ -378,6 +390,31 @@ service cloud.firestore {
         allow read: if true;
         allow write: if false;
       }
+    }
+
+    // Historique personnel du voyageur (Envies → Demandes, voir
+    // logContact() dans sejours/index.html) : un document par contact
+    // initié (Mail/WhatsApp/SMS/Appeler cliqué), pour qu'il puisse
+    // retrouver plus tard quand et par quel moyen il a contacté un hôte —
+    // jamais une confirmation que le SMS/appel/mail a réellement abouti
+    // (impossible à savoir, voir le commentaire de logContact()). Aucun
+    // rapport avec listings/{listingId} ci-dessus : pas une donnée sur
+    // l'annonce ni sur l'hôte, uniquement l'historique du voyageur lui-même,
+    // donc une collection à part, strictement privée à son auteur — jamais
+    // lisible ni modifiable par personne d'autre, pas même un compte
+    // isAdmin() (ce n'est pas une donnée à modérer). Champs bornés
+    // strictement à la création : un canal parmi une liste fixe, et une
+    // date serveur — jamais fournie par le client (request.time, jamais
+    // request.resource.data.createdAt tel quel, qui pourrait être falsifié).
+    match /contactLog/{uid}/entries/{entryId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.channel in ['mail', 'wa', 'sms', 'call']
+        && request.resource.data.listingId is string
+        && request.resource.data.listingName is string
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.keys().hasOnly(['listingId', 'listingName', 'channel', 'createdAt']);
+      allow update: if false;
     }
   }
 }
