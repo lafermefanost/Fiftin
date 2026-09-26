@@ -143,7 +143,15 @@ a{color:inherit; text-decoration:none;}
 .result-line.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0;}
 
 /* ---------- feed ---------- */
-#feed{padding:10px 11px 100px; display:flex; flex-direction:column; gap:18px;}
+/* Marge latérale unique pour TOUTES les vues (Explorer/Envies via #feed
+   directement, Carte/Profil/Espace hôtes via leur propre wrapper à
+   l'intérieur — voir .map-view/.profile-view/.admin-queue/.host-view plus
+   bas, qui n'ajoutent volontairement plus de padding latéral à eux :
+   avant, il s'additionnait à celui-ci, rendant leurs vignettes/contenus
+   visiblement plus étroits que sur Explorer). 11px -> 14px : très léger
+   ajustement demandé, pour une vision un peu plus aérée sur Explorer —
+   qui se propage donc à l'identique partout. */
+#feed{padding:10px 14px 100px; display:flex; flex-direction:column; gap:18px;}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
 .cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
@@ -173,6 +181,7 @@ a{color:inherit; text-decoration:none;}
 .cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream);}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:6px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 6px; letter-spacing:-0.01em;}
+.cover-info .type-label{color:var(--cream);}
 .cover-info .tagline{font-size:14.5px; color:rgba(245,240,229,.88); margin:0 0 14px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:999px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
@@ -229,15 +238,26 @@ a{color:inherit; text-decoration:none;}
 .msg-preview{background:var(--cream); border:1.5px dashed var(--line); border-radius:12px; padding:10px 12px;
   font-size:12px; line-height:1.5; color:var(--ink); opacity:.85;}
 .send-row{display:flex; gap:8px;}
-.send-btn{flex:1; flex-direction:column; gap:4px; padding:10px 6px; border-radius:14px; font-size:11px; font-weight:700;}
-.send-btn svg{width:17px; height:17px;}
-.send-btn.wa{background:var(--sauge-mid); color:#fff;}
-.send-btn.sms{background:var(--lavender); color:#fff;}
-/* Texte volontairement --sauge-deep et non blanc ici (contrairement aux
-   deux boutons ci-dessus) : --yellow est trop clair (contraste ~1.3:1
-   avec du blanc, illisible) — même choix que .btn.primary, qui utilise
-   déjà --yellow avec un texte foncé pour cette raison. */
-.send-btn.call{background:var(--yellow); color:var(--sauge-deep);}
+/* Cartouches carrées façon icône d'appli iPhone : même principe que
+   .tab-icon de la barre d'onglets (voir plus bas) — un carré coloré à
+   bords arrondis pour le pictogramme seul, le libellé en dehors, non
+   coloré. Avant, le libellé était DANS le bouton coloré (rectangle,
+   padding 10px 6px) : rapproché ici de l'esthétique app mobile demandée. */
+.send-btn{flex:1; flex-direction:column; gap:6px; padding:0; background:none; font-size:10.5px; font-weight:700; color:var(--sauge-deep);}
+.send-icon{width:100%; max-width:60px; aspect-ratio:1/1; margin:0 auto; border-radius:16px;
+  display:flex; align-items:center; justify-content:center;}
+.send-btn svg{width:21px; height:21px;}
+/* Mail en premier des 4, vert sauge --sauge (le vert "propriétaire", pas
+   --sauge-mid déjà pris par WhatsApp ci-dessous) — demande explicite. */
+.send-btn.mail .send-icon{background:var(--sauge); color:var(--cream);}
+.send-btn.wa .send-icon{background:var(--sauge-mid); color:#fff;}
+.send-btn.sms .send-icon{background:var(--lavender); color:#fff;}
+/* Texte de l'icône volontairement --sauge-deep et non blanc ici
+   (contrairement aux boutons ci-dessus) : --yellow est trop clair
+   (contraste ~1.3:1 avec du blanc, illisible) — même choix que
+   .btn.primary, qui utilise déjà --yellow avec un texte foncé pour cette
+   raison. */
+.send-btn.call .send-icon{background:var(--yellow); color:var(--sauge-deep);}
 
 /* ---------- filter sheet ---------- */
 .sheet-backdrop{position:fixed; inset:0; background:rgba(20,26,20,.5); z-index:150;
@@ -369,9 +389,13 @@ textarea.text-input{resize:vertical; min-height:80px;}
   border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
 .google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
 .google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
-/* Type d'hébergement en texte, juste avant la description — même corps
-   que .desc, un peu plus gras pour se distinguer sans faire titre. */
-.detail-body p.type-label{font-size:14.5px; font-weight:700; color:var(--ink); margin:0 0 6px;}
+/* Type d'hébergement en texte, juste avant l'accroche (claim) — visible dès
+   le début (fil et fiche détail), pas noyé plus bas dans la description.
+   Même traitement des deux côtés (gras, sans faire titre), couleur adaptée
+   au fond : clair sur la photo du fil (.cover-info), foncé sur le fond
+   crème de la fiche détail (.detail-body). */
+.type-label{font-size:14.5px; font-weight:700; margin:0 0 6px;}
+.detail-body .type-label{color:var(--ink);}
 .detail-body p.desc{font-size:14.5px; line-height:1.65; color:#4a4636; margin:0 0 24px;}
 .section-title{font-size:15px; font-weight:700; margin:0 0 14px;}
 .amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-bottom:26px;}
@@ -401,7 +425,6 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .host-avatar{width:46px; height:46px; border-radius:50%; background:var(--lavender); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:17px; flex-shrink:0;}
 .host-info b{display:block; font-size:14.5px;}
-.host-info span{font-size:12px; color:var(--sauge); font-weight:600;}
 .avail-row{display:flex; gap:7px; overflow-x:auto; margin-bottom:8px;}
 .avail-chip{flex-shrink:0; font-size:11.5px; font-weight:700; padding:7px 11px; border-radius:12px; background:var(--yellow); color:var(--sauge-deep);}
 
@@ -444,8 +467,18 @@ body.detail-open nav.tabbar{z-index:220;}
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
 /* ---------- map view ---------- */
-.map-view{padding:16px 18px 110px;}
-.map-canvas{position:relative; aspect-ratio:3/4; border-radius:24px; overflow:hidden; background:var(--cream-deep);
+.map-view{padding:16px 0 110px;}
+/* z-index:0 en plus de position:relative : ouvre un nouveau contexte
+   d'empilement propre à .map-canvas, qui CONTIENT tous les z-index internes
+   élevés (les tuiles/punaises Leaflet vont jusqu'à ~700, .map-zone-btn est
+   à 1000) — sans lui, ces valeurs se comparaient directement à celles du
+   reste de la page et passaient au-dessus du volet de filtres
+   (.sheet-backdrop, z-index 150 seulement), le rendant invisible/inutilisable
+   derrière la carte pendant qu'on ajustait Lieu/Distance/Prestations/Trier.
+   Avec le contexte d'empilement, .map-canvas dans son ensemble ne vaut que
+   0 pour le reste de la page : il ne peut plus jamais repasser au-dessus
+   d'un sheet, quels que soient les z-index internes de Leaflet. */
+.map-canvas{position:relative; z-index:0; aspect-ratio:3/4; border-radius:24px; overflow:hidden; background:var(--cream-deep);
   margin-bottom:18px;}
 /* Carte de l'annonce sélectionnée sur la carte (clic sur une punaise ou un
    item de la liste) — juste en dessous de la carte plutôt qu'un plein
@@ -458,7 +491,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .map-pin{transform:translate(0,-6px); display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer;}
 .map-pin .dot{width:30px; height:30px; border-radius:50% 50% 50% 0; background:var(--sauge-deep); transform:rotate(-45deg);
   display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,.25);}
-.map-pin .dot span{transform:rotate(45deg); color:var(--yellow); font-size:11px; font-weight:800;}
+.map-pin .dot span{transform:rotate(45deg); color:var(--yellow); font-size:9.5px; font-weight:800; letter-spacing:-.02em;}
 .map-pin.liked .dot{background:var(--danger);}
 .map-cluster-icon{background:none; border:none;}
 .map-cluster{width:38px; height:38px; border-radius:50%; background:var(--lavender-deep); color:#fff;
@@ -476,12 +509,12 @@ body.detail-open nav.tabbar{z-index:220;}
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
 .map-list{display:flex; flex-direction:column; gap:10px;}
 .map-list-item{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px 12px;}
-.map-list-item .sw{width:44px; height:44px; border-radius:12px; flex-shrink:0;}
+.map-list-item .sw{width:44px; height:44px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
 .map-list-item b{font-size:13.5px; display:block;}
 .map-list-item span{font-size:11.5px; color:var(--sauge); font-weight:600;}
 
 /* ---------- profile ---------- */
-.profile-view{padding:24px 20px 110px;}
+.profile-view{padding:24px 0 110px;}
 .profile-head{display:flex; align-items:center; gap:14px; margin-bottom:26px;}
 .profile-avatar{width:60px; height:60px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px;}
@@ -507,7 +540,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
 
 /* ---------- validation des annonces (admin) ---------- */
-.admin-queue{padding:24px 20px 110px;}
+.admin-queue{padding:24px 0 110px;}
 .admin-back{background:none; border:none; padding:0; font-family:inherit; font-size:13px; font-weight:700; color:var(--sauge-deep); margin-bottom:16px;}
 .admin-queue h2{font-size:19px; font-weight:700; margin:0 0 18px;}
 .admin-card{display:flex; gap:12px; background:var(--cream-deep); border-radius:18px; padding:12px; margin-bottom:12px;}
@@ -526,7 +559,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .empty-state p{font-size:14px; font-weight:600; margin:0;}
 
 /* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
-.host-view{padding:24px 20px 110px;}
+.host-view{padding:24px 0 110px;}
 .host-view-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
 .host-listing-name{font-size:16px;}
 .host-listing-select{font-family:'Jost',sans-serif; font-size:14px; font-weight:700; border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; background:var(--cream); flex:1;}
@@ -721,16 +754,21 @@ var MOTIFS = {
 
 /* Type d'hébergement (chambre d'hôtes / avec table d'hôtes / gîte),
    choisi par l'hôte au dépôt de l'annonce (hf-type -> accomType). Affiché
-   en texte (voir .type-label, juste avant la description sur la fiche
-   détail) plutôt qu'en pictogramme (essayé puis retiré, retour
-   utilisateur). Champ optionnel : une annonce qui ne l'a pas encore
-   renseigné (toute annonce réelle existante avant ce champ) n'affiche
-   simplement rien plutôt que d'en deviner un. */
+   en texte (voir .type-label) plutôt qu'en pictogramme (essayé puis
+   retiré, retour utilisateur) — juste avant l'accroche (claim), à la fois
+   sur la carte du fil et sur la fiche détail (typeLabelHtml(), voir
+   plus bas), pour que ce soit visible dès le début plutôt que noyé plus
+   bas dans la description. Champ optionnel : une annonce qui ne l'a pas
+   encore renseigné (toute annonce réelle existante avant ce champ)
+   n'affiche simplement rien plutôt que d'en deviner un. */
 var ACCOM_TYPES = {
   chambre: {label:"Chambre d'hôtes"},
   chambretable: {label:"Chambre d'hôtes avec table d'hôtes"},
   gite: {label:"Gîte (hébergement indépendant)"}
 };
+function typeLabelHtml(l){
+  return (l.accomType && ACCOM_TYPES[l.accomType]) ? '<p class="type-label">'+esc(ACCOM_TYPES[l.accomType].label)+'</p>' : "";
+}
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
   '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>'+
@@ -925,7 +963,7 @@ function normalizeHostListing(doc){
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
     accomType: l.accomType || "",
-    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), response:"Vous contacte directement", phone: l.phone},
+    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || ""},
     photos: gallery ? gallery.length : 0,
     avail: []
   };
@@ -1318,6 +1356,7 @@ function coverHtml(l){
     '<div class="cover-info">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(l.name)+'</h2>'+
+      typeLabelHtml(l)+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       '<div class="cover-cta">'+
         '<button class="btn primary" data-quickreq="'+l.id+'">Contact et disponibilités</button>'+
@@ -1525,9 +1564,15 @@ function quickReqHtml(l, uid, calSource){
   '</div>'+
   '<div class="msg-preview" id="'+qid+'-preview"></div>'+
   '<div class="send-row">'+
-    '<a class="btn send-btn wa" data-send="wa" data-id="'+qid+'" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.3c-.2.6-1.4 1.2-1.9 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1-2.5.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.6.3.2.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg><span>WhatsApp</span></a>'+
-    '<a class="btn send-btn sms" data-send="sms" data-id="'+qid+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h10M7 13h6"/></svg><span>SMS</span></a>'+
-    '<a class="btn send-btn call" data-send="call" data-id="'+qid+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A16 16 0 016 5a2 2 0 012-2z"/></svg><span>Appeler</span></a>'+
+    /* Mail en premier : seulement si l'hôte a renseigné une adresse de
+       contact (hf-email, obligatoire au dépôt depuis son ajout — voir
+       submitHostForm() — mais absente sur toute annonce plus ancienne
+       créée avant ce champ, dégradation propre : pas de bouton plutôt
+       qu'un mailto: vide). */
+    (l.host.email ? '<a class="btn send-btn mail" data-send="mail" data-id="'+qid+'"><span class="send-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg></span><span>Mail</span></a>' : '')+
+    '<a class="btn send-btn wa" data-send="wa" data-id="'+qid+'" target="_blank" rel="noopener"><span class="send-icon"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 00-8.6 15L2 22l5.2-1.4A10 10 0 1012 2zm5.8 14.3c-.2.6-1.4 1.2-1.9 1.2-.5.1-1.1.1-1.8-.1-.4-.1-1-.3-1.7-.6-3-1.3-5-4.3-5.1-4.5-.2-.2-1.2-1.6-1.2-3.1 0-1.5.8-2.2 1-2.5.3-.3.6-.3.8-.3h.6c.2 0 .4 0 .6.5.2.5.7 1.8.8 1.9.1.2.1.3 0 .5-.1.2-.1.3-.3.5-.1.2-.3.3-.4.5-.2.2-.3.4-.1.7.2.3.8 1.3 1.7 2.1 1.2 1.1 2.2 1.4 2.5 1.6.3.2.5.1.6-.1.2-.2.7-.8.9-1.1.2-.3.4-.2.6-.1.2.1 1.5.7 1.8.8.3.1.5.2.5.3.1.2.1.6-.1 1.2z"/></svg></span><span>WhatsApp</span></a>'+
+    '<a class="btn send-btn sms" data-send="sms" data-id="'+qid+'"><span class="send-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M7 9h10M7 13h6"/></svg></span><span>SMS</span></a>'+
+    '<a class="btn send-btn call" data-send="call" data-id="'+qid+'"><span class="send-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h3l2 5-2.5 1.5a11 11 0 005 5L15 12l5 2v3a2 2 0 01-2 2A16 16 0 016 5a2 2 0 012-2z"/></svg></span><span>Appeler</span></a>'+
   '</div>';
 }
 
@@ -1547,6 +1592,7 @@ function wireQuickReq(id, uid, unit){
   var qid = uid;
   var $in = document.getElementById(qid+"-in"), $out = document.getElementById(qid+"-out"), $g = document.getElementById(qid+"-g");
   var $prev = document.getElementById(qid+"-preview");
+  var $mailBtn = document.querySelector('[data-send="mail"][data-id="'+qid+'"]');
   var $waBtn = document.querySelector('[data-send="wa"][data-id="'+qid+'"]');
   var $smsBtn = document.querySelector('[data-send="sms"][data-id="'+qid+'"]');
   var $callBtn = document.querySelector('[data-send="call"][data-id="'+qid+'"]');
@@ -1556,6 +1602,9 @@ function wireQuickReq(id, uid, unit){
     var msg = buildMessage(l, $in.value, $out.value, guests, unit && unit.name);
     $prev.textContent = msg;
     var phone = l.host.phone.replace("+","");
+    /* $mailBtn absent si l.host.email n'existe pas (voir quickReqHtml()) :
+       pas de bouton rendu, rien à câbler. */
+    if($mailBtn) $mailBtn.href = "mailto:"+l.host.email+"?subject="+encodeURIComponent("Demande de séjour — "+l.name)+"&body="+encodeURIComponent(msg);
     $waBtn.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
     $smsBtn.href = "sms:"+l.host.phone+(/iPhone|iPad|iPod/.test(navigator.userAgent)? "&":"?") +"body="+encodeURIComponent(msg);
     $callBtn.href = "tel:"+l.host.phone;
@@ -1712,7 +1761,7 @@ function openDetail(id){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
-    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div><div class="meta-item"><b>'+l.host.response+'</b><span>de l\'hôte</span></div></div></div>';
+    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div></div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
       ((l.websiteUrl || l.googleUrl) ? '<div class="ext-links">'+
@@ -1727,7 +1776,6 @@ function openDetail(id){
           '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
         '</a>' : '')+
       '</div>' : '')+
-      (l.accomType && ACCOM_TYPES[l.accomType] ? '<p class="type-label">'+esc(ACCOM_TYPES[l.accomType].label)+'</p>' : '')+
       '<p class="desc">'+esc(l.desc)+'</p>'+
       '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
@@ -1758,13 +1806,14 @@ function openDetail(id){
     '<div class="detail-body">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
+      typeLabelHtml(l)+
       '<p class="tagline claim">'+esc(l.claim)+'</p>'+
       tabsHtml+
       '<div class="detail-group"'+(hasTabs?' style="border-radius:0 0 12px 12px"':'')+'>'+
         metaRowHtml+
         bodyExtraHtml+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-        '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b><span>'+l.host.response+'</span></div></div></div>'+
+        '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b></div></div></div>'+
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
@@ -1923,6 +1972,9 @@ function openSheet(kind){
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
       '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
+      '<div class="field-block"><label>E-mail de contact</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
+        '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
+      '</div>'+
       '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; })+'</div>'+
@@ -2704,12 +2756,13 @@ function submitHostForm(){
   var claim = document.getElementById("hf-claim").value.trim();
   var desc = document.getElementById("hf-desc").value.trim();
   var phone = document.getElementById("hf-phone").value.trim();
+  var email = document.getElementById("hf-email").value.trim();
   var websiteUrl = document.getElementById("hf-website").value.trim();
   var googleUrl = document.getElementById("hf-google").value.trim();
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !accomType || !hostName || !address || !claim || !desc || !phone){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!name || !accomType || !hostName || !address || !claim || !desc || !phone || !email){ errEl.textContent = "Merci de remplir tous les champs."; return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
   for(var i=0;i<hfUnits.length;i++){
     var u = hfUnits[i];
@@ -2751,7 +2804,7 @@ function submitHostForm(){
       return uploadUnit(0, []).then(function(units){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
-          name:name, accomType:accomType, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, amen:amen,
+          name:name, accomType:accomType, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
           websiteUrl:websiteUrl, googleUrl:googleUrl,
@@ -2845,11 +2898,27 @@ function mapZoneFilteredListings(){
   return {all:list, located:located};
 }
 
+/* Même repli que coverHtml() pour la première photo disponible : la
+   galerie de l'établissement, sinon celle de sa première chambre (annonce
+   sans photo commune, seulement des photos par chambre). Aucune photo nulle
+   part (annonce statique de démo, ou pas encore de photo envoyée) : null,
+   la vignette retombe sur le dégradé de secours comme avant. */
+function listingThumbUrl(l){
+  if(l.gallery && l.gallery.length) return l.gallery[0];
+  if(l.units){
+    for(var i=0;i<l.units.length;i++){
+      if(l.units[i].gallery && l.units[i].gallery.length) return l.units[i].gallery[0];
+    }
+  }
+  return null;
+}
 function renderMapList(located){
   var listEl = document.getElementById("map-list");
   if(!listEl) return;
   listEl.innerHTML = located.length ? located.map(function(l){
-    return '<div class="map-list-item" data-pin-item="'+l.id+'"><div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div><div><b>'+esc(l.name)+'</b><span>'+l.region+' · '+l.price+'€/nuit</span></div></div>';
+    var thumb = listingThumbUrl(l);
+    var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">' : '<div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div>';
+    return '<div class="map-list-item" data-pin-item="'+l.id+'">'+swHtml+'<div><b>'+esc(l.name)+'</b><span>'+l.region+' · '+l.price+'€/nuit</span></div></div>';
   }).join("") : '<p class="sheet-sub" style="margin:4px 0 0;">Aucun hébergement '+(mapZone?"dans cette zone":"à afficher")+'.</p>';
   Array.prototype.forEach.call(listEl.querySelectorAll("[data-pin-item]"), function(el){
     el.addEventListener("click", function(){ selectMapListing(Number(el.getAttribute("data-pin-item"))); });
@@ -2903,7 +2972,7 @@ function refreshMapMarkers(){
   located.forEach(function(l){
     var icon = L.divIcon({
       className:"map-pin-icon",
-      html:'<div class="map-pin'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'"><div class="dot"><span>'+l.price+'</span></div></div>',
+      html:'<div class="map-pin'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'"><div class="dot"><span>'+l.price+'€</span></div></div>',
       iconSize:[30,30], iconAnchor:[15,36]
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
