@@ -635,12 +635,19 @@ body.detail-open nav.tabbar{z-index:220;}
 .cal-unit-pager{text-align:center; margin-bottom:18px;}
 .cal-unit-pager-count{font-size:11px; font-weight:700; color:var(--sauge); display:block; margin-bottom:2px;}
 .cal-unit-pager-row{display:flex; align-items:center; justify-content:center; gap:14px;}
-.cal-unit-pager-row button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px; flex-shrink:0;}
-.cal-unit-pager-row button svg{width:20px; height:20px;}
+/* Boutons chambre précédente/suivante en carré bordé (comme le sélecteur de
+   chambre "Chambre 1 · 1/8" de la vue Location de Fiftin app, .vnav-btn) —
+   demande explicite de coller à la mécanique de navigation de l'app pour ne
+   pas dérouter l'hôte qui utilise les deux outils : même gabarit de bouton,
+   couleurs Séjours (sauge/--line) inchangées. */
+.cal-unit-pager-row button{background:none; border:1.5px solid var(--line); border-radius:8px; width:34px; height:34px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;}
+.cal-unit-pager-row button svg{width:18px; height:18px;}
 .cal-unit-pager-name{font-size:22px; font-weight:800; letter-spacing:-0.01em;}
 .cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin:0;}
-.cal-year-nav button{background:none; border:none; color:var(--sauge-deep); display:flex; padding:4px;}
-.cal-year-nav button svg{width:20px; height:20px;}
+/* Même bouton carré bordé que ci-dessus, gabarit un cran plus petit — reprend
+   .rv-year-btn de l'app (année précédente/suivante de la vue Location). */
+.cal-year-nav button{background:none; border:1.5px solid var(--line); border-radius:8px; width:28px; height:28px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0;}
+.cal-year-nav button svg{width:16px; height:16px;}
 .cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
 /* Carte blanche enveloppant toute la grille des 12 mois — même principe que
    .rv-calendar côté app/ (background:#fff, padding, coins arrondis), pour
