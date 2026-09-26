@@ -1290,12 +1290,15 @@ function writeLikeState(l, liked){
    sur le geste principal du site). Best-effort, comme writeLikeState() :
    un échec réseau ne bloque jamais l'action réelle, déjà en cours
    (l'appel/SMS/mail part indépendamment de cette écriture).
-   checkIn/checkOut : les dates sélectionnées dans le panneau de demande
-   au moment du clic ($in.value/$out.value, voir wireQuickReq()) —
-   toujours renseignées (préremplies par défaut, voir quickReqHtml()),
-   jamais vides. Permet de regrouper les demandes par séjour visé dans
-   Envies → Demandes (groupedContactLogHtml()), même entre annonces
-   différentes contactées pour les mêmes dates. */
+   checkIn/checkOut : les dates du panneau de demande au moment du clic,
+   UNIQUEMENT si le voyageur les a réellement choisies (champ modifié ou
+   jour de calendrier cliqué — voir datesTouched dans wireQuickReq()) ;
+   null sinon, même si le panneau affichait des dates par défaut
+   (préremplies, jamais vides visuellement, voir quickReqHtml()) que
+   personne n'a choisies. Permet de regrouper les demandes par séjour
+   visé dans Envies → Demandes (groupedContactLogHtml()/stayPeriodLabel()),
+   sans faire semblant qu'un contact où les dates n'ont jamais été
+   regardées vise un séjour précis. */
 function logContact(l, channel, unitName, checkIn, checkOut){
   if(!authState.uid || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").add({
@@ -1995,12 +1998,24 @@ function wireQuickReq(id, uid, unit){
      par contact effectivement initié, pas à chaque frappe dans le
      formulaire (qui appelle update() en continu). */
   var unitName = unit && unit.name;
-  if($mailBtn) $mailBtn.addEventListener("click", function(){ logContact(l, "mail", unitName, $in.value, $out.value); });
-  $waBtn.addEventListener("click", function(){ logContact(l, "wa", unitName, $in.value, $out.value); });
-  $smsBtn.addEventListener("click", function(){ logContact(l, "sms", unitName, $in.value, $out.value); });
-  $callBtn.addEventListener("click", function(){ logContact(l, "call", unitName, $in.value, $out.value); });
-  $in.addEventListener("change", update);
-  $out.addEventListener("change", update);
+  /* datesTouched : distingue une date réellement choisie (champ modifié,
+     ou jour du calendrier cliqué — voir wireCalDays() plus bas) d'une
+     date simplement pré-remplie par défaut (todayISO(14)/todayISO(21),
+     voir quickReqHtml()) que le voyageur n'a jamais regardée. Sans cette
+     distinction, TOUT contact — même "j'appelle sans avoir touché aux
+     dates" — se classait dans Demandes sous un intitulé de séjour
+     précis mais fictif ("Séjour du 10 au 17 oct."), qui n'a jamais
+     reflété une intention réelle. Non touché -> checkIn/checkOut null,
+     et la ligne retombe sur "Dates non précisées" (déjà géré par
+     stayPeriodLabel(), jusqu'ici du code mort puisque les champs étaient
+     toujours renseignés). */
+  var datesTouched = false;
+  if($mailBtn) $mailBtn.addEventListener("click", function(){ logContact(l, "mail", unitName, datesTouched?$in.value:null, datesTouched?$out.value:null); });
+  $waBtn.addEventListener("click", function(){ logContact(l, "wa", unitName, datesTouched?$in.value:null, datesTouched?$out.value:null); });
+  $smsBtn.addEventListener("click", function(){ logContact(l, "sms", unitName, datesTouched?$in.value:null, datesTouched?$out.value:null); });
+  $callBtn.addEventListener("click", function(){ logContact(l, "call", unitName, datesTouched?$in.value:null, datesTouched?$out.value:null); });
+  $in.addEventListener("change", function(){ datesTouched = true; update(); });
+  $out.addEventListener("change", function(){ datesTouched = true; update(); });
   Array.prototype.forEach.call(document.querySelectorAll('.stepper button[data-target="'+qid+'-g"]'), function(btn){
     btn.addEventListener("click", function(){
       var v = Number($g.textContent) + Number(btn.getAttribute("data-step"));
@@ -2022,6 +2037,7 @@ function wireQuickReq(id, uid, unit){
         $out.value = end.toISOString().slice(0,10);
         Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.selected"), function(c){ c.classList.remove("selected"); });
         cell.classList.add("selected");
+        datesTouched = true;
         update();
       });
     });
