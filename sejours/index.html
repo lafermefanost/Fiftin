@@ -1713,14 +1713,14 @@ function wireContactLogRows(){
     el.addEventListener("click", function(e){
       e.stopPropagation();
       var entryId = el.getAttribute("data-log-confirm");
-      openConfirmSheet("Ce séjour a-t-il bien eu lieu ?", "Oui, séjour confirmé", function(){ confirmContactLogEntry(entryId); });
+      openConfirmSheet("Ce séjour a bien eu lieu, ou aura lieu ?", "Oui, confirmer", "Non, revenir en arrière", function(){ confirmContactLogEntry(entryId); });
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-log-decline]"), function(el){
     el.addEventListener("click", function(e){
       e.stopPropagation();
       var entryId = el.getAttribute("data-log-decline");
-      openConfirmSheet("Cette demande n'a pas donné suite ?", "Oui, supprimer", function(){ declineContactLogEntry(entryId); });
+      openConfirmSheet("Cette demande n'a pas donné suite. Supprimer ?", "Oui, supprimer", "Non, garder l'annonce", function(){ declineContactLogEntry(entryId); });
     });
   });
 }
@@ -2581,14 +2581,14 @@ function closeSheet(){ document.getElementById("sheet-root").innerHTML = ""; }
    relabelliser ces boutons), ce qui ne correspondait pas au texte "Oui/
    Non" affiché — undéfini pour l'utilisateur ce que "Annuler" voulait
    dire face à une question formulée en oui/non. */
-function openConfirmSheet(title, yesLabel, onYes){
+function openConfirmSheet(title, yesLabel, noLabel, onYes){
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
     '<h3>'+esc(title)+'</h3>'+
     '<div class="sheet-apply">'+
       '<button type="button" class="btn-apply" id="sheet-confirm-yes">'+esc(yesLabel)+'</button>'+
-      '<button type="button" class="link-btn" id="sheet-confirm-no" style="width:100%; text-align:center; margin:12px 0 0;">Non</button>'+
+      '<button type="button" class="link-btn" id="sheet-confirm-no" style="width:100%; text-align:center; margin:12px 0 0;">'+esc(noLabel)+'</button>'+
     '</div>'+
   '</div></div></div>';
   document.getElementById("sheet-close").addEventListener("click", closeSheet);
