@@ -1629,11 +1629,24 @@ function wireFeedEvents(){
       var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
       if(!l) return;
       toggleLike(l);
-      // state.tab==="map" : la carte sélectionnée sous la carte réutilise
-      // ce même markup (voir renderMapSelectedCard) — un renderFeed() ici
-      // écraserait la vue carte par le fil normal. refreshCurrentView()
-      // choisit le bon rafraîchissement selon l'onglet actif.
-      refreshCurrentView(); renderLikeBadge();
+      if(state.tab==="explore"){
+        /* Retour utilisateur : liker une annonce faisait "recharger" toutes
+           les photos du fil, pas juste celle likée. Cause : refreshCurrentView()
+           appelait renderFeed(), qui réécrit tout #feed.innerHTML — donc
+           reconstruit toutes les <img>/carrousels de toutes les cartes, pas
+           seulement celle cliquée. Sur Explorer, la liste elle-même ne change
+           jamais selon l'état liked (contrairement à Favoris, voir plus bas) :
+           mise à jour ciblée du seul bouton cliqué, aucun re-rendu nécessaire. */
+        el.classList.toggle("liked", state.liked.indexOf(l.id)!==-1);
+      } else {
+        // state.tab==="map" : la carte sélectionnée sous la carte réutilise
+        // ce même markup (voir renderMapSelectedCard) — un renderFeed() ici
+        // écraserait la vue carte par le fil normal. state.tab==="likes" :
+        // Favoris ne montre QUE state.liked, la liste elle-même doit changer.
+        // refreshCurrentView() choisit le bon rafraîchissement selon l'onglet.
+        refreshCurrentView();
+      }
+      renderLikeBadge();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-share]"), function(el){
