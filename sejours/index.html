@@ -584,14 +584,15 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
 .profile-row svg{width:16px; height:16px; opacity:.5;}
 .profile-switch{display:flex; gap:10px; margin-bottom:26px;}
-/* Fond plein (pas juste une bordure comme avant) — retour utilisateur :
-   voyageur toujours vert sauge, hôtes toujours lavande, que le tuile soit
-   "active" (vous y êtes) ou cliquable (pour y aller) : les deux tuiles
-   affichent laquelle mène où, la légende ("Vous y êtes" / "Déposer une
-   annonce"/"Gérer mes annonces") reste le seul signal de laquelle est
-   active, plus la peine d'une bordure en plus. */
+/* Fond plein pour les deux tuiles, quelle que soit l'active — décision
+   prise puis inversée : essayé d'abord sans bordure ("la légende suffit
+   à distinguer laquelle est active"), puis avec fond plein des deux
+   côtés (ci-dessous, historique). Retour utilisateur ensuite : l'espace
+   actif ne se détachait pas assez au premier coup d'œil du non-actif —
+   voir les règles :not(.current) plus bas, qui remettent un fond clair +
+   contour sur la tuile qui N'EST PAS l'espace actuel. */
 .switch-tile{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:14px; border-radius:16px;
-  border:none; text-align:left; font-family:inherit; cursor:pointer;}
+  border:1.5px solid transparent; text-align:left; font-family:inherit; cursor:pointer;}
 /* Profil hôte (renderHostProfile()) : la tuile "vous y êtes" (Espace
    hôtes) y est disabled plutôt que cliquable, rien à y faire — sans
    cette règle, le style disabled par défaut du navigateur l'aurait
@@ -605,6 +606,19 @@ body.detail-open nav.tabbar{z-index:220;}
 .switch-tile .switch-label{display:flex; align-items:center; gap:5px; width:100%;}
 .switch-tile b{font-size:13.5px; font-weight:700; color:#fff;}
 .switch-tile span{font-size:11px; color:rgba(255,255,255,.8); font-weight:600; display:block; margin-top:1px;}
+/* Tuile qui n'est PAS l'espace actuel (marqueur .current posé par
+   renderProfile()/renderHostProfile() sur l'autre tuile) : fond clair de
+   la même famille de couleur + contour assorti, plutôt que le même fond
+   plein que l'espace actif. Spécificité (3 classes) l'emporte sur les
+   règles .voyageur/.hotes/b/span ci-dessus sans dépendre de l'ordre. */
+.switch-tile.voyageur:not(.current){background:var(--sauge-light); border-color:var(--sauge);}
+.switch-tile.voyageur:not(.current) b{color:var(--sauge-deep);}
+.switch-tile.voyageur:not(.current) span{color:var(--sauge-mid);}
+.switch-tile.voyageur:not(.current) .switch-icon{background:rgba(53,75,56,.14); color:var(--sauge-deep);}
+.switch-tile.hotes:not(.current){background:var(--lavender-bg); border-color:var(--lavender-deep);}
+.switch-tile.hotes:not(.current) b{color:var(--lavender-deep);}
+.switch-tile.hotes:not(.current) span{color:var(--lavender-icon);}
+.switch-tile.hotes:not(.current) .switch-icon{background:rgba(78,103,188,.14); color:var(--lavender-deep);}
 .profile-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); margin:24px 0 4px 2px;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
 
@@ -3666,7 +3680,7 @@ function renderProfile(){
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
     '<div class="profile-switch">'+
-      '<button type="button" class="switch-tile voyageur" data-switch="voyageur">'+
+      '<button type="button" class="switch-tile voyageur current" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
         '<div class="switch-label"><b>Espace voyageur</b></div>'+
         '<span>Vous y êtes</span>'+
@@ -3772,6 +3786,11 @@ function refreshCurrentView(){
 }
 
 function switchTab(tab){
+  // Retour utilisateur : changer d'onglet laissait la page à la position
+  // de défilement de l'onglet précédent, ce qui pouvait retomber tout en
+  // bas d'un onglet plus court que le précédent (page blanche, contenu
+  // hors écran au-dessus). Repartie du haut à chaque changement.
+  window.scrollTo(0,0);
   // Cliquer un onglet de la barre du bas pendant qu'une fiche détail est
   // ouverte doit ramener naturellement au fil (ou à l'onglet visé) plutôt
   // que de laisser la fiche ouverte par-dessus le nouvel onglet — nav.tabbar
@@ -3892,6 +3911,10 @@ function renderTabbar(){
    HOST_TABS_HTML, plus de 3e onglet séparé pour ça). */
 function enterHostMode(){
   if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
+  // Même correctif que switchTab() : repartir du haut à chaque changement
+  // de menu, pour ne pas atterrir en espace hôtes à la position de
+  // défilement laissée côté voyageur.
+  window.scrollTo(0,0);
   /* Jusqu'ici, enterHostMode() n'était atteignable qu'après un clic sur
      l'onglet Profil, qui masque déjà le hero (voir switchTab). Depuis que
      "Devenir hôte" peut inscrire puis entrer directement en mode hôte sans
@@ -3923,6 +3946,9 @@ function exitHostMode(){
   switchTab("profile");
 }
 function switchHostTab(tab){
+  // Même correctif que switchTab() : repartir du haut à chaque changement
+  // d'onglet côté hôte (Mes annonces / Mon calendrier / Profil).
+  window.scrollTo(0,0);
   state.hostTab = tab;
   persist();
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
@@ -3958,7 +3984,7 @@ function renderHostProfile(){
         '<div class="switch-label"><b>Espace voyageur</b></div>'+
         '<span>Retourner explorer</span>'+
       '</button>'+
-      '<button type="button" class="switch-tile hotes" disabled>'+
+      '<button type="button" class="switch-tile hotes current" disabled>'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>'+
         '<div class="switch-label"><b>Espace hôtes</b></div>'+
         '<span>Vous y êtes</span>'+
