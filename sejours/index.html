@@ -141,17 +141,28 @@ a{color:inherit; text-decoration:none;}
 .chip-reset-all{flex-shrink:0; background:none; border:none; padding:8px 4px; font-family:'Jost',sans-serif;
   font-size:12.5px; font-weight:700; color:var(--danger); white-space:nowrap; text-decoration:underline;}
 
-.result-line{padding:14px 18px 4px; max-height:40px; opacity:1; overflow:hidden;
+/* text-align:center (retour utilisateur, "pas centré") : #result-line
+   n'a qu'un seul enfant (.result-pill, display:inline-block) — le centrer
+   suffit à centrer la pillule elle-même sur la largeur de l'écran. */
+.result-line{padding:14px 18px 4px; max-height:40px; opacity:1; overflow:hidden; text-align:center;
   transition:max-height .22s ease, opacity .18s ease, padding .22s ease;}
 .result-line.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0;}
 /* Retour utilisateur : le compteur "X hébergements trouvés" en pillule,
-   plutôt que du texte nu — même fond que la page derrière (--cream, comme
-   .chip avant son passage en blanc pur ci-dessus), distinguée par son
-   contour comme les cartouches de filtres à l'origine. Texte adouci en
-   --gray-mid (gris moyen) plutôt que --sauge (vert de marque, trop
-   affirmé pour une simple info de comptage). */
+   distinguée par son contour plutôt que par sa couleur de fond. Fond par
+   défaut = --cream (--app), pour les vues sans traitement particulier de
+   #feed. Mais #result-line est un frère AVANT #feed dans le DOM (voir
+   plus haut le balisage) : un sélecteur ~ ne peut pas lire l'état de
+   #feed depuis ici. #result-line reçoit donc les MÊMES classes
+   feed-explore/feed-map que #feed, posées au même endroit (switchTab()
+   et le tout premier rendu, au boot) — pour que la pillule affiche
+   toujours le même fond que #feed sur la vue en cours (blanc sur
+   Explorer, --cream-light sur Carte — retour utilisateur, "pas encore
+   blanc"), jamais un --cream figé qui détonnerait avec ce qu'il y a en
+   dessous. */
 .result-pill{display:inline-block; background:var(--cream); border:1.5px solid var(--line); border-radius:16px;
   padding:6px 12px; font-size:12.5px; color:var(--gray-mid); font-weight:600; letter-spacing:.02em;}
+#result-line.feed-explore .result-pill{background:#fff;}
+#result-line.feed-map .result-pill{background:var(--cream-light);}
 
 /* ---------- feed ---------- */
 /* Marge latérale unique pour TOUTES les vues (Explorer/Envies via #feed
@@ -3938,6 +3949,12 @@ function switchTab(tab){
   document.getElementById("feed").classList.toggle("feed-explore", tab==="explore");
   // Fond blanc de la vue Carte (retour utilisateur) — voir #feed.feed-map en CSS.
   document.getElementById("feed").classList.toggle("feed-map", tab==="map");
+  // #result-line reçoit les mêmes classes que #feed, pour que .result-pill
+  // affiche le même fond que le feed en dessous (voir commentaire CSS de
+  // .result-pill — retour utilisateur, la pillule devait suivre ce fond,
+  // pas rester figée en --cream).
+  document.getElementById("result-line").classList.toggle("feed-explore", tab==="explore");
+  document.getElementById("result-line").classList.toggle("feed-map", tab==="map");
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
      Dès qu'on change d'onglet, il est masqué définitivement. La barre
@@ -4602,6 +4619,8 @@ if(state.hostMode){
   renderFilterBar();
   document.getElementById("feed").classList.toggle("feed-explore", state.tab==="explore"); // voir switchTab() : state.tab vaut "explore" par défaut ici, jamais passé par switchTab() au tout premier rendu
   document.getElementById("feed").classList.toggle("feed-map", state.tab==="map");
+  document.getElementById("result-line").classList.toggle("feed-explore", state.tab==="explore");
+  document.getElementById("result-line").classList.toggle("feed-map", state.tab==="map");
   renderFeed();
   renderResultLine();
 }
