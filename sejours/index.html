@@ -164,6 +164,18 @@ a{color:inherit; text-decoration:none;}
    style. */
 #feed.feed-explore{padding-left:0; padding-right:0; gap:10px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
+/* Onglet Carte uniquement (retour utilisateur) : même principe que
+   feed-explore ci-dessus — fond blanc pur derrière la carte/la liste
+   (pas #app/--cream, qui reste tel quel pour la barre de filtres et la
+   barre d'onglets), padding/gap de #feed inchangés (pas de fil "pleine
+   largeur" ici, juste la couleur de fond). Classe posée/retirée sur
+   #feed par switchTab() (et le tout premier rendu, au boot), comme
+   feed-explore. Les .map-list-item (fond blanc eux aussi) reçoivent une
+   ombre légère pour rester visibles sur ce nouveau fond blanc — même
+   principe que .detail-card/.detail-group, qui s'en sortent déjà ainsi
+   sur fond blanc. */
+#feed.feed-map{background:#fff;}
+#feed.feed-map .map-list-item{box-shadow:0 2px 10px rgba(46,43,34,.1);}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
 .cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
@@ -3854,6 +3866,8 @@ function switchTab(tab){
      (carte sélectionnée, grande vignette Mes séjours) sans devoir hériter
      de ce style. */
   document.getElementById("feed").classList.toggle("feed-explore", tab==="explore");
+  // Fond blanc de la vue Carte (retour utilisateur) — voir #feed.feed-map en CSS.
+  document.getElementById("feed").classList.toggle("feed-map", tab==="map");
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
      Dès qu'on change d'onglet, il est masqué définitivement. La barre
@@ -4517,6 +4531,7 @@ if(state.hostMode){
   renderTabbar();
   renderFilterBar();
   document.getElementById("feed").classList.toggle("feed-explore", state.tab==="explore"); // voir switchTab() : state.tab vaut "explore" par défaut ici, jamais passé par switchTab() au tout premier rendu
+  document.getElementById("feed").classList.toggle("feed-map", state.tab==="map");
   renderFeed();
   renderResultLine();
 }
