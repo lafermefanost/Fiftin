@@ -123,8 +123,11 @@ a{color:inherit; text-decoration:none;}
   padding:calc(10px + env(safe-area-inset-top,0px)) 18px 12px; display:flex; gap:8px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
   max-height:80px; opacity:1; transition:max-height .22s ease, opacity .18s ease, padding .22s ease, border-color .22s ease;}
 .filters.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-color:transparent;}
+/* Fond blanc plutôt que --cream (même couleur que la barre elle-même,
+   les cartouches ne se détachaient que par leur contour) — retour
+   utilisateur. */
 .chip{flex-shrink:0; display:flex; align-items:center; border-radius:16px; border:1.5px solid var(--line);
-  background:var(--cream); white-space:nowrap; transition:all .15s;}
+  background:#fff; white-space:nowrap; transition:all .15s;}
 .chip.active{background:var(--sauge-deep); border-color:var(--sauge-deep);}
 .chip-tap{display:flex; align-items:center; gap:6px; padding:8px 14px; background:none; border:none;
   font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink);}
@@ -138,9 +141,17 @@ a{color:inherit; text-decoration:none;}
 .chip-reset-all{flex-shrink:0; background:none; border:none; padding:8px 4px; font-family:'Jost',sans-serif;
   font-size:12.5px; font-weight:700; color:var(--danger); white-space:nowrap; text-decoration:underline;}
 
-.result-line{padding:14px 18px 4px; font-size:12.5px; color:var(--sauge); font-weight:600; letter-spacing:.02em;
-  max-height:40px; opacity:1; overflow:hidden; transition:max-height .22s ease, opacity .18s ease, padding .22s ease;}
+.result-line{padding:14px 18px 4px; max-height:40px; opacity:1; overflow:hidden;
+  transition:max-height .22s ease, opacity .18s ease, padding .22s ease;}
 .result-line.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0;}
+/* Retour utilisateur : le compteur "X hébergements trouvés" en pillule,
+   plutôt que du texte nu — même fond que la page derrière (--cream, comme
+   .chip avant son passage en blanc pur ci-dessus), distinguée par son
+   contour comme les cartouches de filtres à l'origine. Texte adouci en
+   --gray-mid (gris moyen) plutôt que --sauge (vert de marque, trop
+   affirmé pour une simple info de comptage). */
+.result-pill{display:inline-block; background:var(--cream); border:1.5px solid var(--line); border-radius:16px;
+  padding:6px 12px; font-size:12.5px; color:var(--gray-mid); font-weight:600; letter-spacing:.02em;}
 
 /* ---------- feed ---------- */
 /* Marge latérale unique pour TOUTES les vues (Explorer/Envies via #feed
@@ -159,13 +170,13 @@ a{color:inherit; text-decoration:none;}
    cartes pleine largeur, coins droits, fond blanc pur derrière (pas
    #app/--cream, qui reste tel quel pour la barre de filtres et la barre
    d'onglets — seul #feed change ici) et un espacement resserré entre les
-   annonces (18px -> 10px). .cover garde son aspect-ratio 4:5 inchangé,
-   rien d'autre ne bouge (typos, dégradé, boutons). Classe posée/retirée
-   sur #feed par switchTab() (et le tout premier rendu, au boot) —
-   jamais sur Favoris, la carte sélectionnée de la Carte ni la grande
-   vignette de Mes séjours, qui réutilisent .card sans hériter de ce
-   style. */
-#feed.feed-explore{padding-left:0; padding-right:0; gap:10px; background:#fff;}
+   annonces (18px -> 10px -> 6px, ajustements successifs demandés).
+   .cover garde son aspect-ratio 4:5 inchangé, rien d'autre ne bouge
+   (typos, dégradé, boutons). Classe posée/retirée sur #feed par
+   switchTab() (et le tout premier rendu, au boot) — jamais sur Favoris,
+   la carte sélectionnée de la Carte ni la grande vignette de Mes
+   séjours, qui réutilisent .card sans hériter de ce style. */
+#feed.feed-explore{padding-left:0; padding-right:0; gap:6px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
 /* Onglet Carte uniquement (retour utilisateur) : fond derrière la carte/
    la liste distinct de #app/--cream (qui reste tel quel pour la barre de
@@ -1540,13 +1551,15 @@ function renderFilterBar(){
   var bar = document.getElementById("filter-bar");
   var locActive = !!(f.q || f.regionName || f.deptName);
   var anyActive = locActive || f.distance<100 || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
-  bar.innerHTML = [
+  // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
+  // plutôt qu'après, visible sans avoir à faire défiler la barre.
+  bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
     chipHtml("distance", "Distance · "+f.distance+" km", f.distance<100),
     chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
     chipHtml("sort", "Trier", state.sort!=="reco")
-  ].join("") + (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "");
+  ].join("");
 
   Array.prototype.forEach.call(bar.querySelectorAll(".chip-tap"), function(el){
     el.addEventListener("click", function(){ openSheet(el.getAttribute("data-k")); });
@@ -1585,7 +1598,8 @@ function clearFilter(k){
 
 function renderResultLine(){
   var n = filteredListings().length;
-  document.getElementById("result-line").textContent = n + (n>1? " hébergements trouvés" : " hébergement trouvé");
+  var label = n + (n>1? " hébergements trouvés" : " hébergement trouvé");
+  document.getElementById("result-line").innerHTML = '<span class="result-pill">'+esc(label)+'</span>';
 }
 
 /* ---------------- render: feed ---------------- */
