@@ -389,13 +389,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
   border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
 .google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
 .google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
-/* Type d'hébergement en texte, juste avant l'accroche (claim) — visible dès
-   le début (fil et fiche détail), pas noyé plus bas dans la description.
-   Même traitement des deux côtés (gras, sans faire titre), couleur adaptée
-   au fond : clair sur la photo du fil (.cover-info), foncé sur le fond
-   crème de la fiche détail (.detail-body). */
-.type-label{font-size:14.5px; font-weight:700; margin:0 0 2px;}
+/* Type d'hébergement, sur la même ligne que l'accroche (claim), séparés par
+   "•" (voir taglineHtml()) — visible dès le début (fil et fiche détail),
+   pas noyé plus bas dans la description, et sans bloc à part qui prenait
+   sa propre ligne (retour utilisateur). Le span hérite la taille/couleur
+   de .tagline.claim (serif italique) mais reste gras, sans-serif et droit
+   grâce à une déclaration explicite ici, qui l'emporte sur l'héritage
+   quelle que soit la spécificité de la règle du parent. Couleur adaptée au
+   fond : clair sur la photo du fil (.cover-info), foncé sur le fond crème
+   de la fiche détail (.detail-body). */
+.type-label{font-family:'Jost',sans-serif; font-style:normal; font-weight:700;}
 .detail-body .type-label{color:var(--ink);}
+.type-sep{opacity:.55; font-weight:400;}
 .detail-body p.desc{font-size:14.5px; line-height:1.4; color:#4a4636; margin:0 0 12px;}
 .section-title{font-size:15px; font-weight:700; margin:0 0 8px;}
 .amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-bottom:12px;}
@@ -768,8 +773,20 @@ var ACCOM_TYPES = {
   chambre: {label:"Chambre d'hôtes"},
   gite: {label:"Gîte"}
 };
-function typeLabelHtml(l){
-  return (l.accomType && ACCOM_TYPES[l.accomType]) ? '<p class="type-label">'+esc(ACCOM_TYPES[l.accomType].label)+'</p>' : "";
+/* Type + accroche sur UNE seule ligne : "Gîte • Un air de campagne..."
+   (retour utilisateur — avant, deux paragraphes empilés). Le type reste
+   distinct typographiquement (.type-label : gras, sans-serif, droit) au
+   milieu de l'accroche (.claim : italique, serif Fraunces) grâce à une
+   déclaration explicite sur le span, qui l'emporte sur l'héritage du
+   parent quelle que soit la spécificité (voir .type-label plus bas). Pas
+   de séparateur si aucun type n'est renseigné (repli sur l'accroche
+   seule, comme avant) ni si l'accroche est vide (edge case, le champ est
+   obligatoire au dépôt mais une annonce plus ancienne peut être vide). */
+function taglineHtml(l){
+  var type = (l.accomType && ACCOM_TYPES[l.accomType]) ? esc(ACCOM_TYPES[l.accomType].label) : "";
+  var claim = esc(l.claim);
+  var typePart = type ? '<span class="type-label">'+type+'</span>'+(claim ? ' <span class="type-sep">•</span> ' : '') : '';
+  return '<p class="tagline claim">'+typePart+claim+'</p>';
 }
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
@@ -1358,8 +1375,7 @@ function coverHtml(l){
     '<div class="cover-info">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(l.name)+'</h2>'+
-      typeLabelHtml(l)+
-      '<p class="tagline claim">'+esc(l.claim)+'</p>'+
+      taglineHtml(l)+
       '<div class="cover-cta">'+
         '<button class="btn primary" data-quickreq="'+l.id+'">Contact et disponibilités</button>'+
         '<button class="btn ghost-dark" data-open="'+l.id+'">Voir plus</button>'+
@@ -1808,8 +1824,7 @@ function openDetail(id){
     '<div class="detail-body">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
-      typeLabelHtml(l)+
-      '<p class="tagline claim">'+esc(l.claim)+'</p>'+
+      taglineHtml(l)+
       tabsHtml+
       '<div class="detail-group"'+(hasTabs?' style="border-radius:0 0 12px 12px"':'')+'>'+
         metaRowHtml+
