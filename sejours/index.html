@@ -982,6 +982,11 @@ function bootFirebaseAuth(){
       authState.uid = user ? user.uid : null;
       authState.email = user ? user.email : null;
       if(!user && state.hostMode) exitHostMode();
+      // Session hôte restaurée au boot (voir plus bas) avant que Firebase
+      // Auth ait fini de résoudre : ré-affiche une fois authState.uid/email
+      // vraiment connus (ex. la formule du profil hôte, lue via
+      // resolveHostAccount(), dépendait d'un uid pas encore disponible).
+      else if(state.hostMode) renderHostTabContent();
       if(state.tab==="profile") renderProfile();
       updateHeroMenu();
     });
@@ -1250,8 +1255,16 @@ try{
   if(saved.filters) state.filters = saved.filters;
   if(saved.sort) state.sort = saved.sort;
   if(saved.liked) state.liked = saved.liked;
+  /* hostMode/hostTab : retour utilisateur — recharger la page pendant
+     qu'on est dans l'espace hôtes ramenait à l'espace voyageur (et au
+     hero), comme si de rien n'était. Restaurés ici ; le vrai chargement
+     de l'espace hôtes se décide plus bas, au boot (voir la fin du
+     fichier) — s'il s'avère que ce n'est plus un compte valide une fois
+     Firebase Auth résolu, bootFirebaseAuth() corrige déjà tout seul
+     (if(!user && state.hostMode) exitHostMode()), rien de plus à faire ici. */
+  if(saved.hostMode){ state.hostMode = true; state.hostTab = saved.hostTab || "profile"; }
 }catch(e){}
-function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked})); }catch(e){} }
+function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked, hostMode:state.hostMode, hostTab:state.hostTab})); }catch(e){} }
 
 /* Bascule l'état "favori" d'une annonce. AJOUTER un favori exige un
    compte (pas de simple heuristique locale) : ouvre la connexion au lieu
@@ -3786,16 +3799,15 @@ var HOST_TABS_HTML =
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>'+
     '<span>Mon calendrier</span>'+
   '</button>'+
-  '<button class="tab" data-host-exit="1">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></span>'+
-    '<span>Espace voyageur</span>'+
-  '</button>'+
   /* Profil reste accessible en mode hôte, comme demandé — même icône que
      TRAVELER_TABS_HTML, en dernière position. Contenu différent de la
      vue voyageur (renderHostProfile(), pas renderProfile()) : formules
      hôte à la place des lignes "Mes demandes de disponibilité"/
      "Notifications"/"Moyens de contact préférés", retirées des deux
-     côtés (n'ont jamais eu de contenu réel derrière). */
+     côtés (n'ont jamais eu de contenu réel derrière). Plus de 3e onglet
+     "Espace voyageur" séparé (retour utilisateur) : redondant avec la
+     tuile "Espace voyageur" du profil hôte lui-même (renderHostProfile(),
+     bouton #btn-exit-host) — un seul chemin pour en sortir. */
   '<button class="tab" data-host-tab="profile">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
     '<span>Profil</span>'+
@@ -3806,12 +3818,8 @@ function renderTabbar(){
   if(state.hostMode){
     nav.innerHTML = HOST_TABS_HTML;
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
-      if(el.hasAttribute("data-host-exit")){
-        el.addEventListener("click", exitHostMode);
-      } else {
-        el.classList.toggle("active", el.getAttribute("data-host-tab")===state.hostTab);
-        el.addEventListener("click", function(){ switchHostTab(el.getAttribute("data-host-tab")); });
-      }
+      el.classList.toggle("active", el.getAttribute("data-host-tab")===state.hostTab);
+      el.addEventListener("click", function(){ switchHostTab(el.getAttribute("data-host-tab")); });
     });
   } else {
     nav.innerHTML = TRAVELER_TABS_HTML;
@@ -3827,7 +3835,11 @@ function renderTabbar(){
 /* Bascule déclenchée depuis Profil → Espace hôtes (connecté) : remplace la
    barre d'onglets et le contenu de #feed, masque le bandeau de filtres
    (qui n'a pas de sens ici) — sans toucher au reste de la mécanique
-   voyageur (state.tab reste tel quel, on y revient via exitHostMode). */
+   voyageur (state.tab reste tel quel, on y revient via exitHostMode).
+   Atterrit sur l'onglet Profil (retour utilisateur : atterrir sur "Mes
+   annonces" surprenait, "on devrait rester sur la vue profil") — c'est
+   aussi depuis ce Profil hôte qu'on ressort vers l'espace voyageur (voir
+   HOST_TABS_HTML, plus de 3e onglet séparé pour ça). */
 function enterHostMode(){
   if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
   /* Jusqu'ici, enterHostMode() n'était atteignable qu'après un clic sur
@@ -3843,23 +3855,26 @@ function enterHostMode(){
     if(heroEl) heroEl.hidden = true;
   }
   state.hostMode = true;
-  state.hostTab = "listings";
+  state.hostTab = "profile";
   state.hostListingId = null;
   state.hostUnitId = null;
   hostListingsCache = [];
   hostAccountCache = undefined;
   document.getElementById("filter-bar").classList.add("chrome-collapsed");
   document.getElementById("result-line").classList.add("chrome-collapsed");
+  persist();
   renderTabbar();
   renderHostTabContent();
 }
 function exitHostMode(){
   state.hostMode = false;
+  persist();
   renderTabbar();
   switchTab("profile");
 }
 function switchHostTab(tab){
   state.hostTab = tab;
+  persist();
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
     el.classList.toggle("active", el.getAttribute("data-host-tab")===tab);
   });
@@ -4365,10 +4380,25 @@ function maybeOpenDeepLink(){
   openDetail(id);
 }
 
-renderTabbar();
-renderFilterBar();
-renderFeed();
-renderResultLine();
+/* state.hostMode ici ne peut venir que de la restauration localStorage
+   ci-dessus (jamais mis à true par défaut) — un rechargement pendant une
+   session hôte doit rouvrir directement l'espace hôtes, hero compris
+   (sinon il resterait affiché par-dessus la barre d'onglets hôte, voir
+   le commentaire de enterHostMode()), pas revenir sur Explorer. */
+if(state.hostMode){
+  heroDismissed = true;
+  var heroElBoot = document.getElementById("hero");
+  if(heroElBoot) heroElBoot.hidden = true;
+  document.getElementById("filter-bar").classList.add("chrome-collapsed");
+  document.getElementById("result-line").classList.add("chrome-collapsed");
+  renderTabbar();
+  renderHostTabContent();
+} else {
+  renderTabbar();
+  renderFilterBar();
+  renderFeed();
+  renderResultLine();
+}
 updateHeroMenu();
 
 fetch("listings.json").then(function(r){
