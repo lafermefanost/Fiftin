@@ -141,28 +141,31 @@ a{color:inherit; text-decoration:none;}
 .chip-reset-all{flex-shrink:0; background:none; border:none; padding:8px 4px; font-family:'Jost',sans-serif;
   font-size:12.5px; font-weight:700; color:var(--danger); white-space:nowrap; text-decoration:underline;}
 
-/* text-align:center (retour utilisateur, "pas centré") : #result-line
-   n'a qu'un seul enfant (.result-pill, display:inline-block) — le centrer
-   suffit à centrer la pillule elle-même sur la largeur de l'écran. */
-.result-line{padding:14px 18px 4px; max-height:40px; opacity:1; overflow:hidden; text-align:center;
-  transition:max-height .22s ease, opacity .18s ease, padding .22s ease;}
+/* text-align:center (retour utilisateur, "pas centré") pour centrer le
+   texte du compteur. background:var(--cream) par défaut (= #app, pour les
+   vues sans traitement particulier de #feed) posé ICI, sur #result-line
+   lui-même — PAS seulement sur .result-pill comme avant : ce dernier
+   laissait #result-line transparent (donc le --cream de la page visible
+   tout autour), pendant que seul le texte avait le bon fond, créant deux
+   zones de couleurs différentes bien visibles ("on dirait une div
+   différente du fond" — retour utilisateur). #result-line est un frère
+   AVANT #feed dans le DOM (voir plus haut le balisage) : un sélecteur ~ ne
+   peut pas lire l'état de #feed depuis ici, #result-line reçoit donc les
+   MÊMES classes feed-explore/feed-map que #feed (posées au même endroit,
+   switchTab() et le tout premier rendu au boot) pour afficher le même
+   fond que #feed sur la vue en cours. feed-explore repasse aussi le
+   padding latéral à 0 (comme #feed.feed-explore) : sans ça, le fond blanc
+   de #result-line n'aurait couvert que sa largeur intérieure, pas toute
+   la largeur de l'écran comme #feed juste en dessous — même souci de
+   "div différente" en plus étroit. */
+.result-line{padding:14px 18px 4px; max-height:40px; opacity:1; overflow:hidden; text-align:center; background:var(--cream);
+  transition:max-height .22s ease, opacity .18s ease, padding .22s ease, background .18s ease;}
 .result-line.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0;}
-/* Retour utilisateur : le compteur "X hébergements trouvés" en pillule,
-   distinguée par son contour plutôt que par sa couleur de fond. Fond par
-   défaut = --cream (--app), pour les vues sans traitement particulier de
-   #feed. Mais #result-line est un frère AVANT #feed dans le DOM (voir
-   plus haut le balisage) : un sélecteur ~ ne peut pas lire l'état de
-   #feed depuis ici. #result-line reçoit donc les MÊMES classes
-   feed-explore/feed-map que #feed, posées au même endroit (switchTab()
-   et le tout premier rendu, au boot) — pour que la pillule affiche
-   toujours le même fond que #feed sur la vue en cours (blanc sur
-   Explorer, --cream-light sur Carte — retour utilisateur, "pas encore
-   blanc"), jamais un --cream figé qui détonnerait avec ce qu'il y a en
-   dessous. */
-.result-pill{display:inline-block; background:var(--cream); border:1.5px solid var(--line); border-radius:16px;
-  padding:6px 12px; font-size:12.5px; color:var(--gray-mid); font-weight:600; letter-spacing:.02em;}
-#result-line.feed-explore .result-pill{background:#fff;}
-#result-line.feed-map .result-pill{background:var(--cream-light);}
+.result-line.feed-explore{background:#fff; padding-left:0; padding-right:0;}
+.result-line.feed-map{background:var(--cream-light);}
+/* Retour utilisateur : la pillule (fond + contour) est retirée — simple
+   texte souligné, plus discret. */
+.result-pill{font-size:12.5px; color:var(--gray-mid); font-weight:600; letter-spacing:.02em; text-decoration:underline;}
 
 /* ---------- feed ---------- */
 /* Marge latérale unique pour TOUTES les vues (Explorer/Envies via #feed
