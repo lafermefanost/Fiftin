@@ -123,7 +123,7 @@ a{color:inherit; text-decoration:none;}
   padding:calc(10px + env(safe-area-inset-top,0px)) 18px 12px; display:flex; gap:8px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
   max-height:80px; opacity:1; transition:max-height .22s ease, opacity .18s ease, padding .22s ease, border-color .22s ease;}
 .filters.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-color:transparent;}
-.chip{flex-shrink:0; display:flex; align-items:center; border-radius:20px; border:1.5px solid var(--line);
+.chip{flex-shrink:0; display:flex; align-items:center; border-radius:16px; border:1.5px solid var(--line);
   background:var(--cream); white-space:nowrap; transition:all .15s;}
 .chip.active{background:var(--sauge-deep); border-color:var(--sauge-deep);}
 .chip-tap{display:flex; align-items:center; gap:6px; padding:8px 14px; background:none; border:none;
@@ -131,7 +131,7 @@ a{color:inherit; text-decoration:none;}
 .chip.active .chip-tap{color:var(--cream);}
 .chip-tap svg{width:14px; height:14px; opacity:.7; flex-shrink:0;}
 .chip.active .chip-tap svg{opacity:1;}
-.chip .n{background:var(--yellow); color:var(--sauge-deep); border-radius:10px; padding:1px 6px; font-size:10.5px; font-weight:800;}
+.chip .n{background:var(--yellow); color:var(--sauge-deep); border-radius:12px; padding:1px 6px; font-size:10.5px; font-weight:800;}
 .chip-x{display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin:0 6px 0 -4px;
   border-radius:50%; background:rgba(239,238,234,.25); border:none; color:var(--cream); font-size:15px; line-height:1;
   font-family:'Jost',sans-serif;}
@@ -177,7 +177,7 @@ a{color:inherit; text-decoration:none;}
 .share-btn svg{width:17px; height:17px; stroke:#fff; fill:none; stroke-width:1.8;}
 .top-badges{position:absolute; top:14px; left:14px; z-index:5; display:flex; gap:6px;}
 .pill-badge{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600;
-  padding:5px 10px; border-radius:14px; border:1px solid rgba(255,255,255,.2);}
+  padding:5px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.2);}
 .cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream);}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:4px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 4px; letter-spacing:-0.01em;}
@@ -192,7 +192,7 @@ a{color:inherit; text-decoration:none;}
 
 /* ---------- quick request inline panel ---------- */
 .qr-panel{background:var(--cream-deep); padding:16px; display:flex; flex-direction:column; gap:12px;}
-.cal{background:#fff; border-radius:14px; padding:16px 12px;}
+.cal{background:#fff; border-radius:16px; padding:16px 12px;}
 .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
 .cal-title{font-size:13.5px; font-weight:700; text-transform:capitalize;}
 .cal-nav{width:28px; height:28px; border-radius:50%; border:1.5px solid var(--line); background:var(--cream);
@@ -274,7 +274,7 @@ a{color:inherit; text-decoration:none;}
 .field-hint{font-size:11.5px; color:var(--gray-mid); margin:6px 0 0;}
 /* Suggestions d'adresse (Nominatim), sous le champ adresse du dépôt d'annonce. */
 .hf-address-suggestions{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
-  background:var(--cream); border:1.5px solid var(--line); border-radius:14px; overflow:hidden;
+  background:var(--cream); border:1.5px solid var(--line); border-radius:16px; overflow:hidden;
   box-shadow:0 8px 20px rgba(0,0,0,.14); max-height:220px; overflow-y:auto;}
 .hf-address-suggestion{display:block; width:100%; text-align:left; background:none; border:none;
   padding:10px 14px; font-family:'Jost',sans-serif; font-size:12.5px; color:var(--ink); border-bottom:1px solid var(--line);}
@@ -286,19 +286,19 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amen-group:last-child{margin-bottom:0;}
 .amen-group-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sauge); margin-bottom:8px;}
 .amenity-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
-.amenity-chip{border:1.5px solid var(--line); border-radius:14px; padding:10px 12px; font-size:12.5px; font-weight:600;
+.amenity-chip{border:1.5px solid var(--line); border-radius:16px; padding:10px 12px; font-size:12.5px; font-weight:600;
   display:flex; align-items:center; gap:8px;}
 .amenity-chip.active{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
 .amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
 .region-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
-.region-chip{border:1.5px solid var(--line); border-radius:20px; padding:9px 14px; font-size:12.5px; font-weight:600;
+.region-chip{border:1.5px solid var(--line); border-radius:16px; padding:9px 14px; font-size:12.5px; font-weight:600;
   font-family:'Jost',sans-serif; background:var(--cream);}
 .region-chip.active{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
-.text-input{width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Jost',sans-serif;
+.text-input{width:100%; border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif;
   font-size:14px; background:var(--cream-deep); color:var(--ink);}
 textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
-.radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:14px; font-size:13.5px; font-weight:600;}
+.radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:16px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
 .sheet-apply{position:sticky; bottom:0; background:var(--cream); padding-top:10px;}
 .sheet-sub{font-size:13px; color:var(--sauge); font-weight:600; margin:-10px 0 18px; line-height:1.4;}
@@ -306,7 +306,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .link-btn{display:block; background:none; border:none; padding:0; font-family:inherit; font-size:12.5px; font-weight:700;
   color:var(--sauge-deep); text-decoration:underline; margin-bottom:14px;}
 .host-app-link{display:block; font-size:12.5px; font-weight:600; color:var(--lavender-deep); text-decoration:underline; margin:-6px 0 18px;}
-.btn-photo-add{width:100%; padding:12px; border:1.5px dashed var(--line); border-radius:14px; background:var(--cream-deep);
+.btn-photo-add{width:100%; padding:12px; border:1.5px dashed var(--line); border-radius:16px; background:var(--cream-deep);
   font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge-deep);}
 .hf-photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;}
 .hf-photo-grid:empty{margin-top:0;}
@@ -372,8 +372,8 @@ textarea.text-input{resize:vertical; min-height:80px;}
    juste au-dessus (voir openDetail(), coins hauts remis à 0 quand il y a
    des onglets pour que la div démarre pile là où s'arrête la barre
    d'onglets, sans coupure visuelle). */
-.detail-group{background:#fff; border-radius:12px; padding:12px 14px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
-.detail-card{background:#fff; border-radius:10px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
+.detail-group{background:#fff; border-radius:16px; padding:12px 14px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.detail-card{background:#fff; border-radius:16px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
 .detail-card>*:last-child{margin-bottom:0;}
 .meta-row{display:flex; gap:18px;}
 .meta-item{display:flex; flex-direction:column; gap:2px;}
@@ -385,7 +385,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
    hf-google). Un flex-wrap plutôt qu'un empilement d'ancres à marge
    négative individuelle : propre à N liens, pas juste 1. */
 .ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:-6px 0 10px;}
-.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:20px;
+.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:16px;
   border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
 .google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
 .google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
@@ -426,7 +426,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .unit-thumb-empty{width:100%; height:100%; background:var(--line);}
 .unit-info b{display:block; font-size:14px;}
 .unit-info span{font-size:12px; color:var(--sauge); font-weight:600;}
-.host-card{display:flex; align-items:center; gap:12px; background:transparent; border-radius:18px; padding:0; margin-bottom:0;}
+.host-card{display:flex; align-items:center; gap:12px; background:transparent; border-radius:16px; padding:0; margin-bottom:0;}
 .host-avatar{width:46px; height:46px; border-radius:50%; background:var(--lavender); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:17px; flex-shrink:0;}
 .host-info b{display:block; font-size:14.5px;}
@@ -462,7 +462,7 @@ body.detail-open nav.tabbar{z-index:220;}
    largeur flex du bouton) : seul un carré fixe autour du pictogramme
    passe en vert sauge --sauge (propriétaire, pas --sauge-mid qui sert
    ailleurs de "vert moyen"), le libellé reste en dehors, coloré seul. */
-.tab-icon{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
+.tab-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
 .tab.active{color:var(--sauge-deep);}
@@ -483,7 +483,7 @@ body.detail-open nav.tabbar{z-index:220;}
    Avec le contexte d'empilement, .map-canvas dans son ensemble ne vaut que
    0 pour le reste de la page : il ne peut plus jamais repasser au-dessus
    d'un sheet, quels que soient les z-index internes de Leaflet. */
-.map-canvas{position:relative; z-index:0; aspect-ratio:3/4; border-radius:24px; overflow:hidden; background:var(--cream-deep);
+.map-canvas{position:relative; z-index:0; aspect-ratio:3/4; border-radius:26px; overflow:hidden; background:var(--cream-deep);
   margin-bottom:18px;}
 /* Carte de l'annonce sélectionnée sur la carte (clic sur une punaise ou un
    item de la liste) — juste en dessous de la carte plutôt qu'un plein
@@ -503,10 +503,10 @@ body.detail-open nav.tabbar{z-index:220;}
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
   box-shadow:0 4px 10px rgba(0,0,0,.25); border:2px solid var(--cream);}
 .map-zone-btn{position:absolute; top:12px; right:12px; z-index:1000; background:var(--cream); border:1.5px solid var(--line);
-  border-radius:20px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
+  border-radius:16px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
   box-shadow:0 3px 8px rgba(0,0,0,.18);}
 .map-zone-btn.armed{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
-.map-zone-controls{display:flex; align-items:center; gap:10px; background:var(--cream-deep); border-radius:14px;
+.map-zone-controls{display:flex; align-items:center; gap:10px; background:var(--cream-deep); border-radius:16px;
   padding:10px 14px; margin:12px 0; font-size:12.5px; font-weight:600;}
 .map-zone-controls span{flex-shrink:0;}
 .map-zone-controls input[type=range]{flex:1; accent-color:var(--sauge-deep);}
@@ -534,7 +534,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .switch-tile{flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:10px; padding:14px; border-radius:16px;
   border:1.5px solid var(--line); background:var(--cream-deep); text-align:left; font-family:inherit; cursor:pointer;}
 .switch-tile.active{border-color:var(--sauge-deep);}
-.switch-tile .switch-icon{width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center;}
+.switch-tile .switch-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center;}
 .switch-tile .switch-icon svg{width:17px; height:17px;}
 .switch-tile.voyageur .switch-icon{background:var(--sauge-light); color:var(--sauge-deep);}
 .switch-tile.hotes .switch-icon{background:var(--lavender-bg); color:var(--lavender-deep);}
@@ -548,7 +548,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-queue{padding:24px 0 110px;}
 .admin-back{background:none; border:none; padding:0; font-family:inherit; font-size:13px; font-weight:700; color:var(--sauge-deep); margin-bottom:16px;}
 .admin-queue h2{font-size:19px; font-weight:700; margin:0 0 18px;}
-.admin-card{display:flex; gap:12px; background:var(--cream-deep); border-radius:18px; padding:12px; margin-bottom:12px;}
+.admin-card{display:flex; gap:12px; background:var(--cream-deep); border-radius:16px; padding:12px; margin-bottom:12px;}
 .admin-thumb{width:64px; height:64px; border-radius:12px; object-fit:cover; flex-shrink:0; background:var(--line);}
 .admin-thumb-empty{background:var(--line);}
 .admin-card-body{display:flex; flex-direction:column; gap:3px; min-width:0;}
@@ -557,7 +557,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-owner{color:var(--gray-mid)!important; font-weight:500!important;}
 .admin-actions{display:flex; gap:8px; margin-top:6px;}
 .admin-actions .btn-apply{padding:8px 14px; font-size:12.5px; width:auto;}
-.admin-reject{background:none; border:1.5px solid var(--line); border-radius:20px; padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--danger);}
+.admin-reject{background:none; border:1.5px solid var(--line); border-radius:16px; padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--danger);}
 
 .empty-state{text-align:center; padding:60px 30px; color:var(--sauge);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
@@ -568,16 +568,16 @@ body.detail-open nav.tabbar{z-index:220;}
 .host-view-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
 .host-listing-name{font-size:16px;}
 .host-listing-select{font-family:'Jost',sans-serif; font-size:14px; font-weight:700; border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; background:var(--cream); flex:1;}
-.host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:20px; white-space:nowrap;}
+.host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
 .host-link-row{margin-bottom:18px;}
 .host-link-row label{display:block; font-size:12px; font-weight:700; color:var(--sauge); margin-bottom:6px;}
-.host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
+.host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
 .cal-top-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;}
 .cal-top-actions{display:flex; align-items:center; gap:8px;}
-.cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:20px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
-.cal-add-pill{background:var(--yellow); border:none; border-radius:20px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
+.cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
+.cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
 .cal-unit-pager{text-align:center; margin-bottom:18px;}
 .cal-unit-pager-count{font-size:11px; font-weight:700; color:var(--sauge); display:block; margin-bottom:2px;}
 .cal-unit-pager-row{display:flex; align-items:center; justify-content:center; gap:14px;}
@@ -591,7 +591,7 @@ body.detail-open nav.tabbar{z-index:220;}
 /* Carte blanche enveloppant toute la grille des 12 mois — même principe que
    .rv-calendar côté app/ (background:#fff, padding, coins arrondis), pour
    que le calendrier se détache du fond crème de la page comme dans l'app. */
-.cal-card{background:#fff; border-radius:14px; padding:16px 12px;}
+.cal-card{background:#fff; border-radius:16px; padding:16px 12px;}
 .cal-year-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px 12px;}
 .cal-mini{padding:2px 0;}
 .cal-mini-head{font-size:11.5px; font-weight:800; text-align:center; margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em; color:var(--gray-mid);}
@@ -602,7 +602,7 @@ body.detail-open nav.tabbar{z-index:220;}
    valeur) ; case occupée = un seul vert sauge, mais --sauge (#354B38) et non
    --sauge-deep (#1D2820, en pratique quasi noir à cette taille — repéré en
    usage réel comme "les cases occupées sont noires, pas vertes"). */
-.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:4px; cursor:pointer; background:#E2DFD8;}
+.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:8px; cursor:pointer; background:#E2DFD8;}
 .cal-mini-day.empty{visibility:hidden; cursor:default; background:none;}
 .cal-mini-day.occ{background:var(--sauge); color:var(--cream); font-weight:800;}
 .cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
@@ -1836,7 +1836,7 @@ function openDetail(id){
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
       tabsHtml+
-      '<div class="detail-group"'+(hasTabs?' style="border-radius:0 0 12px 12px"':'')+'>'+
+      '<div class="detail-group"'+(hasTabs?' style="border-radius:0 0 16px 16px"':'')+'>'+
         metaRowHtml+
         bodyExtraHtml+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
@@ -1844,7 +1844,7 @@ function openDetail(id){
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
-        (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:18px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
+        (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
       '</div>'+
     '</div>'+
   '</div>';
