@@ -566,7 +566,17 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-head{display:flex; align-items:center; gap:14px; margin-bottom:26px;}
 .profile-avatar{width:60px; height:60px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px;}
-.profile-stats{display:flex; gap:10px; margin-bottom:26px;}
+/* Sticky en haut de #feed, comme .filters — retour utilisateur : les
+   onglets Favoris/Demandes/Séjours ne doivent pas défiler avec les
+   annonces/lignes en dessous. .profile-stats ne sert plus qu'au bandeau
+   Mes séjours (voir commentaire plus haut) : sticky sans risque sur un
+   autre usage. Marges négatives pour annuler le padding haut+latéral de
+   #feed (dont ce bandeau est toujours le premier enfant, voir
+   renderFeed()/renderContactLog()) et redevenir pleine largeur ; padding
+   repris à l'identique en interne. Fond crème repeint par-dessus les
+   cartes qui défilent dessous, bordure basse comme .filters. Pas de
+   margin-bottom : le gap:18px de #feed espace déjà du contenu suivant. */
+.profile-stats{display:flex; gap:10px; margin:-10px -14px 0; padding:10px 14px 14px; position:sticky; top:0; z-index:60; background:var(--cream); border-bottom:1px solid var(--line);}
 .stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
 .stat-tile b{display:block; font-size:22px; font-weight:800; color:var(--sauge-deep);}
 .stat-tile span{font-size:13px; color:var(--sauge); font-weight:600;}
@@ -628,7 +638,12 @@ body.detail-open nav.tabbar{z-index:220;}
 .host-link-row{margin-bottom:18px;}
 .host-link-row label{display:block; font-size:12px; font-weight:700; color:var(--sauge); margin-bottom:6px;}
 .host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
-.cal-top-row{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px;}
+/* Rangée Aujourd'hui/Ajouter-modifier seule (plus l'année, voir plus bas) —
+   retour utilisateur : l'année partageait cette ligne avec les deux boutons
+   d'action (justify-content:space-between), ce qui l'empêchait d'être
+   vraiment centrée sur la page. Alignée à droite désormais, sa propre
+   ligne. */
+.cal-top-row{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px;}
 .cal-top-actions{display:flex; align-items:center; gap:8px;}
 .cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
 .cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
@@ -643,7 +658,12 @@ body.detail-open nav.tabbar{z-index:220;}
 .cal-unit-pager-row button{background:none; border:1.5px solid var(--line); border-radius:8px; width:34px; height:34px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;}
 .cal-unit-pager-row button svg{width:18px; height:18px;}
 .cal-unit-pager-name{font-size:22px; font-weight:800; letter-spacing:-0.01em;}
-.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin:0;}
+/* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
+   emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
+   .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
+   avec Aujourd'hui/Ajouter-modifier : centrée sur toute la largeur de la
+   carte blanche, elle est maintenant vraiment centrée sur la page. */
+.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin:0 0 14px;}
 /* Même bouton carré bordé que ci-dessus, gabarit un cran plus petit — reprend
    .rv-year-btn de l'app (année précédente/suivante de la vue Location). */
 .cal-year-nav button{background:none; border:1.5px solid var(--line); border-radius:8px; width:28px; height:28px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0;}
@@ -662,8 +682,11 @@ body.detail-open nav.tabbar{z-index:220;}
 /* Case disponible = grise (comme .rv-day-cell/var(--light) côté app/, même
    valeur) ; case occupée = un seul vert sauge, mais --sauge (#354B38) et non
    --sauge-deep (#1D2820, en pratique quasi noir à cette taille — repéré en
-   usage réel comme "les cases occupées sont noires, pas vertes"). */
-.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:8px; cursor:pointer; background:#E2DFD8;}
+   usage réel comme "les cases occupées sont noires, pas vertes"). Coins à
+   4px, pas 8px : retour utilisateur explicite ("carré à bord un peu
+   arrondi, comme sur Fiftin app") — 8px arrondissait visiblement plus que
+   .rv-day-cell côté app/, qui utilise 4px sur un gabarit de case comparable. */
+.cal-mini-day{aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:8.5px; font-weight:600; color:var(--ink); border-radius:4px; cursor:pointer; background:#E2DFD8;}
 .cal-mini-day.empty{visibility:hidden; cursor:default; background:none;}
 .cal-mini-day.occ{background:var(--sauge); color:var(--cream); font-weight:800;}
 .cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
@@ -4264,11 +4287,6 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
       '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
     '</div>'+
     '<div class="cal-top-row">'+
-      '<div class="cal-year-nav">'+
-        '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
-        '<b>'+year+'</b>'+
-        '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
-      '</div>'+
       '<div class="cal-top-actions">'+
         '<button type="button" class="cal-today-btn" id="cal-today-btn">Aujourd\'hui</button>'+
         actionPillHtml+
@@ -4276,7 +4294,14 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     '</div>'+
     unitPagerHtml+
     roomLinkHtml+
-    '<div class="cal-card"><div class="cal-year-grid">'+months+'</div></div>'+
+    '<div class="cal-card">'+
+      '<div class="cal-year-nav">'+
+        '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
+        '<b>'+year+'</b>'+
+        '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+      '</div>'+
+      '<div class="cal-year-grid">'+months+'</div>'+
+    '</div>'+
   '</div>';
 
   if(listings.length>1){
