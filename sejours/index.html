@@ -1567,7 +1567,23 @@ var AMEN_ICONS = {
 };
 
 /* ---------------- state ---------------- */
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:100, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
+/* Bug réel signalé (retour utilisateur) : "les annonces que je poste ne
+   sont visibles que par moi, idem pour Adel" — pas un problème de droits
+   Firestore (vérifié : une requête anonyme renvoie bien les annonces
+   publiées de tout le monde), mais ce plafond de distance, jusqu'ici figé
+   à 100 km ET intranchissable (le curseur du volet Distance allait aussi
+   jusqu'à 100 au maximum, aucun moyen de voir plus loin). Une annonce
+   distante de DEFAULT_ORIGIN (La Ferme Fanost, Essonne — voir plus bas)
+   de plus de 100 km — Noirmoutier, ~395 km, en est l'exemple réel qui a
+   révélé le bug — restait donc invisible EN PERMANENCE pour tout visiteur
+   n'ayant pas activé "Utiliser ma position" pour se rapprocher d'elle,
+   sans aucun recours possible dans l'interface. 1200 km couvre large la
+   France métropolitaine dans toutes les directions (bien au-delà de la
+   plus grande distance réelle entre deux points du territoire) : la
+   distance reste un filtre normal, ajustable par le voyageur, simplement
+   plus jamais un mur invisible par défaut autour d'une seule annonce. */
+var MAX_DISTANCE_KM = 1200;
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:MAX_DISTANCE_KM, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview", likesView:"favoris",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
@@ -1801,12 +1817,12 @@ function renderFilterBar(){
   var activeAmenCount = f.amen.length;
   var bar = document.getElementById("filter-bar");
   var locActive = !!(f.q || f.regionName || f.deptName);
-  var anyActive = locActive || f.distance<100 || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
+  var anyActive = locActive || f.distance<MAX_DISTANCE_KM || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
   // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
   bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
-    chipHtml("distance", "Distance · "+f.distance+" km", f.distance<100),
+    chipHtml("distance", "Distance · "+f.distance+" km", f.distance<MAX_DISTANCE_KM),
     chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
     chipHtml("sort", "Trier", state.sort!=="reco")
@@ -1820,7 +1836,7 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", regionName:"", deptName:"", distance:100, price:300, amen:[]};
+    state.filters = {q:"", regionName:"", deptName:"", distance:MAX_DISTANCE_KM, price:300, amen:[]};
     state.sort = "reco";
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
   });
@@ -1840,7 +1856,7 @@ function chipHtml(k,label,active){
 function clearFilter(k){
   var f = state.filters;
   if(k==="loc"){ f.q = ""; f.regionName = ""; f.deptName = ""; }
-  else if(k==="distance") f.distance = 100;
+  else if(k==="distance") f.distance = MAX_DISTANCE_KM;
   else if(k==="price") f.price = 300;
   else if(k==="amen") f.amen = [];
   else if(k==="sort") state.sort = "reco";
@@ -2887,15 +2903,16 @@ function openSheet(kind){
       '</div></div>' : '')+
       '<div class="field-block"><label>Recherche libre</label><input class="text-input" id="s-loc" placeholder="Nom, ville, quartier, rue…" value="'+esc(f.q)+'"></div>';
   } else if(kind==="distance"){
-    // "Rayon autour de vous"/"autour du lieu recherché" serait faux tant
-    // que `distance` reste un nombre fixe saisi par l'hôte (depuis la
-    // Ferme Fanost), pas une vraie distance recalculée depuis le lieu
-    // choisi ou la géolocalisation — ce chantier (coordonnées lat/lng par
-    // annonce + géolocalisation navigateur) n'est pas encore fait, voir
-    // README. Libellé neutre en attendant, qui ne prétend pas plus que ce
-    // que fait réellement ce curseur aujourd'hui.
+    // Distance réelle (haversine, voir listingDistanceKm()/DEFAULT_ORIGIN
+    // plus haut) depuis la position du voyageur une fois "Utiliser ma
+    // position" activée, sinon depuis DEFAULT_ORIGIN. Plafond MAX_DISTANCE_KM
+    // (1200 km, largement au-delà de toute distance réelle en France
+    // métropolitaine) — jamais 100 km en dur : un plafond plus bas rendait
+    // structurellement invisible toute annonce plus lointaine que ça, quoi
+    // que le voyageur fasse avec ce curseur (bug réel signalé, voir le
+    // commentaire de MAX_DISTANCE_KM).
     inner = '<h3>Distance</h3><div class="field-block"><div class="range-value"><span>Distance maximale</span><span>'+f.distance+' km</span></div>'+
-      '<input type="range" id="s-distance" min="1" max="100" value="'+f.distance+'"></div>';
+      '<input type="range" id="s-distance" min="1" max="'+MAX_DISTANCE_KM+'" value="'+f.distance+'"></div>';
   } else if(kind==="price"){
     inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+f.price+' € / nuit</span></div>'+
       '<input type="range" id="s-price" min="20" max="300" step="5" value="'+f.price+'"></div>';
