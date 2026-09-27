@@ -169,16 +169,16 @@ a{color:inherit; text-decoration:none;}
 
 /* ---------- feed ---------- */
 /* Marge latérale unique pour TOUTES les vues (Explorer/Envies via #feed
-   directement, Carte/Profil/Espace hôtes via leur propre wrapper à
-   l'intérieur — voir .map-view/.profile-view/.admin-queue/.host-view plus
-   bas, qui n'ajoutent volontairement plus de padding latéral à eux :
-   avant, il s'additionnait à celui-ci, rendant leurs vignettes/contenus
-   visiblement plus étroits que sur Explorer). 11px -> 14px -> 18px :
-   ajustements successifs très légers demandés, pour une vision un peu
-   plus aérée — qui se propage donc à l'identique partout. Les vues
-   "plein écran" (Explorer, Carte — #feed.feed-explore/#feed.feed-map)
-   remettent ce padding latéral à 0 volontairement, elles restent donc
-   inchangées par ce réglage. */
+   directement, Profil/Espace hôtes via leur propre wrapper à l'intérieur —
+   voir .profile-view/.admin-queue/.host-view plus bas, qui n'ajoutent
+   volontairement plus de padding latéral à eux : avant, il s'additionnait
+   à celui-ci, rendant leurs vignettes/contenus visiblement plus étroits que
+   sur Explorer). 11px -> 14px -> 18px : ajustements successifs très légers
+   demandés, pour une vision un peu plus aérée — qui se propage donc à
+   l'identique partout. La vue "plein écran" Explorer
+   (#feed.feed-explore) remet ce padding latéral à 0 volontairement, elle
+   reste donc inchangée par ce réglage (sa carte embarquée en tête de fil,
+   .explore-map-block, réintroduit sa propre marge — voir plus bas). */
 #feed{padding:10px 18px 100px; display:flex; flex-direction:column; gap:18px;}
 /* Fil Explorer uniquement (retour utilisateur, "façon feed Instagram") :
    cartes pleine largeur, coins droits, fond blanc pur derrière (pas
@@ -187,9 +187,9 @@ a{color:inherit; text-decoration:none;}
    annonces (18px -> 10px -> 6px, ajustements successifs demandés).
    .cover garde son aspect-ratio 4:5 inchangé, rien d'autre ne bouge
    (typos, dégradé, boutons). Classe posée/retirée sur #feed par
-   switchTab() (et le tout premier rendu, au boot) — jamais sur Favoris,
-   la carte sélectionnée de la Carte ni la grande vignette de Mes
-   séjours, qui réutilisent .card sans hériter de ce style. */
+   switchTab() (et le tout premier rendu, au boot) — jamais sur Favoris ni
+   la grande vignette de Mes séjours, qui réutilisent .card sans hériter de
+   ce style. */
 /* padding-top/bottom resserrés (retour utilisateur, "trop de blanc en haut
    et en bas du feed, juste avant les menus") — les 10px/100px hérités de
    #feed de base créaient un vide plat, disproportionné à côté du gap de
@@ -221,6 +221,13 @@ a{color:inherit; text-decoration:none;}
 #feed.feed-map{background:var(--cream-light);}
 #feed.feed-map .map-list-item{box-shadow:0 2px 10px rgba(46,43,34,.1);}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
+/* Bref clignotement au clic sur une punaise de la carte embarquée
+   d'Explorer (voir scrollToFeedCard()) — repère visuellement, une fois le
+   défilement terminé, LA carte visée parmi toutes celles du fil. outline
+   plutôt que box-shadow : pas affecté par le overflow:hidden de .card
+   (qui, lui, rognerait un box-shadow porté vers l'intérieur). */
+.card.card-pulse{animation:cardPulse 1.1s ease;}
+@keyframes cardPulse{0%{outline:3px solid var(--sauge-deep); outline-offset:-3px;} 100%{outline:3px solid transparent; outline-offset:-3px;}}
 .cover{position:relative; aspect-ratio:4/5; overflow:hidden;}
 .cover .grad{position:absolute; inset:0;}
 .cover .cover-carousel{position:absolute; inset:0; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; z-index:1;}
@@ -533,6 +540,19 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
    sheets/modales (.sheet-backdrop, 150) sur les autres écrans (espace
    hôte notamment), où nav.tabbar doit rester en dessous comme avant. */
 body.detail-open nav.tabbar{z-index:220;}
+/* Bouton "revenir à la carte" (retour utilisateur : "il y aurait un p'tit
+   bouton permanent pour y revenir") — la carte est désormais en tête du
+   fil Explorer (voir .explore-map-block), potentiellement loin au-dessus
+   une fois qu'on a défilé dans les annonces ; ce bouton fixe, toujours
+   affiché tant qu'on est sur Explorer (masqué sinon, voir switchTab()),
+   ramène directement à elle. z-index sous nav.tabbar (50) : les deux ne se
+   chevauchent jamais à l'écran (positionné juste au-dessus de la barre),
+   pas besoin de rivaliser avec elle. */
+.map-back-btn{position:fixed; right:14px; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); z-index:40;
+  width:44px; height:44px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
+  border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;}
+.map-back-btn[hidden]{display:none;}
+.map-back-btn svg{width:20px; height:20px;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
    app/ où .mbnav-btn.on colore tout le bouton, rectangle qui suit la
@@ -548,8 +568,16 @@ body.detail-open nav.tabbar{z-index:220;}
 .tab .badge{position:absolute; top:2px; right:22%; background:var(--danger); color:#fff; font-size:9px; font-weight:800;
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
-/* ---------- map view ---------- */
-.map-view{padding:16px 0 110px;}
+/* ---------- carte embarquée en tête du fil Explorer ---------- */
+/* Fusion de l'ancien onglet "Carte" dans Explorer (retour utilisateur :
+   "j'aimerais que sur le mode visiteur explorer intègre finalement
+   directement la vue carte, menu qui disparaîtrait (...) la carte serait en
+   haut des annonces"). .explore-map-block encadre la carte + ses contrôles
+   de zone avec un peu de marge latérale, DANS #feed.feed-explore — qui,
+   lui, est en padding 0 (cartes plein bord façon fil Instagram, voir plus
+   bas) : sans cette marge propre au bloc, la carte irait aussi bord à bord,
+   perdant ses coins arrondis à l'écran. */
+.explore-map-block{margin:10px 16px 18px;}
 /* z-index:0 en plus de position:relative : ouvre un nouveau contexte
    d'empilement propre à .map-canvas, qui CONTIENT tous les z-index internes
    élevés (les tuiles/punaises Leaflet vont jusqu'à ~700, .map-zone-btn est
@@ -559,14 +587,13 @@ body.detail-open nav.tabbar{z-index:220;}
    derrière la carte pendant qu'on ajustait Lieu/Distance/Prestations/Trier.
    Avec le contexte d'empilement, .map-canvas dans son ensemble ne vaut que
    0 pour le reste de la page : il ne peut plus jamais repasser au-dessus
-   d'un sheet, quels que soient les z-index internes de Leaflet. */
-.map-canvas{position:relative; z-index:0; aspect-ratio:1/1; border-radius:26px; overflow:hidden; background:var(--cream-deep);
-  margin-bottom:18px;}
-/* Carte de l'annonce sélectionnée sur la carte (clic sur une punaise ou un
-   item de la liste) — juste en dessous de la carte plutôt qu'un plein
-   écran par-dessus, même carte que le fil (.card, voir coverHtml()). */
-.map-selected{margin-bottom:18px;}
-.map-selected[hidden]{display:none;}
+   d'un sheet, quels que soient les z-index internes de Leaflet.
+   Hauteur fixe plutôt que l'ancien aspect-ratio:1/1 (carré, ~390px de haut
+   sur mobile) : en tête du fil désormais, la carte doit laisser voir qu'il
+   y a des annonces à faire défiler juste en dessous, pas remplir tout
+   l'écran à elle seule comme quand elle avait son propre onglet plein
+   écran. */
+.map-canvas{position:relative; z-index:0; height:240px; border-radius:26px; overflow:hidden; background:var(--cream-deep);}
 .map-canvas .leaflet-container{width:100%; height:100%; background:var(--cream-deep); font-family:'Jost',sans-serif;}
 .map-canvas .leaflet-control-attribution{font-size:9.5px; background:rgba(239,238,234,.85);}
 .map-pin-icon{background:none; border:none;}
@@ -721,7 +748,14 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-queue{padding:24px 0 110px;}
 .admin-back{background:none; border:none; padding:0; font-family:inherit; font-size:13px; font-weight:700; color:var(--sauge-deep); margin-bottom:16px;}
 .admin-queue h2{font-size:19px; font-weight:700; margin:0 0 18px;}
-.admin-card{display:flex; gap:12px; background:var(--cream-deep); border-radius:16px; padding:12px; margin-bottom:12px;}
+/* .admin-card : conteneur de la carte (fond/coins/marge basse uniquement) ;
+   .admin-card-row porte la mise en page horizontale couverture+infos —
+   séparées pour que .admin-card puisse aussi contenir, dans l'espace hôtes,
+   une ligne "volet" pleine largeur sous cette rangée (voir .cal-disclose
+   plus bas) sans que la file d'admin (seule utilisatrice de la rangée
+   simple) n'en soit affectée. */
+.admin-card{background:var(--cream-deep); border-radius:16px; padding:12px; margin-bottom:12px;}
+.admin-card-row{display:flex; gap:12px;}
 .admin-thumb{width:64px; height:64px; border-radius:12px; object-fit:cover; flex-shrink:0; background:var(--line);}
 .admin-thumb-empty{background:var(--line);}
 .admin-card-body{display:flex; flex-direction:column; gap:3px; min-width:0;}
@@ -746,14 +780,22 @@ body.detail-open nav.tabbar{z-index:220;}
 .host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
-/* Volet calendrier d'une annonce, déplié sous sa carte (retour utilisateur :
-   fusion des anciens onglets "Mes annonces"/"Mon calendrier" — "2 menus ne
-   sont pas nécessaires", "garde les cartes exactement comme ça mais fais en
-   sorte que l'annonce se déplie"). La carte elle-même (.admin-card) ne
-   change pas ; ce volet est un simple conteneur de mise en page juste en
-   dessous, un peu resserré contre elle (marge négative) pour lire comme un
-   dépli plutôt que comme un second bloc sans rapport. */
-.host-cal-panel{margin:-4px 0 12px;}
+/* Ligne "volet" pleine largeur, à l'intérieur de la carte d'annonce
+   (.admin-card) — retour utilisateur : "j'aimerais que le calendrier soit
+   sur la même carte que l'annonce (...) le bouton calendrier devrait
+   plutôt être un encart volet et déplier le calendrier quand on clique
+   dessus". Même idiome que .cal-mini-head (accordéon des mois) : ligne
+   cliquable pleine largeur, chevron qui pivote. Séparée de la rangée
+   couverture+infos par un filet, comme .cal-mini entre deux mois. */
+.cal-disclose{display:flex; align-items:center; justify-content:space-between; width:100%;
+  background:none; border:none; border-top:1px solid var(--line); margin-top:10px; padding:10px 2px 0;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-align:left; cursor:pointer;}
+.cal-disclose-chevron{width:16px; height:16px; color:var(--gray-mid); flex-shrink:0; transition:transform .18s ease; transform:rotate(-90deg);}
+.cal-disclose.expanded .cal-disclose-chevron{transform:rotate(0deg);}
+/* Contenu du calendrier déplié — toujours DANS .admin-card désormais (une
+   seule carte, retour utilisateur), juste un peu d'espace sous la ligne
+   .cal-disclose qui l'ouvre. */
+.host-cal-panel{margin-top:10px;}
 /* Choix de la chambre en onglets (retour utilisateur, remplace l'ancien
    va-et-vient "1/2 < Chambre Bleue >"). .detail-tabs/.detail-tab réutilisés
    tels quels (mêmes classes que la fiche détail d'une annonce à plusieurs
@@ -958,6 +1000,10 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
   <div class="result-line" id="result-line"></div>
 
   <main id="feed"></main>
+
+  <button type="button" class="map-back-btn" id="map-back-btn" hidden aria-label="Revenir à la carte">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>
+  </button>
 
   <nav class="tabbar" id="tabbar"></nav>
 
@@ -1293,7 +1339,6 @@ function fetchPublishedListings(){
       hostFirestoreListings = snap.docs.map(normalizeHostListing);
       rebuildListings();
       if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
-      if(state.tab==="map") renderMap();
       // validLikedCount() dépend de LISTINGS : au tout premier rendu du
       // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
       // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
@@ -1846,29 +1891,42 @@ function coverHtml(l){
 
 function renderFeed(){
   var list = filteredListings();
+  // Fusion de l'onglet Carte dans Explorer (retour utilisateur) : une zone
+  // de recherche dessinée sur la carte embarquée filtre maintenant aussi le
+  // fil de cartes juste en dessous, pas seulement les punaises — "chercher
+  // autour de ce point" doit se répercuter sur ce qu'on voit défiler.
+  if(state.tab==="explore" && mapZone) list = mapZoneFilteredListings().located;
   var feed = document.getElementById("feed");
   if(state.loading){
     feed.innerHTML = '<div class="empty-state"><p>Chargement des hébergements…</p></div>';
     return;
   }
+  // Carte embarquée en tête du fil Explorer (retour utilisateur : "j'aimerais
+  // que sur le mode visiteur explorer intègre directement la vue carte (...)
+  // la carte serait en haut des annonces") — remplace l'ancien onglet
+  // "Carte" séparé. Affichée même liste vide (zéro résultat filtré/zone),
+  // pour ne jamais faire disparaître l'outil de recherche par zone.
+  var mapBlockHtml = state.tab==="explore" ? exploreMapBlockHtml() : "";
   var toggle = state.tab==="likes" ? likesViewToggleHtml() : "";
   if(!list.length){
     if(state.tab==="likes"){
       feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
         '<p>Aucun favori enregistré pour l\'instant.<br>Touchez le cœur sur un hébergement pour le garder de côté.</p></div>';
     } else {
-      feed.innerHTML = '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
-        '<p>Aucun hébergement ne correspond à ces filtres.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
+      feed.innerHTML = mapBlockHtml + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
+        '<p>Aucun hébergement '+(state.tab==="explore" && mapZone ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
     }
     if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
+    if(state.tab==="explore") wireExploreMap();
     return;
   }
-  feed.innerHTML = toggle + list.map(function(l){
+  feed.innerHTML = mapBlockHtml + toggle + list.map(function(l){
     return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
       '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
     '</article>';
   }).join("");
   if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
+  if(state.tab==="explore") wireExploreMap();
   wireFeedEvents();
 }
 
@@ -1896,14 +1954,18 @@ function wireFeedEvents(){
            reconstruit toutes les <img>/carrousels de toutes les cartes, pas
            seulement celle cliquée. Sur Explorer, la liste elle-même ne change
            jamais selon l'état liked (contrairement à Favoris, voir plus bas) :
-           mise à jour ciblée du seul bouton cliqué, aucun re-rendu nécessaire. */
+           mise à jour ciblée du seul bouton cliqué, aucun re-rendu nécessaire.
+           Depuis la fusion de la carte dans Explorer, ça évite surtout de
+           détruire/recréer l'instance Leaflet (perte du zoom/pan) pour un
+           simple cœur. Limite connue, acceptée : la punaise correspondante
+           sur la carte (qui a sa propre couleur "aimée", voir .map-pin.liked)
+           ne se met à jour qu'au prochain rendu complet (changement de
+           filtre…), pas instantanément avec le cœur de la carte cliquée. */
         el.classList.toggle("liked", state.liked.indexOf(l.id)!==-1);
       } else {
-        // state.tab==="map" : la carte sélectionnée sous la carte réutilise
-        // ce même markup (voir renderMapSelectedCard) — un renderFeed() ici
-        // écraserait la vue carte par le fil normal. state.tab==="likes" :
-        // Favoris ne montre QUE state.liked, la liste elle-même doit changer.
-        // refreshCurrentView() choisit le bon rafraîchissement selon l'onglet.
+        // state.tab==="likes" (Favoris) : la liste elle-même doit changer
+        // selon l'état liked. refreshCurrentView() choisit le bon
+        // rafraîchissement (Favoris vs Demandes/Séjours).
         refreshCurrentView();
       }
       renderLikeBadge();
@@ -2027,17 +2089,18 @@ function stayPeriodLabel(checkIn, checkOut){
   var year = new Date(checkOut+"T00:00:00").getFullYear();
   return "Séjour du "+fmtDate(checkIn)+" au "+fmtDate(checkOut)+" "+year;
 }
-/* Réutilise EXACTEMENT le principe visuel de .map-list-item de la carte
-   (vignette photo + nom + région/prix, voir renderMapList()) — seule
-   différence demandée : une 3e ligne (moyen de contact + date/heure du
-   clic). .map-list-item span est en display:block (voir CSS) pour que ces
-   deux sous-lignes s'empilent au lieu de se suivre côte à côte.
+/* Réutilise EXACTEMENT le principe visuel de .map-list-item (vignette photo
+   + nom + région/prix — historiquement celui de la liste de punaises du feu
+   onglet "Carte", fusionné depuis dans Explorer, mais la classe reste
+   utilisée ici) — seule différence demandée : une 3e ligne (moyen de
+   contact + date/heure du clic). .map-list-item span est en display:block
+   (voir CSS) pour que ces deux sous-lignes s'empilent au lieu de se suivre
+   côte à côte.
    Le clic "dérouler l'annonce" (.log-body) n'ouvre plus directement la
-   fiche détail : il affiche la grande vignette juste au-dessus de la
-   liste (selectDemandeListing(), même mécanisme que le clic sur un item
-   de liste dans l'onglet Carte, voir selectMapListing()) — depuis cette
-   grande vignette, "Voir plus" mène à la fiche détail complète. Reste
-   inerte (pas de data-open-log) si l'annonce visée n'est plus chargée
+   fiche détail : il affiche la grande vignette juste au-dessus de la liste
+   (selectDemandeListing()) — depuis cette grande vignette, "Voir plus" mène
+   à la fiche détail complète. Reste inerte (pas de data-open-log) si
+   l'annonce visée n'est plus chargée
    dans LISTINGS (supprimée, ou pas encore chargée). Une fois confirmée
    (entry.status==="confirmed", voir confirmContactLogEntry()), les deux
    boutons d'action disparaissent : il n'y a plus rien à décider ici. */
@@ -2087,12 +2150,11 @@ function groupedDemandesHtml(pendingDocs){
       '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
   }).join("");
 }
-/* Grande vignette d'une demande (même mécanisme que selectMapListing() sur
-   la carte, délibérément dupliqué plutôt que factorisé : les deux gardent
-   leur propre variable d'état — mapSelectedId / demandeSelectedId — sans
-   rapport l'une avec l'autre, deux onglets différents). "Voir plus" sur
-   cette grande carte (déjà câblé par wireFeedEvents(), voir data-open)
-   mène à la fiche détail complète. */
+/* Grande vignette d'une demande (même mécanisme, historiquement, que le feu
+   selectMapListing() de l'ex-onglet Carte — délibérément dupliqué plutôt
+   que factorisé à l'époque : deux variables d'état séparées, sans rapport
+   l'une avec l'autre). "Voir plus" sur cette grande carte (déjà câblé par
+   wireFeedEvents(), voir data-open) mène à la fiche détail complète. */
 var demandeSelectedId = null;
 function selectDemandeListing(id){
   demandeSelectedId = id;
@@ -2441,8 +2503,8 @@ function wireQuickReq(id, uid, unit){
      update() continue de tourner à chaque appel (gratuit, garde le
      message/les liens à jour), seuls les addEventListener ne le sont
      qu'une fois par panneau (réinitialisé automatiquement si le panneau
-     est re-rendu ailleurs, ex. selectMapListing()/selectDemandeListing()
-     : c'est alors un nouveau nœud DOM, sans le flag). */
+     est re-rendu ailleurs, ex. selectDemandeListing() : c'est alors un
+     nouveau nœud DOM, sans le flag). */
   if($prev.dataset.wired){ update(); return; }
   $prev.dataset.wired = "1";
   /* Historique perso du voyageur (voir logContact()) : câblé sur le clic
@@ -3883,12 +3945,6 @@ var mapMarkerLayer = null;
 var mapZone = null;
 var mapZoneArmed = false;
 var mapZoneCircleLayer = null;
-/* Annonce sélectionnée sur la carte (punaise ou item de liste cliqué) :
-   affichée juste sous la carte via renderMapSelectedCard(), plutôt que
-   d'ouvrir la fiche détail en plein écran par-dessus la carte (comportement
-   précédent, jugé déroutant — on perd la carte des yeux). Pas dans state
-   (pas persisté), remise à zéro en quittant l'onglet Carte. */
-var mapSelectedId = null;
 
 /* Zone de recherche dessinée à la main sur la carte : un cercle (centre +
    rayon), pas un polygone libre — plus simple à poser et ajuster d'un
@@ -3925,50 +3981,25 @@ function listingThumbUrl(l){
   }
   return null;
 }
-function renderMapList(located){
-  var listEl = document.getElementById("map-list");
-  if(!listEl) return;
-  listEl.innerHTML = located.length ? located.map(function(l){
-    var thumb = listingThumbUrl(l);
-    var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">' : '<div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div>';
-    return '<div class="map-list-item" data-pin-item="'+l.id+'">'+swHtml+'<div><b>'+esc(l.name)+'</b><span>'+l.region+' · '+l.price+'€/nuit</span></div></div>';
-  }).join("") : '<p class="sheet-sub" style="margin:4px 0 0;">Aucun hébergement '+(mapZone?"dans cette zone":"à afficher")+'.</p>';
-  Array.prototype.forEach.call(listEl.querySelectorAll("[data-pin-item]"), function(el){
-    el.addEventListener("click", function(){ selectMapListing(Number(el.getAttribute("data-pin-item"))); });
-  });
-}
-
-/* Affiche, juste sous la carte, la même carte que celle du fil (nom,
-   contact, "Voir plus"...) pour l'annonce sélectionnée — sans recréer
-   l'instance Leaflet (voir refreshCurrentView()). */
-function selectMapListing(id){
-  mapSelectedId = id;
-  renderMapSelectedCard();
-  var container = document.getElementById("map-selected");
-  if(container) container.scrollIntoView({behavior:"smooth", block:"nearest"});
-}
-function renderMapSelectedCard(){
-  var container = document.getElementById("map-selected");
-  if(!container) return;
-  var l = mapSelectedId!=null ? LISTINGS.filter(function(x){ return x.id===mapSelectedId; })[0] : null;
-  if(!l){
-    mapSelectedId = null;
-    container.hidden = true; container.innerHTML = "";
-    return;
-  }
-  container.hidden = false;
-  container.innerHTML = '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
-    '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
-  '</article>';
-  wireFeedEvents();
+/* Fait défiler le fil jusqu'à la carte (.card) de cette annonce et la fait
+   brièvement clignoter (retour utilisateur, fusion de la carte dans
+   Explorer) — remplace l'ancien mini-aperçu affiché sous la carte
+   (.map-selected/renderMapSelectedCard/selectMapListing) : inutile
+   maintenant que la carte complète (contact, "Voir plus"...) est déjà là,
+   juste plus bas dans le même fil, pas besoin de la dupliquer. */
+function scrollToFeedCard(id){
+  var card = document.getElementById("card-"+id);
+  if(!card) return;
+  card.scrollIntoView({behavior:"smooth", block:"start"});
+  card.classList.add("card-pulse");
+  setTimeout(function(){ card.classList.remove("card-pulse"); }, 1200);
 }
 
 /* Ré-affiche juste les punaises + le cercle de zone sans recréer la carte
    ni recadrer la vue — utilisé pendant le glissement du curseur de rayon,
    pour que la carte ne saute pas à chaque tick. */
-function refreshMapMarkers(){
+function refreshExploreMapMarkers(){
   var located = mapZoneFilteredListings().located;
-  renderMapList(located);
   if(!mapInstance) return;
   if(mapMarkerLayer){ mapInstance.removeLayer(mapMarkerLayer); mapMarkerLayer = null; }
   var useCluster = !!window.L.markerClusterGroup;
@@ -3989,7 +4020,7 @@ function refreshMapMarkers(){
       iconSize:[30,30], iconAnchor:[15,36]
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
-    marker.on("click", function(){ selectMapListing(l.id); });
+    marker.on("click", function(){ scrollToFeedCard(l.id); });
     clusterGroup.addLayer(marker);
   });
   mapMarkerLayer = clusterGroup;
@@ -3997,45 +4028,54 @@ function refreshMapMarkers(){
   if(mapZoneCircleLayer) mapZoneCircleLayer.setRadius(mapZone.radiusKm*1000);
 }
 
-function renderMap(){
-  var feed = document.getElementById("feed");
-  var f = mapZoneFilteredListings();
-
-  feed.innerHTML = '<div class="map-view">'+
+/* Squelette de la carte embarquée en tête du fil Explorer (retour
+   utilisateur, fusion de l'ancien onglet "Carte") — inséré par renderFeed()
+   AVANT les cartes d'annonces. L'instance Leaflet elle-même est montée
+   ensuite par wireExploreMap(), une fois ce HTML posé dans le DOM (Leaflet
+   a besoin que #map-canvas existe déjà). */
+function exploreMapBlockHtml(){
+  return '<div class="explore-map-block">'+
     '<div class="map-canvas" id="map-canvas">'+
       '<button type="button" class="map-zone-btn'+(mapZoneArmed?' armed':'')+'" id="map-zone-btn">'+
         (mapZoneArmed ? "Touchez la carte…" : (mapZone ? "Déplacer la zone" : "Dessiner une zone"))+
       '</button>'+
     '</div>'+
-    '<div class="map-selected" id="map-selected" hidden></div>'+
     (mapZone ? '<div class="map-zone-controls">'+
       '<span>Rayon : <b id="map-zone-radius-label">'+mapZone.radiusKm+' km</b></span>'+
       '<input type="range" id="map-zone-radius" min="1" max="30" value="'+mapZone.radiusKm+'">'+
       '<button type="button" id="map-zone-clear">Effacer</button>'+
     '</div>' : '')+
-    '<div class="map-list" id="map-list"></div>'+
   '</div>';
-  renderMapSelectedCard();
+}
 
+/* Monte/remonte l'instance Leaflet dans #map-canvas et câble les contrôles
+   de zone — appelée par renderFeed() juste après avoir posé
+   exploreMapBlockHtml() dans le DOM. Détruit et recrée systématiquement
+   l'instance précédente (même limite qu'avant la fusion, sur l'ex-onglet
+   Carte : perte du zoom/pan à chaque renderFeed() complet — filtre changé,
+   tri, etc. — mais PAS sur un simple cœur cliqué sur Explorer, voir
+   wireFeedEvents()/data-like, qui évite précisément cet appel). */
+function wireExploreMap(){
   document.getElementById("map-zone-btn").addEventListener("click", function(){
     mapZoneArmed = !mapZone || !mapZoneArmed;
-    renderMap();
+    renderFeed();
   });
   var clearBtn = document.getElementById("map-zone-clear");
   if(clearBtn) clearBtn.addEventListener("click", function(){
     mapZone = null; mapZoneArmed = false;
-    renderMap();
+    renderFeed();
   });
   var radiusInput = document.getElementById("map-zone-radius");
   if(radiusInput) radiusInput.addEventListener("input", function(){
     mapZone.radiusKm = Number(radiusInput.value);
     document.getElementById("map-zone-radius-label").textContent = mapZone.radiusKm+" km";
-    refreshMapMarkers();
+    refreshExploreMapMarkers();
   });
 
   if(mapInstance){ mapInstance.remove(); mapInstance = null; mapMarkerLayer = null; mapZoneCircleLayer = null; }
-  if(!window.L){ renderMapList(f.located); return; }
-  if(!f.located.length && !mapZone){ renderMapList(f.located); return; }
+  if(!window.L) return;
+  var f = mapZoneFilteredListings();
+  if(!f.located.length && !mapZone) return;
 
   mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -4047,10 +4087,10 @@ function renderMap(){
     if(!mapZoneArmed) return;
     mapZone = {lat:e.latlng.lat, lng:e.latlng.lng, radiusKm:(mapZone && mapZone.radiusKm) || 5};
     mapZoneArmed = false;
-    /* setTimeout : renderMap() détruit puis recrée mapInstance. Le faire
+    /* setTimeout : renderFeed() détruit puis recrée mapInstance. Le faire
        de façon synchrone ici casse Leaflet, qui n'a pas fini de traiter
        cet événement "click" sur l'instance qu'on vient de supprimer. */
-    setTimeout(renderMap, 0);
+    setTimeout(renderFeed, 0);
   });
 
   if(mapZone){
@@ -4064,7 +4104,7 @@ function renderMap(){
     }).addTo(mapInstance);
   }
 
-  refreshMapMarkers();
+  refreshExploreMapMarkers();
 
   if(mapZone){
     mapInstance.fitBounds(mapZoneCircleLayer.getBounds(), {padding:[20,20]});
@@ -4145,7 +4185,7 @@ function renderAdminQueue(){
       var cover = coverUrl
         ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">'
         : '<div class="admin-thumb admin-thumb-empty"></div>';
-      return '<div class="admin-card">'+cover+
+      return '<div class="admin-card"><div class="admin-card-row">'+cover+
         '<div class="admin-card-body">'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
           '<span>'+esc(l.region||"")+' · '+listingPriceLabel(l)+' · '+listingDistanceKm(l)+' km'+(l.units?' · '+l.units.length+' chambre'+(l.units.length>1?'s':''):'')+'</span>'+
@@ -4155,7 +4195,7 @@ function renderAdminQueue(){
             '<button type="button" class="admin-reject" data-id="'+doc.id+'">Refuser</button>'+
           '</div>'+
         '</div>'+
-      '</div>';
+      '</div></div>';
     }).join("");
     Array.prototype.forEach.call(list.querySelectorAll(".admin-approve"), function(btn){
       btn.addEventListener("click", function(){
@@ -4183,18 +4223,17 @@ function renderAdminQueue(){
 }
 
 function renderTabContent(){
-  if(state.tab==="map") renderMap();
-  else if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
+  if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
   else renderFeed();
 }
 /* Comme renderTabContent(), mais pour un simple rafraîchissement d'état
-   (like togglé...) qui ne doit pas reconstruire toute la vue : sur la
-   carte, ça évite de détruire/recréer l'instance Leaflet (perte du
-   zoom/pan) juste pour mettre à jour un cœur — seule la carte sélectionnée
-   sous la carte est ré-affichée. */
+   (like togglé...) qui ne doit pas reconstruire toute la vue : sur Explorer,
+   ça évite de détruire/recréer l'instance Leaflet de la carte embarquée
+   (perte du zoom/pan) juste pour mettre à jour un cœur — voir le
+   traitement ciblé data-like dans wireFeedEvents(), qui appelle
+   refreshCurrentView() seulement pour les onglets SANS carte. */
 function refreshCurrentView(){
-  if(state.tab==="map") renderMapSelectedCard();
-  else if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
+  if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
   else renderFeed();
 }
 
@@ -4210,7 +4249,6 @@ function switchTab(tab){
   // reste cliquable même fiche ouverte (voir sa règle CSS) précisément
   // pour permettre ça sans repasser par la flèche retour.
   if(state.detailListingId!=null) closeDetail();
-  if(state.tab==="map" && tab!=="map") mapSelectedId = null;
   // Quitter Mes séjours invalide le cache de contactLog (voir
   // loadContactLogEntries()) : une prochaine visite doit relire l'état
   // réel plutôt que de re-servir des nombres/demandes potentiellement
@@ -4225,17 +4263,19 @@ function switchTab(tab){
      (carte sélectionnée, grande vignette Mes séjours) sans devoir hériter
      de ce style. */
   document.getElementById("feed").classList.toggle("feed-explore", tab==="explore");
-  // Fond gris très léger (--cream-light) — Carte est la référence (retour
-  // utilisateur), repris ici aussi pour Mes séjours et Profil. Le nom de
-  // classe "feed-map" reste tel quel (réutilisé, pas renommé) pour limiter
-  // le diff : voir #feed.feed-map en CSS.
-  document.getElementById("feed").classList.toggle("feed-map", tab==="map" || tab==="likes" || tab==="profile");
+  // Fond gris très léger (--cream-light) — Carte (fusionnée dans Explorer
+  // depuis, voir plus haut) était la référence (retour utilisateur), repris
+  // ici aussi pour Mes séjours et Profil. Le nom de classe "feed-map" reste
+  // tel quel (réutilisé, pas renommé) pour limiter le diff : voir
+  // #feed.feed-map en CSS. N'inclut plus "explore" : la carte, désormais
+  // dans ce fil, garde le fond blanc de #feed.feed-explore.
+  document.getElementById("feed").classList.toggle("feed-map", tab==="likes" || tab==="profile");
   // #result-line reçoit les mêmes classes que #feed, pour que .result-pill
   // affiche le même fond que le feed en dessous (voir commentaire CSS de
   // .result-pill — retour utilisateur, la pillule devait suivre ce fond,
   // pas rester figée en --cream).
   document.getElementById("result-line").classList.toggle("feed-explore", tab==="explore");
-  document.getElementById("result-line").classList.toggle("feed-map", tab==="map" || tab==="likes" || tab==="profile");
+  document.getElementById("result-line").classList.toggle("feed-map", tab==="likes" || tab==="profile");
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
      Dès qu'on change d'onglet, il est masqué définitivement. La barre
@@ -4249,7 +4289,11 @@ function switchTab(tab){
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
     el.classList.toggle("active", el.getAttribute("data-tab")===tab);
   });
-  if(tab==="explore" || tab==="likes" || tab==="map"){
+  // Bouton permanent "revenir à la carte" (retour utilisateur) — visible
+  // uniquement sur Explorer, seul onglet où la carte existe désormais.
+  var mapBackBtn = document.getElementById("map-back-btn");
+  if(mapBackBtn) mapBackBtn.hidden = tab!=="explore";
+  if(tab==="explore" || tab==="likes"){
     renderFilterBar();
     refreshLikesChrome();
   } else {
@@ -4265,13 +4309,14 @@ function switchTab(tab){
    calques (#hero > nav.tabbar > #feed, voir CSS plus haut) reste valable
    quel que soit le contenu de la barre. */
 var TRAVELER_TABS_HTML =
+  /* "Carte" fusionnée dans "Explorer" (retour utilisateur : "j'aimerais que
+     sur le mode visiteur explorer intègre finalement directement la vue
+     carte, menu qui disparaîtrait") — la carte s'affiche désormais en tête
+     du fil Explorer lui-même (voir exploreMapBlockHtml()/wireExploreMap()),
+     plus besoin d'un onglet séparé pour y accéder. */
   '<button class="tab" data-tab="explore">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg></span>'+
     '<span>Explorer</span>'+
-  '</button>'+
-  '<button class="tab" data-tab="map">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg></span>'+
-    '<span>Carte</span>'+
   '</button>'+
   '<button class="tab" data-tab="likes">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></span>'+
@@ -4532,22 +4577,32 @@ function hostListingCardHtml(l){
   var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
   var statusLabel = l.status==="published" ? "Publiée" : "En attente de validation";
   var expanded = l.id===state.hostListingId;
-  // La carte (.admin-card) elle-même ne change pas (retour utilisateur :
-  // "garde les cartes exactement comme ça") — seul son bouton "Voir le
-  // calendrier" devient un bouton de dépli/repli, et un volet calendrier
-  // (.host-cal-panel) apparaît juste en dessous quand déplié.
-  return '<div class="admin-card">'+cover+
-    '<div class="admin-card-body">'+
-      '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-      '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
-      (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
-      '<div class="admin-actions">'+
-        '<button type="button" class="btn-apply" data-cal-expand="'+esc(l.id)+'">'+(expanded?"Masquer les calendriers":"Voir les calendriers")+'</button>'+
-        '<button type="button" class="admin-reject" data-host-edit="'+esc(l.id)+'">Modifier</button>'+
+  // Retour utilisateur : "j'aimerais que le calendrier soit sur la même
+  // carte que l'annonce (...) le bouton calendrier devrait plutôt être un
+  // encart volet et déplier le calendrier quand on clique dessus" — une
+  // seule carte (.admin-card) au lieu de deux : la ligne couverture+infos
+  // devient .admin-card-row (mise en page inchangée), et une ligne "volet"
+  // pleine largeur (.cal-disclose, même idiome que .cal-mini-head/le
+  // chevron de l'accordéon des mois) déplie/replie le calendrier À
+  // L'INTÉRIEUR de cette même carte plutôt que de renvoyer vers un bouton
+  // séparé au-dessus d'une seconde carte.
+  return '<div class="admin-card">'+
+    '<div class="admin-card-row">'+cover+
+      '<div class="admin-card-body">'+
+        '<b>'+esc(l.name||"(sans nom)")+'</b>'+
+        '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
+        (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
+        '<div class="admin-actions">'+
+          '<button type="button" class="admin-reject" data-host-edit="'+esc(l.id)+'">Modifier</button>'+
+        '</div>'+
       '</div>'+
     '</div>'+
-  '</div>'+
-  (expanded ? '<div class="host-cal-panel" id="host-cal-panel"><p class="sheet-sub" style="margin:0;">Chargement du calendrier…</p></div>' : '');
+    '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
+      '<span>Calendrier</span>'+
+      '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>'+
+    '</button>'+
+    (expanded ? '<div class="host-cal-panel" id="host-cal-panel"><p class="sheet-sub" style="margin:0;">Chargement du calendrier…</p></div>' : '')+
+  '</div>';
 }
 function hostEmptyHtml(){
   return '<div class="host-view">'+
@@ -4869,6 +4924,16 @@ function submitDeleteBooking(){
 document.getElementById("hero-scroll-btn").addEventListener("click", function(){
   document.querySelector(".filters").scrollIntoView({behavior:"smooth", block:"start"});
 });
+/* Bouton fixe "revenir à la carte" (voir .map-back-btn en CSS) — élément
+   statique du squelette HTML, câblé une seule fois ici plutôt que recâblé
+   à chaque renderFeed() ; .map-canvas est toujours présent quand ce bouton
+   est visible (uniquement affiché sur Explorer, voir switchTab()), sauf
+   pendant le tout premier "Chargement…" avant que renderFeed() n'ait posé
+   la carte — querySelector renvoie alors null, d'où la garde. */
+document.getElementById("map-back-btn").addEventListener("click", function(){
+  var mc = document.querySelector(".map-canvas");
+  if(mc) mc.scrollIntoView({behavior:"smooth", block:"start"});
+});
 
 
 /* ---------------- init ---------------- */
@@ -4912,9 +4977,11 @@ if(state.hostMode){
   renderTabbar();
   renderFilterBar();
   document.getElementById("feed").classList.toggle("feed-explore", state.tab==="explore"); // voir switchTab() : state.tab vaut "explore" par défaut ici, jamais passé par switchTab() au tout premier rendu
-  document.getElementById("feed").classList.toggle("feed-map", state.tab==="map" || state.tab==="likes" || state.tab==="profile");
+  document.getElementById("feed").classList.toggle("feed-map", state.tab==="likes" || state.tab==="profile");
   document.getElementById("result-line").classList.toggle("feed-explore", state.tab==="explore");
-  document.getElementById("result-line").classList.toggle("feed-map", state.tab==="map" || state.tab==="likes" || state.tab==="profile");
+  document.getElementById("result-line").classList.toggle("feed-map", state.tab==="likes" || state.tab==="profile");
+  var mapBackBtnBoot = document.getElementById("map-back-btn");
+  if(mapBackBtnBoot) mapBackBtnBoot.hidden = state.tab!=="explore";
   renderFeed();
   renderResultLine();
 }
@@ -4928,7 +4995,6 @@ fetch("listings.json").then(function(r){
   rebuildListings();
   state.loading = false;
   renderFilterBar(); renderFeed(); renderResultLine();
-  if(state.tab==="map") renderMap();
   renderLikeBadge(); // voir commentaire de validLikedCount() : LISTINGS était vide au tout premier rendu du badge
   maybeOpenDeepLink();
 }).catch(function(err){
