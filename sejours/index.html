@@ -2999,9 +2999,9 @@ function openSheet(kind){
         '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
         '<div class="hf-photo-grid" id="hf-photo-grid"></div>'+
       '</div>'+
-      '<div class="field-block"><label id="hf-units-label">Chambres — chacune avec son prix, sa capacité et ses photos</label>'+
+      '<div class="field-block"><label id="hf-units-label">Capacité et tarif</label>'+
         '<div id="hf-units"></div>'+
-        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une chambre</button>'+
+        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
       '</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
@@ -3116,13 +3116,12 @@ function openSheet(kind){
       hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
       renderHostUnits();
     });
-    /* Gîte = logement indépendant loué en bloc, jamais plusieurs chambres à
-       gérer séparément — la notion "+ Ajouter une chambre" n'a pas de sens
-       pour ce type (retour utilisateur). Une seule carte tarif/capacité,
-       créée automatiquement, sans bouton pour en ajouter d'autres ni pour
-       la retirer. Chambre/Chambre+table gardent le comportement multi-
-       chambres inchangé. */
-    document.getElementById("hf-type").addEventListener("change", updateUnitsFraming);
+    /* Retour utilisateur : un gîte peut lui aussi couvrir plusieurs
+       locations à la même adresse (ex. deux gîtes indépendants chez le même
+       hôte) — "+ Ajouter une location" ne dépend donc plus du type
+       d'hébergement (voir updateUnitsFraming()/renderHostUnits()), qui ne
+       sert plus qu'à décrire l'hébergement (pictogramme affiché sur
+       l'annonce), jamais à limiter sa structure. */
     hfAvailableRooms = [];
     updateUnitsFraming();
     resolveHostAccount(function(account){
@@ -3384,31 +3383,46 @@ function roomCurrentPrice(room, pax){
    hfUnits directement sur "input" (pas de re-rendu de toute la liste à
    chaque frappe, sinon le focus/curseur saute). Seule la grille de
    photos d'une chambre se re-rend isolément (renderHostUnitPhotoGrid). */
-/* Bascule le libellé/bouton de la section chambres selon le type
-   d'hébergement, et garantit une carte tarif/capacité pour un gîte (pas de
-   bouton "+ Ajouter" dans ce mode, donc rien à cliquer pour en avoir une). */
+/* Structure identique quel que soit le type d'hébergement (retour
+   utilisateur : "je veux que la structure soit identique sur les deux, que
+   ce soit chambre d'hôte ou gîte") — le bouton "+ Ajouter une location" et
+   le comportement d'ajout/retrait ne dépendent plus jamais de accomType,
+   seulement du NOMBRE de locations déjà présentes (voir renderHostUnits()).
+   Ne fait plus que garantir qu'il existe toujours au moins une location. */
 function updateUnitsFraming(){
-  var typeEl = document.getElementById("hf-type");
-  var isGite = !!typeEl && typeEl.value==="gite";
-  var label = document.getElementById("hf-units-label");
-  var addBtn = document.getElementById("hf-add-unit");
-  if(label) label.textContent = isGite ? "Capacité et tarif du gîte" : "Chambres — chacune avec son prix, sa capacité et ses photos";
-  if(addBtn) addBtn.hidden = isGite;
-  if(isGite && !hfUnits.length){
+  if(!hfUnits.length){
     hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
   }
   renderHostUnits();
 }
+/* Retour utilisateur explicite, avec capture d'écran à l'appui : "tu ne
+   devrais pas voir cette partie Chambre 1 tant que tu n'as pas cliqué sur
+   l'option plusieurs locations disponibles" — et, plus largement, "il y a
+   un doublon, le nom de l'annonce répété dans une chambre, comme une
+   poupée russe (...) quand on a qu'une seule location, un seul bloc, pas
+   besoin de poupées russes. Uniquement quand on ajoute une location, là on
+   a ce principe de poupée russe." Tant qu'il n'y a qu'UNE SEULE location
+   (hfUnits.length===1, le cas par défaut au dépôt comme à l'édition — voir
+   son initialisation à l'ouverture du volet), pas de carte "Chambre N"/
+   "Location N" ni de champ Nom séparé (redondant avec le "Nom du logement"
+   déjà rempli plus haut dans ce même formulaire) : juste prix, capacité,
+   lien Fiftin app et photos, à plat. La carte nommée façon poupée russe
+   n'apparaît qu'à partir de la 2e location, ajoutée via "+ Ajouter une
+   location" (jamais masqué par accomType désormais, voir updateUnitsFraming()) —
+   c'est CE geste, pas le type d'hébergement, qui fait exister la notion de
+   "plusieurs locations distinctes à nommer". */
 function renderHostUnits(){
   var wrap = document.getElementById("hf-units");
   if(!wrap) return;
-  var isGite = document.getElementById("hf-type") && document.getElementById("hf-type").value==="gite";
+  var multi = hfUnits.length>1;
+  var label = document.getElementById("hf-units-label");
+  if(label) label.textContent = multi ? "Locations — chacune avec son prix, sa capacité et ses photos" : "Capacité et tarif";
   wrap.innerHTML = hfUnits.map(function(u, i){
     return '<div class="hf-unit-card" data-unit-id="'+u.id+'">'+
-      '<div class="hf-unit-head"><span>'+(isGite ? "Capacité et tarif du gîte" : "Chambre "+(i+1))+'</span>'+
-        (!isGite && hfUnits.length>1 ? '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette chambre">&times;</button>' : '')+
+      (multi ? '<div class="hf-unit-head"><span>Location '+(i+1)+'</span>'+
+        '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette location">&times;</button>'+
       '</div>'+
-      '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Chambre Bleue"></div>'+
+      '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Chambre Bleue"></div>' : '')+
       '<div class="field-block-row">'+
         '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
         '<div class="field-block"><label>Capacité</label><input class="text-input hf-unit-capacity" type="number" min="1" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
@@ -3417,7 +3431,7 @@ function renderHostUnits(){
         '<option value="">— Aucun lien —</option>'+
         hfAvailableRooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===u.linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
       '</select></div>' : '')+
-      '<div class="field-block"><label>Photos de cette chambre</label>'+
+      '<div class="field-block"><label>Photos de cette location</label>'+
         '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
         '<div class="hf-photo-grid hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
@@ -3876,11 +3890,17 @@ function submitHostForm(){
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
   if(!name || !accomType || !hostName || !address || !claim || !desc || !phone || !email){ errEl.textContent = "Merci de remplir tous les champs."; return; }
-  if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une chambre."; return; }
+  if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
+  // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
+  // voir renderHostUnits() — donc jamais exigé pour une seule location
+  // solo, dont le champ reste vide par construction (pas d'input pour le
+  // remplir) : l'exiger ici bloquerait purement et simplement l'envoi de
+  // toute annonce à une seule location.
+  var multiUnits = hfUnits.length>1;
   for(var i=0;i<hfUnits.length;i++){
     var u = hfUnits[i];
-    if(!u.name.trim() || !u.price || Number(u.price)<=0 || !u.maxPersons || Number(u.maxPersons)<=0){
-      errEl.textContent = "Chaque chambre a besoin d'un nom, d'un prix et d'une capacité.";
+    if((multiUnits && !u.name.trim()) || !u.price || Number(u.price)<=0 || !u.maxPersons || Number(u.maxPersons)<=0){
+      errEl.textContent = multiUnits ? "Chaque location a besoin d'un nom, d'un prix et d'une capacité." : "Renseignez un prix et une capacité.";
       return;
     }
   }
@@ -3909,7 +3929,7 @@ function submitHostForm(){
       var uploadUnit = function(i, doneUnits){
         if(i>=hfUnits.length) return Promise.resolve(doneUnits);
         var u = hfUnits[i];
-        return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+u.name.trim()+"…").then(function(unitGallery){
+        return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+(u.name.trim()||name)+"…").then(function(unitGallery){
           doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery, linkedRoomId:u.linkedRoomId||""});
           return uploadUnit(i+1, doneUnits);
         });
