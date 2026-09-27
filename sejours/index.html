@@ -739,37 +739,31 @@ body.detail-open nav.tabbar{z-index:220;}
 /* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
 .host-view{padding:24px 0 110px;}
 /* Statut du compte (géré depuis Fiftin app / calendrier simplifié) — sa
-   propre ligne, alignée à droite, au-dessus des tuiles de logement : c'est
-   une propriété du COMPTE, pas d'un logement en particulier, elle ne doit
-   pas se retrouver dans une des tuiles ci-dessous ni s'y répéter. */
+   propre ligne, alignée à droite, en tête du volet calendrier déplié d'une
+   annonce : c'est une propriété du COMPTE, pas de cette annonce en
+   particulier, mais elle n'a de sens qu'une fois le volet ouvert. */
 .host-status-row{display:flex; justify-content:flex-end; margin-bottom:10px;}
 .host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
-/* Choix du logement en tuiles façon Mes séjours (.profile-stats/.stat-tile,
-   "l'onglet actif va jusqu'à la ligne") — retour utilisateur explicite,
-   même recette reprise sous ses propres classes plutôt que réutiliser
-   .profile-stats/.stat-tile directement : pas besoin ici du comportement
-   sticky (position:sticky;top:0) pensé pour Mes séjours, et les deux
-   pages pourront évoluer sans se marcher dessus. Toujours affichées, même
-   un seul logement (aucun logement à choisir, mais chrome cohérent plutôt
-   qu'un second habillage à part pour ce cas — même principe que les
-   onglets de chambre ci-dessous, toujours affichés y compris pour un
-   gîte à une seule chambre). */
-.host-listing-tiles{display:flex; gap:10px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line);}
-.host-listing-tile{flex:1; min-width:0; background:var(--cream-deep); border:none; border-radius:16px; padding:12px; text-align:center; font-family:'Jost',sans-serif; cursor:pointer;}
-.host-listing-tile b{display:block; font-size:14px; font-weight:800; color:var(--sauge-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.host-listing-tile span{font-size:11px; color:var(--sauge); font-weight:600;}
-.host-listing-tile.active{background:var(--sauge); border-radius:16px 16px 0 0; padding-bottom:26px; margin-bottom:-14px;}
-.host-listing-tile.active b, .host-listing-tile.active span{color:var(--cream);}
+/* Volet calendrier d'une annonce, déplié sous sa carte (retour utilisateur :
+   fusion des anciens onglets "Mes annonces"/"Mon calendrier" — "2 menus ne
+   sont pas nécessaires", "garde les cartes exactement comme ça mais fais en
+   sorte que l'annonce se déplie"). La carte elle-même (.admin-card) ne
+   change pas ; ce volet est un simple conteneur de mise en page juste en
+   dessous, un peu resserré contre elle (marge négative) pour lire comme un
+   dépli plutôt que comme un second bloc sans rapport. */
+.host-cal-panel{margin:-4px 0 12px;}
 /* Choix de la chambre en onglets (retour utilisateur, remplace l'ancien
-   va-et-vient "1/2 < Chambre Bleue >" qui collait à la mécanique de la vue
-   Location de Fiftin app — abandonné : toutes les chambres doivent se voir
-   d'un coup d'œil, pas se découvrir une à une). .detail-tabs/.detail-tab
-   réutilisés tels quels (mêmes classes que la fiche détail d'une annonce à
-   plusieurs chambres). Toujours affichés, y compris un seul onglet pour un
-   gîte (une seule chambre) — retour utilisateur explicite : même chrome
-   dans tous les cas plutôt qu'un sous-titre à part pour ce cas-là. */
+   va-et-vient "1/2 < Chambre Bleue >"). .detail-tabs/.detail-tab réutilisés
+   tels quels (mêmes classes que la fiche détail d'une annonce à plusieurs
+   chambres). Affichés uniquement s'il y a un vrai choix à faire (plusieurs
+   chambres) — retour utilisateur explicite lors de la fusion des deux
+   onglets : "tu vois les onglets chambres si il y en a plusieurs ou tu vois
+   le calendrier unique" (revient sur le choix d'une passe précédente,
+   "toujours affichés, même un seul onglet pour un gîte", pensé pour l'ex-
+   onglet "Mon calendrier" qui vivait seul et avait besoin d'un chrome
+   constant — plus nécessaire une fois DANS la carte de l'annonce voulue). */
 .cal-unit-tabs{margin-bottom:0;}
 /* "Planning associé" — retour utilisateur : remplace le menu déroulant
    (puis les onglets, eux aussi jugés encore trop "menu") par un cartouche
@@ -812,13 +806,15 @@ body.detail-open nav.tabbar{z-index:220;}
 /* Carte blanche enveloppant planning associé + bouton Ajouter/modifier +
    grille des 12 mois — même principe que .rv-calendar côté app/
    (background:#fff, padding), pour que le calendrier se détache du fond
-   crème de la page comme dans l'app. Coins hauts carrés (retour
-   utilisateur : "le blanc doit monter jusqu'à l'encart du logement et
-   sembler être le prolongement de cet encart") — même principe que
-   .detail-group/hasTabs sur la fiche détail : les onglets de chambre
-   (.cal-unit-tabs, coins hauts arrondis, toujours affichés juste
-   au-dessus) et cette carte se rejoignent sans espace ni rupture. */
+   crème de la page. Coins hauts carrés par défaut (retour utilisateur :
+   "le blanc doit monter jusqu'à l'encart du logement et sembler être le
+   prolongement de cet encart") — même principe que .detail-group/hasTabs
+   sur la fiche détail : les onglets de chambre (.cal-unit-tabs, coins hauts
+   arrondis) et cette carte se rejoignent sans espace ni rupture. Modificateur
+   .solo (units.length===1, pas d'onglets au-dessus depuis la fusion Mes
+   annonces/Mon calendrier — rien à souder) : coins tous arrondis. */
 .cal-card{background:#fff; border-radius:0 0 16px 16px; padding:16px 12px;}
+.cal-card.solo{border-radius:16px;}
 /* Un seul mois par ligne (retour utilisateur : "2 calendriers par ligne"
    jusqu'ici, illisible) plutôt qu'une grille 2 colonnes — chaque mois est
    désormais un volet dépliable (voir .cal-mini.collapsed plus bas) : la
@@ -1563,7 +1559,11 @@ try{
      fichier) — s'il s'avère que ce n'est plus un compte valide une fois
      Firebase Auth résolu, bootFirebaseAuth() corrige déjà tout seul
      (if(!user && state.hostMode) exitHostMode()), rien de plus à faire ici. */
-  if(saved.hostMode){ state.hostMode = true; state.hostTab = saved.hostTab || "profile"; }
+  // "calendar" a disparu comme onglet (fusionné dans "listings" — voir
+  // HOST_TABS_HTML) : un état sauvegardé par une session plus ancienne
+  // avant cette fusion pourrait encore porter cette valeur, ramenée sur
+  // "listings" plutôt que de planter sur un onglet qui n'existe plus.
+  if(saved.hostMode){ state.hostMode = true; state.hostTab = (saved.hostTab==="calendar" ? "listings" : saved.hostTab) || "profile"; }
 }catch(e){}
 function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked, hostMode:state.hostMode, hostTab:state.hostTab})); }catch(e){} }
 
@@ -3150,7 +3150,7 @@ function openSheet(kind){
         firebase.firestore().collection("listings").doc(rlCtx.listing.id).update({units:newUnits}).then(function(){
           rlCtx.listing.units = newUnits;
           closeSheet();
-          renderHostCalendar();
+          loadHostListingCalendar(rlCtx.listing);
         }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); closeSheet(); });
       });
     });
@@ -3849,8 +3849,10 @@ function submitHostForm(){
       closeSheet();
       hostFormEditListing = null;
       hostListingsCache = []; /* l'annonce créée/modifiée doit se refléter dans Mes annonces */
+      // renderHostListings() recharge aussi le volet calendrier déplié s'il
+      // y en a un (state.hostListingId), plus besoin d'un second appel
+      // séparé depuis la fusion des deux anciens onglets.
       if(state.hostMode && state.hostTab==="listings") renderHostListings();
-      if(state.hostMode && state.hostTab==="calendar") renderHostCalendar();
     });
     document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
   }).catch(function(err){
@@ -4282,13 +4284,13 @@ var TRAVELER_TABS_HTML =
   '</button>';
 
 var HOST_TABS_HTML =
+  /* "Mon calendrier" fusionné dans "Mes annonces" (retour utilisateur :
+     "2 menus ne sont pas nécessaires") — chaque annonce se déplie
+     désormais directement dans sa propre carte (voir hostListingCardHtml/
+     loadHostListingCalendar), plus besoin d'un onglet séparé pour ça. */
   '<button class="tab" data-host-tab="listings">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>'+
     '<span>Mes annonces</span>'+
-  '</button>'+
-  '<button class="tab" data-host-tab="calendar">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>'+
-    '<span>Mon calendrier</span>'+
   '</button>'+
   /* Profil reste accessible en mode hôte, comme demandé — même icône que
      TRAVELER_TABS_HTML, en dernière position. Contenu différent de la
@@ -4369,7 +4371,8 @@ function exitHostMode(){
 }
 function switchHostTab(tab){
   // Même correctif que switchTab() : repartir du haut à chaque changement
-  // d'onglet côté hôte (Mes annonces / Mon calendrier / Profil).
+  // d'onglet côté hôte (Mes annonces / Profil — "Mon calendrier" fusionné
+  // dans "Mes annonces", voir HOST_TABS_HTML).
   window.scrollTo(0,0);
   state.hostTab = tab;
   persist();
@@ -4380,13 +4383,14 @@ function switchHostTab(tab){
 }
 function renderHostTabContent(){
   // Même fond gris très léger que Carte/Mes séjours/Profil côté voyageur
-  // (retour utilisateur, "pareil pour la vue profil côté hôtes", puis
-  // "là aussi" pour Mon calendrier) — posé ici plutôt que dans
-  // enterHostMode()/switchHostTab() séparément : ce sont les deux seuls
-  // chemins qui mènent ici, inutile de dupliquer.
-  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile" || state.hostTab==="calendar");
-  if(state.hostTab==="calendar") renderHostCalendar();
-  else if(state.hostTab==="profile") renderHostProfile();
+  // (retour utilisateur, "pareil pour la vue profil côté hôtes") — posé ici
+  // plutôt que dans enterHostMode()/switchHostTab() séparément : ce sont les
+  // deux seuls chemins qui mènent ici, inutile de dupliquer. "Mes annonces"
+  // n'est pas concerné (déjà le cas avant la fusion du calendrier dedans) :
+  // ses propres cartes (.admin-card) et, une fois dépliée, la carte blanche
+  // du calendrier (.cal-card) se détachent très bien du fond crème normal.
+  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile");
+  if(state.hostTab==="profile") renderHostProfile();
   else renderHostListings();
 }
 /* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
@@ -4487,16 +4491,27 @@ function renderHostListings(){
   ensureHostListingsLoaded(function(listings){
     if(state.hostTab!=="listings") return; /* l'hôte a changé d'onglet pendant le chargement */
     if(!listings.length){ feed.innerHTML = hostEmptyHtml(); wireHostEmpty(); return; }
+    // L'annonce dépliée peut avoir disparu (supprimée ailleurs) — filet de
+    // sécurité, sinon loadHostListingCalendar() plus bas ne trouverait rien.
+    if(state.hostListingId && !listings.some(function(l){ return l.id===state.hostListingId; })){
+      state.hostListingId = null; state.hostUnitId = null;
+    }
     feed.innerHTML = '<div class="host-view">'+
       '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Nouvelle annonce</button>'+
       listings.map(hostListingCardHtml).join("")+
     '</div>';
     document.getElementById("host-new-listing").addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
-    Array.prototype.forEach.call(document.querySelectorAll("[data-host-cal]"), function(btn){
+    // "Voir les calendriers" — déplie/replie le calendrier de CETTE annonce
+    // directement sous sa carte (retour utilisateur : "2 menus ne sont pas
+    // nécessaires", fusion de l'ancien onglet "Mon calendrier" ici). Un seul
+    // volet ouvert à la fois (state.hostListingId), comme l'ancien onglet ne
+    // montrait qu'une seule annonce à la fois lui aussi.
+    Array.prototype.forEach.call(document.querySelectorAll("[data-cal-expand]"), function(btn){
       btn.addEventListener("click", function(){
-        state.hostListingId = btn.getAttribute("data-host-cal");
+        var id = btn.getAttribute("data-cal-expand");
+        state.hostListingId = (state.hostListingId===id) ? null : id;
         state.hostUnitId = null;
-        switchHostTab("calendar");
+        renderHostListings();
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-edit]"), function(btn){
@@ -4506,23 +4521,33 @@ function renderHostListings(){
         openSheet("hostform");
       });
     });
+    if(state.hostListingId){
+      var expandedListing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
+      if(expandedListing) loadHostListingCalendar(expandedListing);
+    }
   });
 }
 function hostListingCardHtml(l){
   var coverUrl = listingCoverUrl(l);
   var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
   var statusLabel = l.status==="published" ? "Publiée" : "En attente de validation";
+  var expanded = l.id===state.hostListingId;
+  // La carte (.admin-card) elle-même ne change pas (retour utilisateur :
+  // "garde les cartes exactement comme ça") — seul son bouton "Voir le
+  // calendrier" devient un bouton de dépli/repli, et un volet calendrier
+  // (.host-cal-panel) apparaît juste en dessous quand déplié.
   return '<div class="admin-card">'+cover+
     '<div class="admin-card-body">'+
       '<b>'+esc(l.name||"(sans nom)")+'</b>'+
       '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
       (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
       '<div class="admin-actions">'+
-        '<button type="button" class="btn-apply" data-host-cal="'+esc(l.id)+'">Voir le calendrier</button>'+
+        '<button type="button" class="btn-apply" data-cal-expand="'+esc(l.id)+'">'+(expanded?"Masquer les calendriers":"Voir les calendriers")+'</button>'+
         '<button type="button" class="admin-reject" data-host-edit="'+esc(l.id)+'">Modifier</button>'+
       '</div>'+
     '</div>'+
-  '</div>';
+  '</div>'+
+  (expanded ? '<div class="host-cal-panel" id="host-cal-panel"><p class="sheet-sub" style="margin:0;">Chargement du calendrier…</p></div>' : '');
 }
 function hostEmptyHtml(){
   return '<div class="host-view">'+
@@ -4652,55 +4677,57 @@ function fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, cb){
   }
 }
 
-function renderHostCalendar(){
-  var feed = document.getElementById("feed");
-  feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Chargement du calendrier…</p></div>';
-  ensureHostListingsLoaded(function(listings){
-    if(state.hostTab!=="calendar") return;
-    if(!listings.length){ feed.innerHTML = hostEmptyHtml(); wireHostEmpty(); return; }
-    if(!state.hostListingId || !listings.some(function(l){ return l.id===state.hostListingId; })){
-      state.hostListingId = listings[0].id;
-    }
-    var listing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
-    var units = listing.units || [];
-    if(!units.length){
-      feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Cette annonce n\'a pas encore de chambre.</p>'+
-        '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button></div>';
-      document.getElementById("cal-edit-listing").addEventListener("click", function(){
-        hostFormEditListing = listing;
-        openSheet("hostform");
-      });
-      return;
-    }
-    if(!state.hostUnitId || !units.some(function(u){ return u.id===state.hostUnitId; })){
-      state.hostUnitId = units[0].id;
-    }
-    var unit = units.filter(function(u){ return u.id===state.hostUnitId; })[0];
-    resolveHostAccount(function(account){
-      var isGestion = !!account;
-      var rooms = (account && account.settings && account.settings.rooms) || [];
-      var pruned = pruneStaleLinkedRoomIds(units, rooms);
-      var afterPrune = function(){
-        var linkedRoomId = unit.linkedRoomId || "";
-        fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, function(bookings){
-          if(state.hostTab!=="calendar") return;
-          renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
-        });
-      };
-      if(pruned.changed){
-        listing.units = pruned.units;
-        unit = pruned.units.filter(function(u){ return u.id===unit.id; })[0];
-        firebase.firestore().collection("listings").doc(listing.id).update({units:pruned.units}).then(afterPrune).catch(afterPrune);
-      } else {
-        afterPrune();
-      }
+// Remplace l'ancien renderHostCalendar()/renderHostCalendarBody() (page
+// pleine, onglet "Mon calendrier" séparé) — fusion dans "Mes annonces"
+// (retour utilisateur : "2 menus ne sont pas nécessaires") : chaque annonce
+// se déplie directement dans sa propre carte, cible #host-cal-panel (posé
+// par hostListingCardHtml() quand state.hostListingId===listing.id) plutôt
+// que tout #feed. Plus besoin de tuiles de logement pour changer d'annonce
+// (listingSwitchHtml, disparu) : ça se fait déjà en repliant/dépliant la
+// bonne carte dans la liste.
+function loadHostListingCalendar(listing){
+  var panel = document.getElementById("host-cal-panel");
+  if(!panel) return; /* volet fermé entre-temps */
+  var units = listing.units || [];
+  if(!units.length){
+    panel.innerHTML = '<p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de chambre.</p>'+
+      '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button>';
+    document.getElementById("cal-edit-listing").addEventListener("click", function(){
+      hostFormEditListing = listing;
+      openSheet("hostform");
     });
+    return;
+  }
+  if(!state.hostUnitId || !units.some(function(u){ return u.id===state.hostUnitId; })){
+    state.hostUnitId = units[0].id;
+  }
+  var unit = units.filter(function(u){ return u.id===state.hostUnitId; })[0];
+  resolveHostAccount(function(account){
+    if(state.hostListingId!==listing.id) return; /* volet refermé/changé pendant la lecture */
+    var isGestion = !!account;
+    var rooms = (account && account.settings && account.settings.rooms) || [];
+    var pruned = pruneStaleLinkedRoomIds(units, rooms);
+    var afterPrune = function(){
+      var linkedRoomId = unit.linkedRoomId || "";
+      fetchHostBookings(listing, unit, isGestion, linkedRoomId, account, function(bookings){
+        if(state.hostListingId!==listing.id) return;
+        renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings);
+      });
+    };
+    if(pruned.changed){
+      listing.units = pruned.units;
+      unit = pruned.units.filter(function(u){ return u.id===unit.id; })[0];
+      firebase.firestore().collection("listings").doc(listing.id).update({units:pruned.units}).then(afterPrune).catch(afterPrune);
+    } else {
+      afterPrune();
+    }
   });
 }
 
 
-function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings){
-  var feed = document.getElementById("feed");
+function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings){
+  var panel = document.getElementById("host-cal-panel");
+  if(!panel) return;
   var units = listing.units || [];
   var occ = occupiedDatesFromBookings(bookings);
   var year = state.hostCalYear;
@@ -4709,32 +4736,19 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   var months = "";
   for(var m=0;m<12;m++) months += monthMiniHtml(year, m, occ, todayStr);
 
-  // Tuiles de logement façon Mes séjours (retour utilisateur) — toujours
-  // les annonces SÉJOURS (listings/units), jamais les chambres Fiftin app
-  // (rooms) : les deux logiciels restent deux sources distinctes, seul un
-  // lien PONCTUEL entre les deux existe (voir le cartouche "Planning
-  // associé" plus bas) — jamais une annonce ou une chambre qui n'existe
-  // que côté Fiftin app ne doit apparaître ici en onglet de navigation.
-  var listingSwitchHtml = '<div class="host-listing-tiles">'+
-    listings.map(function(l){
-      return '<button type="button" class="host-listing-tile'+(l.id===listing.id?' active':'')+'" data-listing-tile="'+esc(l.id)+'">'+
-        '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-        '<span>'+(l.status==="published"?"Publiée":"En attente")+'</span>'+
-      '</button>';
-    }).join("")+
-  '</div>';
-
-  // Onglets pour choisir la chambre (retour utilisateur : le va-et-vient
-  // "1/2 < Chambre Bleue >" ne montrait jamais les chambres toutes à la
-  // fois — repris sur .detail-tabs/.detail-tab, déjà utilisés pour ce même
-  // choix sur la fiche détail d'une annonce à plusieurs chambres. Toujours
-  // affichés, y compris une seule chambre pour un gîte (retour utilisateur
-  // explicite) : même chrome dans tous les cas, jamais de sous-titre à
-  // part pour ce cas-là. Chambres SÉJOURS (units) uniquement, comme les
-  // tuiles de logement ci-dessus.
-  var unitPagerHtml = '<div class="detail-tabs cal-unit-tabs">'+
+  // Onglets pour choisir la chambre — uniquement s'il y en a plusieurs
+  // (retour utilisateur, fusion des deux anciens onglets : "tu vois les
+  // onglets chambres si il y en a plusieurs ou tu vois le calendrier
+  // unique"). Revient sur cette condition plutôt que "toujours affichés,
+  // même un seul" (choix d'une passe précédente, quand ce volet vivait
+  // seul dans son propre onglet "Mon calendrier" et avait besoin de son
+  // propre chrome constant) : une fois qu'on est déjà DANS la carte de
+  // l'annonce voulue, il ne reste plus qu'à choisir la chambre s'il y a un
+  // choix réel à faire.
+  var hasTabs = units.length>1;
+  var unitPagerHtml = hasTabs ? '<div class="detail-tabs cal-unit-tabs">'+
     units.map(function(u){ return '<button type="button" class="detail-tab'+(u.id===unit.id?' active':'')+'" data-unit-tab="'+esc(u.id)+'">'+esc(u.name||"(sans nom)")+'</button>'; }).join("")+
-  '</div>';
+  '</div>' : '';
 
   // "Planning associé" : le SEUL endroit où une chambre Fiftin app (rooms)
   // apparaît — un cartouche d'état (pas une navigation) qui ouvre un volet
@@ -4742,10 +4756,6 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   // un lien possible entre les deux si besoin", jamais une chambre Fiftin
   // app ne doit se voir proposée en onglet de premier plan comme celles
   // du dessus.
-  // "(en lecture seule, géré depuis fiftin.app)" directement dans la valeur
-  // du cartouche (retour utilisateur) — porte désormais elle-même cette
-  // précision, jusqu'ici redondante avec la pillule "Géré depuis Fiftin
-  // app" tout en haut de page (retirée juste en dessous).
   var curRoomName = linkedRoomId ? (rooms.filter(function(r){ return r.id===linkedRoomId; })[0] || {}).name : "";
   var roomLinkHtml = (isGestion && rooms.length) ?
     '<button type="button" class="planning-chip" id="planning-chip-btn">'+
@@ -4762,23 +4772,15 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
         '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></a>'
     : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
-  // Hiérarchie revue (retour utilisateur) : quelle annonce -> quelle
-  // chambre -> planning associé (si compte géré, porte maintenant lui-même
-  // la précision "lecture seule / géré depuis fiftin.app") -> agir
-  // (Ajouter/modifier) -> le calendrier. Pillule de statut "Géré depuis
-  // Fiftin app" retirée (retour utilisateur, devenue redondante avec le
-  // cartouche) ; "Calendrier simplifié" (compte simple annonce, jamais
-  // redondant avec quoi que ce soit d'autre sur cette page) reste affichée.
-  // Retour utilisateur : le cartouche + le bouton Ajouter/modifier doivent
-  // être DANS la carte blanche du calendrier, qui doit sembler être le
-  // prolongement des onglets de chambre juste au-dessus (même principe que
-  // .detail-tabs/.detail-group sur la fiche détail — coins carrés côté
-  // onglets, la carte "remonte" sans espace).
-  feed.innerHTML = '<div class="host-view">'+
+  // Cartouche + bouton Ajouter/modifier DANS la carte blanche du calendrier
+  // (retour utilisateur, passe précédente), soudée sans espace aux onglets
+  // de chambre juste au-dessus quand il y en a (.cal-card sans le modifier
+  // "solo" — coins hauts carrés) ; coins tous arrondis sinon (.cal-card.solo
+  // — rien au-dessus à souder, une seule chambre).
+  panel.innerHTML =
     (isGestion ? '' : '<div class="host-status-row"><span class="host-status-badge standalone">Calendrier simplifié</span></div>')+
-    listingSwitchHtml+
     unitPagerHtml+
-    '<div class="cal-card">'+
+    '<div class="cal-card'+(hasTabs ? '' : ' solo')+'">'+
       roomLinkHtml+
       '<div class="cal-top-row">'+
         '<div class="cal-top-actions">'+
@@ -4791,27 +4793,15 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
         '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
       '</div>'+
       '<div class="cal-year-grid">'+months+'</div>'+
-    '</div>'+
-  '</div>';
+    '</div>';
 
-  if(listings.length>1){
-    Array.prototype.forEach.call(feed.querySelectorAll("[data-listing-tile]"), function(btn){
-      btn.addEventListener("click", function(){
-        var newId = btn.getAttribute("data-listing-tile");
-        if(newId===listing.id) return;
-        state.hostListingId = newId;
-        state.hostUnitId = null;
-        renderHostCalendar();
-      });
-    });
-  }
   if(units.length>1){
-    Array.prototype.forEach.call(feed.querySelectorAll("[data-unit-tab]"), function(btn){
+    Array.prototype.forEach.call(panel.querySelectorAll("[data-unit-tab]"), function(btn){
       btn.addEventListener("click", function(){
         var newId = btn.getAttribute("data-unit-tab");
         if(newId===unit.id) return;
         state.hostUnitId = newId;
-        renderHostCalendar();
+        loadHostListingCalendar(listing);
       });
     });
   }
@@ -4820,14 +4810,14 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     hostRoomLinkContext = {listing:listing, unit:unit, rooms:rooms, linkedRoomId:linkedRoomId};
     openSheet("roomlink");
   });
-  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
-  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings); });
+  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings); });
   var addBtn = document.getElementById("cal-add-btn");
   if(addBtn) addBtn.addEventListener("click", function(){
     hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:null};
     openSheet("hostbooking");
   });
-  Array.prototype.forEach.call(feed.querySelectorAll(".cal-mini-day[data-date]"), function(el){
+  Array.prototype.forEach.call(panel.querySelectorAll(".cal-mini-day[data-date]"), function(el){
     var ds = el.getAttribute("data-date");
     var occBooking = occ[ds];
     if(isGestion && !occBooking) return; /* rien à afficher, rien à ajouter depuis ici */
@@ -4840,7 +4830,7 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
       openSheet("hostbooking");
     });
   });
-  Array.prototype.forEach.call(feed.querySelectorAll("[data-cal-toggle]"), function(btn){
+  Array.prototype.forEach.call(panel.querySelectorAll("[data-cal-toggle]"), function(btn){
     btn.addEventListener("click", function(){ btn.closest(".cal-mini").classList.toggle("collapsed"); });
   });
 }
@@ -4864,7 +4854,7 @@ function submitAddBooking(){
     unitId:ctx.unit.id, name:name, checkIn:checkIn, checkOut:checkOut, createdAt:firebase.firestore.FieldValue.serverTimestamp()
   }).then(function(){
     closeSheet();
-    renderHostCalendar();
+    loadHostListingCalendar(ctx.listing);
   }).catch(function(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; });
 }
 function submitDeleteBooking(){
@@ -4872,7 +4862,7 @@ function submitDeleteBooking(){
   if(ctx.isGestion) return; /* pas de bouton dans ce cas, filet de sécurité */
   if(!confirm("Supprimer cette réservation ?")) return;
   firebase.firestore().collection("listings").doc(ctx.listing.id).collection("bookings").doc(ctx.booking.id).delete()
-    .then(function(){ closeSheet(); renderHostCalendar(); })
+    .then(function(){ closeSheet(); loadHostListingCalendar(ctx.listing); })
     .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
 }
 
