@@ -784,13 +784,20 @@ body.detail-open nav.tabbar{z-index:220;}
 .planning-chip-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sauge);}
 .planning-chip-value{font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .planning-chip svg{width:16px; height:16px; color:var(--gray-mid); opacity:.6; flex-shrink:0;}
-/* Rangée Ajouter/modifier — sa propre ligne, alignée à droite (le bouton
-   "Aujourd'hui" qui la partageait avant a été retiré, retour utilisateur :
-   l'accordéon des mois ouvre déjà le mois en cours par défaut, ce bouton
-   ne servait plus qu'à revenir dessus après l'avoir replié à la main). */
-.cal-top-row{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px;}
+/* Rangée Ajouter/modifier — sa propre ligne, centrée (retour utilisateur ;
+   le bouton "Aujourd'hui" qui la partageait avant, alignée à droite pour
+   lui, a été retiré : l'accordéon des mois ouvre déjà le mois en cours par
+   défaut, ce bouton ne servait plus qu'à revenir dessus après l'avoir
+   replié à la main). */
+.cal-top-row{display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px;}
 .cal-top-actions{display:flex; align-items:center; gap:8px;}
-.cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
+.cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-flex; align-items:center; gap:6px;}
+/* Picto "lien externe" (retour utilisateur : "montrer qu'on sort de ce
+   site") — même tracé que .google-link svg.ext (fiche détail, liens
+   Site/Avis Google), repris tel quel plutôt qu'un nouveau pictogramme ;
+   currentColor pour suivre le texte du bouton (--sauge-deep), pas le gris
+   discret de svg.ext sur fond blanc, illisible ici sur fond jaune. */
+.cal-add-pill svg.ext{width:12px; height:12px; flex-shrink:0;}
 /* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
    emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
    .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
@@ -4729,25 +4736,35 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   // un lien possible entre les deux si besoin", jamais une chambre Fiftin
   // app ne doit se voir proposée en onglet de premier plan comme celles
   // du dessus.
+  // "(en lecture seule, géré depuis fiftin.app)" directement dans la valeur
+  // du cartouche (retour utilisateur) — porte désormais elle-même cette
+  // précision, jusqu'ici redondante avec la pillule "Géré depuis Fiftin
+  // app" tout en haut de page (retirée juste en dessous).
   var curRoomName = linkedRoomId ? (rooms.filter(function(r){ return r.id===linkedRoomId; })[0] || {}).name : "";
   var roomLinkHtml = (isGestion && rooms.length) ?
     '<button type="button" class="planning-chip" id="planning-chip-btn">'+
       '<span class="planning-chip-text"><span class="planning-chip-label">Planning associé</span>'+
-        '<span class="planning-chip-value">'+(curRoomName ? esc(curRoomName) : "Aucun — associer un planning")+'</span></span>'+
+        '<span class="planning-chip-value">'+(curRoomName ? esc(curRoomName)+" (en lecture seule, géré depuis fiftin.app)" : "Aucun — associer un planning")+'</span></span>'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>' : '';
 
+  // Texte + picto "lien externe" (retour utilisateur) — même tracé que les
+  // liens Site/Avis Google de la fiche détail (svg.ext), déjà le pictogramme
+  // "on quitte ce site" établi ailleurs dans l'app plutôt qu'un nouveau.
   var actionPillHtml = isGestion
-    ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier →</a>'
+    ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier réservation depuis fiftin.app'+
+        '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></a>'
     : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
-  // Hiérarchie revue (retour utilisateur) : statut du compte -> quelle
-  // annonce -> quelle chambre -> planning associé (si compte géré) ->
-  // agir (Ajouter/modifier) -> le calendrier. Bouton "Aujourd'hui" retiré
-  // (retour utilisateur) : l'accordéon des mois ouvre déjà le mois en
-  // cours par défaut.
+  // Hiérarchie revue (retour utilisateur) : quelle annonce -> quelle
+  // chambre -> planning associé (si compte géré, porte maintenant lui-même
+  // la précision "lecture seule / géré depuis fiftin.app") -> agir
+  // (Ajouter/modifier) -> le calendrier. Pillule de statut "Géré depuis
+  // Fiftin app" retirée (retour utilisateur, devenue redondante avec le
+  // cartouche) ; "Calendrier simplifié" (compte simple annonce, jamais
+  // redondant avec quoi que ce soit d'autre sur cette page) reste affichée.
   feed.innerHTML = '<div class="host-view">'+
-    '<div class="host-status-row"><span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span></div>'+
+    (isGestion ? '' : '<div class="host-status-row"><span class="host-status-badge standalone">Calendrier simplifié</span></div>')+
     listingSwitchHtml+
     unitPagerHtml+
     roomLinkHtml+
