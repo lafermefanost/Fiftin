@@ -738,45 +738,59 @@ body.detail-open nav.tabbar{z-index:220;}
 
 /* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
 .host-view{padding:24px 0 110px;}
-.host-view-head{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;}
-.host-listing-name{font-size:16px;}
-.host-listing-select{font-family:'Jost',sans-serif; font-size:14px; font-weight:700; border:1.5px solid var(--line); border-radius:12px; padding:8px 10px; background:var(--cream); flex:1;}
+/* Statut du compte (géré depuis Fiftin app / calendrier simplifié) — sa
+   propre ligne, alignée à droite, au-dessus des tuiles de logement : c'est
+   une propriété du COMPTE, pas d'un logement en particulier, elle ne doit
+   pas se retrouver dans une des tuiles ci-dessous ni s'y répéter. */
+.host-status-row{display:flex; justify-content:flex-end; margin-bottom:10px;}
 .host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
-.host-link-row{margin-bottom:18px;}
-.host-link-row label{display:block; font-size:12px; font-weight:700; color:var(--sauge); margin-bottom:6px;}
-.host-link-row select{width:100%; border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif; font-size:13.5px; background:var(--cream);}
-/* Rangée Aujourd'hui/Ajouter-modifier seule (plus l'année, voir plus bas) —
-   retour utilisateur : l'année partageait cette ligne avec les deux boutons
-   d'action (justify-content:space-between), ce qui l'empêchait d'être
-   vraiment centrée sur la page. Alignée à droite désormais, sa propre
-   ligne. */
-.cal-top-row{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px;}
-.cal-top-actions{display:flex; align-items:center; gap:8px;}
-.cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
-.cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
+/* Choix du logement en tuiles façon Mes séjours (.profile-stats/.stat-tile,
+   "l'onglet actif va jusqu'à la ligne") — retour utilisateur explicite,
+   même recette reprise sous ses propres classes plutôt que réutiliser
+   .profile-stats/.stat-tile directement : pas besoin ici du comportement
+   sticky (position:sticky;top:0) pensé pour Mes séjours, et les deux
+   pages pourront évoluer sans se marcher dessus. Toujours affichées, même
+   un seul logement (aucun logement à choisir, mais chrome cohérent plutôt
+   qu'un second habillage à part pour ce cas — même principe que les
+   onglets de chambre ci-dessous, toujours affichés y compris pour un
+   gîte à une seule chambre). */
+.host-listing-tiles{display:flex; gap:10px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid var(--line);}
+.host-listing-tile{flex:1; min-width:0; background:var(--cream-deep); border:none; border-radius:16px; padding:12px; text-align:center; font-family:'Jost',sans-serif; cursor:pointer;}
+.host-listing-tile b{display:block; font-size:14px; font-weight:800; color:var(--sauge-deep); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.host-listing-tile span{font-size:11px; color:var(--sauge); font-weight:600;}
+.host-listing-tile.active{background:var(--sauge); border-radius:16px 16px 0 0; padding-bottom:26px; margin-bottom:-14px;}
+.host-listing-tile.active b, .host-listing-tile.active span{color:var(--cream);}
 /* Choix de la chambre en onglets (retour utilisateur, remplace l'ancien
    va-et-vient "1/2 < Chambre Bleue >" qui collait à la mécanique de la vue
    Location de Fiftin app — abandonné : toutes les chambres doivent se voir
    d'un coup d'œil, pas se découvrir une à une). .detail-tabs/.detail-tab
    réutilisés tels quels (mêmes classes que la fiche détail d'une annonce à
-   plusieurs chambres) : juste un peu d'air en dessous, pour rester posés
-   sur la même page que le reste des contrôles plutôt que collés dessus. */
+   plusieurs chambres). Toujours affichés, y compris un seul onglet pour un
+   gîte (une seule chambre) — retour utilisateur explicite : même chrome
+   dans tous les cas plutôt qu'un sous-titre à part pour ce cas-là. */
 .cal-unit-tabs{margin-bottom:14px;}
-/* Une seule chambre : rien à choisir, juste son nom en sous-titre discret
-   plutôt que l'ancien gros libellé 22px (qui laissait croire à un choix
-   possible là où il n'y en avait aucun). */
-.cal-unit-solo{font-size:13px; font-weight:700; color:var(--sauge); text-align:center; margin-bottom:14px;}
-/* Même traitement en onglets pour "Afficher les réservations de" (choix de
-   la chambre Fiftin app reliée) — retour utilisateur, cette liste
-   déroulante restait le seul menu qui ressemblait encore à un choix de
-   chambre une fois celui du dessus passé en onglets. Onglets plus petits
-   ici que .cal-unit-tabs : ce n'est pas la navigation principale de la
-   page (déjà assurée par les onglets de chambre), juste un réglage —
-   sa propre étiquette au-dessus (voir .host-link-row label) l'annonce
-   comme tel plutôt que comme un second choix de chambre concurrent. */
-.cal-roomlink-tabs .detail-tab{font-size:11px; padding:7px 6px;}
+/* "Planning associé" — retour utilisateur : remplace le menu déroulant
+   (puis les onglets, eux aussi jugés encore trop "menu") par un cartouche
+   qui affiche l'état actuel et ouvre un volet de choix au clic (voir
+   kind==="roomlink" dans openSheet()) — même geste qu'un .profile-row qui
+   ouvre quelque chose ailleurs dans l'app (chevron ›), pas une navigation
+   de page comme les onglets au-dessus. */
+.planning-chip{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+  background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px;
+  font-family:'Jost',sans-serif; text-align:left; cursor:pointer; margin-bottom:18px;}
+.planning-chip-text{display:flex; flex-direction:column; gap:1px; min-width:0;}
+.planning-chip-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sauge);}
+.planning-chip-value{font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.planning-chip svg{width:16px; height:16px; color:var(--gray-mid); opacity:.6; flex-shrink:0;}
+/* Rangée Ajouter/modifier — sa propre ligne, alignée à droite (le bouton
+   "Aujourd'hui" qui la partageait avant a été retiré, retour utilisateur :
+   l'accordéon des mois ouvre déjà le mois en cours par défaut, ce bouton
+   ne servait plus qu'à revenir dessus après l'avoir replié à la main). */
+.cal-top-row{display:flex; align-items:center; justify-content:flex-end; gap:10px; margin-bottom:14px;}
+.cal-top-actions{display:flex; align-items:center; gap:8px;}
+.cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
 /* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
    emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
    .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
@@ -1523,6 +1537,7 @@ var userInteracted = false;
 var hostListingsCache = [];
 var hostAccountCache;
 var hostBookingContext = null;
+var hostRoomLinkContext = null;
 try{
   var saved = JSON.parse(localStorage.getItem("fiftin_state")||"{}");
   if(saved.filters) state.filters = saved.filters;
@@ -2914,12 +2929,25 @@ function openSheet(kind){
     // (fermable par le X ou le fond, comme demandé), le bouton du pied mène
     // au vrai formulaire de connexion plutôt que de dupliquer ses champs ici.
     inner = '<h3>Se connecter</h3><p class="sheet-sub">Se connecter pour programmer vos futurs séjours.</p>';
+  } else if(kind==="roomlink"){
+    // Choix de la chambre Fiftin app à relier (compte gestion uniquement)
+    // — un clic = enregistré tout de suite (même geste que kind==="sort",
+    // voir wireSheet() plus bas), pas de bouton "Valider" à part : ouvrir
+    // ce volet, c'est déjà l'intention de choisir.
+    var rlCtx = hostRoomLinkContext;
+    inner = '<h3>Planning associé</h3>'+
+      '<p class="sheet-sub">Choisissez la chambre de votre Fiftin app dont les réservations doivent s\'afficher ici, en lecture seule. Aucune écriture n\'est faite côté Fiftin app : seul ce lien, côté Séjours, est enregistré.</p>'+
+      '<div class="field-block sort-row">'+
+        '<button class="radio-row'+(!rlCtx.linkedRoomId?' active':'')+'" data-roomlink="">Aucune</button>'+
+        rlCtx.rooms.map(function(r){ return '<button class="radio-row'+(r.id===rlCtx.linkedRoomId?' active':'')+'" data-roomlink="'+esc(r.id)+'">'+esc(r.name)+'</button>'; }).join("")+
+      '</div>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
     : kind==="hostform" ? (hostFormEditListing ? "Enregistrer les modifications" : "Envoyer l'annonce")
     : kind==="hostbooking" ? ((hostBookingContext.mode==="view" || hostBookingContext.isGestion) ? "Fermer" : "Ajouter la réservation")
     : kind==="loginPrompt" ? "Se connecter"
+    : kind==="roomlink" ? "Fermer"
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -3093,6 +3121,25 @@ function openSheet(kind){
   } else if(kind==="sort"){
     Array.prototype.forEach.call(root.querySelectorAll("[data-sort]"), function(el){
       el.addEventListener("click", function(){ state.sort = el.getAttribute("data-sort"); closeSheet(); persist(); renderFilterBar(); renderTabContent(); });
+    });
+  } else if(kind==="roomlink"){
+    Array.prototype.forEach.call(root.querySelectorAll("[data-roomlink]"), function(el){
+      el.addEventListener("click", function(){
+        var rlCtx = hostRoomLinkContext;
+        var newRoomId = el.getAttribute("data-roomlink");
+        if(newRoomId===(rlCtx.linkedRoomId||"")){ closeSheet(); return; }
+        /* linkedRoomId (sur la chambre, dans le tableau units) ne sert qu'à
+           choisir QUOI afficher en lecture seule — jamais un chemin
+           d'écriture vers accounts/{uid}, voir le grand commentaire de
+           fetchHostBookings(). On réécrit tout le tableau units (Firestore
+           ne permet pas de modifier un seul élément d'un array par index). */
+        var newUnits = (rlCtx.listing.units||[]).map(function(u){ return u.id===rlCtx.unit.id ? Object.assign({}, u, {linkedRoomId:newRoomId}) : u; });
+        firebase.firestore().collection("listings").doc(rlCtx.listing.id).update({units:newUnits}).then(function(){
+          rlCtx.listing.units = newUnits;
+          closeSheet();
+          renderHostCalendar();
+        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); closeSheet(); });
+      });
     });
   }
 }
@@ -4638,23 +4685,6 @@ function renderHostCalendar(){
   });
 }
 
-/* Mise en page reprise de la vue "Location" de Fiftin app (grille de mois
-   par 2 avec numéros de semaine — déjà le cas ici — + pagination "n/total"
-   d'une chambre à l'autre + rangée Année/Aujourd'hui/action en haut) : même
-   structure, mais identité visuelle et couleurs Séjours inchangées (sauge/
-   crème, un seul vert sauge pour "occupé" — Séjours reste en lecture seule,
-   pas un outil de gestion multi-sources comme app/). */
-function scrollToCurrentMonthCal(){
-  var now = new Date();
-  var monthEls = document.querySelectorAll(".cal-mini");
-  var el = monthEls[now.getMonth()];
-  if(!el) return;
-  // Déplié par défaut (voir monthMiniHtml()), mais l'hôte a pu le
-  // replier à la main entre-temps — "Aujourd'hui" doit toujours amener
-  // sur un mois visible, jamais sur un volet fermé.
-  el.classList.remove("collapsed");
-  el.scrollIntoView({block:"center", behavior:"smooth"});
-}
 
 function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings){
   var feed = document.getElementById("feed");
@@ -4666,57 +4696,63 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   var months = "";
   for(var m=0;m<12;m++) months += monthMiniHtml(year, m, occ, todayStr);
 
-  var listingSwitchHtml = listings.length>1 ?
-    '<select class="host-listing-select" id="host-listing-select">'+
-      listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
-    '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
+  // Tuiles de logement façon Mes séjours (retour utilisateur) — toujours
+  // les annonces SÉJOURS (listings/units), jamais les chambres Fiftin app
+  // (rooms) : les deux logiciels restent deux sources distinctes, seul un
+  // lien PONCTUEL entre les deux existe (voir le cartouche "Planning
+  // associé" plus bas) — jamais une annonce ou une chambre qui n'existe
+  // que côté Fiftin app ne doit apparaître ici en onglet de navigation.
+  var listingSwitchHtml = '<div class="host-listing-tiles">'+
+    listings.map(function(l){
+      return '<button type="button" class="host-listing-tile'+(l.id===listing.id?' active':'')+'" data-listing-tile="'+esc(l.id)+'">'+
+        '<b>'+esc(l.name||"(sans nom)")+'</b>'+
+        '<span>'+(l.status==="published"?"Publiée":"En attente")+'</span>'+
+      '</button>';
+    }).join("")+
+  '</div>';
 
   // Onglets pour choisir la chambre (retour utilisateur : le va-et-vient
   // "1/2 < Chambre Bleue >" ne montrait jamais les chambres toutes à la
-  // fois, il fallait cliquer pour découvrir ce qu'il y avait — repris sur
-  // .detail-tabs/.detail-tab, déjà utilisés pour ce même choix sur la
-  // fiche détail d'une annonce à plusieurs chambres (même geste des deux
-  // côtés de l'app). Une seule chambre : pas d'onglet à afficher (rien à
-  // choisir), juste son nom en petit sous-titre.
-  var unitPagerHtml = units.length>1 ?
-    '<div class="detail-tabs cal-unit-tabs">'+
-      units.map(function(u){ return '<button type="button" class="detail-tab'+(u.id===unit.id?' active':'')+'" data-unit-tab="'+esc(u.id)+'">'+esc(u.name||"(sans nom)")+'</button>'; }).join("")+
-    '</div>' :
-    '<div class="cal-unit-solo">'+esc(unit.name||"(sans nom)")+'</div>';
+  // fois — repris sur .detail-tabs/.detail-tab, déjà utilisés pour ce même
+  // choix sur la fiche détail d'une annonce à plusieurs chambres. Toujours
+  // affichés, y compris une seule chambre pour un gîte (retour utilisateur
+  // explicite) : même chrome dans tous les cas, jamais de sous-titre à
+  // part pour ce cas-là. Chambres SÉJOURS (units) uniquement, comme les
+  // tuiles de logement ci-dessus.
+  var unitPagerHtml = '<div class="detail-tabs cal-unit-tabs">'+
+    units.map(function(u){ return '<button type="button" class="detail-tab'+(u.id===unit.id?' active':'')+'" data-unit-tab="'+esc(u.id)+'">'+esc(u.name||"(sans nom)")+'</button>'; }).join("")+
+  '</div>';
 
-  // Onglets ici aussi (retour utilisateur : "au lieu de menu list pour
-  // choisir la chambre" — ce select restait le seul menu déroulant
-  // ressemblant à un choix de chambre une fois le vrai sélecteur de
-  // chambre Séjours passé en onglets ci-dessus, voir unitPagerHtml).
-  // .detail-tab plus petits ici (.cal-roomlink-tabs) : ce n'est pas LA
-  // navigation principale de la page (déjà les onglets au-dessus), mais
-  // un réglage secondaire — sa propre étiquette au-dessus le distingue.
+  // "Planning associé" : le SEUL endroit où une chambre Fiftin app (rooms)
+  // apparaît — un cartouche d'état (pas une navigation) qui ouvre un volet
+  // de choix au clic (voir kind==="roomlink"). Retour utilisateur : "juste
+  // un lien possible entre les deux si besoin", jamais une chambre Fiftin
+  // app ne doit se voir proposée en onglet de premier plan comme celles
+  // du dessus.
+  var curRoomName = linkedRoomId ? (rooms.filter(function(r){ return r.id===linkedRoomId; })[0] || {}).name : "";
   var roomLinkHtml = (isGestion && rooms.length) ?
-    '<div class="host-link-row"><label>Afficher les réservations de</label>'+
-    '<div class="detail-tabs cal-roomlink-tabs">'+
-      '<button type="button" class="detail-tab'+(!linkedRoomId?' active':'')+'" data-room-link="">Non reliée</button>'+
-      rooms.map(function(r){ return '<button type="button" class="detail-tab'+(r.id===linkedRoomId?' active':'')+'" data-room-link="'+esc(r.id)+'">'+esc(r.name)+'</button>'; }).join("")+
-    '</div></div>' : '';
+    '<button type="button" class="planning-chip" id="planning-chip-btn">'+
+      '<span class="planning-chip-text"><span class="planning-chip-label">Planning associé</span>'+
+        '<span class="planning-chip-value">'+(curRoomName ? esc(curRoomName) : "Aucun — associer un planning")+'</span></span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
+    '</button>' : '';
 
   var actionPillHtml = isGestion
     ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier →</a>'
     : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
-  // Hiérarchie revue (retour utilisateur) : quelle annonce -> quelle
-  // chambre -> comment elle est source (lien Fiftin app, le cas échéant)
-  // -> agir (Aujourd'hui/Ajouter) -> le calendrier lui-même. Les actions
-  // étaient avant au-dessus du choix de chambre ; elles portent pourtant
-  // sur LA chambre choisie juste avant, d'où leur déplacement juste
-  // au-dessus du calendrier qu'elles pilotent.
+  // Hiérarchie revue (retour utilisateur) : statut du compte -> quelle
+  // annonce -> quelle chambre -> planning associé (si compte géré) ->
+  // agir (Ajouter/modifier) -> le calendrier. Bouton "Aujourd'hui" retiré
+  // (retour utilisateur) : l'accordéon des mois ouvre déjà le mois en
+  // cours par défaut.
   feed.innerHTML = '<div class="host-view">'+
-    '<div class="host-view-head">'+listingSwitchHtml+
-      '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
-    '</div>'+
+    '<div class="host-status-row"><span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span></div>'+
+    listingSwitchHtml+
     unitPagerHtml+
     roomLinkHtml+
     '<div class="cal-top-row">'+
       '<div class="cal-top-actions">'+
-        '<button type="button" class="cal-today-btn" id="cal-today-btn">Aujourd\'hui</button>'+
         actionPillHtml+
       '</div>'+
     '</div>'+
@@ -4731,52 +4767,33 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   '</div>';
 
   if(listings.length>1){
-    document.getElementById("host-listing-select").addEventListener("change", function(e){
-      state.hostListingId = e.target.value;
-      state.hostUnitId = null;
-      renderHostCalendar();
+    Array.prototype.forEach.call(feed.querySelectorAll("[data-listing-tile]"), function(btn){
+      btn.addEventListener("click", function(){
+        var newId = btn.getAttribute("data-listing-tile");
+        if(newId===listing.id) return;
+        state.hostListingId = newId;
+        state.hostUnitId = null;
+        renderHostCalendar();
+      });
     });
   }
   if(units.length>1){
     Array.prototype.forEach.call(feed.querySelectorAll("[data-unit-tab]"), function(btn){
       btn.addEventListener("click", function(){
-        state.hostUnitId = btn.getAttribute("data-unit-tab");
+        var newId = btn.getAttribute("data-unit-tab");
+        if(newId===unit.id) return;
+        state.hostUnitId = newId;
         renderHostCalendar();
       });
     });
   }
-  if(isGestion && rooms.length){
-    Array.prototype.forEach.call(feed.querySelectorAll("[data-room-link]"), function(btn){
-      btn.addEventListener("click", function(){
-        if(btn.classList.contains("active")) return; // déjà la sélection courante
-        var newRoomId = btn.getAttribute("data-room-link");
-        var tabs = feed.querySelectorAll("[data-room-link]");
-        Array.prototype.forEach.call(tabs, function(b){ b.disabled = true; });
-        /* linkedRoomId (sur la chambre, dans le tableau units) ne sert qu'à
-           choisir QUOI afficher en lecture seule — jamais un chemin
-           d'écriture, voir commentaire plus haut. On réécrit tout le
-           tableau units (Firestore ne permet pas de modifier un seul élément
-           d'un array par index), jamais accounts/{uid}. */
-        var newUnits = units.map(function(u){ return u.id===unit.id ? Object.assign({}, u, {linkedRoomId:newRoomId}) : u; });
-        firebase.firestore().collection("listings").doc(listing.id).update({units:newUnits}).then(function(){
-          listing.units = newUnits;
-          renderHostCalendar();
-        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); Array.prototype.forEach.call(tabs, function(b){ b.disabled = false; }); });
-      });
-    });
-  }
+  var planningChipBtn = document.getElementById("planning-chip-btn");
+  if(planningChipBtn) planningChipBtn.addEventListener("click", function(){
+    hostRoomLinkContext = {listing:listing, unit:unit, rooms:rooms, linkedRoomId:linkedRoomId};
+    openSheet("roomlink");
+  });
   document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
   document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
-  document.getElementById("cal-today-btn").addEventListener("click", function(){
-    var currentYear = (new Date()).getFullYear();
-    if(state.hostCalYear!==currentYear){
-      state.hostCalYear = currentYear;
-      renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings);
-      setTimeout(scrollToCurrentMonthCal, 60);
-    } else {
-      scrollToCurrentMonthCal();
-    }
-  });
   var addBtn = document.getElementById("cal-add-btn");
   if(addBtn) addBtn.addEventListener("click", function(){
     hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:null};
