@@ -756,17 +756,18 @@ body.detail-open nav.tabbar{z-index:220;}
 .cal-top-actions{display:flex; align-items:center; gap:8px;}
 .cal-today-btn{background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--sauge-deep);}
 .cal-add-pill{background:var(--yellow); border:none; border-radius:16px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:800; color:var(--sauge-deep); text-decoration:none; white-space:nowrap; display:inline-block;}
-.cal-unit-pager{text-align:center; margin-bottom:18px;}
-.cal-unit-pager-count{font-size:11px; font-weight:700; color:var(--sauge); display:block; margin-bottom:2px;}
-.cal-unit-pager-row{display:flex; align-items:center; justify-content:center; gap:14px;}
-/* Boutons chambre précédente/suivante en carré bordé (comme le sélecteur de
-   chambre "Chambre 1 · 1/8" de la vue Location de Fiftin app, .vnav-btn) —
-   demande explicite de coller à la mécanique de navigation de l'app pour ne
-   pas dérouter l'hôte qui utilise les deux outils : même gabarit de bouton,
-   couleurs Séjours (sauge/--line) inchangées. */
-.cal-unit-pager-row button{background:none; border:1.5px solid var(--line); border-radius:8px; width:34px; height:34px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0; flex-shrink:0;}
-.cal-unit-pager-row button svg{width:18px; height:18px;}
-.cal-unit-pager-name{font-size:22px; font-weight:800; letter-spacing:-0.01em;}
+/* Choix de la chambre en onglets (retour utilisateur, remplace l'ancien
+   va-et-vient "1/2 < Chambre Bleue >" qui collait à la mécanique de la vue
+   Location de Fiftin app — abandonné : toutes les chambres doivent se voir
+   d'un coup d'œil, pas se découvrir une à une). .detail-tabs/.detail-tab
+   réutilisés tels quels (mêmes classes que la fiche détail d'une annonce à
+   plusieurs chambres) : juste un peu d'air en dessous, pour rester posés
+   sur la même page que le reste des contrôles plutôt que collés dessus. */
+.cal-unit-tabs{margin-bottom:14px;}
+/* Une seule chambre : rien à choisir, juste son nom en sous-titre discret
+   plutôt que l'ancien gros libellé 22px (qui laissait croire à un choix
+   possible là où il n'y en avait aucun). */
+.cal-unit-solo{font-size:13px; font-weight:700; color:var(--sauge); text-align:center; margin-bottom:14px;}
 /* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
    emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
    .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
@@ -4660,17 +4661,18 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
       listings.map(function(l){ return '<option value="'+esc(l.id)+'"'+(l.id===listing.id?' selected':'')+'>'+esc(l.name||"(sans nom)")+'</option>'; }).join("")+
     '</select>' : '<b class="host-listing-name">'+esc(listing.name||"(sans nom)")+'</b>';
 
-  var unitIndex = units.findIndex(function(u){ return u.id===unit.id; });
+  // Onglets pour choisir la chambre (retour utilisateur : le va-et-vient
+  // "1/2 < Chambre Bleue >" ne montrait jamais les chambres toutes à la
+  // fois, il fallait cliquer pour découvrir ce qu'il y avait — repris sur
+  // .detail-tabs/.detail-tab, déjà utilisés pour ce même choix sur la
+  // fiche détail d'une annonce à plusieurs chambres (même geste des deux
+  // côtés de l'app). Une seule chambre : pas d'onglet à afficher (rien à
+  // choisir), juste son nom en petit sous-titre.
   var unitPagerHtml = units.length>1 ?
-    '<div class="cal-unit-pager">'+
-      '<span class="cal-unit-pager-count">'+(unitIndex+1)+' / '+units.length+'</span>'+
-      '<div class="cal-unit-pager-row">'+
-        '<button type="button" id="cal-unit-prev" aria-label="Chambre précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
-        '<b class="cal-unit-pager-name">'+esc(unit.name||"(sans nom)")+'</b>'+
-        '<button type="button" id="cal-unit-next" aria-label="Chambre suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
-      '</div>'+
+    '<div class="detail-tabs cal-unit-tabs">'+
+      units.map(function(u){ return '<button type="button" class="detail-tab'+(u.id===unit.id?' active':'')+'" data-unit-tab="'+esc(u.id)+'">'+esc(u.name||"(sans nom)")+'</button>'; }).join("")+
     '</div>' :
-    '<b class="cal-unit-pager-name" style="display:block;text-align:center;margin:0 0 18px;">'+esc(unit.name||"(sans nom)")+'</b>';
+    '<div class="cal-unit-solo">'+esc(unit.name||"(sans nom)")+'</div>';
 
   var roomLinkHtml = (isGestion && rooms.length) ?
     '<div class="host-link-row"><label>Afficher les réservations de</label><select id="host-room-link">'+
@@ -4682,18 +4684,24 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier →</a>'
     : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
+  // Hiérarchie revue (retour utilisateur) : quelle annonce -> quelle
+  // chambre -> comment elle est source (lien Fiftin app, le cas échéant)
+  // -> agir (Aujourd'hui/Ajouter) -> le calendrier lui-même. Les actions
+  // étaient avant au-dessus du choix de chambre ; elles portent pourtant
+  // sur LA chambre choisie juste avant, d'où leur déplacement juste
+  // au-dessus du calendrier qu'elles pilotent.
   feed.innerHTML = '<div class="host-view">'+
     '<div class="host-view-head">'+listingSwitchHtml+
       '<span class="host-status-badge '+(isGestion?'linked':'standalone')+'">'+(isGestion?"Géré depuis Fiftin app · lecture seule":"Calendrier simplifié")+'</span>'+
     '</div>'+
+    unitPagerHtml+
+    roomLinkHtml+
     '<div class="cal-top-row">'+
       '<div class="cal-top-actions">'+
         '<button type="button" class="cal-today-btn" id="cal-today-btn">Aujourd\'hui</button>'+
         actionPillHtml+
       '</div>'+
     '</div>'+
-    unitPagerHtml+
-    roomLinkHtml+
     '<div class="cal-card">'+
       '<div class="cal-year-nav">'+
         '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
@@ -4712,15 +4720,11 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     });
   }
   if(units.length>1){
-    document.getElementById("cal-unit-prev").addEventListener("click", function(){
-      var idx = units.findIndex(function(u){ return u.id===unit.id; });
-      state.hostUnitId = units[(idx-1+units.length)%units.length].id;
-      renderHostCalendar();
-    });
-    document.getElementById("cal-unit-next").addEventListener("click", function(){
-      var idx = units.findIndex(function(u){ return u.id===unit.id; });
-      state.hostUnitId = units[(idx+1)%units.length].id;
-      renderHostCalendar();
+    Array.prototype.forEach.call(feed.querySelectorAll("[data-unit-tab]"), function(btn){
+      btn.addEventListener("click", function(){
+        state.hostUnitId = btn.getAttribute("data-unit-tab");
+        renderHostCalendar();
+      });
     });
   }
   if(isGestion && rooms.length){
