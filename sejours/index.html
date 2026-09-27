@@ -694,6 +694,15 @@ body.detail-open nav.tabbar{z-index:220;}
 .switch-tile.hotes:not(.current) .switch-icon{background:rgba(78,103,188,.14); color:var(--lavender-deep);}
 .profile-section-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); margin:24px 0 4px 2px;}
 .profile-list.legal .profile-row{font-weight:500; color:var(--sauge);}
+/* Cartes blanches séparant les groupes de menu du Profil (retour
+   utilisateur, "comme sur d'autres vues") — même recette que
+   .detail-group/.detail-card (fond blanc, coins arrondis, ombre légère).
+   .profile-list garde son border-top (inutile en haut de carte, mais
+   sans incidence visuelle vu le padding) ; seul le dernier .profile-row
+   perd son border-bottom, redondant avec le bord bas de la carte. */
+.profile-card{background:#fff; border-radius:16px; padding:0 14px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
+.profile-card .profile-list{border-top:none;}
+.profile-card .profile-row:last-child{border-bottom:none;}
 
 /* ---------- validation des annonces (admin) ---------- */
 .admin-queue{padding:24px 0 110px;}
@@ -3925,16 +3934,16 @@ function renderProfile(){
         '<span>'+hostSub+'</span>'+
       '</button>'+
     '</div>'+
-    '<div class="profile-list">'+
-      (isAdmin() ? '<div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div></div></div>' : '')+
+    '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-    '</div>'+
+    '</div></div>'+
     '<div class="profile-section-label">Informations légales</div>'+
-    '<div class="profile-list legal">'+
+    '<div class="profile-card"><div class="profile-list legal">'+
       '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-    '</div></div>';
+    '</div></div></div>';
   document.querySelector('[data-switch="voyageur"]').addEventListener("click", function(){ switchTab("explore"); });
   document.getElementById("btn-host-space").addEventListener("click", function(){
     if(connected) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
@@ -4048,14 +4057,17 @@ function switchTab(tab){
      (carte sélectionnée, grande vignette Mes séjours) sans devoir hériter
      de ce style. */
   document.getElementById("feed").classList.toggle("feed-explore", tab==="explore");
-  // Fond blanc de la vue Carte (retour utilisateur) — voir #feed.feed-map en CSS.
-  document.getElementById("feed").classList.toggle("feed-map", tab==="map");
+  // Fond gris très léger (--cream-light) — Carte est la référence (retour
+  // utilisateur), repris ici aussi pour Mes séjours et Profil. Le nom de
+  // classe "feed-map" reste tel quel (réutilisé, pas renommé) pour limiter
+  // le diff : voir #feed.feed-map en CSS.
+  document.getElementById("feed").classList.toggle("feed-map", tab==="map" || tab==="likes" || tab==="profile");
   // #result-line reçoit les mêmes classes que #feed, pour que .result-pill
   // affiche le même fond que le feed en dessous (voir commentaire CSS de
   // .result-pill — retour utilisateur, la pillule devait suivre ce fond,
   // pas rester figée en --cream).
   document.getElementById("result-line").classList.toggle("feed-explore", tab==="explore");
-  document.getElementById("result-line").classList.toggle("feed-map", tab==="map");
+  document.getElementById("result-line").classList.toggle("feed-map", tab==="map" || tab==="likes" || tab==="profile");
   /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
      au chargement initial — pas se répéter à chaque retour sur Explorer.
      Dès qu'on change d'onglet, il est masqué définitivement. La barre
@@ -4719,9 +4731,9 @@ if(state.hostMode){
   renderTabbar();
   renderFilterBar();
   document.getElementById("feed").classList.toggle("feed-explore", state.tab==="explore"); // voir switchTab() : state.tab vaut "explore" par défaut ici, jamais passé par switchTab() au tout premier rendu
-  document.getElementById("feed").classList.toggle("feed-map", state.tab==="map");
+  document.getElementById("feed").classList.toggle("feed-map", state.tab==="map" || state.tab==="likes" || state.tab==="profile");
   document.getElementById("result-line").classList.toggle("feed-explore", state.tab==="explore");
-  document.getElementById("result-line").classList.toggle("feed-map", state.tab==="map");
+  document.getElementById("result-line").classList.toggle("feed-map", state.tab==="map" || state.tab==="likes" || state.tab==="profile");
   renderFeed();
   renderResultLine();
 }
