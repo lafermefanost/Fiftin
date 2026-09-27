@@ -221,6 +221,14 @@ a{color:inherit; text-decoration:none;}
 #feed.feed-map{background:var(--cream-light);}
 #feed.feed-map .map-list-item{box-shadow:0 2px 10px rgba(46,43,34,.1);}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
+/* "Charger plus d'hébergements" (pagination du fil, voir README
+   « Performance ») — même esprit que .btn-photo-add (pleine largeur,
+   discret) mais bordure pleine plutôt que pointillée : "pointillé" est
+   déjà réservé au geste "ajouter" ailleurs dans le site, alors qu'ici
+   c'est une continuation, pas un ajout. */
+.load-more-btn{width:100%; padding:14px; border:1.5px solid var(--line); border-radius:16px; background:var(--cream-deep);
+  font-family:'Jost',sans-serif; font-size:13.5px; font-weight:700; color:var(--sauge-deep);}
+.load-more-btn:disabled{opacity:.6;}
 /* Bref clignotement au clic sur une punaise de la carte embarquée
    d'Explorer (voir scrollToFeedCard()) — repère visuellement, une fois le
    défilement terminé, LA carte visée parmi toutes celles du fil. outline
@@ -1167,6 +1175,59 @@ var staticListings = [];
 var hostFirestoreListings = [];
 function rebuildListings(){ LISTINGS = staticListings.concat(hostFirestoreListings); }
 
+/* Pagination du fil de cartes (Explorer) — voir README « Performance ».
+   LISTINGS peut désormais rester PARTIEL (seules les annonces déjà
+   affichées y sont chargées en détail, photos comprises) ; l'index léger
+   (listingIndexCache, voir fetchListingIndex()) reste la seule source
+   TOUJOURS complète. PAGE_SIZE : nombre de fiches complètes chargées à la
+   fois. visibleListingCount : combien de matchingIndexListings() sont
+   actuellement demandées — remis à PAGE_SIZE à chaque changement de
+   filtre/tri/zone (renderFeed()), avancé de PAGE_SIZE par
+   loadMoreListings() ("Charger plus", sans reset). */
+var PAGE_SIZE = 12;
+var visibleListingCount = PAGE_SIZE;
+
+/* Va chercher en Firestore les documents COMPLETS des identifiants listés
+   qui ne sont pas déjà dans LISTINGS (déjà chargés depuis une page
+   précédente, un lien profond, une collection déjà ouverte…) — jamais de
+   double téléchargement pour une annonce déjà en cache. cb() est appelé
+   une fois les documents manquants récupérés (immédiatement si rien ne
+   manquait — le cas normal une fois qu'une page a déjà été vue). */
+function ensureListingDocsLoaded(docIds, cb){
+  var known = {};
+  LISTINGS.forEach(function(l){ known[listingKey(l)] = true; });
+  var missing = docIds.filter(function(id){ return id && !known[id]; });
+  if(!missing.length || typeof firebase==="undefined"){ cb(); return; }
+  Promise.all(missing.map(function(id){
+    return firebase.firestore().collection("listings").doc(id).get().catch(function(){ return null; });
+  })).then(function(docs){
+    docs.forEach(function(doc){
+      if(doc && doc.exists) hostFirestoreListings.push(normalizeHostListing(doc));
+    });
+    rebuildListings();
+    cb();
+  });
+}
+
+/* Retrouve une annonce par son id numérique (idFromString(docId), voir
+   normalizeHostListing()) même si sa fiche complète n'est pas encore
+   chargée (pagination, voir ensureListingDocsLoaded() ci-dessus) —
+   utilisé par les points d'entrée qui peuvent référencer N'IMPORTE
+   QUELLE annonce publiée, pas seulement celles de la page actuellement
+   affichée : une punaise de la carte (tous les pins viennent de l'index
+   complet, voir mapPinsFromIndex()), un lien profond
+   (maybeOpenDeepLink()), une annonce sauvegardée dans une collection.
+   cb(null) si l'annonce n'existe pas/plus (ex. supprimée entre-temps). */
+function resolveListingById(numericId, cb){
+  var l = LISTINGS.filter(function(x){ return x.id===numericId; })[0];
+  if(l){ cb(l); return; }
+  var ix = listingIndexCache.filter(function(x){ return x.id===numericId; })[0];
+  if(!ix){ cb(null); return; }
+  ensureListingDocsLoaded([ix.docId], function(){
+    cb(LISTINGS.filter(function(x){ return x.id===numericId; })[0] || null);
+  });
+}
+
 /* ---------------- comptes Fiftin (même Firebase que app/) ----------------
    Même config, même mécanisme de connexion (email + mot de passe) que
    app/index.html : un compte créé ou connecté ici est le même compte que
@@ -1382,33 +1443,27 @@ function normalizeHostListing(doc){
     avail: []
   };
 }
-/* listings.json est désormais toujours vide (voir README, "Nettoyage") —
-   toutes les annonces réelles viennent d'ici, Firestore. Charger le SDK
-   Firebase (4 scripts, l'un après l'autre, voir loadFirebaseSDK) puis
-   interroger Firestore prend structurellement plus longtemps qu'un simple
-   fetch("listings.json") same-origin : sans le garde-fou ci-dessous, la
-   toute première page (state.loading, voir plus bas au boot) passait à
-   "chargé" dès listings.json résolu, affichant "Aucun hébergement" à
-   n'importe quel visiteur assez rapide pour voir cet instant précis —
-   bug réel, reproduit en retardant artificiellement la réponse Firestore
-   (le fil se corrigeait bien tout seul une fois Firestore arrivé, mais
-   ce premier écran, lui, avait déjà affirmé à tort qu'il n'y avait rien).
-   firestoreListingsSettled + maybeFinishInitialLoad() (voir plus bas, au
-   boot) retiennent state.loading=true tant que les DEUX sources n'ont pas
-   répondu, succès ou échec confondus. */
-var firestoreListingsSettled = false;
-function fetchPublishedListings(){
+/* listings.json est désormais toujours vide (voir README, "Nettoyage").
+   fetchPublishedListings() télécharge les documents COMPLETS (photos,
+   chambres) de toutes les annonces publiées — volontairement PAS appelée
+   au boot depuis ce chantier (voir fetchListingIndex()/PAGE_SIZE plus
+   bas) : ce serait exactement le téléchargement massif que la pagination
+   cherche à éviter. Ne reste appelée que (1) en filet de secours par
+   fetchListingIndex() si l'index revient vide (voir son commentaire), et
+   (2) après une action ponctuelle qui vient de changer le catalogue
+   public (ex. un admin qui publie une annonce, "Annonces à valider").
+   cb optionnel, appelé une fois réglé (succès, échec ou délai dépassé). */
+function fetchPublishedListings(cb){
   var settled = false;
   function settle(){
     if(settled) return;
     settled = true;
-    firestoreListingsSettled = true;
-    maybeFinishInitialLoad();
+    if(cb) cb();
   }
   // Filet de secours : si Firebase met vraiment trop de temps (SDK lent à
   // charger, requête qui traîne, script bloqué par un bloqueur de pub…),
-  // ne bloque pas indéfiniment le tout premier affichage — le fil se
-  // complètera quand même au prochain rendu Firestore réussi, comme avant.
+  // ne bloque pas indéfiniment l'appelant — le fil se complètera quand
+  // même au prochain rendu Firestore réussi, comme avant.
   setTimeout(settle, 6000);
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
@@ -1436,15 +1491,15 @@ function fetchPublishedListings(){
 /* Index public léger (listingIndex/{id}, voir functions/index.js et
    README « Performance ») : TOUTES les annonces publiées, mais seulement
    leurs champs légers (position, prix, lieu, prestations, jamais les
-   photos). Sert à deux choses qui ont besoin de connaître la totalité des
-   annonces sans en payer le poids : les pins de la carte embarquée
-   (mapPinsFromIndex(), toujours complets même quand le fil de cartes en
-   dessous ne l'est pas — voir son commentaire) et, plus tard, le calcul
-   de ce qui doit être chargé en détail par la pagination du fil. Même
-   garde-fou de premier chargement que fetchPublishedListings() ci-dessus
-   (settle() + maybeFinishInitialLoad()), pour la même raison : sans lui,
-   un visiteur rapide verrait une carte à moitié vide le temps que
-   Firestore réponde. */
+   photos) — LA source chargée au boot, à la place de
+   fetchPublishedListings() ci-dessus (voir son commentaire). Sert à la
+   fois aux pins de la carte embarquée (mapPinsFromIndex(), toujours
+   complets même quand le fil de cartes en dessous ne l'est pas) et à la
+   pagination du fil (matchingIndexListings()/PAGE_SIZE, plus bas) : quelles
+   annonces, dans quel ordre, charger en détail. Même garde-fou de premier
+   chargement (settle() + maybeFinishInitialLoad()) que l'ancien montage :
+   sans lui, un visiteur rapide verrait une carte à moitié vide le temps
+   que Firestore réponde. */
 var listingIndexCache = [];
 var listingIndexSettled = false;
 function fetchListingIndex(){
@@ -1467,6 +1522,21 @@ function fetchListingIndex(){
         return d;
       });
       if(mapInstance) refreshExploreMapMarkers(); // arrivé après le premier rendu de la carte (mapInstance déjà monté) : ne pas attendre la prochaine action pour afficher les vrais pins
+      if(snap.empty){
+        // Filet de secours — voir aussi matchingIndexListings() : un
+        // index vide veut dire soit "vraiment aucune annonce publiée"
+        // (fetchPublishedListings() reviendra vide aussi, sans dégât),
+        // soit "Cloud Function/règle listingIndex pas encore déployée"
+        // (voir README, « Important, ter ») alors que de vraies annonces
+        // existent bien dans listings/ — impossible à distinguer les
+        // deux sans interroger listings/ directement. Dans ce second cas,
+        // ce filet est ce qui évite que le fil entier reste bloqué sur
+        // "Aucun hébergement" alors que le catalogue ne l'est pas
+        // vraiment : dégradé (plus de pagination tant que l'index reste
+        // vide), mais fonctionnel.
+        fetchPublishedListings(settle);
+        return;
+      }
       settle();
     }).catch(function(){ settle(); });
   });
@@ -1625,7 +1695,7 @@ function matchesLocation(l, f){
    sur l'annonce : recalculée à chaque rendu, pour rester juste si le
    voyageur active/désactive sa position en cours de navigation. */
 var DEFAULT_ORIGIN = {lat:48.7370, lng:2.3280}; // La Ferme Fanost (Essonne) — mêmes coordonnées que "Le Petit Fanost" dans listings.json
-// haversineKm() existe déjà plus bas (mapZoneFilteredListings, la zone de
+// haversineKm() existe déjà plus bas (matchingIndexListings(), la zone de
 // recherche dessinée à la main sur la carte) — réutilisée telle quelle,
 // pas redéclarée : une déclaration de fonction est hissée quelle que soit
 // sa position dans le fichier, donc disponible ici sans avoir à la copier.
@@ -1705,7 +1775,7 @@ var AMEN_ICONS = {
    filtres qui viennent ensuite réduire la sélection". `filters.distance`
    vaut donc `null` par défaut (AUCUN filtre de distance, quelle que soit
    la distance réelle — une annonce à l'autre bout du monde resterait
-   visible) plutôt qu'un nombre, aussi grand soit-il ; voir filteredListings()
+   visible) plutôt qu'un nombre, aussi grand soit-il ; voir matchesAllFilters()
    plus bas, qui ne compare que si `f.distance!=null`. MAX_DISTANCE_KM
    reste utile comme SOMMET du curseur du volet Distance (au-delà de toute
    distance réelle en France métropolitaine) : le voyageur qui veut filtrer
@@ -2001,15 +2071,14 @@ function listingPriceLabel(l){
   return (l.price!=null ? l.price : "?") + "€/nuit";
 }
 
-/* Prédicat de filtrage partagé — utilisé tel quel sur les annonces
-   COMPLÈTES de LISTINGS (filteredListings() ci-dessous, le fil de cartes)
-   ET sur les entrées LÉGÈRES de listingIndexCache (mapPinsFromIndex(),
-   plus bas) : les deux portent les mêmes champs utiles au filtrage
+/* Prédicat de filtrage — fonctionne aussi bien sur une annonce COMPLÈTE
+   (LISTINGS) que sur une entrée LÉGÈRE de l'index (listingIndexCache) :
+   les deux portent les mêmes champs utiles au filtrage
    (region/regionName/deptName/city, lat/lng, price, amen), seules les
-   photos/chambres manquent côté index, jamais lues ici. Un seul endroit
-   qui décide "cette annonce correspond aux filtres actifs", pour ne
-   jamais risquer que la carte et le fil de cartes se désaccordent sur ce
-   qui est affiché. */
+   photos/chambres manquent côté index, jamais lues ici. Utilisé par
+   matchingIndexListings() ci-dessous — un seul endroit qui décide "cette
+   annonce correspond aux filtres actifs", pour ne jamais risquer que la
+   carte, le compteur et la pagination se désaccordent entre eux. */
 function matchesAllFilters(l, f){
   if(!matchesLocation(l, f)) return false;
   if(f.distance!=null && listingDistanceKm(l) > f.distance) return false;
@@ -2018,18 +2087,37 @@ function matchesAllFilters(l, f){
   return true;
 }
 
-function filteredListings(){
-  // Favoris (Mes séjours) ne passe plus par ici : renderFavorisView() gère
-  // sa propre liste (annonces d'UNE collection), sans filtres Lieu/Distance/
-  // Prix/Prestations/Trier — voir son propre commentaire plus bas.
-  var f = state.filters;
-  var list = LISTINGS.filter(function(l){ return matchesAllFilters(l, f); });
-  if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return listingDistanceKm(a)-listingDistanceKm(b); });
-  else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return listingDistanceKm(b)-listingDistanceKm(a); });
-  else if(state.sort==="likes_desc") list = list.slice().sort(function(a,b){ return (b.likeCount||0)-(a.likeCount||0); });
-  else if(state.sort==="price_asc") list = list.slice().sort(function(a,b){ return a.price-b.price; });
-  else if(state.sort==="price_desc") list = list.slice().sort(function(a,b){ return b.price-a.price; });
+function sortListings(list){
+  if(state.sort==="distance_asc") return list.slice().sort(function(a,b){ return listingDistanceKm(a)-listingDistanceKm(b); });
+  if(state.sort==="distance_desc") return list.slice().sort(function(a,b){ return listingDistanceKm(b)-listingDistanceKm(a); });
+  if(state.sort==="likes_desc") return list.slice().sort(function(a,b){ return (b.likeCount||0)-(a.likeCount||0); });
+  if(state.sort==="price_asc") return list.slice().sort(function(a,b){ return a.price-b.price; });
+  if(state.sort==="price_desc") return list.slice().sort(function(a,b){ return b.price-a.price; });
   return list;
+}
+
+/* Liste COMPLÈTE et ordonnée des annonces correspondant aux filtres actifs
+   (+ zone dessinée sur la carte), calculée sur listingIndexCache — donc
+   toujours entière même quand LISTINGS, lui, ne contient encore que les
+   annonces déjà chargées en détail (pagination du fil, voir PAGE_SIZE/
+   renderFeed() plus bas). Deux usages : le compteur de résultats
+   (renderResultLine(), doit compter TOUT ce qui correspond, pas
+   seulement ce qui est déjà affiché) et la pagination elle-même (quelles
+   annonces, dans quel ordre, charger en détail au fil du scroll). */
+function matchingIndexListings(){
+  var f = state.filters;
+  // Filet de secours (voir fetchListingIndex()) : un index vide alors que
+  // LISTINGS, lui, a du contenu (rescue fetchPublishedListings() déjà
+  // exécuté) veut dire que l'index est cassé/pas déployé, pas que le
+  // catalogue est vide — dans ce cas seulement, retomber sur LISTINGS
+  // (pagination alors inactive) plutôt que d'afficher "Aucun hébergement"
+  // à tort.
+  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
+  var list = source.filter(function(l){ return matchesAllFilters(l, f); });
+  if(mapZone){
+    list = list.filter(function(l){ return l.lat && l.lng && haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
+  }
+  return sortListings(list);
 }
 
 /* ---------------- render: filter bar ---------------- */
@@ -2103,7 +2191,10 @@ function clearFilter(k){
 }
 
 function renderResultLine(){
-  var n = filteredListings().length;
+  // matchingIndexListings() (l'index complet), pas LISTINGS (ce qui est
+  // déjà chargé en détail) : le compteur doit refléter TOUT ce qui
+  // correspond aux filtres, y compris les annonces pas encore paginées.
+  var n = matchingIndexListings().length;
   var label = n + (n>1? " hébergements trouvés" : " hébergement trouvé");
   document.getElementById("result-line").innerHTML = '<span class="result-pill">'+esc(label)+'</span>';
 }
@@ -2147,37 +2238,68 @@ function coverHtml(l){
 // Explorer uniquement désormais — Mes séjours (Favoris/Demandes/Séjours)
 // a ses propres fonctions de rendu (renderFavorisView()/renderContactLog()),
 // voir renderTabContent() plus bas.
+// Toute autre raison de re-rendre le fil (filtre changé, tri, zone
+// dessinée/effacée, changement d'onglet…) repart de la première page —
+// seul loadMoreListings() ci-dessous avance sans réinitialiser.
 function renderFeed(){
-  var list = filteredListings();
-  // Fusion de l'onglet Carte dans Explorer (retour utilisateur) : une zone
-  // de recherche dessinée sur la carte embarquée filtre maintenant aussi le
-  // fil de cartes juste en dessous, pas seulement les punaises — "chercher
-  // autour de ce point" doit se répercuter sur ce qu'on voit défiler.
-  if(mapZone) list = mapZoneFilteredListings().located;
+  visibleListingCount = PAGE_SIZE;
+  renderFeedBody();
+}
+function loadMoreListings(){
+  visibleListingCount += PAGE_SIZE;
+  renderFeedBody();
+}
+
+/* feedRenderGen : un changement de filtre pendant qu'une page précédente
+   est encore en train de charger ses fiches complètes (ensureListingDocsLoaded,
+   voir plus haut) ne doit jamais laisser CET ancien appel écraser le
+   rendu du nouveau, arrivé entre-temps — chaque appel vérifie qu'il est
+   toujours le dernier avant d'appliquer son résultat. */
+var feedRenderGen = 0;
+function renderFeedBody(){
   var feed = document.getElementById("feed");
   if(state.loading){
     feed.innerHTML = '<div class="empty-state"><p>Chargement des hébergements…</p></div>';
     return;
   }
+  var gen = ++feedRenderGen;
+  // Liste COMPLÈTE et ordonnée (filtres + zone dessinée sur la carte, voir
+  // matchingIndexListings()) ; on ne demande les fiches détaillées que
+  // pour la page actuellement affichée (visibleListingCount).
+  var fullList = matchingIndexListings();
+  var pageEntries = fullList.slice(0, visibleListingCount);
   // Carte embarquée en tête du fil Explorer (retour utilisateur : "j'aimerais
   // que sur le mode visiteur explorer intègre directement la vue carte (...)
   // la carte serait en haut des annonces") — remplace l'ancien onglet
   // "Carte" séparé. Affichée même liste vide (zéro résultat filtré/zone),
   // pour ne jamais faire disparaître l'outil de recherche par zone.
   var mapBlockHtml = exploreMapBlockHtml();
-  if(!list.length){
+  if(!pageEntries.length){
     feed.innerHTML = mapBlockHtml + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
       '<p>Aucun hébergement '+(mapZone ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
     wireExploreMap();
     return;
   }
-  feed.innerHTML = mapBlockHtml + list.map(function(l){
-    return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
-      '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
-    '</article>';
-  }).join("");
-  wireExploreMap();
-  wireFeedEvents();
+  var docIds = pageEntries.map(function(ix){ return ix.docId; });
+  ensureListingDocsLoaded(docIds, function(){
+    if(gen!==feedRenderGen) return; // un rendu plus récent a déjà pris le dessus
+    var list = docIds.map(function(id){ return LISTINGS.filter(function(l){ return listingKey(l)===id; })[0]; }).filter(Boolean);
+    var hasMore = fullList.length > pageEntries.length;
+    feed.innerHTML = mapBlockHtml + list.map(function(l){
+      return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
+        '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
+      '</article>';
+    }).join("") + (hasMore ? '<button type="button" class="load-more-btn" id="feed-load-more">Charger plus d’hébergements</button>' : '');
+    wireExploreMap();
+    wireFeedEvents();
+    if(hasMore){
+      document.getElementById("feed-load-more").addEventListener("click", function(){
+        this.disabled = true;
+        this.textContent = "Chargement…";
+        loadMoreListings();
+      });
+    }
+  });
 }
 
 function wireFeedEvents(){
@@ -2296,9 +2418,10 @@ function loadLikesCounts(){
    trouvés" masqués sur TOUTE la vue Mes séjours (Favoris compris — retour
    utilisateur), pas seulement Demandes/Séjours comme avant : un filtre
    resté actif depuis Explorer, invisible ici, pourrait sinon faire
-   disparaître un favori sans aucun moyen de comprendre pourquoi (voir
-   filteredListings(), qui ignore désormais state.filters/state.sort sur
-   cette vue pour la même raison). Appelée à la fois par switchTab()
+   disparaître un favori sans aucun moyen de comprendre pourquoi
+   (renderFavorisView(), voir plus haut, ignore de toute façon
+   state.filters/state.sort sur cette vue, pour la même raison). Appelée
+   à la fois par switchTab()
    (première entrée sur l'onglet) et par le clic sur le bandeau. */
 function refreshLikesChrome(){
   var filterBar = document.getElementById("filter-bar");
@@ -2334,8 +2457,19 @@ function renderFavorisView(){
   if(state.likesCollectionId && collectionsCache && !collectionsCache.some(function(c){ return c.id===state.likesCollectionId; })){
     state.likesCollectionId = null;
   }
+  // Les annonces d'une collection peuvent inclure des id au-delà de la
+  // page actuellement chargée dans Explorer (pagination, voir README
+  // « Performance ») — ensureListingDocsLoaded() va chercher celles qui
+  // manquent avant de composer les tuiles/la fiche détail, pour qu'un
+  // favori plus ancien n'y disparaisse jamais silencieusement.
   if(state.likesCollectionId && collectionsCache){
-    renderCollectionDetail(feed, toggle);
+    var openCol = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
+    feed.innerHTML = toggle + '<div class="empty-state"><p>Chargement…</p></div>';
+    wireLikesToggle();
+    ensureListingDocsLoaded(openCol.listingIds, function(){
+      if(state.tab!=="likes" || state.likesView!=="favoris" || state.likesCollectionId!==openCol.id) return;
+      renderCollectionDetail(feed, toggle);
+    });
     return;
   }
   feed.innerHTML = toggle + '<div class="empty-state"><p>Chargement…</p></div>';
@@ -2343,7 +2477,12 @@ function renderFavorisView(){
   ensureCollectionsLoaded(function(cols){
     if(state.tab!=="likes" || state.likesView!=="favoris") return; // a changé d'onglet pendant le chargement
     if(state.likesCollectionId){ renderFavorisView(); return; } // une collection a été ouverte entre-temps (chargement déclenché par le volet du cœur, par ex.)
-    renderCollectionsGrid(feed, toggle, cols);
+    var coverIds = [];
+    cols.forEach(function(c){ coverIds = coverIds.concat(c.listingIds.slice(0,3)); }); // 3 premières = tout ce que collectionTileHtml() affiche jamais
+    ensureListingDocsLoaded(coverIds, function(){
+      if(state.tab!=="likes" || state.likesView!=="favoris" || state.likesCollectionId) return;
+      renderCollectionsGrid(feed, toggle, cols);
+    });
   });
 }
 function renderCollectionsGrid(feed, toggle, cols){
@@ -2516,7 +2655,11 @@ function groupedDemandesHtml(pendingDocs){
 var demandeSelectedId = null;
 function selectDemandeListing(id){
   demandeSelectedId = id;
-  renderDemandeSelectedCard();
+  // Une demande peut référencer une annonce au-delà de la page Explorer
+  // actuellement chargée (pagination) — resolveListingById() va la
+  // chercher si besoin plutôt que de la traiter comme supprimée (voir
+  // renderDemandeSelectedCard() ci-dessous). Synchrone si déjà en cache.
+  resolveListingById(id, function(){ renderDemandeSelectedCard(); });
   var container = document.getElementById("demandes-selected");
   if(container) container.scrollIntoView({behavior:"smooth", block:"nearest"});
 }
@@ -4477,33 +4620,16 @@ function haversineKm(lat1, lng1, lat2, lng2){
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-function mapZoneFilteredListings(){
-  var list = filteredListings();
-  var located = list.filter(function(l){ return l.lat && l.lng; });
-  if(mapZone){
-    located = located.filter(function(l){ return haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
-  }
-  return {all:list, located:located};
-}
-
-/* Source des PINS de la carte embarquée — toujours listingIndexCache,
-   jamais LISTINGS (contrairement à mapZoneFilteredListings() ci-dessus,
-   qui reste la source du FIL DE CARTES sous la carte quand une zone est
-   dessinée, et a donc besoin des annonces complètes avec leurs photos) :
-   la carte doit pouvoir montrer tous les emplacements correspondant aux
-   filtres actifs même pour une annonce dont la fiche complète n'est pas
-   encore chargée. Aujourd'hui les deux sources contiennent exactement
-   les mêmes annonces (LISTINGS n'est pas encore paginé), mais ce
-   découplage est ce qui permettra plus tard de paginer le fil de cartes
-   sans jamais faire mentir la carte sur ce qui existe réellement (voir
-   README, « Performance »). */
+/* Source des PINS de la carte embarquée — toujours listingIndexCache
+   (via matchingIndexListings()), jamais LISTINGS : la carte montre tous
+   les emplacements correspondant aux filtres actifs, y compris une
+   annonce dont la fiche complète (photos) n'est pas encore chargée par
+   la pagination du fil de cartes juste en dessous (voir PAGE_SIZE/
+   renderFeed() et README, « Performance ») — sans ce découplage, la
+   carte aurait été incomplète tant que le voyageur n'a pas cliqué
+   "Charger plus" assez de fois pour tout voir. */
 function mapPinsFromIndex(){
-  var f = state.filters;
-  var located = listingIndexCache.filter(function(l){ return l.lat && l.lng && matchesAllFilters(l, f); });
-  if(mapZone){
-    located = located.filter(function(l){ return haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
-  }
-  return located;
+  return matchingIndexListings().filter(function(l){ return l.lat && l.lng; });
 }
 
 /* Même repli que coverHtml() pour la première photo disponible : la
@@ -4528,7 +4654,15 @@ function listingThumbUrl(l){
    juste plus bas dans le même fil, pas besoin de la dupliquer. */
 function scrollToFeedCard(id){
   var card = document.getElementById("card-"+id);
-  if(!card) return;
+  if(!card){
+    // La punaise cliquée peut référencer une annonce au-delà de la page
+    // actuellement chargée (pagination, voir mapPinsFromIndex()) — sa
+    // carte n'existe alors pas encore dans le fil : ouvrir sa fiche
+    // détail directement plutôt que de ne rien faire (silencieux, avant
+    // ce correctif) est le geste le plus proche de l'intention du clic.
+    resolveListingById(id, function(l){ if(l) openDetail(id); });
+    return;
+  }
   card.scrollIntoView({behavior:"smooth", block:"start"});
   card.classList.add("card-pulse");
   setTimeout(function(){ card.classList.remove("card-pulse"); }, 1200);
@@ -5477,17 +5611,24 @@ var deepLinkHandled = false;
 function maybeOpenDeepLink(){
   if(deepLinkHandled) return;
   var idParam = new URLSearchParams(location.search).get("listing");
-  if(!idParam) { deepLinkHandled = true; return; }
+  if(!idParam) return;
   var id = Number(idParam);
-  var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
-  if(!l) return; // pas encore trouvée : on retentera à la prochaine source chargée
-  deepLinkHandled = true;
-  if(!heroDismissed){
-    heroDismissed = true;
-    var heroEl = document.getElementById("hero");
-    if(heroEl) heroEl.hidden = true;
-  }
-  openDetail(id);
+  // resolveListingById() va elle-même chercher l'annonce au-delà de la
+  // page actuellement chargée si besoin (pagination, voir son
+  // commentaire) — plusieurs appels avant résolution sont possibles
+  // (fetchPublishedListings() puis maybeFinishInitialLoad(), l'index n'est
+  // pas forcément encore chargé au premier), donc deepLinkHandled n'est
+  // posé qu'au moment de vraiment ouvrir la fiche, pas à la tentative.
+  resolveListingById(id, function(l){
+    if(deepLinkHandled || !l) return;
+    deepLinkHandled = true;
+    if(!heroDismissed){
+      heroDismissed = true;
+      var heroEl = document.getElementById("hero");
+      if(heroEl) heroEl.hidden = true;
+    }
+    openDetail(id);
+  });
 }
 
 /* state.hostMode ici ne peut venir que de la restauration localStorage
@@ -5518,15 +5659,17 @@ if(state.hostMode){
 updateHeroMenu();
 
 /* Ne fait passer state.loading à false, et donc ne rend le tout premier
-   fil, qu'une fois les DEUX sources revenues (listings.json ET Firestore,
-   voir le commentaire de fetchPublishedListings ci-dessus) — sinon un
+   fil, qu'une fois les DEUX sources revenues (listings.json ET l'index
+   Firestore léger, voir fetchListingIndex() — qui inclut son propre
+   filet de secours vers fetchPublishedListings() si besoin, réglé avant
+   d'appeler maybeFinishInitialLoad() dans tous les cas) — sinon un
    visiteur assez rapide voyait "Aucun hébergement" pendant la fraction de
    seconde où seul listings.json (vide, voir README) avait déjà répondu,
    avant que Firestore (plus lent : SDK à charger puis requête réseau) ait
    eu le temps d'apporter les vraies annonces. */
 var listingsJsonLoaded = false, listingsJsonFailed = false;
 function maybeFinishInitialLoad(){
-  if(!listingsJsonLoaded || !firestoreListingsSettled || !listingIndexSettled || !state.loading) return;
+  if(!listingsJsonLoaded || !listingIndexSettled || !state.loading) return;
   state.loading = false;
   if(listingsJsonFailed && !LISTINGS.length){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
@@ -5551,7 +5694,6 @@ fetch("listings.json").then(function(r){
 });
 
 bootFirebaseAuth();
-fetchPublishedListings();
 fetchListingIndex();
 
 })();
