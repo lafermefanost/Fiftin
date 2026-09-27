@@ -520,6 +520,21 @@ service cloud.firestore {
       }
     }
 
+    // Index public léger des annonces publiées (voir functions/index.js,
+    // syncPublicListingIndex) — la carte et le calcul filtres/tri/distance
+    // du fil voyageur en ont besoin pour TOUTES les annonces, mais
+    // seulement de leurs champs légers (jamais les photos). Même principe
+    // que publicAvail ci-dessus : republié uniquement par la Cloud
+    // Function (SDK Admin, hors règles), `allow write: if false` empêche
+    // tout client — même le propriétaire connecté — d'y écrire n'importe
+    // quoi directement (ça permettrait de faire apparaître une annonce
+    // jamais validée par un admin, ou de fausser sa position/son prix
+    // affiché sur la carte sans toucher au vrai document listings/{id}).
+    match /listingIndex/{listingId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Historique personnel du voyageur (Envies → Demandes, voir
     // logContact() dans sejours/index.html) : un document par contact
     // initié (Mail/WhatsApp/SMS/Appeler cliqué), pour qu'il puisse
@@ -605,6 +620,8 @@ Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par 
 
 **Important, bis : le bloc `collections/{uid}/items/{collectionId}` ci-dessus (favoris) n'est pas déployé automatiquement non plus — comme tout le reste de ce fichier de règles, c'est un texte à recopier toi-même dans Firebase Console → Firestore Database → Règles.** Tant que ce n'est pas fait, créer une collection ou y ajouter une annonce échoue avec une erreur de permission (`PERMISSION_DENIED`) — visible en test local (mock Firestore) mais pas en production tant que la vraie règle n'y est pas collée.
 
+**Important, ter : le bloc `listingIndex/{listingId}` ci-dessus (voir « Performance : index public léger… » plus bas) exige, en plus de la règle, le déploiement de la nouvelle Cloud Function `syncPublicListingIndex` (`firebase deploy --only functions`, même étape que pour la disponibilité, voir plus bas).** Sans les deux, `listingIndex` reste vide en production : la carte et le compteur d'annonces resteront à 0, même avec de vraies annonces publiées dans `listings/`.
+
 ### Espace hôtes : calendrier simplifié (Profil → Espace hôtes)
 
 Depuis l'onglet Profil, un hôte connecté qui clique sur « Espace hôtes » bascule toute l'application dans un mode hôte : la barre d'onglets affiche **Mes annonces** / **Mon calendrier** / **Espace voyageur** (retour), le bandeau de filtres disparaît. « Mon calendrier » reprend la mise en page de la vue Location de `app/` — rangée Année/Aujourd'hui/Action en haut, 12 mini-mois par 2 avec numéros de semaine dans une carte blanche détachée du fond (`.cal-card`, même principe que `.rv-calendar` côté app/) — pour **une chambre à la fois** : si l'annonce sélectionnée a plusieurs chambres (`units`), une pagination « n / total » avec flèches (au lieu d'un simple menu déroulant) permet de passer de l'une à l'autre — chaque chambre a son propre statut, son propre lien vers `app/` et ses propres réservations.
@@ -667,6 +684,25 @@ Signalé par capture d'écran (fiftin.fr, visiteur non connecté, onglet Explore
 **Cause réelle : une course entre deux chargements indépendants au tout premier affichage.** Le fil est reconstruit à partir de deux sources chargées en parallèle (`rebuildListings()`, commentaire déjà présent dans le code) : `listings.json` (un fichier statique same-origin, désormais toujours vide — voir « Nettoyage » plus haut) et Firestore (`fetchPublishedListings()`, qui doit d'abord charger 4 scripts SDK l'un après l'autre — voir `loadFirebaseSDK()` — puis interroger la base). `state.loading` ne passait à `false`, déclenchant le tout premier rendu du fil, que sur la résolution de `listings.json` seul — presque instantanée puisque same-origin. Sur une connexion un peu lente ou simplement le temps que les scripts Firebase se chargent, un visiteur voyait donc, l'espace d'un instant bien réel (pas juste théorique), un fil affirmant à tort qu'il n'y avait aucun hébergement, avant que Firestore ne réponde et corrige le fil — correction que le visiteur n'a aucune raison d'attendre s'il a déjà tiré la conclusion « rien ici » et quitté la page. Reproduit en local en retardant artificiellement la réponse Firestore (3 s) avec les 4 vraies annonces en données : capture de l'écran à 900 ms → « Aucun hébergement » (le bug), à 4,4 s → fil correct.
 
 **Corrigé en attendant les DEUX sources avant le tout premier rendu**, pas seulement `listings.json` : `firestoreListingsSettled`/`listingsJsonLoaded` (nouveaux indicateurs) et `maybeFinishInitialLoad()` (nouvelle fonction) ne font passer `state.loading` à `false` que quand les deux ont répondu — succès ou échec confondus, `fetchPublishedListings()` appelle aussi `settle()` dans son `.catch()`. **Filet de secours** : si Firestore met plus de 6 secondes (`setTimeout(settle, 6000)`), le premier rendu se fait quand même avec ce qui est disponible à ce moment-là, pour ne jamais bloquer indéfiniment un visiteur sur l'écran « Chargement… » (cas extrême : SDK Firebase bloqué par un bloqueur de publicités, connexion très dégradée). Même testé (Playwright, mêmes 4 scénarios déjà couverts — collections, calendrier hôte, carte Explorer, formulaire d'annonce) : aucune régression, zéro erreur JS.
+
+### Performance : index public léger, pour rester rapide même avec beaucoup d'annonces
+
+Anticipé avant que ça devienne un vrai problème (retour utilisateur : « il faut y passer maintenant si ça prend vite de l'ampleur »), pas encore un correctif à un ralentissement observé — aujourd'hui 4 annonces réelles, donc rien de mesurable, mais l'architecture décrite ici ne tiendrait pas à plusieurs centaines.
+
+**Le problème de fond.** Le fil (`fetchPublishedListings()`) télécharge aujourd'hui TOUTES les annonces publiées, documents complets (galeries, chambres) compris, à chaque chargement de page — nécessaire tant que le filtrage/tri/la carte tournent entièrement côté client sur ce tableau. Et la carte embarquée (fusionnée dans Explorer, toujours visible, pas seulement au clic d'un bouton) a besoin de connaître TOUTES les annonces en permanence pour placer tous ses pins, même sans aucun filtre actif — une pagination naïve du fil de cartes (charger 20 annonces, puis 20 de plus au scroll) aurait donc laissé une carte à moitié vide, une incohérence repérée avant d'être codée plutôt qu'après (retour utilisateur : « quand aucun filtre n'est mis, tu as quand même les pins de toutes les annonces sur la carte ? »).
+
+**La solution retenue : découpler ce qui a besoin d'être complet de ce qui est lourd.** Une nouvelle collection Firestore `listingIndex/{listingId}`, republiée par une nouvelle Cloud Function (`syncPublicListingIndex`, `functions/index.js`) à chaque écriture sur `listings/{listingId}` — même principe que `publicAvail` pour la disponibilité (voir plus haut) : une projection publique minimale, écrite uniquement côté serveur (SDK Admin, règle `allow write: if false`), jamais falsifiable par un client. Contient uniquement les champs utiles au filtrage/tri/à la carte (nom, prix, position, région/département, prestations, nombre de favoris) — jamais les photos ni le détail des chambres, le vrai poids d'une annonce. Chargé **en entier, systématiquement**, quel que soit le nombre d'annonces à terme : à cette taille (quelques centaines d'octets par annonce), même plusieurs milliers d'annonces resteraient légers à charger d'un coup.
+
+Concrètement, côté client (`sejours/index.html`) :
+- `listingIndexCache` (nouveau, chargé par `fetchListingIndex()`, même garde-fou de premier affichage que `fetchPublishedListings()` — voir plus haut, « Bug de production ») — la carte (`mapPinsFromIndex()`, nouveau) lit exclusivement cet index, jamais `LISTINGS`, pour ses pins : elle reste donc toujours complète et cohérente avec les filtres actifs, y compris pour une annonce dont la fiche complète n'a pas encore été chargée.
+- `matchesAllFilters(l, f)` (extrait de `filteredListings()`, sans changement de comportement) : un seul prédicat de filtrage, appliqué aussi bien aux annonces complètes de `LISTINGS` (fil de cartes) qu'aux entrées légères de l'index (carte) — jamais deux logiques de filtrage à maintenir en parallèle.
+- `mapZoneFilteredListings()` (le fil de cartes quand une zone est dessinée sur la carte, pas les pins eux-mêmes) reste inchangée, sur `LISTINGS` : elle a besoin des photos pour les cartes qu'elle alimente.
+
+**Étape suivante, pas encore construite : la pagination du fil de cartes lui-même** (ce qui allègera réellement la bande passante, cette étape-ci prépare seulement le terrain pour que la carte n'en souffre pas). Aujourd'hui `LISTINGS` contient toujours toutes les annonces complètes (aucune pagination active) — les deux sources (index et `LISTINGS`) sont donc strictement équivalentes en couverture pour l'instant, ce changement est invisible en usage normal. Il devient nécessaire dès que le fil de cartes commencera à charger ses documents complets par lot plutôt que tous d'un coup.
+
+**Testé** (Playwright, mock Firestore + un faux Leaflet minimal simulant fidèlement addLayer/removeLayer — Leaflet lui-même reste bloqué dans cet environnement de développement, limite déjà documentée, sans rapport avec ce changement) : la carte affiche bien les deux annonces géolocalisées sans aucun filtre ; un filtre prix appliqué exclut la bonne annonce à la fois des pins ET du fil de cartes, les deux restant cohérents entre eux. Aucune régression sur les suites de tests existantes (calendrier hôte, formulaire d'annonce, collections, carte/Explorer).
+
+**Nécessite le déploiement de la nouvelle Cloud Function** (`firebase deploy --only functions`, même étape que pour la disponibilité) **et la règle Firestore `listingIndex` ci-dessus collée dans Firebase Console** — voir « Important, ter » plus haut. Sans les deux, `listingIndex` reste vide en production et la carte n'affichera aucun pin, même avec de vraies annonces publiées.
 
 ## À faire avant un vrai passage en production
 

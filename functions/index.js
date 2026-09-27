@@ -31,6 +31,53 @@ const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 initializeApp();
 const db = getFirestore();
 
+/* Index public léger des annonces publiées (listingIndex/{listingId}),
+ * pensé pour que le fil voyageur (sejours/index.html) reste rapide même
+ * avec beaucoup d'annonces : la carte (tous les pins, en permanence,
+ * même sans filtre) et le calcul filtres/tri/distance ont besoin de
+ * connaître TOUTES les annonces publiées, mais seulement de leurs champs
+ * légers (position, prix, lieu, prestations) — jamais des photos ni du
+ * détail des chambres, le vrai poids d'une annonce. Sans cet index, le
+ * client devrait télécharger chaque document COMPLET (galeries comprises)
+ * juste pour savoir où placer un point sur la carte.
+ *
+ * Republié à chaque écriture sur listings/{listingId} (création,
+ * modification, suppression, validation/refus par un admin) — supprimé
+ * de l'index dès que status n'est plus "published" (annonce en attente,
+ * refusée, ou effacée), jamais montré tant qu'un admin ne l'a pas validée. */
+function listingIndexPrice(listing) {
+  if (listing.units && listing.units.length) {
+    return Math.min.apply(null, listing.units.map(function (u) { return u.price; }));
+  }
+  return listing.price;
+}
+
+exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async (event) => {
+  const listingId = event.params.listingId;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  const indexRef = db.collection("listingIndex").doc(listingId);
+
+  if (!after || after.status !== "published") {
+    await indexRef.delete().catch(function () {});
+    return;
+  }
+
+  await indexRef.set({
+    name: after.name || "",
+    price: listingIndexPrice(after),
+    accomType: after.accomType || "",
+    lat: (typeof after.lat === "number") ? after.lat : null,
+    lng: (typeof after.lng === "number") ? after.lng : null,
+    region: after.region || "",
+    regionName: after.regionName || "",
+    deptName: after.deptName || "",
+    city: after.city || "",
+    amen: after.amen || [],
+    likeCount: (typeof after.likeCount === "number") ? after.likeCount : 0,
+    createdAt: after.createdAt || null,
+  });
+});
+
 function toPublicRanges(bookings) {
   return (bookings || [])
     .filter(function (b) { return b && typeof b.checkIn === "string" && typeof b.checkOut === "string"; })

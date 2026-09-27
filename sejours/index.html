@@ -1433,6 +1433,45 @@ function fetchPublishedListings(){
   });
 }
 
+/* Index public léger (listingIndex/{id}, voir functions/index.js et
+   README « Performance ») : TOUTES les annonces publiées, mais seulement
+   leurs champs légers (position, prix, lieu, prestations, jamais les
+   photos). Sert à deux choses qui ont besoin de connaître la totalité des
+   annonces sans en payer le poids : les pins de la carte embarquée
+   (mapPinsFromIndex(), toujours complets même quand le fil de cartes en
+   dessous ne l'est pas — voir son commentaire) et, plus tard, le calcul
+   de ce qui doit être chargé en détail par la pagination du fil. Même
+   garde-fou de premier chargement que fetchPublishedListings() ci-dessus
+   (settle() + maybeFinishInitialLoad()), pour la même raison : sans lui,
+   un visiteur rapide verrait une carte à moitié vide le temps que
+   Firestore réponde. */
+var listingIndexCache = [];
+var listingIndexSettled = false;
+function fetchListingIndex(){
+  var settled = false;
+  function settle(){
+    if(settled) return;
+    settled = true;
+    listingIndexSettled = true;
+    maybeFinishInitialLoad();
+  }
+  setTimeout(settle, 6000);
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    firebase.firestore().collection("listingIndex").get().then(function(snap){
+      listingIndexCache = snap.docs.map(function(doc){
+        var d = doc.data();
+        d.id = idFromString(doc.id); // même id numérique que normalizeHostListing(), pour que scrollToFeedCard() retrouve la bonne carte
+        d.docId = doc.id;
+        d.amen = d.amen || [];
+        return d;
+      });
+      if(mapInstance) refreshExploreMapMarkers(); // arrivé après le premier rendu de la carte (mapInstance déjà monté) : ne pas attendre la prochaine action pour afficher les vrais pins
+      settle();
+    }).catch(function(){ settle(); });
+  });
+}
+
 var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
   "Cheminée","Sauna","Jardin","Cuisine équipée","Parking privé","Wifi","Accès PMR",
   "Professionnels","Familial","Romantique"];
@@ -1962,18 +2001,29 @@ function listingPriceLabel(l){
   return (l.price!=null ? l.price : "?") + "€/nuit";
 }
 
+/* Prédicat de filtrage partagé — utilisé tel quel sur les annonces
+   COMPLÈTES de LISTINGS (filteredListings() ci-dessous, le fil de cartes)
+   ET sur les entrées LÉGÈRES de listingIndexCache (mapPinsFromIndex(),
+   plus bas) : les deux portent les mêmes champs utiles au filtrage
+   (region/regionName/deptName/city, lat/lng, price, amen), seules les
+   photos/chambres manquent côté index, jamais lues ici. Un seul endroit
+   qui décide "cette annonce correspond aux filtres actifs", pour ne
+   jamais risquer que la carte et le fil de cartes se désaccordent sur ce
+   qui est affiché. */
+function matchesAllFilters(l, f){
+  if(!matchesLocation(l, f)) return false;
+  if(f.distance!=null && listingDistanceKm(l) > f.distance) return false;
+  if(l.price > f.price) return false;
+  if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
+  return true;
+}
+
 function filteredListings(){
   // Favoris (Mes séjours) ne passe plus par ici : renderFavorisView() gère
   // sa propre liste (annonces d'UNE collection), sans filtres Lieu/Distance/
   // Prix/Prestations/Trier — voir son propre commentaire plus bas.
   var f = state.filters;
-  var list = LISTINGS.filter(function(l){
-    if(!matchesLocation(l, f)) return false;
-    if(f.distance!=null && listingDistanceKm(l) > f.distance) return false;
-    if(l.price > f.price) return false;
-    if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
-    return true;
-  });
+  var list = LISTINGS.filter(function(l){ return matchesAllFilters(l, f); });
   if(state.sort==="distance_asc") list = list.slice().sort(function(a,b){ return listingDistanceKm(a)-listingDistanceKm(b); });
   else if(state.sort==="distance_desc") list = list.slice().sort(function(a,b){ return listingDistanceKm(b)-listingDistanceKm(a); });
   else if(state.sort==="likes_desc") list = list.slice().sort(function(a,b){ return (b.likeCount||0)-(a.likeCount||0); });
@@ -4436,6 +4486,26 @@ function mapZoneFilteredListings(){
   return {all:list, located:located};
 }
 
+/* Source des PINS de la carte embarquée — toujours listingIndexCache,
+   jamais LISTINGS (contrairement à mapZoneFilteredListings() ci-dessus,
+   qui reste la source du FIL DE CARTES sous la carte quand une zone est
+   dessinée, et a donc besoin des annonces complètes avec leurs photos) :
+   la carte doit pouvoir montrer tous les emplacements correspondant aux
+   filtres actifs même pour une annonce dont la fiche complète n'est pas
+   encore chargée. Aujourd'hui les deux sources contiennent exactement
+   les mêmes annonces (LISTINGS n'est pas encore paginé), mais ce
+   découplage est ce qui permettra plus tard de paginer le fil de cartes
+   sans jamais faire mentir la carte sur ce qui existe réellement (voir
+   README, « Performance »). */
+function mapPinsFromIndex(){
+  var f = state.filters;
+  var located = listingIndexCache.filter(function(l){ return l.lat && l.lng && matchesAllFilters(l, f); });
+  if(mapZone){
+    located = located.filter(function(l){ return haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
+  }
+  return located;
+}
+
 /* Même repli que coverHtml() pour la première photo disponible : la
    galerie de l'établissement, sinon celle de sa première chambre (annonce
    sans photo commune, seulement des photos par chambre). Aucune photo nulle
@@ -4468,7 +4538,7 @@ function scrollToFeedCard(id){
    ni recadrer la vue — utilisé pendant le glissement du curseur de rayon,
    pour que la carte ne saute pas à chaque tick. */
 function refreshExploreMapMarkers(){
-  var located = mapZoneFilteredListings().located;
+  var located = mapPinsFromIndex();
   if(!mapInstance) return;
   if(mapMarkerLayer){ mapInstance.removeLayer(mapMarkerLayer); mapMarkerLayer = null; }
   var useCluster = !!window.L.markerClusterGroup;
@@ -4543,8 +4613,8 @@ function wireExploreMap(){
 
   if(mapInstance){ mapInstance.remove(); mapInstance = null; mapMarkerLayer = null; mapZoneCircleLayer = null; }
   if(!window.L) return;
-  var f = mapZoneFilteredListings();
-  if(!f.located.length && !mapZone) return;
+  var located = mapPinsFromIndex();
+  if(!located.length && !mapZone) return;
 
   mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -4577,10 +4647,10 @@ function wireExploreMap(){
 
   if(mapZone){
     mapInstance.fitBounds(mapZoneCircleLayer.getBounds(), {padding:[20,20]});
-  } else if(f.located.length===1){
-    mapInstance.setView([f.located[0].lat, f.located[0].lng], 12);
-  } else if(f.located.length>1){
-    mapInstance.fitBounds(L.featureGroup(f.located.map(function(l){ return L.marker([l.lat,l.lng]); })).getBounds(), {padding:[32,32]});
+  } else if(located.length===1){
+    mapInstance.setView([located[0].lat, located[0].lng], 12);
+  } else if(located.length>1){
+    mapInstance.fitBounds(L.featureGroup(located.map(function(l){ return L.marker([l.lat,l.lng]); })).getBounds(), {padding:[32,32]});
   }
 }
 
@@ -4673,6 +4743,7 @@ function renderAdminQueue(){
           status:"published", publishedAt:firebase.firestore.FieldValue.serverTimestamp()
         }).then(function(){
           fetchPublishedListings();
+          fetchListingIndex(); // la carte doit refléter tout de suite la nouvelle annonce publiée, pas seulement le fil de cartes
           renderAdminQueue();
         }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; btn.textContent = "Publier"; });
       });
@@ -5455,7 +5526,7 @@ updateHeroMenu();
    eu le temps d'apporter les vraies annonces. */
 var listingsJsonLoaded = false, listingsJsonFailed = false;
 function maybeFinishInitialLoad(){
-  if(!listingsJsonLoaded || !firestoreListingsSettled || !state.loading) return;
+  if(!listingsJsonLoaded || !firestoreListingsSettled || !listingIndexSettled || !state.loading) return;
   state.loading = false;
   if(listingsJsonFailed && !LISTINGS.length){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
@@ -5481,6 +5552,7 @@ fetch("listings.json").then(function(r){
 
 bootFirebaseAuth();
 fetchPublishedListings();
+fetchListingIndex();
 
 })();
 </script>
