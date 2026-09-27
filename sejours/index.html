@@ -4311,10 +4311,11 @@ function switchHostTab(tab){
 }
 function renderHostTabContent(){
   // Même fond gris très léger que Carte/Mes séjours/Profil côté voyageur
-  // (retour utilisateur, "pareil pour la vue profil côté hôtes") — posé ici
-  // plutôt que dans enterHostMode()/switchHostTab() séparément : ce sont
-  // les deux seuls chemins qui mènent ici, inutile de dupliquer.
-  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile");
+  // (retour utilisateur, "pareil pour la vue profil côté hôtes", puis
+  // "là aussi" pour Mon calendrier) — posé ici plutôt que dans
+  // enterHostMode()/switchHostTab() séparément : ce sont les deux seuls
+  // chemins qui mènent ici, inutile de dupliquer.
+  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile" || state.hostTab==="calendar");
   if(state.hostTab==="calendar") renderHostCalendar();
   else if(state.hostTab==="profile") renderHostProfile();
   else renderHostListings();
