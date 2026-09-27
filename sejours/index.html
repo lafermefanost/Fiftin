@@ -2614,7 +2614,15 @@ function openDetail(id){
       '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul></div>'+
-      (l.units && l.units.length ? '<div class="detail-card"><div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u, hasTabs); }).join("")+'</div></div>' : '')+
+      /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
+         seule unité (typiquement un gîte, où le formulaire n'en pousse
+         jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
+         faisait que répéter en double le nom/prix déjà sur la carte
+         méta juste au-dessus — retour utilisateur, capture d'écran à
+         l'appui ("il y a toujours le menu chambre alors que c'est un
+         gîte"). Utile seulement pour prévisualiser plusieurs chambres
+         avant de choisir un onglet, ce qui n'existe que si hasTabs. */
+      (hasTabs ? '<div class="detail-card"><div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u, hasTabs); }).join("")+'</div></div>' : '')+
       (!hasTabs ? '<div class="detail-card"><div class="section-title">Créneaux libres (aperçu)</div><div class="avail-row">'+(l.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div></div>' : '');
   } else {
     // chambre sélectionnée : ses propres infos, photos (déjà gérées ci-dessus) et son propre planning —
