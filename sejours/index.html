@@ -385,6 +385,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
 .radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:16px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
+/* Volet "Ajouter à une collection" (kind==="collPicker") : mêmes lignes que
+   .radio-row, mais à choix MULTIPLE — un rond à cocher plutôt qu'un simple
+   changement de fond, pour ne jamais laisser croire qu'une seule case peut
+   être active à la fois (contrairement à .radio-row, réutilisé ailleurs
+   pour du choix unique). */
+.coll-pick-row{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; padding:11px 14px;
+  border:1.5px solid var(--line); border-radius:16px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:600; text-align:left; background:none; color:var(--ink);}
+.coll-pick-row.active{border-color:var(--sauge-deep); background:var(--sauge-bg);}
+.coll-pick-row .check{width:20px; height:20px; border-radius:50%; border:1.5px solid var(--line); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:#fff;}
+.coll-pick-row.active .check{background:var(--sauge-deep); border-color:var(--sauge-deep);}
+.coll-pick-row .check svg{width:12px; height:12px; opacity:0;}
+.coll-pick-row.active .check svg{opacity:1;}
 .sheet-apply{position:sticky; bottom:0; background:var(--cream); padding-top:10px;}
 .sheet-sub{font-size:13px; color:var(--sauge); font-weight:600; margin:-10px 0 18px; line-height:1.4;}
 .auth-err{font-size:12.5px; font-weight:600; color:var(--danger); min-height:16px; margin-bottom:8px;}
@@ -683,6 +695,36 @@ body.detail-open nav.tabbar{z-index:220;}
 .stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
 .stat-tile b{display:block; font-size:22px; font-weight:800; color:var(--sauge-deep);}
 .stat-tile span{font-size:13px; color:var(--sauge); font-weight:600;}
+/* ---------- Favoris : grille de collections ---------- */
+/* Tuiles carrées à 2 colonnes, mosaïque photo + dégradé + nom en overlay —
+   adapté de l'écran Collections de Photos iOS (retour utilisateur,
+   capture d'écran fournie en référence), avec notre style graphique
+   propre (coins 20px cohérents avec .card/.admin-card, typo Jost). */
+.collections-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
+.collection-tile{position:relative; aspect-ratio:1/1; border-radius:20px; overflow:hidden; background:var(--cream-deep); border:none; padding:0; text-align:left; cursor:pointer;}
+.collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
+.collection-tile-photos.n1{grid-template-columns:1fr;}
+.collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
+.collection-tile-photos.n3{grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr;}
+.collection-tile-photos.n3 img:first-child, .collection-tile-photos.n3 .collection-tile-empty:first-child{grid-row:1/3;}
+.collection-tile-photos img{width:100%; height:100%; object-fit:cover; display:block;}
+.collection-tile-empty{width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:var(--cream-deep); color:var(--sauge);}
+.collection-tile-empty svg{width:30%; height:30%; opacity:.35;}
+.collection-tile-scrim{position:absolute; inset:0; background:linear-gradient(to top, rgba(20,26,20,.65), transparent 55%); pointer-events:none;}
+.collection-tile-info{position:absolute; left:12px; right:12px; bottom:10px; color:#fff;}
+.collection-tile-info b{display:block; font-size:14px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.collection-tile-info span{font-size:11px; font-weight:600; opacity:.9;}
+/* En-tête du détail d'une collection (retour aux collections + nom +
+   renommer/supprimer) — même hauteur/esprit que .detail-back, mais en
+   ligne plutôt qu'en superposition sur une galerie photo. */
+.collection-detail-head{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+.collection-detail-back{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:var(--ink);}
+.collection-detail-back svg{width:18px; height:18px;}
+.collection-detail-title{flex:1; font-size:18px; font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.collection-detail-actions{display:flex; gap:6px; flex-shrink:0;}
+.collection-detail-actions button{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--ink);}
+.collection-detail-actions button svg{width:16px; height:16px;}
+#coll-detail-delete{color:var(--danger);}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
 .profile-row svg{width:16px; height:16px; opacity:.5;}
@@ -1237,6 +1279,15 @@ function bootFirebaseAuth(){
       authState.ready = true;
       authState.uid = user ? user.uid : null;
       authState.email = user ? user.email : null;
+      // Collections propres au compte (voir plus haut) : jamais celles d'un
+      // compte précédent après une déconnexion/reconnexion sous un autre
+      // uid sur le même appareil. Rechargées tout de suite si connecté
+      // (plutôt que d'attendre la première ouverture de Mes séjours) pour
+      // que les cœurs déjà affichés sur Explorer reflètent le bon état dès
+      // que possible — refreshSavedHeartsInDom() patche juste les cœurs déjà
+      // dans le DOM, pas de re-rendu complet (voir son commentaire).
+      collectionsCache = undefined;
+      if(user) ensureCollectionsLoaded(function(){ refreshSavedHeartsInDom(); renderLikeBadge(); });
       if(!user && state.hostMode) exitHostMode();
       // Session hôte restaurée au boot (voir plus bas) avant que Firebase
       // Auth ait fini de résoudre : ré-affiche une fois authState.uid/email
@@ -1338,8 +1389,9 @@ function fetchPublishedListings(){
       if(snap.empty) return;
       hostFirestoreListings = snap.docs.map(normalizeHostListing);
       rebuildListings();
-      if(state.tab==="explore" || state.tab==="likes"){ renderFeed(); renderResultLine(); }
-      // validLikedCount() dépend de LISTINGS : au tout premier rendu du
+      if(state.tab==="explore"){ renderFeed(); renderResultLine(); }
+      else if(state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
+      // savedListingsCount() dépend de LISTINGS : au tout premier rendu du
       // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
       // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
       // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
@@ -1592,10 +1644,15 @@ var AMEN_ICONS = {
    jusqu'à ce sommet repasse `f.distance` à `null` (voir kind==="distance"
    plus bas), pas à une valeur numérique qui resterait, elle, un plafond. */
 var MAX_DISTANCE_KM = 1200;
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, price:300, amen:[]}, sort:"reco", liked:[], loading:true,
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, price:300, amen:[]}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
-  detailListingId:null, detailTab:"overview", likesView:"favoris",
+  detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null,
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
+// likesCollectionId : collection actuellement ouverte dans Mes séjours ->
+// Favoris (voir renderFavorisView() plus bas) — null = grille des
+// collections, un id = le détail d'UNE collection. Jamais persisté (comme
+// geoOrigin) : rouvrir l'app doit toujours repartir de la grille, jamais
+// se retrouver profondément dans une collection sans contexte.
 var heroDismissed = false;
 var loginPromptShown = false; // voir openSheet("loginPrompt") dans bootFirebaseAuth() : une seule fois par chargement de page.
 /* Passe à true dès la première action volontaire du visiteur (ouvrir un
@@ -1617,11 +1674,29 @@ var hostListingsCache = [];
 var hostAccountCache;
 var hostBookingContext = null;
 var hostRoomLinkContext = null;
+/* Contexte du volet "Ajouter à une collection" (kind==="collPicker") —
+   {listing, onChange, creating}. creating:true bascule le volet sur le
+   petit formulaire "Nouvelle collection" à la place de la liste à cocher
+   (voir openSheet()/wireSheet()). onChange(): callback appelé après CHAQUE
+   case cochée/décochée, pour que l'appelant (carte du fil, fiche détail,
+   vue Favoris) mette à jour son propre affichage sans devoir tout
+   re-rendre. */
+var collectionPickerContext = null;
+var collectionRenameContext = null; // collection ciblée par kind==="collRename"
+/* Collections du voyageur connecté (Mes séjours -> Favoris) — synchronisées
+   par compte (collections/{uid}/items/{collectionId}), contrairement à
+   l'ancien state.liked qui restait local à l'appareil (localStorage) : un
+   favori posé sur un appareil ne survivait jamais à un changement
+   d'appareil ni à un vidage de cache, retour utilisateur explicite à
+   corriger. undefined = jamais chargées ; array une fois chargées
+   (éventuellement vide). Réinitialisées à chaque changement de compte
+   (voir bootFirebaseAuth()) pour ne jamais montrer les collections d'un
+   compte précédent. */
+var collectionsCache;
 try{
   var saved = JSON.parse(localStorage.getItem("fiftin_state")||"{}");
   if(saved.filters) state.filters = saved.filters;
   if(saved.sort) state.sort = saved.sort;
-  if(saved.liked) state.liked = saved.liked;
   /* hostMode/hostTab : retour utilisateur — recharger la page pendant
      qu'on est dans l'espace hôtes ramenait à l'espace voyageur (et au
      hero), comme si de rien n'était. Restaurés ici ; le vrai chargement
@@ -1635,48 +1710,125 @@ try{
   // "listings" plutôt que de planter sur un onglet qui n'existe plus.
   if(saved.hostMode){ state.hostMode = true; state.hostTab = (saved.hostTab==="calendar" ? "listings" : saved.hostTab) || "profile"; }
 }catch(e){}
-function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, liked:state.liked, hostMode:state.hostMode, hostTab:state.hostTab})); }catch(e){} }
+function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, hostMode:state.hostMode, hostTab:state.hostTab})); }catch(e){} }
 
-/* Bascule l'état "favori" d'une annonce. AJOUTER un favori exige un
-   compte (pas de simple heuristique locale) : ouvre la connexion au lieu
-   de liker si le visiteur n'est pas connecté — un like compte désormais
-   pour de vrai dans un classement global ("Les plus appréciés", voir le
-   tri), donc doit être rattaché à une vraie personne, pas juste à un
-   navigateur. RETIRER un favori reste toujours possible localement sans
-   connexion, y compris un ancien favori ajouté anonymement avant ce
-   changement (aucune purge rétroactive) — seul l'AJOUT est bloqué.
-   L'écriture serveur (writeLikeState) ne part que si le visiteur est
-   connecté ET que l'annonce est réelle (docId, voir normalizeHostListing) —
-   une annonce statique de démo (listings.json) reste "aimable" localement
-   sans jamais toucher Firestore, il n'y a pas de document à incrémenter. */
-/* Nombre de favoris à AFFICHER (bandeau Mes séjours, badge de l'onglet) —
-   distinct de state.liked.length. Retour utilisateur (bug) : le chiffre
-   restait gonflé par des annonces supprimées depuis longtemps. Cause :
-   toggleLike() ajoute/retire un id de state.liked, mais rien ne le retire
-   quand l'annonce elle-même disparaît de LISTINGS (suppression) — l'id
-   reste indéfiniment dans state.liked/localStorage. filteredListings()
-   ignore déjà ces ids fantômes pour la LISTE de Favoris (LISTINGS.filter),
-   seul le chiffre ne suivait pas. Ne PRUNE pas state.liked lui-même
-   (aucune écriture ici) : une annonce simplement dépubliée temporairement
-   (pas supprimée) disparaît aussi un temps de LISTINGS sans devoir perdre
-   son statut de favori pour de bon — elle recomptera dès qu'elle
-   revient. */
-function validLikedCount(){
-  var ids = {};
-  LISTINGS.forEach(function(l){ ids[l.id] = true; });
-  return state.liked.filter(function(id){ return ids[id]; }).length;
+/* ---------------- Favoris en collections (retour utilisateur) ----------------
+   "Les favoris devraient être construits avec un principe de collection,
+   renommable et personnalisable" (inspiration : l'écran Collections de
+   Photos iOS, adapté à notre style). Remplace l'ancien favori binaire
+   (state.liked, un simple tableau d'ids en localStorage, jamais synchronisé
+   entre appareils) par de vraies collections nommées, synchronisées par
+   compte (collections/{uid}/items/{collectionId} — voir règles Firestore
+   dans le README). Une annonce peut appartenir à PLUSIEURS collections à la
+   fois (comme des tags, pas des dossiers exclusifs) : le cœur n'est plus un
+   simple bouton à bascule, il ouvre un volet de choix (kind==="collPicker"
+   plus bas) qui coche/décoche une à une les collections concernées.
+   listingKey(l) : même convention que logContact() (l.docId||String(l.id))
+   — l'identifiant stocké dans listingIds n'a besoin d'aucun document
+   Firestore côté annonce (contrairement à listings/{id}/likes/{uid}
+   ci-dessous, qui lui exige un docId réel) : une annonce statique de démo
+   peut donc très bien rejoindre une collection. */
+function listingKey(l){ return l.docId || String(l.id); }
+function ensureCollectionsLoaded(cb){
+  if(collectionsCache){ cb(collectionsCache); return; }
+  if(!authState.uid || typeof firebase==="undefined"){ cb([]); return; }
+  firebase.firestore().collection("collections").doc(authState.uid).collection("items").orderBy("createdAt","asc").get().then(function(snap){
+    collectionsCache = snap.docs.map(function(doc){
+      var d = doc.data(); d.id = doc.id; d.listingIds = d.listingIds || [];
+      return d;
+    });
+    cb(collectionsCache);
+  }).catch(function(){ collectionsCache = []; cb(collectionsCache); });
 }
-function toggleLike(l){
-  var idx = state.liked.indexOf(l.id);
-  var liked = idx===-1;
-  if(liked && !authState.uid){
-    authContext = "traveler";
-    openSheet("auth");
-    return;
-  }
-  if(liked) state.liked.push(l.id); else state.liked.splice(idx,1);
-  persist();
-  if(authState.uid) writeLikeState(l, liked);
+function collectionsContaining(key){
+  return (collectionsCache||[]).filter(function(c){ return c.listingIds.indexOf(key)!==-1; });
+}
+function isListingSaved(l){ return collectionsContaining(listingKey(l)).length>0; }
+/* Nombre de favoris à AFFICHER (bandeau Mes séjours) : annonces distinctes
+   sauvegardées dans au moins une collection, ignorant les ids fantômes
+   d'une annonce supprimée depuis (même esprit que l'ancien validLikedCount(),
+   dont c'est le successeur direct) — jamais le nombre de COLLECTIONS. */
+function savedListingsCount(){
+  var ids = {};
+  LISTINGS.forEach(function(l){ ids[listingKey(l)] = true; });
+  var seen = {};
+  (collectionsCache||[]).forEach(function(c){
+    c.listingIds.forEach(function(k){ if(ids[k]) seen[k] = true; });
+  });
+  return Object.keys(seen).length;
+}
+/* Coche/décoche une annonce dans UNE collection (volet kind==="collPicker") —
+   écrit tout de suite, comme les autres volets à cases indépendantes de ce
+   fichier (kind==="roomlink"). wasSaved/isSaved (avant/après CE changement,
+   toutes collections confondues) pilotent writeLikeState() : l'agrégat
+   public listings/{id}/likes/{uid} (compteur "Les plus appréciés", voir plus
+   bas) ne bouge qu'au moment où l'annonce entre dans sa PREMIÈRE collection
+   ou sort de sa DERNIÈRE — jamais à chaque case cochée individuellement,
+   sans quoi cocher 3 collections d'un coup l'incrémenterait 3 fois. */
+function toggleListingInCollection(listing, collection, add){
+  var key = listingKey(listing);
+  var wasSaved = isListingSaved(listing);
+  var newIds = add
+    ? (collection.listingIds.indexOf(key)===-1 ? collection.listingIds.concat(key) : collection.listingIds)
+    : collection.listingIds.filter(function(k){ return k!==key; });
+  var ref = firebase.firestore().collection("collections").doc(authState.uid).collection("items").doc(collection.id);
+  return ref.update({listingIds:newIds, updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).then(function(){
+    collection.listingIds = newIds;
+    var isSaved = isListingSaved(listing);
+    if(wasSaved!==isSaved) writeLikeState(listing, isSaved);
+  });
+}
+/* Nouvelle collection, vide, nommée par l'hôte — .add() plutôt que
+   .doc().set() : laisse Firestore générer l'id, sans rien à choisir
+   soi-même. createdAt en repli côté client (new Date()) pour trier
+   immédiatement dans la session en cours, avant que le serveur ne résolve
+   son vrai FieldValue.serverTimestamp() (pas relisible tout de suite après
+   un .add()) ; écrasé de toute façon au prochain vrai chargement
+   (ensureCollectionsLoaded() repart à zéro). */
+function createCollection(name, cb){
+  var itemsRef = firebase.firestore().collection("collections").doc(authState.uid).collection("items");
+  var serverNow = firebase.firestore.FieldValue.serverTimestamp();
+  itemsRef.add({name:name, listingIds:[], createdAt:serverNow, updatedAt:serverNow}).then(function(ref){
+    var col = {id:ref.id, name:name, listingIds:[], createdAt:new Date(), updatedAt:new Date()};
+    collectionsCache.push(col);
+    cb(col);
+  }).catch(function(err){ cb(null, err); });
+}
+function renameCollection(collection, newName, cb){
+  firebase.firestore().collection("collections").doc(authState.uid).collection("items").doc(collection.id)
+    .update({name:newName, updatedAt:firebase.firestore.FieldValue.serverTimestamp()})
+    .then(function(){ collection.name = newName; cb(); })
+    .catch(function(err){ cb(err); });
+}
+/* Supprimer une collection peut faire sortir une annonce de sa DERNIÈRE
+   collection (si elle n'était que dans celle-ci) : même logique
+   wasSaved/isSaved que toggleListingInCollection() ci-dessus, vérifiée pour
+   chacune de ses annonces APRÈS le retrait de la collection du cache, pour
+   ne jamais laisser le compteur public likeCount gonflé par une collection
+   qui n'existe plus. */
+function deleteCollection(collection, cb){
+  firebase.firestore().collection("collections").doc(authState.uid).collection("items").doc(collection.id).delete().then(function(){
+    var affectedKeys = collection.listingIds.slice();
+    collectionsCache = collectionsCache.filter(function(c){ return c.id!==collection.id; });
+    affectedKeys.forEach(function(key){
+      if(collectionsContaining(key).length) return; // encore présente ailleurs, rien à décrémenter
+      var l = LISTINGS.filter(function(x){ return listingKey(x)===key; })[0];
+      if(l) writeLikeState(l, false);
+    });
+    cb();
+  }).catch(function(err){ cb(err); });
+}
+/* Point d'entrée unique du cœur, partout dans l'app (carte du fil, fiche
+   détail) : ouvre le volet de choix de collection(s) plutôt que de liker
+   directement — voir kind==="collPicker". AJOUTER à une collection exige un
+   compte (comme l'ancien like) : ouvre la connexion à la place si le
+   visiteur n'est pas connecté. onChange(), optionnel, est rappelé après
+   chaque case cochée/décochée dans le volet (pas seulement à sa fermeture)
+   pour que l'appelant reste synchronisé en direct. */
+function openCollectionPicker(l, onChange){
+  if(!authState.uid){ authContext = "traveler"; openSheet("auth"); return; }
+  collectionPickerContext = {listing:l, onChange:onChange||function(){}, creating:false};
+  openSheet("collPicker");
 }
 
 /* Écrit l'état "favori" côté serveur : un document par (annonce, compte)
@@ -1689,7 +1841,11 @@ function toggleLike(l){
    set()/delete() + update() du compteur partent dans le MÊME batch,
    atomique : jamais l'un sans l'autre. Best-effort (même esprit que
    writeBackSejoursLink côté app/) : un échec réseau ne bloque jamais
-   l'action locale, déjà faite avant cet appel. */
+   l'action locale, déjà faite avant cet appel. Appelée désormais par
+   toggleListingInCollection()/deleteCollection() (première/dernière
+   collection contenant l'annonce), plus par un simple clic sur un cœur —
+   la règle Firestore elle-même (voir README) n'a pas changé, seul QUI
+   déclenche l'écriture a changé. */
 function writeLikeState(l, liked){
   if(!l.docId || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
   var db = firebase.firestore();
@@ -1777,15 +1933,9 @@ function listingPriceLabel(l){
 }
 
 function filteredListings(){
-  /* Favoris (onglet Mes séjours) : les filtres Lieu/Distance/Prix/
-     Prestations/Trier sont masqués sur toute cette vue (voir
-     refreshLikesChrome()) — les ignorer ici aussi, sinon un favori
-     resterait invisible à cause d'un filtre laissé actif depuis Explorer,
-     sans aucun moyen de le voir ni de le lever sur cet onglet. Tous les
-     favoris, dans l'ordre naturel de LISTINGS, un point c'est tout. */
-  if(state.tab==="likes"){
-    return LISTINGS.filter(function(l){ return state.liked.indexOf(l.id)!==-1; });
-  }
+  // Favoris (Mes séjours) ne passe plus par ici : renderFavorisView() gère
+  // sa propre liste (annonces d'UNE collection), sans filtres Lieu/Distance/
+  // Prix/Prestations/Trier — voir son propre commentaire plus bas.
   var f = state.filters;
   var list = LISTINGS.filter(function(l){
     if(!matchesLocation(l, f)) return false;
@@ -1899,7 +2049,7 @@ function coverHtml(l){
     '<div class="grain"></div>'+
     '<div class="scrim"></div>'+
     '<div class="top-badges"><span class="pill-badge">'+listingDistanceKm(l)+' km</span><span class="pill-badge">'+priceLabel+'</span></div>'+
-    '<button class="save-btn'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'" aria-label="Enregistrer">'+
+    '<button class="save-btn'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
     '<div class="cover-info">'+
@@ -1914,13 +2064,16 @@ function coverHtml(l){
   '</div>';
 }
 
+// Explorer uniquement désormais — Mes séjours (Favoris/Demandes/Séjours)
+// a ses propres fonctions de rendu (renderFavorisView()/renderContactLog()),
+// voir renderTabContent() plus bas.
 function renderFeed(){
   var list = filteredListings();
   // Fusion de l'onglet Carte dans Explorer (retour utilisateur) : une zone
   // de recherche dessinée sur la carte embarquée filtre maintenant aussi le
   // fil de cartes juste en dessous, pas seulement les punaises — "chercher
   // autour de ce point" doit se répercuter sur ce qu'on voit défiler.
-  if(state.tab==="explore" && mapZone) list = mapZoneFilteredListings().located;
+  if(mapZone) list = mapZoneFilteredListings().located;
   var feed = document.getElementById("feed");
   if(state.loading){
     feed.innerHTML = '<div class="empty-state"><p>Chargement des hébergements…</p></div>';
@@ -1931,27 +2084,19 @@ function renderFeed(){
   // la carte serait en haut des annonces") — remplace l'ancien onglet
   // "Carte" séparé. Affichée même liste vide (zéro résultat filtré/zone),
   // pour ne jamais faire disparaître l'outil de recherche par zone.
-  var mapBlockHtml = state.tab==="explore" ? exploreMapBlockHtml() : "";
-  var toggle = state.tab==="likes" ? likesViewToggleHtml() : "";
+  var mapBlockHtml = exploreMapBlockHtml();
   if(!list.length){
-    if(state.tab==="likes"){
-      feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
-        '<p>Aucun favori enregistré pour l\'instant.<br>Touchez le cœur sur un hébergement pour le garder de côté.</p></div>';
-    } else {
-      feed.innerHTML = mapBlockHtml + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
-        '<p>Aucun hébergement '+(state.tab==="explore" && mapZone ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
-    }
-    if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
-    if(state.tab==="explore") wireExploreMap();
+    feed.innerHTML = mapBlockHtml + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
+      '<p>Aucun hébergement '+(mapZone ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
+    wireExploreMap();
     return;
   }
-  feed.innerHTML = mapBlockHtml + toggle + list.map(function(l){
+  feed.innerHTML = mapBlockHtml + list.map(function(l){
     return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
       '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
     '</article>';
   }).join("");
-  if(state.tab==="likes"){ wireLikesToggle(); loadLikesCounts(); }
-  if(state.tab==="explore") wireExploreMap();
+  wireExploreMap();
   wireFeedEvents();
 }
 
@@ -1971,29 +2116,19 @@ function wireFeedEvents(){
       var id = Number(el.getAttribute("data-like"));
       var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
       if(!l) return;
-      toggleLike(l);
-      if(state.tab==="explore"){
-        /* Retour utilisateur : liker une annonce faisait "recharger" toutes
-           les photos du fil, pas juste celle likée. Cause : refreshCurrentView()
-           appelait renderFeed(), qui réécrit tout #feed.innerHTML — donc
-           reconstruit toutes les <img>/carrousels de toutes les cartes, pas
-           seulement celle cliquée. Sur Explorer, la liste elle-même ne change
-           jamais selon l'état liked (contrairement à Favoris, voir plus bas) :
-           mise à jour ciblée du seul bouton cliqué, aucun re-rendu nécessaire.
-           Depuis la fusion de la carte dans Explorer, ça évite surtout de
-           détruire/recréer l'instance Leaflet (perte du zoom/pan) pour un
-           simple cœur. Limite connue, acceptée : la punaise correspondante
-           sur la carte (qui a sa propre couleur "aimée", voir .map-pin.liked)
-           ne se met à jour qu'au prochain rendu complet (changement de
-           filtre…), pas instantanément avec le cœur de la carte cliquée. */
-        el.classList.toggle("liked", state.liked.indexOf(l.id)!==-1);
-      } else {
-        // state.tab==="likes" (Favoris) : la liste elle-même doit changer
-        // selon l'état liked. refreshCurrentView() choisit le bon
-        // rafraîchissement (Favoris vs Demandes/Séjours).
-        refreshCurrentView();
-      }
-      renderLikeBadge();
+      /* Le cœur n'est plus un simple bouton à bascule (retour utilisateur,
+         "le cœur ouvre un choix de collection(s) au clic") : il ouvre le
+         volet de choix, jamais un re-rendu du fil complet à lui seul — ce
+         qui évite au passage de reconstruire toutes les cartes/de détruire
+         l'instance Leaflet d'Explorer pour un simple clic sur un cœur.
+         Limite connue, acceptée, inchangée : la punaise correspondante sur
+         la carte (.map-pin.liked) ne se met à jour qu'au prochain rendu
+         complet, pas instantanément avec ce cœur. */
+      openCollectionPicker(l, function(){
+        el.classList.toggle("liked", isListingSaved(l));
+        renderLikeBadge();
+        if(state.tab==="likes" && state.likesView==="favoris") renderFavorisView();
+      });
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-share]"), function(el){
@@ -2021,17 +2156,18 @@ function wireFeedEvents(){
 /* ---------------- Mes séjours : sous-onglets Favoris / Demandes / Séjours ----------------
    Les trois regroupés ici parce que ce sont les seules listes propres au
    compte du voyageur (par opposition au fil, qui montre les annonces de
-   tout le monde) : Favoris (state.liked), Demandes en cours et Séjours
-   confirmés (les deux derniers tirés de contactLog, voir logContact()).
-   Rendu comme un bandeau à 3 segments en tête de #feed, dans
-   renderFeed()/renderContactLog() plutôt que comme un élément fixe séparé.
-   Chaque segment réutilise .stat-tile (voir CSS, "dans le style de la vue
-   profil" — demande explicite) : Favoris est synchrone (validLikedCount(),
-   voir plus haut — déjà en mémoire, juste filtré contre LISTINGS) ;
-   Demandes/Séjours viennent d'une lecture Firestore
-   partagée (loadContactLogEntries()/contactLogCache) — "…" tant qu'elle
-   n'a pas répondu, patché ensuite par loadLikesCounts() sans devoir
-   attendre pour afficher Favoris. */
+   tout le monde) : Favoris (collections, voir plus haut), Demandes en
+   cours et Séjours confirmés (les deux derniers tirés de contactLog, voir
+   logContact()). Rendu comme un bandeau à 3 segments en tête de #feed,
+   dans renderFavorisView()/renderContactLog() plutôt que comme un élément
+   fixe séparé. Chaque segment réutilise .stat-tile (voir CSS, "dans le
+   style de la vue profil" — demande explicite) : Favoris est synchrone
+   (savedListingsCount(), voir plus haut) SEULEMENT une fois les
+   collections chargées (sinon "…", comme Demandes/Séjours en attendant
+   loadContactLogEntries()) ; Demandes/Séjours viennent d'une lecture
+   Firestore partagée (loadContactLogEntries()/contactLogCache) — patchés
+   ensuite par loadLikesCounts() sans devoir attendre pour afficher le
+   bandeau lui-même. */
 function contactLogCounts(docs){
   var enCours = 0, confirmed = 0;
   docs.forEach(function(d){ if(d.data().status==="confirmed") confirmed++; else enCours++; });
@@ -2040,8 +2176,9 @@ function contactLogCounts(docs){
 function likesViewToggleHtml(){
   var loaded = !authState.uid || contactLogCache!=null;
   var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
+  var favLoaded = !authState.uid || collectionsCache!=null;
   return '<div class="profile-stats">'+
-    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+validLikedCount()+'</b><span>Favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+(favLoaded?savedListingsCount():"…")+'</b><span>Favoris</span></button>'+
     '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Demandes</span></button>'+
     '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Séjours</span></button>'+
   '</div>';
@@ -2049,6 +2186,10 @@ function likesViewToggleHtml(){
 function wireLikesToggle(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-likes-view]"), function(btn){
     btn.addEventListener("click", function(){
+      // Toujours revenir à la grille des collections en (re)cliquant sur
+      // Favoris — même geste "retour au sommet" qu'un onglet de nav
+      // reclique sur lui-même ailleurs dans l'app.
+      state.likesCollectionId = null;
       state.likesView = btn.getAttribute("data-likes-view");
       refreshLikesChrome();
     });
@@ -2087,6 +2228,118 @@ function refreshLikesChrome(){
   resultLine.classList.toggle("chrome-collapsed", hideChrome);
   renderTabContent();
   if(!hideChrome) renderResultLine();
+}
+
+/* ---------------- Favoris : grille de collections + détail d'une collection ----------------
+   Remplace l'ancienne liste plate de favoris (retour utilisateur, voir le
+   grand commentaire plus haut sur les collections). Deux écrans sur cette
+   même entrée, pilotés par state.likesCollectionId : null = grille des
+   collections (tuiles façon Collections Photos, adaptées à notre style —
+   capture d'écran fournie en référence) ; un id = le détail d'UNE
+   collection (ses annonces, dans le même format de carte que le fil
+   Explorer — coeur, partage, contact — plus un en-tête renommer/
+   supprimer). */
+function renderFavorisView(){
+  var feed = document.getElementById("feed");
+  var toggle = likesViewToggleHtml();
+  if(!authState.uid){
+    feed.innerHTML = toggle + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
+      '<p>Connectez-vous pour créer et retrouver vos collections.</p></div>';
+    wireLikesToggle();
+    return;
+  }
+  // Collection ouverte supprimée/introuvable (autre appareil, ou juste
+  // supprimée à l'instant) : repli silencieux sur la grille plutôt qu'un
+  // écran de détail cassé.
+  if(state.likesCollectionId && collectionsCache && !collectionsCache.some(function(c){ return c.id===state.likesCollectionId; })){
+    state.likesCollectionId = null;
+  }
+  if(state.likesCollectionId && collectionsCache){
+    renderCollectionDetail(feed, toggle);
+    return;
+  }
+  feed.innerHTML = toggle + '<div class="empty-state"><p>Chargement…</p></div>';
+  wireLikesToggle();
+  ensureCollectionsLoaded(function(cols){
+    if(state.tab!=="likes" || state.likesView!=="favoris") return; // a changé d'onglet pendant le chargement
+    if(state.likesCollectionId){ renderFavorisView(); return; } // une collection a été ouverte entre-temps (chargement déclenché par le volet du cœur, par ex.)
+    renderCollectionsGrid(feed, toggle, cols);
+  });
+}
+function renderCollectionsGrid(feed, toggle, cols){
+  var body = !cols.length
+    ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
+      '<p>Aucune collection pour l\'instant.<br>Touchez le cœur sur un hébergement pour en créer une.</p></div>'
+    : '<div class="collections-grid">'+cols.map(collectionTileHtml).join("")+'</div>';
+  feed.innerHTML = toggle + body;
+  wireLikesToggle();
+  Array.prototype.forEach.call(feed.querySelectorAll("[data-open-coll]"), function(el){
+    el.addEventListener("click", function(){
+      state.likesCollectionId = el.getAttribute("data-open-coll");
+      renderFavorisView();
+    });
+  });
+}
+/* Tuile d'une collection — mosaïque des photos de ses 1 à 3 premières
+   annonces (comme Collections Photos, qui compose la tuile à partir des
+   vraies photos de l'album plutôt qu'une couverture choisie à la main :
+   "personnalisable" se joue ici sur le NOM, voir renameCollection(), pas
+   sur un choix de couverture séparé — pas de champ dédié à alourdir la
+   création pour un gain marginal, la mosaïque parle déjà d'elle-même). */
+function collectionTileHtml(c){
+  var covers = c.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean).slice(0,3);
+  var n = covers.length;
+  var photosHtml = !n
+    ? '<div class="collection-tile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg></div>'
+    : '<div class="collection-tile-photos n'+n+'">'+covers.map(function(l){
+        var thumb = listingThumbUrl(l);
+        return thumb ? '<img src="'+thumb+'" alt="" loading="lazy">' : '<div class="collection-tile-empty" style="background:'+GRADIENTS[l.grad]+'"></div>';
+      }).join("")+'</div>';
+  var count = c.listingIds.length;
+  return '<button type="button" class="collection-tile" data-open-coll="'+esc(c.id)+'">'+
+    photosHtml+
+    '<div class="collection-tile-scrim"></div>'+
+    '<div class="collection-tile-info"><b>'+esc(c.name)+'</b><span>'+count+' hébergement'+(count>1?'s':'')+'</span></div>'+
+  '</button>';
+}
+function renderCollectionDetail(feed, toggle){
+  var col = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
+  var listings = col.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean);
+  var head = '<div class="collection-detail-head">'+
+    '<button type="button" class="collection-detail-back" id="coll-detail-back" aria-label="Retour aux collections"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>'+
+    '<span class="collection-detail-title">'+esc(col.name)+'</span>'+
+    '<div class="collection-detail-actions">'+
+      '<button type="button" id="coll-detail-rename" aria-label="Renommer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'+
+      '<button type="button" id="coll-detail-delete" aria-label="Supprimer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+    '</div>'+
+  '</div>';
+  var body = !listings.length
+    ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><p>Cette collection est vide pour l\'instant.<br>Touchez le cœur sur un hébergement pour l\'y ajouter.</p></div>'
+    : listings.map(function(l){
+        return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
+          '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
+        '</article>';
+      }).join("");
+  feed.innerHTML = toggle + head + body;
+  wireLikesToggle();
+  if(listings.length) wireFeedEvents();
+  document.getElementById("coll-detail-back").addEventListener("click", function(){
+    state.likesCollectionId = null;
+    renderFavorisView();
+  });
+  document.getElementById("coll-detail-rename").addEventListener("click", function(){
+    collectionRenameContext = col;
+    openSheet("collRename");
+  });
+  document.getElementById("coll-detail-delete").addEventListener("click", function(){
+    if(!confirm('Supprimer la collection "'+col.name+'" ? Les annonces elles-mêmes ne sont pas supprimées, seulement retirées de cette collection.')) return;
+    deleteCollection(col, function(err){
+      if(err){ alert("Erreur : "+(err.message||err.code)); return; }
+      state.likesCollectionId = null;
+      renderFavorisView();
+      renderLikeBadge();
+    });
+  });
 }
 
 /* Plus qu'un libellé texte : la vignette photo de l'annonce a remplacé
@@ -2792,7 +3045,7 @@ function openDetail(id){
   root.innerHTML = '<div class="detail" id="detail-panel">'+
     '<div class="detail-gallery" id="detail-gallery">'+slides+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
-      '<button class="save-btn detail-save'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'" data-like="'+l.id+'"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
+      '<button class="save-btn detail-save'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
       '<button class="share-btn detail-share" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
@@ -2820,8 +3073,7 @@ function openDetail(id){
 
   document.getElementById("detail-back").addEventListener("click", closeDetail);
   root.querySelector("[data-like]").addEventListener("click", function(){
-    toggleLike(l);
-    renderLikeBadge(); openDetail(id);
+    openCollectionPicker(l, function(){ renderLikeBadge(); openDetail(id); });
   });
   root.querySelector("[data-share]").addEventListener("click", function(){ shareListing(l); });
   if(hasTabs){
@@ -3048,12 +3300,49 @@ function openSheet(kind){
         '<button class="radio-row'+(!rlCtx.linkedRoomId?' active':'')+'" data-roomlink="">Aucune</button>'+
         rlCtx.rooms.map(function(r){ return '<button class="radio-row'+(r.id===rlCtx.linkedRoomId?' active':'')+'" data-roomlink="'+esc(r.id)+'">'+esc(r.name)+'</button>'; }).join("")+
       '</div>';
+  } else if(kind==="collPicker"){
+    // "Ajouter à une collection" (retour utilisateur : le cœur ouvre
+    // désormais un choix de collection(s) au clic, plutôt qu'un simple
+    // favori à bascule). Une case cochée = enregistré tout de suite (même
+    // esprit que kind==="roomlink"/kind==="amen" : le volet reste ouvert,
+    // plusieurs collections peuvent être cochées d'affilée). "+ Nouvelle
+    // collection" bascule ce MÊME volet sur un petit formulaire de création
+    // (collectionPickerContext.creating) plutôt que d'ouvrir un second
+    // volet par-dessus.
+    var cpCtx = collectionPickerContext;
+    if(cpCtx.creating){
+      inner = '<h3>Nouvelle collection</h3>'+
+        '<button type="button" class="link-btn" id="coll-back-btn" style="margin-bottom:10px;">&larr; Retour</button>'+
+        '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-new-name" placeholder="Ex. Vacances d\'été" autofocus></div>'+
+        '<div class="auth-err" id="coll-err"></div>';
+    } else if(!collectionsCache){
+      inner = '<h3>Ajouter à une collection</h3><p class="sheet-sub">Chargement de vos collections…</p>';
+    } else {
+      var savedInIds = collectionsContaining(listingKey(cpCtx.listing)).map(function(c){ return c.id; });
+      inner = '<h3>Ajouter à une collection</h3>'+
+        '<p class="sheet-sub">Une annonce peut appartenir à plusieurs collections à la fois.</p>'+
+        '<div class="field-block sort-row">'+
+          (collectionsCache.length ? collectionsCache.map(function(c){
+            return '<button type="button" class="coll-pick-row'+(savedInIds.indexOf(c.id)!==-1?' active':'')+'" data-coll-id="'+esc(c.id)+'">'+
+              '<span>'+esc(c.name)+'</span>'+
+              '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>'+
+            '</button>';
+          }).join("") : '<p class="sheet-sub" style="margin:0 0 10px;">Aucune collection pour l\'instant.</p>')+
+          '<button type="button" class="link-btn" id="coll-new-btn">+ Nouvelle collection</button>'+
+        '</div>';
+    }
+  } else if(kind==="collRename"){
+    inner = '<h3>Renommer la collection</h3>'+
+      '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-rename-name" value="'+esc(collectionRenameContext.name)+'"></div>'+
+      '<div class="auth-err" id="coll-rename-err"></div>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
     : kind==="hostform" ? (hostFormEditListing ? "Enregistrer les modifications" : "Envoyer l'annonce")
     : kind==="hostbooking" ? ((hostBookingContext.mode==="view" || hostBookingContext.isGestion) ? "Fermer" : "Ajouter la réservation")
     : kind==="loginPrompt" ? "Se connecter"
+    : kind==="collPicker" ? (collectionPickerContext.creating ? "Créer" : "Terminé")
+    : kind==="collRename" ? "Enregistrer"
     : kind==="roomlink" ? "Fermer"
     : "Voir les résultats";
 
@@ -3148,6 +3437,82 @@ function openSheet(kind){
       closeSheet();
       authContext = "traveler";
       openSheet("auth");
+    });
+    return;
+  } else if(kind==="collPicker"){
+    /* Comme hostbooking/loginPrompt ci-dessus : ce kind gère lui-même son
+       #sheet-apply (ou n'en a pas besoin), donc return avant le handler
+       générique plus bas qui ferme+persiste+re-render — sinon les deux
+       handlers se déclenchent l'un après l'autre sur le même clic et le
+       générique vide #sheet-root avant que celui-ci ait fini de lire les
+       champs du formulaire. */
+    var cpCtx = collectionPickerContext;
+    if(!collectionsCache){
+      // Premier volet ouvert de la session (collections pas encore
+      // chargées) : re-ouvre ce même volet une fois la lecture Firestore
+      // revenue — cf. le repli "Chargement…" posé dans inner ci-dessus.
+      ensureCollectionsLoaded(function(){ openSheet("collPicker"); });
+    } else if(cpCtx.creating){
+      document.getElementById("coll-back-btn").addEventListener("click", function(){
+        cpCtx.creating = false;
+        openSheet("collPicker");
+      });
+      document.getElementById("sheet-apply").addEventListener("click", function(){
+        var name = document.getElementById("coll-new-name").value.trim();
+        var errEl = document.getElementById("coll-err");
+        errEl.textContent = "";
+        if(!name){ errEl.textContent = "Donnez un nom à cette collection."; return; }
+        var btn = document.getElementById("sheet-apply");
+        btn.disabled = true;
+        createCollection(name, function(col, err){
+          if(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; return; }
+          // La nouvelle collection reçoit tout de suite l'annonce qu'on
+          // était en train d'ajouter — créer une collection vide puis
+          // devoir recocher la case juste après serait un geste en trop.
+          toggleListingInCollection(cpCtx.listing, col, true).then(function(){
+            cpCtx.creating = false;
+            cpCtx.onChange();
+            openSheet("collPicker");
+          }).catch(function(err2){ errEl.textContent = "Erreur : "+(err2.message||err2.code); btn.disabled = false; });
+        });
+      });
+    } else {
+      Array.prototype.forEach.call(root.querySelectorAll("[data-coll-id]"), function(el){
+        el.addEventListener("click", function(){
+          var col = collectionsCache.filter(function(c){ return c.id===el.getAttribute("data-coll-id"); })[0];
+          if(!col || el.disabled) return;
+          var willAdd = !el.classList.contains("active");
+          el.classList.toggle("active", willAdd); // optimiste, annulé plus bas si l'écriture échoue
+          el.disabled = true;
+          toggleListingInCollection(cpCtx.listing, col, willAdd).then(function(){
+            el.disabled = false;
+            cpCtx.onChange();
+          }).catch(function(err){
+            el.classList.toggle("active", !willAdd);
+            el.disabled = false;
+            alert("Erreur : "+(err.message||err.code));
+          });
+        });
+      });
+      document.getElementById("coll-new-btn").addEventListener("click", function(){
+        cpCtx.creating = true;
+        openSheet("collPicker");
+      });
+    }
+    return;
+  } else if(kind==="collRename"){
+    document.getElementById("sheet-apply").addEventListener("click", function(){
+      var name = document.getElementById("coll-rename-name").value.trim();
+      var errEl = document.getElementById("coll-rename-err");
+      errEl.textContent = "";
+      if(!name){ errEl.textContent = "Le nom ne peut pas être vide."; return; }
+      var btn = document.getElementById("sheet-apply");
+      btn.disabled = true;
+      renameCollection(collectionRenameContext, name, function(err){
+        if(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; return; }
+        closeSheet();
+        renderFavorisView();
+      });
     });
     return;
   }
@@ -3997,8 +4362,21 @@ function submitHostForm(){
 function renderLikeBadge(){
   var b = document.getElementById("like-badge");
   if(!b) return; /* absent en mode hôte, la barre d'onglets est différente */
-  var n = validLikedCount();
+  var n = savedListingsCount();
   if(n){ b.hidden=false; b.textContent = n; } else b.hidden = true;
+}
+/* Patche juste la classe .liked des cœurs déjà présents dans le DOM (fil
+   Explorer, fiche détail) une fois les collections chargées/rechargées —
+   jamais un re-rendu complet (voir bootFirebaseAuth()), qui détruirait
+   inutilement l'instance Leaflet d'Explorer pour une simple connexion. Les
+   punaises de la carte gardent leur limite déjà documentée (couleur "aimée"
+   mise à jour seulement au prochain rendu complet). */
+function refreshSavedHeartsInDom(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-like]"), function(el){
+    var id = Number(el.getAttribute("data-like"));
+    var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+    if(l) el.classList.toggle("liked", isListingSaved(l));
+  });
 }
 
 var mapInstance = null;
@@ -4077,7 +4455,7 @@ function refreshExploreMapMarkers(){
   located.forEach(function(l){
     var icon = L.divIcon({
       className:"map-pin-icon",
-      html:'<div class="map-pin'+(state.liked.indexOf(l.id)!==-1?' liked':'')+'"><div class="dot"><span>'+l.price+'€</span></div></div>',
+      html:'<div class="map-pin'+(isListingSaved(l)?' liked':'')+'"><div class="dot"><span>'+l.price+'€</span></div></div>',
       iconSize:[30,30], iconAnchor:[15,36]
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
@@ -4284,17 +4662,7 @@ function renderAdminQueue(){
 }
 
 function renderTabContent(){
-  if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
-  else renderFeed();
-}
-/* Comme renderTabContent(), mais pour un simple rafraîchissement d'état
-   (like togglé...) qui ne doit pas reconstruire toute la vue : sur Explorer,
-   ça évite de détruire/recréer l'instance Leaflet de la carte embarquée
-   (perte du zoom/pan) juste pour mettre à jour un cœur — voir le
-   traitement ciblé data-like dans wireFeedEvents(), qui appelle
-   refreshCurrentView() seulement pour les onglets SANS carte. */
-function refreshCurrentView(){
-  if(state.tab==="likes" && state.likesView!=="favoris") renderContactLog();
+  if(state.tab==="likes") { if(state.likesView==="favoris") renderFavorisView(); else renderContactLog(); }
   else renderFeed();
 }
 
@@ -5056,7 +5424,7 @@ fetch("listings.json").then(function(r){
   rebuildListings();
   state.loading = false;
   renderFilterBar(); renderFeed(); renderResultLine();
-  renderLikeBadge(); // voir commentaire de validLikedCount() : LISTINGS était vide au tout premier rendu du badge
+  renderLikeBadge(); // voir commentaire de savedListingsCount() : LISTINGS était vide au tout premier rendu du badge
   maybeOpenDeepLink();
 }).catch(function(err){
   state.loading = false;

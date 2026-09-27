@@ -558,6 +558,43 @@ service cloud.firestore {
         && request.resource.data.confirmedAt == request.time
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']);
     }
+
+    // Collections de favoris (Mes séjours -> Favoris, voir
+    // ensureCollectionsLoaded()/createCollection()/toggleListingInCollection()
+    // dans sejours/index.html) : un document par collection, entièrement
+    // privé à son propriétaire — même principe strictement privé que
+    // contactLog ci-dessus (jamais lu ni modifié par personne d'autre, pas
+    // même un compte isAdmin(), une collection de favoris n'a rien à voir
+    // avec la modération des annonces), mais mutable : on peut renommer une
+    // collection ou ajouter/retirer une annonce de listingIds, ce que
+    // contactLog interdit à sa propre donnée. listingIds contient des
+    // identifiants d'annonces (listingKey() côté client — docId Firestore
+    // réel, ou id statique en tant que chaîne pour les rares annonces de
+    // demo de listings.json) : une simple liste de chaînes, jamais une
+    // référence vers listings/{listingId} elle-même, donc aucune lecture
+    // croisée n'est nécessaire ici pour appliquer la règle.
+    match /collections/{uid}/items/{collectionId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.name is string
+        && request.resource.data.listingIds is list
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.keys().hasOnly(['name', 'listingIds', 'createdAt', 'updatedAt']);
+      // update() (renameCollection()/toggleListingInCollection()) n'envoie
+      // jamais que les champs modifiés (name+updatedAt, ou listingIds+
+      // updatedAt) : request.resource.data représente ici le document
+      // COMPLET après fusion, donc createdAt doit rester strictement
+      // identique à sa valeur précédente (jamais falsifiable) et
+      // affectedKeys() ne doit jamais toucher autre chose que name/
+      // listingIds/updatedAt.
+      allow update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.name is string
+        && request.resource.data.listingIds is list
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name', 'listingIds', 'updatedAt']);
+    }
   }
 }
 ```
@@ -565,6 +602,8 @@ service cloud.firestore {
 Cette règle dit : un document `accounts/XXXX` n'est lisible/modifiable que par la personne connectée dont l'identifiant Firebase est `XXXX` (le propriétaire) — sauf le sous-document `shared/ops`, également lisible par un compte Personnel qui lui est officiellement rattaché. Personne d'autre, même avec la configuration Firebase en main, ne peut y accéder. Pour `listings/{listingId}`, seul le propriétaire (`ownerUid`) peut créer/modifier/supprimer son annonce, tout le monde peut lire une annonce `published`, et personne côté application ne peut faire passer `status` de `pending` à `published` (règle `update` : le nouveau `status` doit rester égal à l'ancien) — cette bascule se fait uniquement à la main dans la Firebase Console. Le champ `linkedRoomId` (Espace hôtes → Mon calendrier, voir plus bas) est un champ comme un autre pour cette règle : le propriétaire peut le modifier librement tant que `status` ne bouge pas.
 
 **Important : sans ce nouveau bloc `listings/{listingId}` (bookings inclus) collé dans Firebase Console → Firestore Database → Règles, le dépôt d'annonce et le calendrier hôte échouent silencieusement avec une erreur de permission** — les règles Firestore refusent par défaut tout ce qui n'est pas explicitement autorisé.
+
+**Important, bis : le bloc `collections/{uid}/items/{collectionId}` ci-dessus (favoris) n'est pas déployé automatiquement non plus — comme tout le reste de ce fichier de règles, c'est un texte à recopier toi-même dans Firebase Console → Firestore Database → Règles.** Tant que ce n'est pas fait, créer une collection ou y ajouter une annonce échoue avec une erreur de permission (`PERMISSION_DENIED`) — visible en test local (mock Firestore) mais pas en production tant que la vraie règle n'y est pas collée.
 
 ### Espace hôtes : calendrier simplifié (Profil → Espace hôtes)
 
@@ -602,6 +641,24 @@ Les photos déjà en ligne ne sont ni re-uploadées ni perdues : chaque entrée 
 Symétrique au sélecteur ci-dessus, dans l'autre sens : dans `app/`, « + Ajouter une chambre » (`addRoom()`) lit désormais (`resolveSejoursListings()`, lecture seule sur `listings` où `ownerUid == uid` — même règle Firestore que le propriétaire lisant sa propre annonce, y compris `pending`) les chambres Séjours de l'hôte pas encore reprises (`roomAddChoiceEntries()`, qui exclut celles déjà associées via `room.linkedListingId`/`linkedUnitId`). S'il y en a, une modale (`modalRoomAdd`) propose de reprendre l'une d'elles (nom, capacité, prix repris comme tarif de base) ou de repartir d'une chambre vierge ; **s'il n'y en a aucune, `addRoom()` crée directement une chambre vierge, exactement comme avant** — aucun changement de comportement pour un compte sans présence sur Séjours.
 
 Reprendre une chambre passe par `addRoomFromListingUnit()`, qui pousse dans `S.settings.rooms` exactement comme `addRoom()` le faisait déjà (même écriture `saveSettings()`/`pushToFirebase()`, inchangée) puis appelle `writeBackSejoursLink()` : celle-ci écrit `unit.linkedRoomId` sur l'annonce Séjours d'origine (même mécanisme que le sens Séjours→app ci-dessus — tout le tableau `units` réécrit, jamais `status`/`ownerUid`/`createdAt`), pour que le calendrier Séjours de cette chambre affiche directement les réservations de la chambre app sans étape manuelle en plus. **Sans cette écriture retour, le lien restait à sens unique** : la chambre app savait qu'elle venait de cette chambre Séjours (`linkedListingId`/`linkedUnitId`), mais le calendrier Séjours, lui, ne voyait toujours aucun lien — bug réel repéré en usage (calendrier Séjours affiché comme "non relié" malgré une chambre correctement reprise côté app). `roomAddChoiceEntries()` exclut aussi une chambre déjà reliée dans l'autre sens (`unit.linkedRoomId` déjà posé côté Séjours), pour ne jamais la reproposer et créer un second lien concurrent. Testé via Playwright (mock Firebase hors-ligne) : proposition correcte pour un compte avec des chambres Séjours non reprises, chambre déjà reprise (dans un sens comme dans l'autre) jamais reproposée, écriture retour au bon format (`linkedRoomId` sur la seule chambre concernée), et — le point critique — comportement strictement identique à avant (chambre vierge immédiate, aucune modale, aucune écriture) pour un compte sans aucune annonce Séjours.
+
+### Favoris repensés en collections (Mes séjours → Favoris)
+
+Retour utilisateur, avec une capture d'écran des Collections Apple Photos comme inspiration graphique (pas comme cahier des charges à copier telle quelle — adapté au style Séjours, cartes crème/sauge plutôt que fond sombre iOS) : « J'aimerais que les favoris soit construits avec un principe de collection (renommable et personnalisable) ». Trois choix structurants tranchés explicitement avant d'écrire le code :
+
+- **Synchronisées par compte**, pas en local — une collection existe dans `collections/{uid}/items/{collectionId}` (nouvelle collection Firestore top-niveau, un document par collection), pas dans `localStorage` : retrouvée à l'identique en se connectant depuis un autre appareil, contrairement à l'ancien `state.liked` (un simple tableau d'ids, jamais synchronisé, perdu en changeant de navigateur).
+- **Une annonce peut appartenir à plusieurs collections à la fois** (logique de tags, `listingIds` sur chaque collection), pas à une seule — le cas d'usage Apple Photos type « ce lieu est à la fois dans Vacances d'été ET dans Idées week-end » aurait été impossible avec une appartenance exclusive.
+- **Le cœur ouvre un choix de collection(s) au clic**, pas un ajout instantané à une collection unique implicite — cohérent avec le point précédent : sans ce choix, ajouter une annonce à une deuxième collection aurait exigé un geste séparé (aller dans la collection, chercher l'annonce, l'y ajouter depuis là) au lieu d'un seul clic sur le cœur, où qu'il soit affiché (fil, fiche détail, carte).
+
+**Modèle de données.** `state.liked` (tableau d'ids, `localStorage`) est entièrement retiré — remplacé par `collectionsCache` (les collections du compte connecté, chargées une fois par session via `ensureCollectionsLoaded()`, chacune `{id, name, listingIds, createdAt, updatedAt}`) et des fonctions dérivées : `isListingSaved(l)` (l'annonce est dans au moins une collection), `savedListingsCount()` (nombre d'annonces distinctes tous favoris confondus, affiché sur le badge cœur de la barre d'onglets — remplace l'ancien `validLikedCount()`). `listingKey(l)` (`l.docId || String(l.id)`, déjà utilisée par `logContact()`) identifie une annonce dans `listingIds`, aussi bien une vraie annonce Firestore qu'une annonce statique de démo. Le like reste, comme avant ce chantier, réservé aux comptes connectés (`openCollectionPicker()` ouvre la connexion sinon) et `listings/{id}.likeCount`/`listings/{id}/likes/{uid}` (compteur public "Les plus appréciés" du tri, voir plus haut) continuent d'être tenus à jour en parallèle : `toggleListingInCollection()` appelle `writeLikeState(l, isSaved)` uniquement quand le statut « au moins une collection » change réellement (ajouter une deuxième collection à une annonce déjà sauvegardée ne touche pas `likeCount`, seul le passage 0→1 ou 1→0 collection compte) — le compteur public reste donc un vrai « nombre de personnes ayant aimé », indépendant du nombre de collections dans lesquelles chacune l'a rangée.
+
+**Interface.** Le cœur (fil, carte sélectionnée sur la carte embarquée, fiche détail) ouvre désormais un volet (`openSheet("collPicker")`) : une ligne par collection existante avec coche (`.coll-pick-row`, même langage visuel que les autres choix à coche de Séjours), cochable/décochable indépendamment les unes des autres, plus un bouton « + Nouvelle collection » qui bascule le même volet en mode création (nom, puis la nouvelle collection reçoit tout de suite l'annonce en cours — éviter d'avoir à recocher juste après l'avoir créée). Onglet **Mes séjours → Favoris** : une grille 2 colonnes de tuiles carrées (`.collection-tile`), chacune avec une mosaïque de couverture prise dans les 1 à 3 premières photos des annonces membres (1 photo pleine, 2 côte à côte, ou 3 en L — `collectionTileHtml()`), un dégradé de secours si l'annonce n'a pas encore de photo, nom + nombre d'hébergements en surimpression. Cliquer une tuile ouvre le détail de la collection (`renderCollectionDetail()`) : mêmes cartes que le fil Explorer, plus trois actions dans l'en-tête (retour, renommer via un volet dédié `collRename`, supprimer avec confirmation — suppression qui retire la collection et son contenu mais **jamais** les annonces elles-mêmes, seulement leur appartenance à celle-ci). **Choix d'interprétation pour « personnalisable » (retour utilisateur)** : la mosaïque de couverture est automatique (dernières annonces ajoutées), il n'y a pas de sélecteur de couverture manuel ni de couleur/icône personnalisée par collection à ce stade — seul le nom est personnalisable. À corriger si ce n'était pas l'intention derrière « personnalisable ».
+
+**Bug rencontré et corrigé en cours de route : la création d'une collection plantait silencieusement.** `openSheet()` (la fonction qui construit puis câble tous les volets de l'application) pose, pour tout `kind` qui ne fait pas de `return` explicite avant, un handler générique sur `#sheet-apply` (`closeSheet(); persist(); renderFilterBar(); renderTabContent(); renderResultLine();` — le comportement "Terminé" par défaut d'un volet de filtre). Les nouveaux `kind==="collPicker"`/`kind==="collRename"` posent chacun leur PROPRE handler sur ce même bouton (lire le nom saisi, écrire dans Firestore) — mais comme ils étaient positionnés APRÈS ce handler générique dans le fichier, les deux handlers se déclenchaient l'un après l'autre sur un même clic : le générique (posé en premier, donc déclenché en premier) fermait le volet et vidait `#sheet-root` avant que le second n'ait fini de lire `document.getElementById("coll-new-name").value` — `Cannot read properties of null (reading 'value')`. Corrigé en repositionnant ces deux `kind` dans le même groupe que `hostbooking`/`loginPrompt` (avant le handler générique, avec leur propre `return;` explicite) — exactement le mécanisme déjà utilisé par ces deux-là pour la même raison, repéré en lisant leur code plutôt que deviné.
+
+**Testé (Playwright, mock Firestore hors-ligne)** : visiteur non connecté → clic cœur ouvre la connexion (pas le volet collections) ; première collection créée depuis le volet, cochée automatiquement, cœur rempli sur la carte ; grille Favoris avec la bonne tuile, bon nom, bon sous-titre, badge de la barre d'onglets à jour ; ouverture du détail, renommage effectif, suppression qui ramène automatiquement à la grille (vide) avec le badge redescendu à 0 ; aucune erreur JS sur l'ensemble du parcours.
+
+**Nécessite la nouvelle règle Firestore `collections/{uid}/items/{collectionId}` ci-dessus (section Règles Firestore) — sans elle, en production, la création/modification d'une collection échoue avec une erreur de permission.**
 
 ## À faire avant un vrai passage en production
 
