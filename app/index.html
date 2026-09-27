@@ -409,33 +409,46 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-/* Vue Location — calendrier annuel d'un seul logement : grille de 12
-   mini-calendriers (3 par ligne, voir monthBlock), chacun avec ses vraies
-   semaines lundi→dimanche en lignes — le format calendrier habituel,
-   plutôt qu'une bande de 31 colonnes par mois. Tous les mois restent
-   visibles sans défiler ; le numéro de semaine ISO figure dans la marge
-   gauche de chaque mini-calendrier. */
+/* Vue Location — calendrier annuel d'un seul logement : liste de 12
+   mini-calendriers (un seul par ligne — retour utilisateur : deux par
+   ligne restait peu lisible), chacun avec ses vraies semaines
+   lundi→dimanche en lignes — le format calendrier habituel, plutôt qu'une
+   bande de 31 colonnes par mois. Chaque mois est un volet dépliable (voir
+   .rv-month-block.collapsed plus bas et isPastMonth dans monthBlock) :
+   passés repliés par défaut, mois en cours et à venir dépliés — pour
+   repérer le mois actuel d'un coup d'œil sans que les mois passés,
+   généralement sans intérêt, n'encombrent l'écran. Le numéro de semaine
+   ISO figure dans la marge gauche de chaque mini-calendrier. */
 .rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
-  display:grid;grid-template-columns:repeat(2,1fr);gap:20px 16px;}
+  display:flex;flex-direction:column;}
 /* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
-   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear.
-   grid-column:1/-1 pour occuper toute la largeur de la bulle blanche,
-   au-dessus de la grille des mois plutôt que dans une de ses colonnes. */
-.rv-year-nav{grid-column:1/-1;display:flex;align-items:center;
-  justify-content:center;gap:16px;margin-bottom:2px;}
+   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear. */
+.rv-year-nav{display:flex;align-items:center;
+  justify-content:center;gap:16px;margin-bottom:10px;}
 .rv-year-btn{background:none;border:1.5px solid var(--light);border-radius:8px;
   width:28px;height:28px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--dark);flex-shrink:0;}
 .rv-year-btn:active{filter:brightness(.96);}
 .rv-year-label{font-size:16px;font-weight:700;color:var(--dark);
   min-width:44px;text-align:center;}
-.rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.rv-month-label{font-size:13px;font-weight:700;color:var(--gray);
-  text-transform:uppercase;letter-spacing:.04em;text-align:center;}
-/* Mois en cours (voir isCurMonth dans monthBlock) : bulle verte plutôt que
-   le simple texte gris — repère visuel immédiat dans la grille des 12 mois. */
-.rv-month-label.rv-month-cur{background:var(--green);color:#fff;
-  border-radius:999px;padding:3px 12px;width:fit-content;margin:0 auto;}
+.rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
+  border-top:1.5px solid var(--light);padding:4px 0;}
+.rv-month-block:first-child{border-top:none;}
+.rv-month-label{display:flex;align-items:center;justify-content:space-between;width:100%;
+  background:none;border:none;padding:8px 2px;font-family:inherit;
+  font-size:13.5px;font-weight:700;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.04em;text-align:left;cursor:pointer;}
+/* Mois en cours (voir isCurMonth dans monthBlock) : nom en vert + étiquette
+   à côté — remplace l'ancienne bulle pleine (incompatible avec un
+   en-tête pleine largeur cliquable, texte à gauche/chevron à droite). */
+.rv-month-label.rv-month-cur{color:var(--green);}
+.rv-month-cur-tag{font-size:10.5px;font-weight:700;text-transform:none;letter-spacing:0;
+  color:#fff;background:var(--green);border-radius:8px;padding:2px 8px;margin-left:8px;}
+.rv-month-chevron{width:16px;height:16px;color:var(--gray);opacity:.7;
+  flex-shrink:0;transition:transform .18s ease;}
+.rv-month-block.collapsed .rv-month-chevron{transform:rotate(-90deg);}
+.rv-month-block.collapsed .rv-dow-hd,
+.rv-month-block.collapsed .rv-monthgrid-wrap{display:none;}
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
 .rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
   text-align:center;text-transform:uppercase;}
@@ -483,9 +496,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-num{position:absolute;inset:0;display:flex;align-items:center;
   justify-content:center;font-size:11px;font-weight:600;color:var(--gray);
   pointer-events:none;}
-@media (max-width:520px){
-  .rv-calendar{gap:16px 12px;}
-}
 @media (max-width:420px){
   .rv-month-grid{grid-auto-rows:24px;}
   .rv-wknum{height:24px;}
@@ -4104,6 +4114,13 @@ function chLocYear(d){
   byId('yrLabel').textContent=S.year;
   renderToday();
 }
+// Déplie/replie un mois du calendrier annuel de la vue Location (voir
+// monthBlock dans renderToday()) — état purement visuel, jamais persisté :
+// chaque re-rendu (changement d'année/chambre, goToday…) reprend le repli
+// par défaut (passé replié, en cours/à venir déplié).
+function toggleRvMonth(btn){
+  btn.closest('.rv-month-block').classList.toggle('collapsed');
+}
 function renderToday(){
   const rooms=ROOMS;
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
@@ -4209,8 +4226,16 @@ function renderToday(){
       wknums+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
     }
     const isCurMonth=year===todayY&&m===todayM;
-    return`<div class="rv-month-block">
-      <div class="rv-month-label${isCurMonth?' rv-month-cur':''}">${MON[m]}</div>
+    // Passé = replié par défaut, comparé à la vraie date du jour et non à
+    // l'année affichée (voir le commentaire CSS de .rv-calendar) : une
+    // année entièrement passée s'ouvre donc tout entière repliée, une
+    // année future tout entière dépliée.
+    const isPastMonth=year<todayY||(year===todayY&&m<todayM);
+    return`<div class="rv-month-block${isPastMonth?' collapsed':''}">
+      <button type="button" class="rv-month-label${isCurMonth?' rv-month-cur':''}" onclick="toggleRvMonth(this)">
+        <span>${MON[m]}${isCurMonth?'<span class="rv-month-cur-tag">Ce mois-ci</span>':''}</span>
+        <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
       <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
       <div class="rv-monthgrid-wrap">
         <div class="rv-wknum-col">${wknums}</div>
