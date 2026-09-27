@@ -490,11 +490,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
    pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
    choisie en JS selon le fond (voir light()) pour rester lisible quelle que
-   soit la couleur du client/statut ; gris discret sur une case vide. Pas de
-   lettre jour-de-semaine ici : elle est déjà donnée par la colonne, via
-   l'en-tête .rv-dow-hd, une seule fois par mini-calendrier. */
+   soit la couleur du client/statut ; --dark (pas --gray, plus discret) sur
+   une case vide — même contraste marqué que .cal-mini-day côté Séjours
+   (--ink), retour utilisateur : "même design partout où le calendrier
+   apparaît". Pas de lettre jour-de-semaine ici : elle est déjà donnée par
+   la colonne, via l'en-tête .rv-dow-hd, une seule fois par mini-calendrier. */
 .rv-num{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;font-size:11px;font-weight:600;color:var(--gray);
+  justify-content:center;font-size:11px;font-weight:600;color:var(--dark);
   pointer-events:none;}
 @media (max-width:420px){
   .rv-month-grid{grid-auto-rows:24px;}
@@ -4196,7 +4198,11 @@ function renderToday(){
       const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
       const isCin=ds===bk.checkIn;
       const isCout=addDays(ds,1)===bk.checkOut;
-      numCol=light(dispCol)?'#2C2C2C':'#fff';
+      // var(--cream), pas #fff : même blanc cassé que les numéros de jour
+      // occupé côté Séjours (.cal-mini-day.occ), pour un rendu identique
+      // sur les deux apps — seule la couleur de fond change (une par
+      // réservation ici, un seul vert côté Séjours), jamais ce blanc.
+      numCol=light(dispCol)?'#2C2C2C':'var(--cream)';
       seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
     }
     // Case libre : même sélection de plage au clic que la Grille (1er clic =
@@ -4207,7 +4213,11 @@ function renderToday(){
     const emptyClick=bk?'':` onclick="startOrExtendRange('${rm.id}','${ds}')"`;
     const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
     const isToday=ds===todayIso;
-    return`<div class="rv-day-cell${isToday?' rv-day-today':''}" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    // Numéro en gras (800) sur une case occupée — même poids que
+    // .cal-mini-day.occ côté Séjours ; poids normal (voir .rv-num) sur une
+    // case libre, où la même graisse épaisse serait hors de propos.
+    const numStyle=numCol?` style="color:${numCol};font-weight:800"`:'';
+    return`<div class="rv-day-cell${isToday?' rv-day-today':''}" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numStyle}>${day}</span></div>`;
   };
   const monthBlock=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
