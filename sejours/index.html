@@ -768,6 +768,15 @@ body.detail-open nav.tabbar{z-index:220;}
    plutôt que l'ancien gros libellé 22px (qui laissait croire à un choix
    possible là où il n'y en avait aucun). */
 .cal-unit-solo{font-size:13px; font-weight:700; color:var(--sauge); text-align:center; margin-bottom:14px;}
+/* Même traitement en onglets pour "Afficher les réservations de" (choix de
+   la chambre Fiftin app reliée) — retour utilisateur, cette liste
+   déroulante restait le seul menu qui ressemblait encore à un choix de
+   chambre une fois celui du dessus passé en onglets. Onglets plus petits
+   ici que .cal-unit-tabs : ce n'est pas la navigation principale de la
+   page (déjà assurée par les onglets de chambre), juste un réglage —
+   sa propre étiquette au-dessus (voir .host-link-row label) l'annonce
+   comme tel plutôt que comme un second choix de chambre concurrent. */
+.cal-roomlink-tabs .detail-tab{font-size:11px; padding:7px 6px;}
 /* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
    emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
    .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
@@ -4675,11 +4684,19 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     '</div>' :
     '<div class="cal-unit-solo">'+esc(unit.name||"(sans nom)")+'</div>';
 
+  // Onglets ici aussi (retour utilisateur : "au lieu de menu list pour
+  // choisir la chambre" — ce select restait le seul menu déroulant
+  // ressemblant à un choix de chambre une fois le vrai sélecteur de
+  // chambre Séjours passé en onglets ci-dessus, voir unitPagerHtml).
+  // .detail-tab plus petits ici (.cal-roomlink-tabs) : ce n'est pas LA
+  // navigation principale de la page (déjà les onglets au-dessus), mais
+  // un réglage secondaire — sa propre étiquette au-dessus le distingue.
   var roomLinkHtml = (isGestion && rooms.length) ?
-    '<div class="host-link-row"><label>Afficher les réservations de</label><select id="host-room-link">'+
-      '<option value="">— Choisir une chambre Fiftin app —</option>'+
-      rooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
-    '</select></div>' : '';
+    '<div class="host-link-row"><label>Afficher les réservations de</label>'+
+    '<div class="detail-tabs cal-roomlink-tabs">'+
+      '<button type="button" class="detail-tab'+(!linkedRoomId?' active':'')+'" data-room-link="">Non reliée</button>'+
+      rooms.map(function(r){ return '<button type="button" class="detail-tab'+(r.id===linkedRoomId?' active':'')+'" data-room-link="'+esc(r.id)+'">'+esc(r.name)+'</button>'; }).join("")+
+    '</div></div>' : '';
 
   var actionPillHtml = isGestion
     ? '<a class="cal-add-pill" href="../app/" target="_blank" rel="noopener">Ajouter/modifier →</a>'
@@ -4729,20 +4746,23 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
     });
   }
   if(isGestion && rooms.length){
-    document.getElementById("host-room-link").addEventListener("change", function(e){
-      var newRoomId = e.target.value;
-      var sel = e.target;
-      sel.disabled = true;
-      /* linkedRoomId (sur la chambre, dans le tableau units) ne sert qu'à
-         choisir QUOI afficher en lecture seule — jamais un chemin
-         d'écriture, voir commentaire plus haut. On réécrit tout le
-         tableau units (Firestore ne permet pas de modifier un seul élément
-         d'un array par index), jamais accounts/{uid}. */
-      var newUnits = units.map(function(u){ return u.id===unit.id ? Object.assign({}, u, {linkedRoomId:newRoomId}) : u; });
-      firebase.firestore().collection("listings").doc(listing.id).update({units:newUnits}).then(function(){
-        listing.units = newUnits;
-        renderHostCalendar();
-      }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); sel.disabled = false; });
+    Array.prototype.forEach.call(feed.querySelectorAll("[data-room-link]"), function(btn){
+      btn.addEventListener("click", function(){
+        if(btn.classList.contains("active")) return; // déjà la sélection courante
+        var newRoomId = btn.getAttribute("data-room-link");
+        var tabs = feed.querySelectorAll("[data-room-link]");
+        Array.prototype.forEach.call(tabs, function(b){ b.disabled = true; });
+        /* linkedRoomId (sur la chambre, dans le tableau units) ne sert qu'à
+           choisir QUOI afficher en lecture seule — jamais un chemin
+           d'écriture, voir commentaire plus haut. On réécrit tout le
+           tableau units (Firestore ne permet pas de modifier un seul élément
+           d'un array par index), jamais accounts/{uid}. */
+        var newUnits = units.map(function(u){ return u.id===unit.id ? Object.assign({}, u, {linkedRoomId:newRoomId}) : u; });
+        firebase.firestore().collection("listings").doc(listing.id).update({units:newUnits}).then(function(){
+          listing.units = newUnits;
+          renderHostCalendar();
+        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); Array.prototype.forEach.call(tabs, function(b){ b.disabled = false; }); });
+      });
     });
   }
   document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, isGestion, bookings); });
