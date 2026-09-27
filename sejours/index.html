@@ -770,7 +770,7 @@ body.detail-open nav.tabbar{z-index:220;}
    plusieurs chambres). Toujours affichés, y compris un seul onglet pour un
    gîte (une seule chambre) — retour utilisateur explicite : même chrome
    dans tous les cas plutôt qu'un sous-titre à part pour ce cas-là. */
-.cal-unit-tabs{margin-bottom:14px;}
+.cal-unit-tabs{margin-bottom:0;}
 /* "Planning associé" — retour utilisateur : remplace le menu déroulant
    (puis les onglets, eux aussi jugés encore trop "menu") par un cartouche
    qui affiche l'état actuel et ouvre un volet de choix au clic (voir
@@ -809,10 +809,16 @@ body.detail-open nav.tabbar{z-index:220;}
 .cal-year-nav button{background:none; border:1.5px solid var(--line); border-radius:8px; width:28px; height:28px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0;}
 .cal-year-nav button svg{width:16px; height:16px;}
 .cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
-/* Carte blanche enveloppant toute la grille des 12 mois — même principe que
-   .rv-calendar côté app/ (background:#fff, padding, coins arrondis), pour
-   que le calendrier se détache du fond crème de la page comme dans l'app. */
-.cal-card{background:#fff; border-radius:16px; padding:16px 12px;}
+/* Carte blanche enveloppant planning associé + bouton Ajouter/modifier +
+   grille des 12 mois — même principe que .rv-calendar côté app/
+   (background:#fff, padding), pour que le calendrier se détache du fond
+   crème de la page comme dans l'app. Coins hauts carrés (retour
+   utilisateur : "le blanc doit monter jusqu'à l'encart du logement et
+   sembler être le prolongement de cet encart") — même principe que
+   .detail-group/hasTabs sur la fiche détail : les onglets de chambre
+   (.cal-unit-tabs, coins hauts arrondis, toujours affichés juste
+   au-dessus) et cette carte se rejoignent sans espace ni rupture. */
+.cal-card{background:#fff; border-radius:0 0 16px 16px; padding:16px 12px;}
 /* Un seul mois par ligne (retour utilisateur : "2 calendriers par ligne"
    jusqu'ici, illisible) plutôt qu'une grille 2 colonnes — chaque mois est
    désormais un volet dépliable (voir .cal-mini.collapsed plus bas) : la
@@ -4763,17 +4769,22 @@ function renderHostCalendarBody(listings, listing, unit, rooms, linkedRoomId, is
   // Fiftin app" retirée (retour utilisateur, devenue redondante avec le
   // cartouche) ; "Calendrier simplifié" (compte simple annonce, jamais
   // redondant avec quoi que ce soit d'autre sur cette page) reste affichée.
+  // Retour utilisateur : le cartouche + le bouton Ajouter/modifier doivent
+  // être DANS la carte blanche du calendrier, qui doit sembler être le
+  // prolongement des onglets de chambre juste au-dessus (même principe que
+  // .detail-tabs/.detail-group sur la fiche détail — coins carrés côté
+  // onglets, la carte "remonte" sans espace).
   feed.innerHTML = '<div class="host-view">'+
     (isGestion ? '' : '<div class="host-status-row"><span class="host-status-badge standalone">Calendrier simplifié</span></div>')+
     listingSwitchHtml+
     unitPagerHtml+
-    roomLinkHtml+
-    '<div class="cal-top-row">'+
-      '<div class="cal-top-actions">'+
-        actionPillHtml+
-      '</div>'+
-    '</div>'+
     '<div class="cal-card">'+
+      roomLinkHtml+
+      '<div class="cal-top-row">'+
+        '<div class="cal-top-actions">'+
+          actionPillHtml+
+        '</div>'+
+      '</div>'+
       '<div class="cal-year-nav">'+
         '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
         '<b>'+year+'</b>'+
