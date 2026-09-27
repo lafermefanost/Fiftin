@@ -20,7 +20,7 @@
   --cream:#EFEEEA; --cream-deep:#E4E1D9; --cream-light:#F7F6F4; --ink:#2E2B22;
   --sauge:#354B38; --sauge-deep:#1D2820; --sauge-light:#8B9D86; --sauge-mid:#4E6F53; --sauge-bg:#E5E9E4;
   --lavender:#7B94E8; --lavender-bg:#E7E9F1; --lavender-soft:#B2BBDA; --lavender-deep:#4E67BC; --lavender-icon:#829AD0;
-  --yellow:#DEEB82; --yellow-deep:#C7D65E;
+  --yellow:#DEEB82; --yellow-deep:#C7D65E; --yellow-light:#EFF5C1;
   --line:rgba(46,43,34,0.14);
   --danger:#B2543B;
   --gray-mid:#9A9789;
@@ -260,7 +260,7 @@ a{color:inherit; text-decoration:none;}
 .price-tag b{font-size:15px;}
 
 /* ---------- quick request inline panel ---------- */
-.qr-panel{background:var(--cream-deep); padding:16px; display:flex; flex-direction:column; gap:12px;}
+.qr-panel{background:var(--cream-light); padding:16px; display:flex; flex-direction:column; gap:12px;}
 .cal{background:#fff; border-radius:16px; padding:16px 12px;}
 .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;}
 .cal-title{font-size:13.5px; font-weight:700; text-transform:capitalize;}
@@ -288,6 +288,16 @@ a{color:inherit; text-decoration:none;}
    ce bouton (blanc/crème serait illisible sur cette teinte claire). */
 .cal-cell.avail{background:var(--yellow); color:var(--sauge-deep); cursor:pointer;}
 .cal-cell.avail.selected{background:var(--sauge-deep); color:var(--cream);}
+/* Jours strictement entre l'arrivée et le départ choisis en cliquant deux
+   fois (voir wireCalDays()/paintRangeSelection()) — teinte intermédiaire
+   pour montrer la période entière, sans confondre ces cases avec le début/
+   fin (.selected, plus foncé) ni avec une case simplement disponible.
+   --sauge-bg essayé d'abord : bien trop proche du gris "indisponible"
+   (#E2DFD8) une fois posé sur une petite case de calendrier, illisible en
+   pratique malgré la classe correctement posée (vérifié) — repris en
+   variante plus pâle de --yellow (la couleur "disponible" elle-même),
+   nettement distincte à la fois du gris et du jaune plein. */
+.cal-cell.avail.range-mid{background:var(--yellow-light); color:var(--sauge-deep);}
 .cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
 .cal-dot{width:8px; height:8px; border-radius:50%; background:#E2DFD8; display:inline-block;}
 .cal-dot.avail{background:var(--yellow);}
@@ -703,6 +713,11 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-card{background:#fff; border-radius:16px; padding:0 14px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
 .profile-card .profile-list{border-top:none;}
 .profile-card .profile-row:last-child{border-bottom:none;}
+/* Titre À L'INTÉRIEUR de la bulle (retour utilisateur, capture d'écran à
+   l'appui) plutôt qu'au-dessus, en .profile-section-label — même typo,
+   simplement replacée avec le padding latéral de la carte et un peu d'air
+   au-dessus pour respirer par rapport au bord haut arrondi. */
+.profile-card-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); padding:16px 0 6px;}
 
 /* ---------- validation des annonces (admin) ---------- */
 .admin-queue{padding:24px 0 110px;}
@@ -2332,6 +2347,16 @@ function wireQuickReq(id, uid, unit){
   var $callBtn = document.querySelector('[data-send="call"][data-id="'+qid+'"]');
 
   function update(){
+    /* $out.value peut être vide entre le premier et le second clic sur le
+       calendrier (arrivée posée, départ pas encore choisi — voir
+       wireCalDays()) : buildMessage()/fmtDate() sur une date vide
+       planterait le message et les liens d'envoi. On affiche une invite
+       à la place, sans toucher aux liens (qui gardent leur dernière
+       valeur valide jusqu'à ce que le départ soit choisi). */
+    if(!$in.value || !$out.value){
+      $prev.textContent = "Choisissez votre date de départ sur le calendrier ci-dessus.";
+      return;
+    }
     var guests = Number($g.textContent);
     var msg = buildMessage(l, $in.value, $out.value, guests, unit && unit.name);
     $prev.textContent = msg;
@@ -2393,19 +2418,55 @@ function wireQuickReq(id, uid, unit){
   /* data-date (ISO complet) plutôt que reconstruire depuis data-day+mois :
      commun aux deux modes (démo comme réel, voir calendarGridHtml/
      realCalendarGridHtml), donc pas besoin de savoir dans lequel on est. */
+  /* Peint la sélection en cours sur les cases DU MOIS ACTUELLEMENT AFFICHÉ,
+     à partir de $in/$out (jamais de variable d'état séparée à resynchroniser :
+     data-date de chaque case suffit à savoir si elle tombe dans la période).
+     Fonctionne aussi bien sur un mois qui ne contient que le début, que la
+     fin, ou aucun des deux (juste des jours "range-mid" traversés). Appelée
+     après chaque clic et après chaque re-rendu du mois (renderCal/
+     renderRealMonth), pour que la période choisie reste visible en
+     naviguant d'un mois à l'autre. */
+  function paintRangeSelection(){
+    Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell:not(.empty)"), function(cell){
+      cell.classList.remove("selected", "range-mid");
+      var d = cell.getAttribute("data-date");
+      if(!d || !datesTouched || !$in.value) return;
+      if(d===$in.value || (Boolean($out.value) && d===$out.value)){
+        cell.classList.add("selected");
+      } else if($out.value && d>$in.value && d<$out.value){
+        cell.classList.add("range-mid");
+      }
+    });
+  }
   function wireCalDays(){
     Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.avail"), function(cell){
       cell.addEventListener("click", function(){
-        var start = new Date(cell.getAttribute("data-date")+"T00:00:00");
-        var end = new Date(start.getTime()); end.setDate(end.getDate()+7);
-        $in.value = start.toISOString().slice(0,10);
-        $out.value = end.toISOString().slice(0,10);
-        Array.prototype.forEach.call($cal.querySelectorAll(".cal-cell.selected"), function(c){ c.classList.remove("selected"); });
-        cell.classList.add("selected");
+        var clicked = cell.getAttribute("data-date");
+        /* Sélection en deux clics façon "additionner les jours" (retour
+           utilisateur) : le premier clic après une période déjà complète
+           (ou au tout premier chargement, avant tout clic réel — voir
+           datesTouched) repart d'une arrivée neuve, départ vidé. Tant que
+           seule l'arrivée est posée, le clic suivant fixe le départ (ou
+           redéfinit l'arrivée si le jour cliqué est antérieur) — jamais de
+           +7 nuits deviné automatiquement comme avant. */
+        var pendingStartOnly = datesTouched && $in.value && !$out.value;
+        if(pendingStartOnly){
+          if(clicked > $in.value) $out.value = clicked;
+          else if(clicked < $in.value) $in.value = clicked;
+          // clicked === $in.value : reclique sur l'arrivée déjà posée, rien à faire
+        } else {
+          $in.value = clicked;
+          $out.value = "";
+        }
         datesTouched = true;
         update();
+        paintRangeSelection();
       });
     });
+    // Appelé aussi bien au premier montage qu'après chaque re-rendu du mois
+    // (renderCal/renderRealMonth) : repeint la période déjà choisie sur les
+    // cases du mois nouvellement affiché.
+    paintRangeSelection();
   }
   function renderCal(monthIndex){
     $cal.setAttribute("data-cal-month", monthIndex);
@@ -3938,8 +3999,7 @@ function renderProfile(){
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
-    '<div class="profile-section-label">Informations légales</div>'+
-    '<div class="profile-card"><div class="profile-list legal">'+
+    '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -4213,6 +4273,11 @@ function switchHostTab(tab){
   renderHostTabContent();
 }
 function renderHostTabContent(){
+  // Même fond gris très léger que Carte/Mes séjours/Profil côté voyageur
+  // (retour utilisateur, "pareil pour la vue profil côté hôtes") — posé ici
+  // plutôt que dans enterHostMode()/switchHostTab() séparément : ce sont
+  // les deux seuls chemins qui mènent ici, inutile de dupliquer.
+  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile");
   if(state.hostTab==="calendar") renderHostCalendar();
   else if(state.hostTab==="profile") renderHostProfile();
   else renderHostListings();
@@ -4246,21 +4311,21 @@ function renderHostProfile(){
         '<span>Vous y êtes</span>'+
       '</button>'+
     '</div>'+
-    '<div class="profile-list">'+
-      (isAdmin() ? '<div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div></div></div>' : '')+
+    '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-    '</div>'+
-    '<div class="profile-section-label">Votre formule</div>'+
+    '</div></div>'+
+    '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
     '<div class="formula-picker" id="host-formulas">'+
       HOST_FORMULAS.map(function(f){ return formulaCardReadOnlyHtml(f, f.value==="simple"); }).join("")+
     '</div>'+
     '<p class="sheet-sub">Changement de formule depuis Fiftin app (Réglages → Compte) — paiement pas encore activé.</p>'+
-    '<div class="profile-section-label">Informations légales</div>'+
-    '<div class="profile-list legal">'+
+    '</div>'+
+    '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
-    '</div></div>';
+    '</div></div></div>';
   document.getElementById("btn-exit-host").addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   if(isAdmin()){
