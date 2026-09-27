@@ -452,13 +452,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
 .rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
   text-align:center;text-transform:uppercase;}
-.rv-monthgrid-wrap{display:flex;gap:2px;}
-.rv-wknum-col{flex:none;width:14px;display:flex;flex-direction:column;gap:2px;}
-.rv-wknum{height:26px;display:flex;align-items:center;justify-content:center;
+/* Numéro de semaine + jours dans UNE seule grille à 8 colonnes (14px + 7
+   colonnes égales), comme .cal-mini-grid côté Séjours — pas deux mises en
+   page séparées (colonne flex des numéros + grille des jours) synchronisées
+   seulement par une même hauteur de ligne fixe en dur : c'est justement ce
+   qui empêchait les cases d'être carrées (aspect-ratio et hauteur de ligne
+   fixe entrent en conflit) — retour utilisateur, capture d'écran à
+   l'appui : "cases carrées partout comme sur la vue séjours". Une seule
+   grille laisse chaque case carrée (aspect-ratio:1) dicter elle-même la
+   hauteur de sa ligne ; le numéro de semaine, simple item de la même
+   grille, s'y cale automatiquement (étirement par défaut). */
+.rv-monthgrid-wrap{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
+.rv-wknum{display:flex;align-items:center;justify-content:center;
   font-size:7px;color:var(--gray);opacity:.5;}
-.rv-month-grid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,1fr);
-  grid-auto-rows:26px;gap:2px;}
-.rv-day-cell{position:relative;background:var(--light);border-radius:4px;
+.rv-day-cell{position:relative;aspect-ratio:1;background:var(--light);border-radius:4px;
   overflow:hidden;cursor:pointer;}
 .rv-day-cell.rv-day-blank{background:transparent;cursor:default;}
 /* Sélection de plage pour créer une réservation — mêmes couleurs que la
@@ -499,8 +506,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   justify-content:center;font-size:11px;font-weight:600;color:var(--dark);
   pointer-events:none;}
 @media (max-width:420px){
-  .rv-month-grid{grid-auto-rows:24px;}
-  .rv-wknum{height:24px;}
   .rv-num{font-size:10px;}
 }
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
@@ -4224,16 +4229,18 @@ function renderToday(){
     const firstDow=(new Date(year,m,1).getDay()+6)%7; // 0=lundi..6=dimanche
     const totalCells=Math.ceil((firstDow+dim)/7)*7;
     const rows=totalCells/7;
-    let gridCells='';
-    for(let i=0;i<totalCells;i++){
-      const day=i-firstDow+1;
-      gridCells+=(day<1||day>dim)?'<div class="rv-day-cell rv-day-blank"></div>':dayCellHtml(m,day);
-    }
-    // Numéro de semaine ISO dans la marge gauche, une fois par ligne.
-    let wknums='';
+    // Numéro de semaine ISO puis les 7 jours de la ligne, dans cet ordre —
+    // une seule grille à 8 colonnes (voir .rv-monthgrid-wrap), comme
+    // .cal-mini-grid côté Séjours : la case carrée dicte la hauteur de sa
+    // ligne, le numéro de semaine s'y cale tout seul.
+    let gridRows='';
     for(let r=0;r<rows;r++){
       const anyDay=Math.min(Math.max(r*7-firstDow+1,1),dim);
-      wknums+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
+      gridRows+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
+      for(let c=0;c<7;c++){
+        const day=r*7+c-firstDow+1;
+        gridRows+=(day<1||day>dim)?'<div class="rv-day-cell rv-day-blank"></div>':dayCellHtml(m,day);
+      }
     }
     const isCurMonth=year===todayY&&m===todayM;
     // Passé = replié par défaut, comparé à la vraie date du jour et non à
@@ -4247,10 +4254,7 @@ function renderToday(){
         <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
-      <div class="rv-monthgrid-wrap">
-        <div class="rv-wknum-col">${wknums}</div>
-        <div class="rv-month-grid">${gridCells}</div>
-      </div>
+      <div class="rv-monthgrid-wrap">${gridRows}</div>
     </div>`;
   };
   let monthsHtml='';
