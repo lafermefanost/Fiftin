@@ -1382,13 +1382,41 @@ function normalizeHostListing(doc){
     avail: []
   };
 }
+/* listings.json est désormais toujours vide (voir README, "Nettoyage") —
+   toutes les annonces réelles viennent d'ici, Firestore. Charger le SDK
+   Firebase (4 scripts, l'un après l'autre, voir loadFirebaseSDK) puis
+   interroger Firestore prend structurellement plus longtemps qu'un simple
+   fetch("listings.json") same-origin : sans le garde-fou ci-dessous, la
+   toute première page (state.loading, voir plus bas au boot) passait à
+   "chargé" dès listings.json résolu, affichant "Aucun hébergement" à
+   n'importe quel visiteur assez rapide pour voir cet instant précis —
+   bug réel, reproduit en retardant artificiellement la réponse Firestore
+   (le fil se corrigeait bien tout seul une fois Firestore arrivé, mais
+   ce premier écran, lui, avait déjà affirmé à tort qu'il n'y avait rien).
+   firestoreListingsSettled + maybeFinishInitialLoad() (voir plus bas, au
+   boot) retiennent state.loading=true tant que les DEUX sources n'ont pas
+   répondu, succès ou échec confondus. */
+var firestoreListingsSettled = false;
 function fetchPublishedListings(){
+  var settled = false;
+  function settle(){
+    if(settled) return;
+    settled = true;
+    firestoreListingsSettled = true;
+    maybeFinishInitialLoad();
+  }
+  // Filet de secours : si Firebase met vraiment trop de temps (SDK lent à
+  // charger, requête qui traîne, script bloqué par un bloqueur de pub…),
+  // ne bloque pas indéfiniment le tout premier affichage — le fil se
+  // complètera quand même au prochain rendu Firestore réussi, comme avant.
+  setTimeout(settle, 6000);
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     firebase.firestore().collection("listings").where("status","==","published").get().then(function(snap){
-      if(snap.empty) return;
-      hostFirestoreListings = snap.docs.map(normalizeHostListing);
-      rebuildListings();
+      if(!snap.empty){
+        hostFirestoreListings = snap.docs.map(normalizeHostListing);
+        rebuildListings();
+      }
       if(state.tab==="explore"){ renderFeed(); renderResultLine(); }
       else if(state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
       // savedListingsCount() dépend de LISTINGS : au tout premier rendu du
@@ -1397,8 +1425,10 @@ function fetchPublishedListings(){
       // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
       renderLikeBadge();
       maybeOpenDeepLink();
+      settle();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
+      settle();
     });
   });
 }
@@ -5416,19 +5446,37 @@ if(state.hostMode){
 }
 updateHeroMenu();
 
+/* Ne fait passer state.loading à false, et donc ne rend le tout premier
+   fil, qu'une fois les DEUX sources revenues (listings.json ET Firestore,
+   voir le commentaire de fetchPublishedListings ci-dessus) — sinon un
+   visiteur assez rapide voyait "Aucun hébergement" pendant la fraction de
+   seconde où seul listings.json (vide, voir README) avait déjà répondu,
+   avant que Firestore (plus lent : SDK à charger puis requête réseau) ait
+   eu le temps d'apporter les vraies annonces. */
+var listingsJsonLoaded = false, listingsJsonFailed = false;
+function maybeFinishInitialLoad(){
+  if(!listingsJsonLoaded || !firestoreListingsSettled || !state.loading) return;
+  state.loading = false;
+  if(listingsJsonFailed && !LISTINGS.length){
+    document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
+    return;
+  }
+  renderFilterBar(); renderFeed(); renderResultLine();
+  renderLikeBadge(); // voir commentaire de savedListingsCount() : LISTINGS était vide au tout premier rendu du badge
+  maybeOpenDeepLink();
+}
+
 fetch("listings.json").then(function(r){
   if(!r.ok) throw new Error("HTTP "+r.status);
   return r.json();
 }).then(function(data){
   staticListings = data;
   rebuildListings();
-  state.loading = false;
-  renderFilterBar(); renderFeed(); renderResultLine();
-  renderLikeBadge(); // voir commentaire de savedListingsCount() : LISTINGS était vide au tout premier rendu du badge
-  maybeOpenDeepLink();
 }).catch(function(err){
-  state.loading = false;
-  document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
+  listingsJsonFailed = true;
+}).then(function(){
+  listingsJsonLoaded = true;
+  maybeFinishInitialLoad();
 });
 
 bootFirebaseAuth();
