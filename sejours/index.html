@@ -821,9 +821,60 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-card-body b{font-size:14px;}
 .admin-card-body span{font-size:12px; color:var(--sauge); font-weight:600;}
 .admin-owner{color:var(--gray-mid)!important; font-weight:500!important;}
-.admin-actions{display:flex; gap:8px; margin-top:6px;}
+.admin-actions{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
 .admin-actions .btn-apply{padding:8px 14px; font-size:12.5px; width:auto;}
 .admin-reject{background:none; border:1.5px solid var(--line); border-radius:16px; padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--danger);}
+/* .host-listing-card : variante de .admin-card réservée à "Mes annonces"
+   (retour utilisateur, capture d'écran) — fond blanc plutôt que --cream-deep
+   (même convention que .map-list-item, déjà en #fff ailleurs sur le site) et
+   vignette qui remplit tout le bord gauche de la carte au lieu d'un petit
+   carré 64px. Scopée en modificateur plutôt qu'appliquée à .admin-card
+   directement : la file d'admin (Annonces à valider) réutilise la même
+   classe de base avec sa mise en page compacte d'origine, inchangée. Nom
+   distinct de .host-card (déjà pris ailleurs — mini-ligne avatar+nom de
+   l'hôte dans le panneau de demande rapide, display:flex en ligne — les
+   deux collisionnaient et écrasaient la mise en page en colonne voulue ici
+   avant ce renommage). Padding retiré du conteneur (report sur
+   .admin-card-body/.cal-disclose/.host-cal-panel) + overflow:hidden pour
+   que la vignette, sans coins arrondis propres, se fasse quand même rogner
+   par les coins 16px de la carte. align-items par défaut du flex (stretch)
+   suffit à faire remplir la vignette sur toute la hauteur de la ligne —
+   pas de hauteur fixe. */
+.admin-card.host-listing-card{background:#fff; padding:0; overflow:hidden;}
+.admin-card.host-listing-card .admin-card-row{gap:0;}
+.admin-card.host-listing-card .admin-thumb{width:112px; height:auto; border-radius:0;}
+.admin-card.host-listing-card .admin-card-body{padding:12px 14px 12px 0; margin-left:14px; gap:5px;}
+/* width:calc(...) plutôt que width:auto : .cal-disclose est display:flex
+   (voir sa règle de base) — un conteneur flex en width:auto se dimensionne
+   par défaut à son contenu (fit-content), pas en remplissant son parent
+   comme le ferait un bloc ordinaire ; sans ce calc() explicite, la ligne
+   "Calendrier" se réduisait à la largeur de son seul texte. */
+.admin-card.host-listing-card .cal-disclose{margin-left:14px; margin-right:14px; width:calc(100% - 28px);}
+.admin-card.host-listing-card .host-cal-panel{margin-left:14px; margin-right:14px;}
+/* Bouton pause/reprise, à côté du badge de statut (retour utilisateur :
+   "au niveau de l'info sur le statut de l'annonce, mettre aussi un bouton
+   mettre en pause qui retire temporairement l'annonce du fil"). Même
+   gabarit pilule que .host-status-badge, posé juste à côté, pour lire les
+   deux comme une seule ligne d'état + action plutôt que deux éléments sans
+   rapport. Voir toggleListingPause() : bascule status published<->paused,
+   jamais proposé sur une annonce encore "pending" (rien à mettre en pause
+   avant une première publication). */
+.host-status-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.host-pause-btn{display:inline-flex; align-items:center; gap:5px; background:none; border:1.5px solid var(--line);
+  border-radius:16px; padding:4px 10px 4px 8px; font-family:'Jost',sans-serif; font-size:10.5px; font-weight:700; color:var(--sauge-mid);}
+.host-pause-btn svg{width:12px; height:12px; flex-shrink:0;}
+/* Modifier/Supprimer avec pictogramme (retour utilisateur : "dans l'esprit
+   des autres pages avec picto clair et moderne") — mêmes tracés que
+   #coll-detail-rename/#coll-detail-delete (favoris), rien de réinventé.
+   Supprimer distinct de Modifier par la couleur seulement (danger, contour
+   discret) plutôt qu'un remplissage plein : une carte de liste n'a pas
+   besoin d'un bouton rouge plein qui saute aux yeux à chaque scroll, le
+   picto poubelle suffit à signaler l'intention. */
+.host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; gap:6px; background:none; border-radius:16px;
+  padding:8px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700;}
+.host-edit-btn{border:1.5px solid var(--line); color:var(--ink);}
+.host-delete-btn{border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
+.host-edit-btn svg, .host-delete-btn svg{width:14px; height:14px; flex-shrink:0;}
 
 .empty-state{text-align:center; padding:60px 30px; color:var(--sauge);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
@@ -839,6 +890,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
+.host-status-badge.paused{background:var(--cream-deep); color:var(--gray-mid);}
 /* Ligne "volet" pleine largeur, à l'intérieur de la carte d'annonce
    (.admin-card) — retour utilisateur : "j'aimerais que le calendrier soit
    sur la même carte que l'annonce (...) le bouton calendrier devrait
@@ -5455,16 +5507,79 @@ function renderHostListings(){
         openSheet("hostform");
       });
     });
+    // Pause/reprise (voir toggleListingPause()) et suppression (voir
+    // deleteListing()) — retour utilisateur, "Mes annonces". stopPropagation
+    // même s'il n'y a aujourd'hui aucun clic parent sur .admin-card-row à
+    // court-circuiter : ces deux boutons restent, comme .log-actions
+    // ailleurs, dans une carte qui pourrait un jour devenir elle-même
+    // cliquable (ouvrir un détail, par ex.) sans qu'on ait à s'en souvenir
+    // ici.
+    Array.prototype.forEach.call(document.querySelectorAll("[data-host-pause]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        toggleListingPause(btn.getAttribute("data-host-pause"), btn.getAttribute("data-pause-to"));
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-host-delete]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var listingId = btn.getAttribute("data-host-delete");
+        var l = listings.filter(function(x){ return x.id===listingId; })[0];
+        if(l) deleteListing(l);
+      });
+    });
     if(state.hostListingId){
       var expandedListing = listings.filter(function(l){ return l.id===state.hostListingId; })[0];
       if(expandedListing) loadHostListingCalendar(expandedListing);
     }
   });
 }
+/* Bascule published<->paused (retour utilisateur : "un bouton mettre en
+   pause qui retire temporairement l'annonce du fil") — jamais proposé sur
+   une annonce encore "pending" (voir hostListingCardHtml(), rien à mettre
+   en pause avant une première publication par un admin). Nécessite une
+   règle Firestore dédiée (README, « Règles Firestore à appliquer ») qui
+   autorise le propriétaire à alterner UNIQUEMENT entre published et
+   paused — la règle d'origine figeait status à sa valeur courante pour
+   tout le monde sauf un admin, pour empêcher un hôte de s'auto-publier
+   depuis "pending" ; sans cette mise à jour de règle, cet appel échoue en
+   production avec permission-denied (fonctionne quand même dans les tests
+   Playwright, dont le mock ne connaît pas les règles réelles).
+   syncPublicListingIndex (functions/index.js) retire déjà l'annonce de
+   listingIndex dès que status n'est plus "published", quelle que soit la
+   nouvelle valeur — rien à changer côté Cloud Function pour ce nouveau
+   statut. */
+function toggleListingPause(id, toStatus){
+  firebase.firestore().collection("listings").doc(id).update({status: toStatus})
+    .then(function(){
+      hostListingsCache = [];
+      if(state.hostMode && state.hostTab==="listings") renderHostListings();
+    })
+    .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+}
+/* Suppression définitive — déjà permise par la règle Firestore existante
+   (propriétaire ou admin), aucune mise à jour de règle nécessaire ici,
+   contrairement à toggleListingPause() ci-dessus. syncPublicListingIndex
+   retire aussi l'entrée listingIndex correspondante (onDocumentWritten
+   couvre les suppressions : before rempli, after vide). */
+function deleteListing(l){
+  openConfirmSheet('Supprimer "'+(l.name||"cette annonce")+'" ? Cette action est définitive.', "Oui, supprimer", "Non, garder l'annonce", function(){
+    firebase.firestore().collection("listings").doc(l.id).delete()
+      .then(function(){
+        hostListingsCache = [];
+        if(state.hostListingId===l.id){ state.hostListingId = null; state.hostUnitId = null; }
+        if(state.hostMode && state.hostTab==="listings") renderHostListings();
+      })
+      .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+  });
+}
 function hostListingCardHtml(l){
   var coverUrl = listingCoverUrl(l);
   var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
-  var statusLabel = l.status==="published" ? "Publiée" : "En attente de validation";
+  var isPaused = l.status==="paused";
+  var statusLabel = l.status==="published" ? "Publiée" : isPaused ? "En pause" : "En attente de validation";
+  var badgeClass = l.status==="published" ? "published" : isPaused ? "paused" : "pending";
+  var canTogglePause = l.status==="published" || isPaused;
   var expanded = l.id===state.hostListingId;
   // Retour utilisateur : "j'aimerais que le calendrier soit sur la même
   // carte que l'annonce (...) le bouton calendrier devrait plutôt être un
@@ -5475,14 +5590,27 @@ function hostListingCardHtml(l){
   // chevron de l'accordéon des mois) déplie/replie le calendrier À
   // L'INTÉRIEUR de cette même carte plutôt que de renvoyer vers un bouton
   // séparé au-dessus d'une seconde carte.
-  return '<div class="admin-card">'+
+  // .host-listing-card (retour utilisateur, capture d'écran) : fond blanc +
+  // grande vignette plutôt que le style compact d'origine — voir le
+  // commentaire CSS de .admin-card.host-listing-card, qui documente
+  // pourquoi c'est un modificateur et non .admin-card lui-même (la file
+  // d'admin partage la classe de base, pas ce style).
+  return '<div class="admin-card host-listing-card">'+
     '<div class="admin-card-row">'+cover+
       '<div class="admin-card-body">'+
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-        '<span class="host-status-badge '+(l.status==="published"?"published":"pending")+'">'+statusLabel+'</span>'+
+        '<div class="host-status-line">'+
+          '<span class="host-status-badge '+badgeClass+'">'+statusLabel+'</span>'+
+          (canTogglePause ? '<button type="button" class="host-pause-btn" data-host-pause="'+esc(l.id)+'" data-pause-to="'+(isPaused?"published":"paused")+'">'+
+            (isPaused
+              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8V4z"/></svg><span>Publier</span>'
+              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Mettre en pause</span>')+
+          '</button>' : '')+
+        '</div>'+
         (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
         '<div class="admin-actions">'+
-          '<button type="button" class="admin-reject" data-host-edit="'+esc(l.id)+'">Modifier</button>'+
+          '<button type="button" class="host-edit-btn" data-host-edit="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span></button>'+
+          '<button type="button" class="host-delete-btn" data-host-delete="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Supprimer</span></button>'+
         '</div>'+
       '</div>'+
     '</div>'+
