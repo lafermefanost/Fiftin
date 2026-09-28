@@ -1586,6 +1586,32 @@ function fetchListingIndex(){
         return d;
       });
       if(mapInstance) refreshExploreMapMarkers(); // arrivé après le premier rendu de la carte (mapInstance déjà monté) : ne pas attendre la prochaine action pour afficher les vrais pins
+      // Retour utilisateur : "parfois il affiche zéro annonces et puis
+      // elles chargent enfin" — bug réel trouvé en lisant le code, pas
+      // reproduit en direct : si le filet de 6s ci-dessus se déclenche
+      // AVANT cette réponse Firestore (SDK Firebase lent à charger — 4
+      // scripts en cascade, voir loadFirebaseSDK() — ou requête réseau
+      // lente), settle() ci-dessous devient un no-op (settled déjà à true)
+      // et maybeFinishInitialLoad() ne se relance jamais : listingIndexCache
+      // vient pourtant d'être rempli juste au-dessus, mais rien ne
+      // redessine le fil de cartes pour le montrer — contrairement à
+      // fetchPublishedListings() plus haut, qui rend directement dans son
+      // .then() sans jamais dépendre de ce genre de verrou. Le visiteur
+      // restait bloqué sur "Aucun hébergement" jusqu'à une action sans
+      // rapport (changer d'onglet, toucher un filtre) qui déclenche un
+      // renderFeed() par un autre chemin — d'où l'impression que "ça finit
+      // par charger", sans lien apparent avec l'action qui le débloquait
+      // réellement. !state.loading ici veut dire soit ce cas (le filet a
+      // déjà réglé le tout premier chargement avant cette réponse), soit
+      // un second appel à fetchListingIndex() après le tout premier
+      // chargement (ex. gérerAdminApprove() plus bas) : redessiner le fil
+      // dans les deux cas, jamais en double avec le premier rendu normal
+      // (là où state.loading est encore true, laissé à maybeFinishInitialLoad()
+      // ci-dessous pour ne pas dessiner deux fois).
+      if(!state.loading){
+        if(state.tab==="explore"){ renderFeed(); renderResultLine(); }
+        else if(state.tab==="likes") renderTabContent();
+      }
       if(snap.empty){
         // Filet de secours — voir aussi matchingIndexListings() : un
         // index vide veut dire soit "vraiment aucune annonce publiée"
