@@ -296,25 +296,24 @@ a{color:inherit; text-decoration:none;}
    sait juste pas : voir calendarHtml/le commentaire plus bas). */
 .cal:not(.cal-nodata) .cal-cell:not(.avail):not(.empty){
   background-image:linear-gradient(135deg, transparent calc(50% - 0.5px), rgba(46,43,34,.3) calc(50% - 0.5px), rgba(46,43,34,.3) calc(50% + 0.5px), transparent calc(50% + 0.5px));}
-/* Disponible : vert acide --yellow, même couleur que le bouton "Contact et
-   disponibilités" (.btn.primary) pour que le calendrier parle le même
-   langage que le bouton qui y mène — texte en --sauge-deep dessus comme
-   ce bouton (blanc/crème serait illisible sur cette teinte claire). */
-.cal-cell.avail{background:var(--yellow); color:var(--sauge-deep); cursor:pointer;}
+/* Disponible : retour utilisateur, "dans le calendrier passe les cases
+   disponibles plutôt en vert moyen" — --sauge-mid, texte clair dessus
+   (--sauge-deep n'y serait plus assez lisible, cette teinte est plus
+   sombre que l'ancien jaune). */
+.cal-cell.avail{background:var(--sauge-mid); color:var(--cream); cursor:pointer;}
 .cal-cell.avail.selected{background:var(--sauge-deep); color:var(--cream);}
 /* Jours strictement entre l'arrivée et le départ choisis en cliquant deux
    fois (voir wireCalDays()/paintRangeSelection()) — teinte intermédiaire
    pour montrer la période entière, sans confondre ces cases avec le début/
    fin (.selected, plus foncé) ni avec une case simplement disponible.
-   --sauge-bg essayé d'abord : bien trop proche du gris "indisponible"
-   (#E2DFD8) une fois posé sur une petite case de calendrier, illisible en
-   pratique malgré la classe correctement posée (vérifié) — repris en
-   variante plus pâle de --yellow (la couleur "disponible" elle-même),
-   nettement distincte à la fois du gris et du jaune plein. */
-.cal-cell.avail.range-mid{background:var(--yellow-light); color:var(--sauge-deep);}
+   --sauge-bg essayé d'abord (du temps où "disponible" était en jaune) :
+   bien trop proche du gris "indisponible" (#E2DFD8) sur une petite case
+   de calendrier, illisible en pratique — repris ici en --sauge-light,
+   nettement distincte à la fois du gris et du vert moyen plein. */
+.cal-cell.avail.range-mid{background:var(--sauge-light); color:var(--cream);}
 .cal-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--gray-mid);}
 .cal-dot{width:8px; height:8px; border-radius:50%; background:#E2DFD8; display:inline-block;}
-.cal-dot.avail{background:var(--yellow);}
+.cal-dot.avail{background:var(--sauge-mid);}
 /* Calendrier sans données (voir calendarHtml) : cases en gris très clair
    plutôt que la même teinte que "réservé/indisponible" habituelle, pour ne
    pas laisser croire que tout est pris. */
@@ -488,17 +487,20 @@ textarea.text-input{resize:vertical; min-height:80px;}
    taux de conversion, 3 sinon : le filet doit s'adapter à ce nombre
    variable, pas être câblé en dur sur "toujours 3"). */
 .meta-row{display:flex; gap:0;}
-.meta-item{display:flex; flex-direction:column; align-items:flex-start; gap:6px; flex:1; padding:0 16px;}
+.meta-item{display:flex; flex-direction:column; align-items:flex-start; gap:8px; flex:1; padding:0 16px;}
 .meta-item:first-child{padding-left:0;}
 .meta-item:not(:first-child){border-left:1px solid var(--line);}
 /* Retour utilisateur : "mettre les 3 pictos dans un petit encart carré de
-   couleur" — même pastille que .amen-badge (avant sa dépose lors du
-   passage des prestations aux chips lavande) : fond sauge clair, coins
-   arrondis, picto sauge foncé dessus. Reprend cette famille visuelle-là
-   plutôt que la lavande des prestations, pour ne pas laisser croire que
-   ces stats et les prestations sont liées. */
-.meta-icon{width:34px; height:34px; border-radius:11px; background:var(--sauge-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
-.meta-item svg{width:18px; height:18px; color:var(--sauge-deep);}
+   couleur", puis "passe le fond de l'encart en vert moyen" — --sauge-mid,
+   texte/picto en clair dessus (trop sombre pour rester lisible en sauge
+   foncé comme avant). */
+.meta-icon{width:34px; height:34px; border-radius:11px; background:var(--sauge-mid); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.meta-item svg{width:18px; height:18px; color:var(--cream);}
+/* .meta-text regroupe valeur + libellé pour leur donner un interlignage
+   propre à eux (retour utilisateur : "réduit un peu l'interlignage entre
+   les deux styles de ligne"), plus serré que l'espace badge->texte porté
+   par .meta-item lui-même. */
+.meta-text{display:flex; flex-direction:column; gap:1px;}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
 /* .ext-links : conteneur pour le(s) lien(s) externes de l'annonce (site
@@ -511,10 +513,13 @@ textarea.text-input{resize:vertical; min-height:80px;}
    carte fraîche ; .tagline porte déjà sa propre marge basse (10px, voir sa
    règle), suffisante comme espacement. */
 .ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:0;}
+/* Retour utilisateur : "Site web/Avis Google : passe les deux encarts en
+   vert moyen typo blanche" — --sauge-mid plein, texte et pictos blancs,
+   plus de bordure (elle ne servait qu'à délimiter le fond crème d'avant). */
 .google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:16px;
-  border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
-.google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
-.google-link svg.ext{width:12px; height:12px; color:var(--gray-mid); margin-left:2px;}
+  background:var(--sauge-mid); font-size:13px; font-weight:600; color:#fff;}
+.google-link svg{width:15px; height:15px; color:#fff; flex-shrink:0;}
+.google-link svg.ext{width:12px; height:12px; color:rgba(255,255,255,.75); margin-left:2px;}
 /* Type d'hébergement, sur la même ligne que l'accroche (claim), séparés par
    "•" (voir taglineHtml()) — visible dès le début (fil et fiche détail),
    pas noyé plus bas dans la description, et sans bloc à part qui prenait
@@ -564,12 +569,16 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .unit-thumb-empty{width:100%; height:100%; background:var(--line);}
 .unit-info b{display:block; font-size:14px;}
 .unit-info span{font-size:12px; color:var(--sauge); font-weight:600;}
-.host-card{display:flex; align-items:center; gap:12px; background:transparent; border-radius:16px; padding:0; margin-bottom:0;}
+/* align-items:flex-start (pas center) depuis l'ajout de la présentation :
+   avec un simple nom sur une ligne l'avatar restait déjà bien aligné,
+   mais un paragraphe de présentation sur plusieurs lignes ferait dériver
+   l'avatar vers le bas du bloc si on le gardait centré verticalement. */
+.host-card{display:flex; align-items:flex-start; gap:12px; background:transparent; border-radius:16px; padding:0; margin-bottom:0;}
 .host-avatar{width:46px; height:46px; border-radius:50%; background:var(--lavender); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:17px; flex-shrink:0;}
+.host-info{display:flex; flex-direction:column; gap:5px; flex:1; min-width:0;}
 .host-info b{display:block; font-size:14.5px;}
-.avail-row{display:flex; gap:7px; overflow-x:auto; margin-bottom:8px;}
-.avail-chip{flex-shrink:0; font-size:11.5px; font-weight:700; padding:7px 11px; border-radius:12px; background:var(--yellow); color:var(--sauge-deep);}
+.host-info p{margin:0; font-size:13px; line-height:1.4; color:#4a4636;}
 
 /* ---------- bottom nav ----------
    Pas d'apparition animée : la barre est installée à sa place fixe dès
@@ -1281,7 +1290,7 @@ var META_ICON_DISTANCE = "<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-
 var META_ICON_CONVERSION = "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>";
 var META_ICON_GUESTS = "<circle cx='12' cy='8' r='3.5'/><path d='M5 21c0-4 3-7 7-7s7 3 7 7'/>";
 function metaItemHtml(iconPath, value, label){
-  return '<div class="meta-item"><span class="meta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg></span><b>'+value+'</b><span>'+label+'</span></div>';
+  return '<div class="meta-item"><span class="meta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg></span><span class="meta-text"><b>'+value+'</b><span>'+label+'</span></span></div>';
 }
 /* Prestations groupées par catégorie (AMEN_GROUPS) plutôt qu'une seule
    liste à plat — retour utilisateur, "étoffe cette partie-là (...) que la
@@ -1611,7 +1620,7 @@ function normalizeHostListing(doc){
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
     accomType: l.accomType || "",
-    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || ""},
+    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || ""},
     photos: gallery ? gallery.length : 0,
     avail: []
   };
@@ -3578,8 +3587,7 @@ function openDetail(id){
          l'appui ("il y a toujours le menu chambre alors que c'est un
          gîte"). Utile seulement pour prévisualiser plusieurs chambres
          avant de choisir un onglet, ce qui n'existe que si hasTabs. */
-      (hasTabs ? '<div class="detail-card"><div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u, hasTabs); }).join("")+'</div></div>' : '')+
-      (!hasTabs ? '<div class="detail-card"><div class="section-title">Créneaux libres (aperçu)</div><div class="avail-row">'+(l.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div></div>' : '');
+      (hasTabs ? '<div class="detail-card"><div class="section-title">Chambres</div><div class="unit-list">'+l.units.map(function(u){ return unitCardHtml(u, hasTabs); }).join("")+'</div></div>' : '');
   } else {
     // chambre sélectionnée : ses propres infos, photos (déjà gérées ci-dessus) et son propre planning —
     // pas la description/liste des chambres de l'établissement, déjà sur la vue d'ensemble (le site/
@@ -3592,9 +3600,7 @@ function openDetail(id){
       '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
-      detailAmenitiesHtml(l)+'</div>'+
-      '<div class="detail-card"><div class="section-title">Créneaux libres de cette chambre (aperçu)</div>'+
-      '<div class="avail-row">'+(activeUnit.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div></div>';
+      detailAmenitiesHtml(l)+'</div>';
   }
 
   var qrUid = "qrd"+l.id+(activeUnit ? "-"+activeUnit.id : "");
@@ -3620,7 +3626,7 @@ function openDetail(id){
         metaRowHtml+
         bodyExtraHtml+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-        '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+l.host.name+'</b></div></div></div>'+
+        '<div class="host-card"><div class="host-avatar">'+l.host.initial+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b>'+(l.host.bio ? '<p>'+esc(l.host.bio)+'</p>' : '')+'</div></div></div>'+
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
@@ -3790,6 +3796,9 @@ function openSheet(kind){
         '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
       '</div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
+      '<div class="field-block"><label>Présentation (facultatif)</label><textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
+        '<p class="field-hint">Affichée sous votre nom dans la fiche de l\'annonce, section "Votre hôte". Si vous avez plusieurs annonces, la même présentation doit être ressaisie sur chacune (voir README).</p>'+
+      '</div>'+
       '<div class="field-block" style="position:relative;"><label>Adresse complète du logement</label>'+
         '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
         '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
@@ -4882,6 +4891,7 @@ function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var accomType = document.getElementById("hf-type").value;
   var hostName = document.getElementById("hf-hostname").value.trim();
+  var hostBio = document.getElementById("hf-hostbio").value.trim();
   var regionName = document.getElementById("hf-region-name").value;
   var deptName = document.getElementById("hf-dept-name").value;
   var city = document.getElementById("hf-city").value.trim();
@@ -4943,7 +4953,7 @@ function submitHostForm(){
       return uploadUnit(0, []).then(function(units){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
-          name:name, accomType:accomType, hostName:hostName, region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
+          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
           websiteUrl:websiteUrl, googleUrl:googleUrl,
