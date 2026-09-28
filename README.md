@@ -967,6 +967,16 @@ Retour utilisateur (capture d'écran à l'appui) : « mets à côté du chiffre 
 
 **Testé** (Playwright, capture d'écran) : 3 pictos confirmés présents, un par tuile ; libellé "Mes contacts" confirmé sur une ligne. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Bandeau Mes séjours : palmier pour Séjours, chiffre à gauche du picto
+
+Retour utilisateur : « utilise peut-être un palmier pour séjour, ou je sais pas, quelque chose de plus clair, et laisse le chiffre à gauche plutôt. »
+
+La coche de `.log-action.confirm`, réutilisée pour "Séjours" au chantier précédent, jugée pas assez parlante — remplacée par un palmier (`STAT_ICON_SEJOURS`, 4 traits simples depuis un tronc), qui se lit sans ambiguïté comme "séjour/vacances". Un premier tracé avec tronc penché et palmes asymétriques essayé puis écarté (vérifié par capture d'écran zoomée sur juste ce picto) : moins clair que le tracé symétrique retenu, plus proche d'un astérisque qu'un palmier une fois réduit à 17px.
+
+Ordre chiffre/picto inversé dans `.stat-num` pour les trois tuiles (chiffre d'abord, picto ensuite) — c'était l'inverse au chantier précédent.
+
+**Testé** (Playwright, capture d'écran zoomée sur le picto) : ordre chiffre-puis-picto confirmé sur les trois tuiles. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
