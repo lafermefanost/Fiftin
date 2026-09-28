@@ -480,8 +480,9 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .detail-card>*:last-child{margin-bottom:0;}
 /* Ligne de stats (prix/distance/conversion) — retour utilisateur :
    "graphiquement plus clair et attractif, pictogrammes ou lignes de
-   séparation". Les deux : un picto par item (voir META_ICON_*/
-   metaItemHtml()) au-dessus de la valeur, et un filet vertical entre deux
+   séparation". Les deux : un picto par item (voir les constantes
+   META_ICON_… et metaItemHtml()) au-dessus de la valeur, et un filet
+   vertical entre deux
    items plutôt qu'un simple espace — :not(:first-child) pour ne jamais en
    poser un avant le tout premier (2 items sur la vue d'une chambre sans
    taux de conversion, 3 sinon : le filet doit s'adapter à ce nombre
