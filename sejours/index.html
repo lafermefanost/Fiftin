@@ -668,9 +668,11 @@ body.detail-open nav.tabbar{z-index:220;}
 /* Encore "un tout petit peu trop fort" au retour suivant — pic ré-abaissé
    une seconde fois (.4->.3 / .48->.36), même courbe à 3 arrêts sinon.
    Puis "diminue de moitié l'effet" : toutes les opacités divisées par 2
-   (.3->.15 / .36->.18, arrêts intermédiaires idem). */
-.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.15), rgba(20,26,20,.08) 55%, transparent);}
-.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.18), rgba(20,26,20,.095) 55%, transparent);}
+   (.3->.15 / .36->.18, arrêts intermédiaires idem). Puis "baisse encore
+   très légèrement, et après c'est bon" : dernier petit ajustement
+   (.15->.12 / .18->.14) — point d'arrêt de ce réglage. */
+.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.12), rgba(20,26,20,.06) 55%, transparent);}
+.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à

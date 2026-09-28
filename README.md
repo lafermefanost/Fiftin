@@ -943,6 +943,10 @@ Retour utilisateur, après l'adoucissement de la démarcation : « c'est encore 
 
 Retour utilisateur : « diminue de moitié l'effet ». Toutes les opacités du dégradé divisées par 2 (haut `.3→.15`, bas `.36→.18`, arrêts intermédiaires idem), même courbe à 3 arrêts sinon.
 
+### Dégradé du fil Explorer : dernier réglage
+
+Retour utilisateur : « baisse encore très légèrement l'effet et après c'est bon ». Dernier ajustement (haut `.15→.12`, bas `.18→.14`) — point d'arrêt de ce réglage, pas d'autre changement prévu sur ce dégradé sauf nouveau retour.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
