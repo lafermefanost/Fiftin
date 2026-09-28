@@ -939,6 +939,10 @@ Retour utilisateur, après l'adoucissement de la démarcation : « c'est encore 
 
 **Testé** : capture d'écran, effet toujours visible mais nettement plus discret. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Dégradé du fil Explorer : effet divisé par deux
+
+Retour utilisateur : « diminue de moitié l'effet ». Toutes les opacités du dégradé divisées par 2 (haut `.3→.15`, bas `.36→.18`, arrêts intermédiaires idem), même courbe à 3 arrêts sinon.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
