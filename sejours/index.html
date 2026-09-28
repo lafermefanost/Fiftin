@@ -606,7 +606,14 @@ body.detail-open nav.tabbar{z-index:220;}
    y a des annonces à faire défiler juste en dessous, pas remplir tout
    l'écran à elle seule comme quand elle avait son propre onglet plein
    écran. */
-.map-canvas{position:relative; z-index:0; height:240px; border-radius:26px; overflow:hidden; background:var(--cream-deep);}
+.map-canvas{position:relative; z-index:0; height:240px; border-radius:26px; overflow:hidden; background:var(--cream-deep);
+  transition:height .25s ease;}
+/* 80vh plutôt qu'un pourcentage du bloc lui-même (retour utilisateur :
+   "une petite flèche qui permet d'agrandir la carte pour travailler un peu
+   plus dessus") — 4/5 de la hauteur d'écran visible, largement assez pour
+   placer un repère précisément sans faire disparaître complètement le fil
+   en dessous (qui reste accessible d'un scroll). */
+.map-canvas.expanded{height:80vh;}
 .map-canvas .leaflet-container{width:100%; height:100%; background:var(--cream-deep); font-family:'Jost',sans-serif;}
 .map-canvas .leaflet-control-attribution{font-size:9.5px; background:rgba(239,238,234,.85);}
 .map-pin-icon{background:none; border:none;}
@@ -619,16 +626,28 @@ body.detail-open nav.tabbar{z-index:220;}
 .map-cluster{width:38px; height:38px; border-radius:50%; background:var(--lavender-deep); color:#fff;
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
   box-shadow:0 4px 10px rgba(0,0,0,.25); border:2px solid var(--cream);}
+.map-expand-btn{position:absolute; top:12px; left:12px; z-index:1000; width:34px; height:34px; border-radius:50%;
+  background:var(--cream); border:1.5px solid var(--line); box-shadow:0 3px 8px rgba(0,0,0,.18);
+  display:flex; align-items:center; justify-content:center; color:var(--ink);}
+.map-expand-btn svg{width:16px; height:16px;}
 .map-zone-btn{position:absolute; top:12px; right:12px; z-index:1000; background:var(--cream); border:1.5px solid var(--line);
   border-radius:16px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
   box-shadow:0 3px 8px rgba(0,0,0,.18);}
 .map-zone-btn.armed{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
-.map-zone-controls{display:flex; align-items:center; gap:10px; background:var(--cream-deep); border-radius:16px;
+.map-zone-controls{display:flex; flex-direction:column; gap:10px; background:var(--cream-deep); border-radius:16px;
   padding:10px 14px; margin:12px 0; font-size:12.5px; font-weight:600;}
-.map-zone-controls span{flex-shrink:0;}
-.map-zone-controls input[type=range]{flex:1; accent-color:var(--sauge-deep);}
-.map-zone-controls button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
+.map-zone-controls-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
+.map-zone-controls-head button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
+/* Rayons prédéfinis (retour utilisateur : "tu cliques, tac, tu as juste le
+   nombre de kilomètres") plutôt que le curseur continu d'avant — une ligne
+   de puces qui s'enroule proprement sur mobile plutôt qu'un slider qui
+   aurait dû cohabiter avec .map-zone-controls-head sur la même largeur
+   réduite. */
+.map-zone-radius-chips{display:flex; flex-wrap:wrap; gap:8px;}
+.radius-chip{background:var(--cream); border:1.5px solid var(--line); border-radius:12px; padding:7px 12px;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);}
+.radius-chip.active{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
 .map-list{display:flex; flex-direction:column; gap:10px;}
 .map-list-item{display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px; padding:10px 12px;}
 .map-list-item .sw{width:68px; height:68px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
@@ -1689,7 +1708,13 @@ var DEFAULT_ORIGIN = {lat:48.7370, lng:2.3280}; // La Ferme Fanost (Essonne) —
 // recherche dessinée à la main sur la carte) — réutilisée telle quelle,
 // pas redéclarée : une déclaration de fonction est hissée quelle que soit
 // sa position dans le fichier, donc disponible ici sans avoir à la copier.
-function currentOrigin(){ return state.geoOrigin || DEFAULT_ORIGIN; }
+/* state.filters.zoneOrigin (repère posé sur la carte embarquée d'Explorer,
+   voir exploreMapBlockHtml()/wireExploreMap() plus bas) prime sur
+   geoOrigin : poser un repère est un choix explicite et plus récent que
+   la géolocalisation, "je veux chercher autour du Mans", pas "autour de
+   moi" — les deux n'ont pas de raison de rester actifs en même temps
+   (voir "Utiliser ma position", qui efface le repère en retour). */
+function currentOrigin(){ return state.filters.zoneOrigin || state.geoOrigin || DEFAULT_ORIGIN; }
 /* Distance en km, arrondie (même format d'affichage qu'avant, "8 km").
    Annonce sans coordonnées (pas encore géocodée, ou créée avant ce
    chantier et jamais réenregistrée depuis) : repli sur son ancien nombre
@@ -1773,7 +1798,23 @@ var AMEN_ICONS = {
    jusqu'à ce sommet repasse `f.distance` à `null` (voir kind==="distance"
    plus bas), pas à une valeur numérique qui resterait, elle, un plafond. */
 var MAX_DISTANCE_KM = 1200;
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, price:300, amen:[]}, sort:"reco", loading:true,
+/* filters.zoneOrigin : repère {lat,lng} posé à la main sur la carte
+   embarquée d'Explorer (voir exploreMapBlockHtml()/wireExploreMap() plus
+   bas, "Choisir un lieu sur la carte") — remplace l'ancienne zone de
+   recherche dessinée à la main (mapZone), qui appliquait un DEUXIÈME
+   filtre de distance indépendant, cumulé au-dessus de filters.distance
+   (déjà mesuré depuis la position du voyageur/DEFAULT_ORIGIN) : deux
+   notions de distance qui pouvaient se contredire silencieusement, sans
+   qu'il y ait de raison de les garder séparées. Fusionné : zoneOrigin
+   devient simplement une autre origine possible pour currentOrigin()
+   (voir plus bas), filters.distance en reste le rayon, unique — poser un
+   repère sur la carte ET ajuster le volet Distance du bandeau du haut
+   modifient donc exactement le même filtre, plutôt que deux qui se
+   superposent. Persisté comme le reste de filters (voir persist()) :
+   comme filters.distance, une distance choisie doit survivre à un
+   rechargement de page. `null` par défaut (aucun repère posé, origine =
+   position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[]}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null,
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
@@ -2099,14 +2140,19 @@ function sortListings(list){
   return list;
 }
 
-/* Liste COMPLÈTE et ordonnée des annonces correspondant aux filtres actifs
-   (+ zone dessinée sur la carte), calculée sur listingIndexCache — donc
-   toujours entière même quand LISTINGS, lui, ne contient encore que les
-   annonces déjà chargées en détail (pagination du fil, voir PAGE_SIZE/
-   renderFeed() plus bas). Deux usages : le compteur de résultats
-   (renderResultLine(), doit compter TOUT ce qui correspond, pas
-   seulement ce qui est déjà affiché) et la pagination elle-même (quelles
-   annonces, dans quel ordre, charger en détail au fil du scroll). */
+/* Liste COMPLÈTE et ordonnée des annonces correspondant aux filtres actifs,
+   calculée sur listingIndexCache — donc toujours entière même quand
+   LISTINGS, lui, ne contient encore que les annonces déjà chargées en
+   détail (pagination du fil, voir PAGE_SIZE/renderFeed() plus bas). Deux
+   usages : le compteur de résultats (renderResultLine(), doit compter
+   TOUT ce qui correspond, pas seulement ce qui est déjà affiché) et la
+   pagination elle-même (quelles annonces, dans quel ordre, charger en
+   détail au fil du scroll).
+   Le repère posé sur la carte (filters.zoneOrigin) n'a plus besoin de son
+   propre filtre séparé ici : c'est juste une autre origine possible pour
+   currentOrigin(), déjà pris en compte par matchesAllFilters() via
+   filters.distance/listingDistanceKm() — voir le commentaire de
+   filters.zoneOrigin plus haut. */
 function matchingIndexListings(){
   var f = state.filters;
   // Filet de secours (voir fetchListingIndex()) : un index vide alors que
@@ -2117,9 +2163,6 @@ function matchingIndexListings(){
   // à tort.
   var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
   var list = source.filter(function(l){ return matchesAllFilters(l, f); });
-  if(mapZone){
-    list = list.filter(function(l){ return l.lat && l.lng && haversineKm(mapZone.lat, mapZone.lng, l.lat, l.lng) <= mapZone.radiusKm; });
-  }
   return sortListings(list);
 }
 
@@ -2152,7 +2195,7 @@ function renderFilterBar(){
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
   bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
-    chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km" : "Distance", f.distance!=null),
+    chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km"+(f.zoneOrigin?" (repère)":"") : "Distance", f.distance!=null),
     chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
     chipHtml("sort", "Trier", state.sort!=="reco")
@@ -2166,7 +2209,7 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", regionName:"", deptName:"", distance:null, price:300, amen:[]};
+    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[]};
     state.sort = "reco";
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
   });
@@ -2186,7 +2229,7 @@ function chipHtml(k,label,active){
 function clearFilter(k){
   var f = state.filters;
   if(k==="loc"){ f.q = ""; f.regionName = ""; f.deptName = ""; }
-  else if(k==="distance") f.distance = null;
+  else if(k==="distance"){ f.distance = null; f.zoneOrigin = null; } // retire aussi le repère de la carte, sinon un cercle sans rayon resterait affiché sans filtre associé
   else if(k==="price") f.price = 300;
   else if(k==="amen") f.amen = [];
   else if(k==="sort") state.sort = "reco";
@@ -2279,7 +2322,7 @@ function renderFeedBody(){
   var mapBlockHtml = exploreMapBlockHtml();
   if(!pageEntries.length){
     feed.innerHTML = mapBlockHtml + '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>'+
-      '<p>Aucun hébergement '+(mapZone ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
+      '<p>Aucun hébergement '+(state.filters.zoneOrigin ? "dans cette zone" : "ne correspond à ces filtres")+'.<br>Essayez d\'élargir la distance ou le budget.</p></div>';
     wireExploreMap();
     return;
   }
@@ -3396,6 +3439,7 @@ function openSheet(kind){
         (state.geoOrigin ? "✓ Position activée — distances calculées depuis vous" : "📍 Utiliser ma position")+
       '</button>'+
       (state.geoOrigin ? '<button type="button" class="link-btn" id="btn-clear-geo" style="margin-top:8px;">Revenir à la position par défaut</button>' : '')+
+      (f.zoneOrigin ? '<p class="field-hint">Un repère posé sur la carte (Explorer) prime actuellement sur '+(state.geoOrigin?"votre position":"cette position par défaut")+' pour le calcul des distances — voir le volet Distance pour le retirer.</p>' : '')+
       '<p class="field-hint" id="geo-err"></p>'+
       '</div>'+
       '<div class="field-block"><label>Région</label><div class="region-chip-row">'+
@@ -3425,7 +3469,14 @@ function openSheet(kind){
     // "input" plus bas), pour ne jamais réintroduire un plafond numérique
     // silencieux à la place de l'ancien.
     var distSliderVal = f.distance!=null ? f.distance : MAX_DISTANCE_KM;
-    inner = '<h3>Distance</h3><div class="field-block"><div class="range-value"><span>Distance maximale</span><span>'+(f.distance!=null ? f.distance+" km" : "Illimitée")+'</span></div>'+
+    // Repère posé sur la carte d'Explorer (filters.zoneOrigin, voir son
+    // grand commentaire plus haut) : ce curseur reste le MÊME filtre,
+    // ajuster l'un déplace l'autre — juste un rappel ici de l'origine
+    // réellement utilisée tant qu'un repère est actif, avec de quoi le
+    // retirer sans avoir à rouvrir la carte.
+    inner = '<h3>Distance</h3>'+
+      (f.zoneOrigin ? '<p class="field-hint">Calculée depuis le repère posé sur la carte (Explorer), pas depuis '+(state.geoOrigin?"votre position":"La Ferme Fanost")+'. <button type="button" class="link-btn" id="btn-clear-zone-origin" style="display:inline;padding:0;">Retirer le repère</button></p>' : '')+
+      '<div class="field-block"><div class="range-value"><span>Distance maximale</span><span>'+(f.distance!=null ? f.distance+" km" : "Illimitée")+'</span></div>'+
       '<input type="range" id="s-distance" min="1" max="'+MAX_DISTANCE_KM+'" value="'+distSliderVal+'"></div>';
   } else if(kind==="price"){
     inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+f.price+' € / nuit</span></div>'+
@@ -3780,8 +3831,13 @@ function openSheet(kind){
       geoBtn.textContent = "Localisation en cours…";
       navigator.geolocation.getCurrentPosition(function(pos){
         state.geoOrigin = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+        // Choisir explicitement sa position réelle prime sur un repère posé
+        // sur la carte (voir currentOrigin()) : les deux ne devraient
+        // jamais rester actifs en silence en même temps, ce geste-ci gagne
+        // puisqu'il vient d'être posé volontairement, maintenant.
+        f.zoneOrigin = null;
         openSheet("loc"); // reconstruit le volet (bouton "activé") + les distances affichées derrière
-        renderTabContent(); renderResultLine();
+        renderFilterBar(); renderTabContent(); renderResultLine();
       }, function(err){
         errP.textContent = err.code===1
           ? "Position refusée — autorisez la géolocalisation dans les réglages de votre navigateur pour l'utiliser."
@@ -3830,6 +3886,12 @@ function openSheet(kind){
       var v = Number($r.value);
       f.distance = v>=MAX_DISTANCE_KM ? null : v;
       root.querySelector(".range-value span:last-child").textContent = f.distance!=null ? f.distance+" km" : "Illimitée";
+    });
+    var clearZoneBtn = document.getElementById("btn-clear-zone-origin");
+    if(clearZoneBtn) clearZoneBtn.addEventListener("click", function(){
+      f.zoneOrigin = null;
+      openSheet("distance"); // reconstruit le volet (rappel d'origine retiré) + l'origine réelle utilisée derrière
+      renderFilterBar(); renderTabContent(); renderResultLine();
     });
   } else if(kind==="price"){
     var $p = document.getElementById("s-price");
@@ -4692,14 +4754,28 @@ function refreshSavedHeartsInDom(){
 
 var mapInstance = null;
 var mapMarkerLayer = null;
-var mapZone = null;
-var mapZoneArmed = false;
+var mapZoneArmed = false; // en attente d'un clic sur la carte pour poser/déplacer le repère — jamais persisté, juste un état d'interaction en cours
 var mapZoneCircleLayer = null;
+/* Carte agrandie (retour utilisateur : "une petite flèche qui permet
+   d'agrandir la carte pour pouvoir travailler un peu plus dessus") — juste
+   plus de hauteur à la même instance Leaflet déjà montée, jamais un
+   renderFeed() complet (voir wireExploreMap()) : agrandir ne doit ni
+   reconstruire les cartes d'annonces en dessous ni recadrer le zoom/pan
+   déjà choisi par le voyageur. Jamais persisté : repart toujours repliée
+   à l'ouverture. */
+var mapExpanded = false;
+/* Rayons proposés en un clic une fois un repère posé (retour utilisateur :
+   "tu cliques sur Le Mans, tac, tu as juste le nombre de kilomètres et
+   basta" — plutôt qu'un curseur continu à faire glisser, "un peu idiot"
+   pour ce geste précis). Le curseur continu du volet Distance du bandeau
+   du haut reste disponible pour un réglage plus fin — même champ
+   (filters.distance), voir son grand commentaire plus haut. */
+var MAP_RADIUS_PRESETS = [10, 25, 50, 100, 200];
 
-/* Zone de recherche dessinée à la main sur la carte : un cercle (centre +
-   rayon), pas un polygone libre — plus simple à poser et ajuster d'un
-   doigt sur mobile qu'un tracé à main levée, pour un résultat tout aussi
-   utile ici (chercher "autour de ce point"). */
+/* Repère posé à la main sur la carte (centre + rayon, filters.zoneOrigin/
+   filters.distance), pas un polygone libre — plus simple à poser et
+   ajuster d'un doigt sur mobile qu'un tracé à main levée, pour un résultat
+   tout aussi utile ici (chercher "autour de ce point"). */
 function haversineKm(lat1, lng1, lat2, lng2){
   var R = 6371;
   var dLat = (lat2-lat1) * Math.PI/180, dLng = (lng2-lng1) * Math.PI/180;
@@ -4795,7 +4871,7 @@ function refreshExploreMapMarkers(){
   });
   mapMarkerLayer = clusterGroup;
   mapInstance.addLayer(mapMarkerLayer);
-  if(mapZoneCircleLayer) mapZoneCircleLayer.setRadius(mapZone.radiusKm*1000);
+  if(mapZoneCircleLayer && state.filters.distance!=null) mapZoneCircleLayer.setRadius(state.filters.distance*1000);
 }
 
 /* Squelette de la carte embarquée en tête du fil Explorer (retour
@@ -4804,18 +4880,32 @@ function refreshExploreMapMarkers(){
    ensuite par wireExploreMap(), une fois ce HTML posé dans le DOM (Leaflet
    a besoin que #map-canvas existe déjà). */
 function exploreMapBlockHtml(){
+  var f = state.filters;
+  var hasZone = !!f.zoneOrigin;
   return '<div class="explore-map-block">'+
-    '<div class="map-canvas" id="map-canvas">'+
+    '<div class="map-canvas'+(mapExpanded?' expanded':'')+'" id="map-canvas">'+
+      '<button type="button" class="map-expand-btn" id="map-expand-btn" aria-label="'+(mapExpanded?"Réduire la carte":"Agrandir la carte")+'">'+MAP_EXPAND_ICON(mapExpanded)+'</button>'+
       '<button type="button" class="map-zone-btn'+(mapZoneArmed?' armed':'')+'" id="map-zone-btn">'+
-        (mapZoneArmed ? "Touchez la carte…" : (mapZone ? "Déplacer la zone" : "Dessiner une zone"))+
+        (mapZoneArmed ? "Touchez la carte pour choisir un lieu…" : (hasZone ? "Déplacer le repère" : "Choisir un lieu sur la carte"))+
       '</button>'+
     '</div>'+
-    (mapZone ? '<div class="map-zone-controls">'+
-      '<span>Rayon : <b id="map-zone-radius-label">'+mapZone.radiusKm+' km</b></span>'+
-      '<input type="range" id="map-zone-radius" min="1" max="30" value="'+mapZone.radiusKm+'">'+
-      '<button type="button" id="map-zone-clear">Effacer</button>'+
+    (hasZone ? '<div class="map-zone-controls">'+
+      '<div class="map-zone-controls-head"><span>Rayon autour du repère</span><button type="button" id="map-zone-clear">Effacer le repère</button></div>'+
+      '<div class="map-zone-radius-chips">'+MAP_RADIUS_PRESETS.map(function(km){
+        return '<button type="button" class="radius-chip'+(f.distance===km?' active':'')+'" data-radius="'+km+'">'+km+' km</button>';
+      }).join("")+'</div>'+
     '</div>' : '')+
   '</div>';
+}
+/* Deux flèches diagonales, sens inversé selon l'état — même geste visuel
+   qu'un "plein écran"/"réduire" classique, sans les faux-airs de vidéo qui
+   viendraient d'une icône plein écran toute faite. Fonction plutôt que
+   deux constantes : réutilisée à l'identique par wireExploreMap() pour
+   rafraîchir juste l'icône au clic, sans reconstruire tout le bloc carte. */
+function MAP_EXPAND_ICON(expanded){
+  return expanded
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg>';
 }
 
 /* Monte/remonte l'instance Leaflet dans #map-canvas et câble les contrôles
@@ -4824,28 +4914,51 @@ function exploreMapBlockHtml(){
    l'instance précédente (même limite qu'avant la fusion, sur l'ex-onglet
    Carte : perte du zoom/pan à chaque renderFeed() complet — filtre changé,
    tri, etc. — mais PAS sur un simple cœur cliqué sur Explorer, voir
-   wireFeedEvents()/data-like, qui évite précisément cet appel). */
+   wireFeedEvents()/data-like, qui évite précisément cet appel, NI sur
+   agrandir/réduire la carte, voir #map-expand-btn plus bas, qui évite
+   spécifiquement un renderFeed() pour ne jamais faire sauter le zoom/pan
+   en cours juste pour donner plus de place à la même vue). */
 function wireExploreMap(){
+  var f = state.filters;
+
+  document.getElementById("map-expand-btn").addEventListener("click", function(){
+    mapExpanded = !mapExpanded;
+    document.getElementById("map-canvas").classList.toggle("expanded", mapExpanded);
+    this.setAttribute("aria-label", mapExpanded ? "Réduire la carte" : "Agrandir la carte");
+    this.innerHTML = MAP_EXPAND_ICON(mapExpanded);
+    // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
+    // (voir .map-canvas), Leaflet doit attendre qu'elle soit terminée pour
+    // mesurer la bonne taille — appeler invalidateSize() trop tôt le
+    // laisserait dessiner sur l'ancienne taille jusqu'au prochain geste
+    // (zoom, pan...) qui le forcerait à se corriger.
+    setTimeout(function(){ if(mapInstance) mapInstance.invalidateSize(); }, 260);
+  });
+
   document.getElementById("map-zone-btn").addEventListener("click", function(){
-    mapZoneArmed = !mapZone || !mapZoneArmed;
+    mapZoneArmed = !f.zoneOrigin || !mapZoneArmed;
     renderFeed();
   });
   var clearBtn = document.getElementById("map-zone-clear");
   if(clearBtn) clearBtn.addEventListener("click", function(){
-    mapZone = null; mapZoneArmed = false;
-    renderFeed();
+    f.zoneOrigin = null; f.distance = null; mapZoneArmed = false;
+    persist(); renderFilterBar(); renderFeed(); renderResultLine();
   });
-  var radiusInput = document.getElementById("map-zone-radius");
-  if(radiusInput) radiusInput.addEventListener("input", function(){
-    mapZone.radiusKm = Number(radiusInput.value);
-    document.getElementById("map-zone-radius-label").textContent = mapZone.radiusKm+" km";
-    refreshExploreMapMarkers();
+  // Rayons prédéfinis (retour utilisateur, voir MAP_RADIUS_PRESETS) :
+  // chaque clic applique tout de suite (pas de bouton "Appliquer" séparé
+  // ici, comme le reste des contrôles de la carte embarquée, déjà en
+  // dehors des volets de filtre habituels) et met à jour la puce Distance
+  // du bandeau du haut — même champ filters.distance, voir currentOrigin().
+  Array.prototype.forEach.call(document.querySelectorAll(".radius-chip"), function(btn){
+    btn.addEventListener("click", function(){
+      f.distance = Number(btn.getAttribute("data-radius"));
+      persist(); renderFilterBar(); renderFeed(); renderResultLine();
+    });
   });
 
   if(mapInstance){ mapInstance.remove(); mapInstance = null; mapMarkerLayer = null; mapZoneCircleLayer = null; }
   if(!window.L) return;
   var located = mapPinsFromIndex();
-  if(!located.length && !mapZone) return;
+  if(!located.length && !f.zoneOrigin) return;
 
   mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -4855,34 +4968,41 @@ function wireExploreMap(){
 
   mapInstance.on("click", function(e){
     if(!mapZoneArmed) return;
-    mapZone = {lat:e.latlng.lat, lng:e.latlng.lng, radiusKm:(mapZone && mapZone.radiusKm) || 5};
+    f.zoneOrigin = {lat:e.latlng.lat, lng:e.latlng.lng};
+    // Rayon de départ raisonnable au tout premier repère posé (l'ancien
+    // défaut, 5 km, était pensé pour un curseur qu'on affine ensuite à la
+    // main — trop court pour un des presets ci-dessus qu'on ne fait plus
+    // que cliquer) ; un repère déplacé garde le rayon déjà choisi.
+    if(f.distance==null) f.distance = 25;
     mapZoneArmed = false;
+    persist();
     /* setTimeout : renderFeed() détruit puis recrée mapInstance. Le faire
        de façon synchrone ici casse Leaflet, qui n'a pas fini de traiter
        cet événement "click" sur l'instance qu'on vient de supprimer. */
-    setTimeout(renderFeed, 0);
+    setTimeout(function(){ renderFilterBar(); renderFeed(); renderResultLine(); }, 0);
   });
 
-  if(mapZone){
+  if(f.zoneOrigin){
     /* Circle.getBounds() a besoin que la carte ait déjà une vue (centre +
        zoom) pour projeter son rayon en pixels — sans ça, Leaflet plante
        en interne. setView ici, avant fitBounds plus bas qui affine le
        cadrage sur le cercle réel. */
-    mapInstance.setView([mapZone.lat, mapZone.lng], 12);
-    mapZoneCircleLayer = L.circle([mapZone.lat, mapZone.lng], {
-      radius:mapZone.radiusKm*1000, color:"#1D2820", weight:2, fillOpacity:.08
+    mapInstance.setView([f.zoneOrigin.lat, f.zoneOrigin.lng], 12);
+    mapZoneCircleLayer = L.circle([f.zoneOrigin.lat, f.zoneOrigin.lng], {
+      radius:(f.distance||25)*1000, color:"#1D2820", weight:2, fillOpacity:.08
     }).addTo(mapInstance);
   }
 
   refreshExploreMapMarkers();
 
-  if(mapZone){
+  if(f.zoneOrigin){
     mapInstance.fitBounds(mapZoneCircleLayer.getBounds(), {padding:[20,20]});
   } else if(located.length===1){
     mapInstance.setView([located[0].lat, located[0].lng], 12);
   } else if(located.length>1){
     mapInstance.fitBounds(L.featureGroup(located.map(function(l){ return L.marker([l.lat,l.lng]); })).getBounds(), {padding:[32,32]});
   }
+  if(mapExpanded) mapInstance.invalidateSize();
 }
 
 function renderProfile(){
