@@ -1432,7 +1432,8 @@ function normalizeHostListing(doc){
     likeCount: (typeof l.likeCount==="number") ? l.likeCount : 0,
     grad: "clay", motif: "roof",
     gallery: gallery,
-    units: units,
+    galleryThumb: l.galleryThumb || null, // vignette légère de gallery[0] (voir listingThumbUrl()) — absente sur une annonce créée avant ce chantier, repli automatique sur gallery[0]
+    units: units, // chaque chambre porte déjà son propre galleryThumb tel quel (même mécanisme, pas besoin de le remapper ici)
     amen: l.amen || [],
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
@@ -3480,10 +3481,15 @@ function openSheet(kind){
       '</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
-    hfSelectedFiles = (hfEf && hfEf.gallery ? hfEf.gallery : []).map(function(url){ return {type:"existing", url:url}; });
+    // thumbUrl repris ici (galleryThumb, même index que gallery) pour
+    // qu'une photo déjà en ligne, gardée telle quelle, n'ait jamais besoin
+    // de régénérer sa vignette à l'enregistrement (voir resolvePhotoEntries()).
+    hfSelectedFiles = (hfEf && hfEf.gallery ? hfEf.gallery : []).map(function(url, i){
+      return {type:"existing", url:url, thumbUrl:(hfEf.galleryThumb && hfEf.galleryThumb[i]) || null};
+    });
     hfUnits = (hfEf && hfEf.units && hfEf.units.length) ? hfEf.units.map(function(u){
       return {id:u.id, name:u.name||"", price:u.price!=null?String(u.price):"", maxPersons:u.maxPersons!=null?u.maxPersons:2,
-        photos:(u.gallery||[]).map(function(url){ return {type:"existing", url:url}; }), linkedRoomId:u.linkedRoomId||""};
+        photos:(u.gallery||[]).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(u.galleryThumb && u.galleryThumb[i]) || null}; }), linkedRoomId:u.linkedRoomId||""};
     }) : [{id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""}];
   } else if(kind==="hostbooking"){
     var hbCtx = hostBookingContext;
@@ -4149,9 +4155,55 @@ function compressImageFile(file){
    transformer les File bruts choisis en entrées prêtes pour
    hfSelectedFiles/unit.photos — traite les fichiers un par un (queue),
    jamais en parallèle, pour ne montrer qu'un cadrage à la fois. */
-var CROP_OUTPUT_SIZE = 1600;
+/* 2048 plutôt que l'ancien 1600 : calculé, pas choisi au hasard — le site
+   entier est plafonné à 520px de large, `#app{max-width:520px}`, jamais
+   plus, même sur ordinateur (voir README, « Performance »). 520×4 couvre
+   une densité d'écran de 4x, au-delà de ce qui existe couramment
+   aujourd'hui (le maximum courant est 3x) — une vraie marge pour
+   l'évolution des écrans dans les années à venir, sans viser un chiffre
+   arbitrairement énorme. */
+var CROP_OUTPUT_SIZE = 2048;
 var CROP_ZOOM_MAX_MULT = 3;
 var CROP_PREVIEW_SQUARE = 90; // px — échelle de référence des deux aperçus (carte 4/5, fiche 5/4), proportionnelle au cadre principal
+
+/* Vignette légère générée EN PLUS du fichier plein format, pour les
+   contextes qui n'affichent jamais une photo en grand (tuile de
+   collection ~250px, ligne "Demandes" ~50px — voir listingThumbUrl()) :
+   sans elle, ces petits contextes téléchargeaient le même fichier
+   2048px que la fiche détail pour n'en afficher qu'une fraction. 480px
+   est largement suffisant même au double de la plus grande de ces
+   tailles à densité d'écran élevée (250×2 = 500). Prend le fichier DÉJÀ
+   recadré/compressé (cropOneFile()/compressImageFile()) et le rétrécit
+   encore une fois — jamais l'image source brute, pour rester cohérent
+   avec le cadrage déjà choisi par l'hôte. null si le canvas échoue
+   (repli sur le fichier plein format côté affichage, voir
+   listingThumbUrl()), jamais bloquant pour l'envoi. */
+var THUMB_MAX_DIM = 480;
+function makeThumbFile(file){
+  return new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if(!w || !h){ resolve(null); return; }
+      var scale = Math.min(1, THUMB_MAX_DIM / Math.max(w, h));
+      var tw = Math.max(1, Math.round(w*scale)), th = Math.max(1, Math.round(h*scale));
+      var canvas = document.createElement("canvas");
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ resolve(null); return; }
+      ctx.drawImage(img, 0, 0, tw, th);
+      canvas.toBlob(function(blob){
+        if(!blob){ resolve(null); return; }
+        var name = file.name.replace(/\.[^.\/]+$/, "")+"-thumb.jpg";
+        resolve(new File([blob], name, {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
 
 function cropAndCompressFiles(files){
   var results = [];
@@ -4314,32 +4366,55 @@ function renderHostUnitPhotoGrid(unitId){
   });
 }
 
+/* Envoie le fichier plein format ET sa vignette (makeThumbFile(), voir
+   plus haut) en parallèle pour chaque photo — deux fichiers, un seul
+   round-trip de plus par photo (pas deux fois plus lent : les deux
+   uploads d'une même photo tournent en même temps, pas l'un après
+   l'autre). thumbUrls[i] vaut null si la vignette n'a pas pu être
+   générée (canvas indisponible…) — jamais bloquant, listingThumbUrl()
+   retombe alors sur le plein format. */
 function uploadPhotoFiles(files, uid, pathPrefix, progressLabel){
   var btn = document.getElementById("sheet-apply");
-  if(!files.length) return Promise.resolve([]);
-  var urls = [];
+  if(!files.length) return Promise.resolve({urls:[], thumbUrls:[]});
+  var urls = [], thumbUrls = [];
   var uploadOne = function(i){
     if(i>=files.length) return Promise.resolve();
     btn.textContent = progressLabel+" ("+(i+1)+"/"+files.length+")";
     var file = files[i];
-    var path = "listings/"+uid+"/"+pathPrefix+"-"+Date.now()+"-"+i+"-"+file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
-    var ref = firebase.storage().ref().child(path);
-    return ref.put(file).then(function(snap){ return snap.ref.getDownloadURL(); }).then(function(url){
-      urls.push(url);
+    var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    var ts = Date.now();
+    var fullPromise = firebase.storage().ref().child("listings/"+uid+"/"+pathPrefix+"-"+ts+"-"+i+"-"+safeName)
+      .put(file).then(function(snap){ return snap.ref.getDownloadURL(); });
+    var thumbPromise = makeThumbFile(file).then(function(thumbFile){
+      if(!thumbFile) return null;
+      return firebase.storage().ref().child("listings/"+uid+"/"+pathPrefix+"-thumb-"+ts+"-"+i+"-"+safeName)
+        .put(thumbFile).then(function(snap){ return snap.ref.getDownloadURL(); });
+    });
+    return Promise.all([fullPromise, thumbPromise]).then(function(results){
+      urls.push(results[0]);
+      thumbUrls.push(results[1]);
       return uploadOne(i+1);
     });
   };
-  return uploadOne(0).then(function(){ return urls; });
+  return uploadOne(0).then(function(){ return {urls:urls, thumbUrls:thumbUrls}; });
 }
 /* Sépare les entrées déjà en ligne (juste réutilisées telles quelles, rien
    à envoyer) des nouveaux fichiers à uploader, puis recombine dans l'ordre
    d'origine — utilisé pour la maison et pour chaque chambre, en création
-   comme en modification. */
+   comme en modification. Une entrée "existing" porte déjà son thumbUrl
+   (repris depuis le document Firestore au chargement du formulaire
+   d'édition, voir openSheet(kind==="hostform")) — jamais régénéré pour
+   une photo qui n'a pas changé. */
 function resolvePhotoEntries(entries, uid, pathPrefix, progressLabel){
   var newFiles = entries.filter(function(e){ return e.type==="new"; }).map(function(e){ return e.file; });
-  return uploadPhotoFiles(newFiles, uid, pathPrefix, progressLabel).then(function(newUrls){
-    var newUrlsQueue = newUrls.slice();
-    return entries.map(function(e){ return e.type==="existing" ? e.url : newUrlsQueue.shift(); });
+  return uploadPhotoFiles(newFiles, uid, pathPrefix, progressLabel).then(function(res){
+    var urlsQueue = res.urls.slice(), thumbQueue = res.thumbUrls.slice();
+    var urls = [], thumbs = [];
+    entries.forEach(function(e){
+      if(e.type==="existing"){ urls.push(e.url); thumbs.push(e.thumbUrl || null); }
+      else { urls.push(urlsQueue.shift()); thumbs.push(thumbQueue.shift()); }
+    });
+    return {urls:urls, thumbs:thumbs};
   });
 }
 
@@ -4513,12 +4588,12 @@ function submitHostForm(){
       if(!city) city = match.city;
     }
     var region = (city ? city+", " : "") + (deptName || regionName || address);
-    return resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(gallery){
+    return resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(house){
       var uploadUnit = function(i, doneUnits){
         if(i>=hfUnits.length) return Promise.resolve(doneUnits);
         var u = hfUnits[i];
-        return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+(u.name.trim()||name)+"…").then(function(unitGallery){
-          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitGallery, linkedRoomId:u.linkedRoomId||""});
+        return resolvePhotoEntries(u.photos, authState.uid, "chambre-"+(i+1), "Envoi des photos de "+(u.name.trim()||name)+"…").then(function(unitPhotos){
+          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitPhotos.urls, galleryThumb:unitPhotos.thumbs, linkedRoomId:u.linkedRoomId||""});
           return uploadUnit(i+1, doneUnits);
         });
       };
@@ -4529,7 +4604,7 @@ function submitHostForm(){
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
           websiteUrl:websiteUrl, googleUrl:googleUrl,
-          gallery:gallery,
+          gallery:house.urls, galleryThumb:house.thumbs,
           units:units
         };
         if(editing){
@@ -4636,12 +4711,21 @@ function mapPinsFromIndex(){
    galerie de l'établissement, sinon celle de sa première chambre (annonce
    sans photo commune, seulement des photos par chambre). Aucune photo nulle
    part (annonce statique de démo, ou pas encore de photo envoyée) : null,
-   la vignette retombe sur le dégradé de secours comme avant. */
+   la vignette retombe sur le dégradé de secours comme avant.
+   Seul endroit qui affiche une photo en tout petit (tuile de collection
+   ~250px, ligne "Demandes" ~50px) — préfère donc systématiquement
+   galleryThumb[0]/unit.galleryThumb[0] (~480px, voir makeThumbFile()) à
+   gallery[0] (jusqu'à 2048px, prévu pour la fiche détail) : une annonce
+   créée/réenregistrée avant ce chantier n'a pas encore de galleryThumb
+   et retombe naturellement sur le plein format, jamais d'image cassée. */
 function listingThumbUrl(l){
+  if(l.galleryThumb && l.galleryThumb.length && l.galleryThumb[0]) return l.galleryThumb[0];
   if(l.gallery && l.gallery.length) return l.gallery[0];
   if(l.units){
     for(var i=0;i<l.units.length;i++){
-      if(l.units[i].gallery && l.units[i].gallery.length) return l.units[i].gallery[0];
+      var u = l.units[i];
+      if(u.galleryThumb && u.galleryThumb.length && u.galleryThumb[0]) return u.galleryThumb[0];
+      if(u.gallery && u.gallery.length) return u.gallery[0];
     }
   }
   return null;
