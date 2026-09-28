@@ -4962,7 +4962,13 @@ function wireExploreMap(){
   var located = mapPinsFromIndex();
   if(!located.length && !f.zoneOrigin) return;
 
-  mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:true});
+  // zoomControl:false puis L.control.zoom() posé en bas à gauche à la main
+  // (retour utilisateur : "il y'a le + et - de la carte qui passe dessus")
+  // — Leaflet pose son +/- par défaut en haut à gauche, exactement sous
+  // #map-expand-btn (même coin, voir sa CSS) : les deux se chevauchaient.
+  // Aucun autre contrôle en bas, coin libre.
+  mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:false});
+  L.control.zoom({position:"bottomleft"}).addTo(mapInstance);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom:19,
     attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
