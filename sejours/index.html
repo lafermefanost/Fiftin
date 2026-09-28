@@ -800,6 +800,7 @@ body.detail-open nav.tabbar{z-index:220;}
    doit pas s'arrondir juste avant de toucher la ligne. */
 .stat-tile.active{background:var(--sauge); border-radius:16px 16px 0 0; padding-bottom:28px; margin-bottom:-14px;}
 .stat-tile.active b, .stat-tile.active span{color:var(--cream);}
+.stat-tile.active .stat-num svg{color:var(--cream);}
 
 /* ---------- profile ---------- */
 .profile-view{padding:24px 0 110px;}
@@ -818,8 +819,14 @@ body.detail-open nav.tabbar{z-index:220;}
    margin-bottom : le gap:18px de #feed espace déjà du contenu suivant. */
 .profile-stats{display:flex; gap:10px; margin:-10px -14px 0; padding:10px 14px 14px; position:sticky; top:0; z-index:60; background:var(--cream); border-bottom:1px solid var(--line);}
 .stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
-.stat-tile b{display:block; font-size:22px; font-weight:800; color:var(--sauge-deep);}
+.stat-tile b{font-size:22px; font-weight:800; color:var(--sauge-deep);}
 .stat-tile span{font-size:13px; color:var(--sauge); font-weight:600;}
+/* .stat-num regroupe le picto et le chiffre sur la même ligne (retour
+   utilisateur) — .stat-tile b n'est donc plus display:block, ce rôle
+   revient à .stat-num, qui centre l'ensemble comme le faisait b seul
+   avant. */
+.stat-num{display:flex; align-items:center; justify-content:center; gap:5px;}
+.stat-num svg{width:17px; height:17px; flex-shrink:0; color:var(--sauge-deep);}
 /* ---------- Favoris : grille de collections ---------- */
 /* Tuiles carrées à 2 colonnes, mosaïque photo + dégradé + nom en overlay —
    adapté de l'écran Collections de Photos iOS (retour utilisateur,
@@ -2840,14 +2847,25 @@ function contactLogCounts(docs){
   docs.forEach(function(d){ if(d.data().status==="confirmed") confirmed++; else enCours++; });
   return {enCours:enCours, confirmed:confirmed};
 }
+/* Retour utilisateur : "mets à côté du chiffre un picto qui illustre bien
+   la catégorie (étoile pour favori, bulle pour contacts…)". <svg> complets
+   (pas de simples tracés de <path> comme META_ICON_*) : insérés tels
+   quels dans .stat-num, sans wrapper <svg> séparé à écrire à chaque
+   appel — un seul endroit par icône plutôt que trois. Séjours reprend le
+   tracé de coche déjà utilisé pour "confirmer" ailleurs (.log-action.confirm) :
+   un séjour ICI est justement une demande confirmée, pas une nouvelle
+   icône à inventer pour la même idée. */
+var STAT_ICON_FAVORIS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.9 5.8 20.3l1.6-6.8L2.2 8.9l6.9-.6z'/></svg>";
+var STAT_ICON_CONTACTS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z'/></svg>";
+var STAT_ICON_SEJOURS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M5 13l4 4L19 7'/></svg>";
 function likesViewToggleHtml(){
   var loaded = !authState.uid || contactLogCache!=null;
   var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
   var favLoaded = !authState.uid || collectionsCache!=null;
   return '<div class="profile-stats">'+
-    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+(favLoaded?savedListingsCount():"…")+'</b><span>Mes favoris</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Mes demandes</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Mes séjours</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><span class="stat-num">'+STAT_ICON_FAVORIS+'<b>'+(favLoaded?savedListingsCount():"…")+'</b></span><span>Mes favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><span class="stat-num">'+STAT_ICON_CONTACTS+'<b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b></span><span>Mes contacts</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><span class="stat-num">'+STAT_ICON_SEJOURS+'<b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b></span><span>Mes séjours</span></button>'+
   '</div>';
 }
 function wireLikesToggle(){

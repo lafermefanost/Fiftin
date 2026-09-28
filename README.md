@@ -957,6 +957,16 @@ Retour utilisateur : « mets département et ville plutôt que région et dépar
 
 **Testé** (Playwright) : ligne de localisation vérifiée identique ("Essonne, Milly-la-Forêt") sur la carte du fil et sur la fiche détail. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Bandeau Mes séjours : pictos par catégorie, Demandes renommé Contacts
+
+Retour utilisateur (capture d'écran à l'appui) : « mets à côté du chiffre un picto qui illustre bien la catégorie (ex: étoile pour favori, bulle pour contacts…) et remplace demandes par contacts, ça doit passer sur une ligne. »
+
+`.stat-num` (nouveau `<span>` regroupant picto + chiffre sur la même ligne) remplace le `<b>` nu de chaque tuile — étoile pour Mes favoris, bulle de discussion pour Mes contacts, coche pour Mes séjours (`STAT_ICON_FAVORIS`/`STAT_ICON_CONTACTS`/`STAT_ICON_SEJOURS`, trois `<svg>` complets déclarés une seule fois). La coche de Séjours reprend le tracé déjà utilisé pour "confirmer" ailleurs (`.log-action.confirm`) plutôt qu'une nouvelle icône : un séjour ici est justement une demande confirmée.
+
+« Mes demandes » devient « Mes contacts » (texte affiché seulement — `data-likes-view="demandes"`/`#stat-count-demandes` inchangés, ce sont des clés internes, pas ce qui était visé). Tient bien sur une seule ligne à la largeur de la tuile, contrairement à « Mes demandes ».
+
+**Testé** (Playwright, capture d'écran) : 3 pictos confirmés présents, un par tuile ; libellé "Mes contacts" confirmé sur une ligne. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
