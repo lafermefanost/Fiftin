@@ -933,6 +933,12 @@ Un dégradé à 2 arrêts (`rgba(…), transparent`) saute directement à sa ple
 
 **Testé** (Playwright, captures d'écran avant/après) : transition visiblement plus progressive à l'endroit où l'encart touche la barre de filtres/la barre de nav. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Dégradé du fil Explorer : encore un peu baissé
+
+Retour utilisateur, après l'adoucissement de la démarcation : « c'est encore un tout petit peu trop fort ». Pic ré-abaissé une seconde fois (haut `.4→.3`, bas `.48→.36`, second arrêt réduit dans les mêmes proportions), même courbe à 3 arrêts sinon.
+
+**Testé** : capture d'écran, effet toujours visible mais nettement plus discret. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
