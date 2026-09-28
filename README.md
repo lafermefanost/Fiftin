@@ -925,6 +925,14 @@ Retour utilisateur sur l'essai précédent : « j'aime pas le dégradé clair su
 
 **Testé** (Playwright) : comparaison de pixels avant/après le correctif à plusieurs coordonnées (ex. écart RGB ~105→53 après repositionnement, contre ~114→109 avant — une différence à peine perceptible devenue nette), confirmée aussi par capture d'écran. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Dégradé du fil Explorer : démarcation adoucie
+
+Retour utilisateur : « on voit un peu trop la démarcation du dégradé, où il est légèrement trop marqué. »
+
+Un dégradé à 2 arrêts (`rgba(…), transparent`) saute directement à sa pleine opacité dès le bord de l'encart — contre `.filters` en haut, juste au-dessus de `nav.tabbar` en bas — une vraie ligne dure à cet endroit précis, pas un vrai dégradé progressif dès le départ. Passé à 3 arrêts (`rgba(…,.4/.48), rgba(…,.22/.26) 55%, transparent`) : la crête d'opacité est adoucie au milieu plutôt que posée d'un bloc au bord, et légèrement abaissée par rapport à l'essai précédent. Coupure atténuée sans perdre l'effet de vignettage demandé.
+
+**Testé** (Playwright, captures d'écran avant/après) : transition visiblement plus progressive à l'endroit où l'encart touche la barre de filtres/la barre de nav. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

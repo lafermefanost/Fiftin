@@ -658,14 +658,15 @@ body.detail-open nav.tabbar{z-index:220;}
    un vignettage" — même teinte sombre que les autres scrims du site
    (rgba(20,26,20,…), voir .cover .scrim/.collection-tile-scrim), pas une
    couleur réinventée pour l'occasion. */
-.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.55), transparent);}
-/* bottom:0 posait tout le dégradé DERRIÈRE nav.tabbar (opaque, ~77px de
-   haut sans zone de sécurité) : vérifié au pixel près (screenshot avec/
-   sans l'encart), la vraie différence de couleur visible au-dessus de la
-   barre restait minime — la partie la plus sombre du dégradé (proche de
-   bottom:0) était justement celle entièrement masquée. Décalé pour tenir
-   tout entier dans la bande visible juste au-dessus de la barre. */
-.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.65), transparent);}
+/* Retour utilisateur : "on voit un peu trop la démarcation, légèrement
+   trop marqué". Cause : un dégradé à 2 arrêts saute directement à
+   l'opacité pleine dès le bord de l'encart (contre .filters/nav.tabbar),
+   une vraie ligne dure à cet endroit précis. Étalé sur 3 arrêts (crête
+   adoucie au milieu plutôt qu'au bord, jamais pleine opacité tout de
+   suite) + pic un peu moins fort qu'avant — atténue la coupure sans
+   perdre l'effet de vignettage. */
+.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.4), rgba(20,26,20,.22) 55%, transparent);}
+.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.48), rgba(20,26,20,.26) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
