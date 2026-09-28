@@ -472,16 +472,31 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .detail-cards{margin-top:14px;}
 .detail-card{background:#fff; border-radius:16px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.12); overflow:hidden;}
 .detail-card>*:last-child{margin-bottom:0;}
-.meta-row{display:flex; gap:18px;}
-.meta-item{display:flex; flex-direction:column; gap:2px;}
+/* Ligne de stats (prix/distance/conversion) — retour utilisateur :
+   "graphiquement plus clair et attractif, pictogrammes ou lignes de
+   séparation". Les deux : un picto par item (voir META_ICON_*/
+   metaItemHtml()) au-dessus de la valeur, et un filet vertical entre deux
+   items plutôt qu'un simple espace — :not(:first-child) pour ne jamais en
+   poser un avant le tout premier (2 items sur la vue d'une chambre sans
+   taux de conversion, 3 sinon : le filet doit s'adapter à ce nombre
+   variable, pas être câblé en dur sur "toujours 3"). */
+.meta-row{display:flex; gap:0;}
+.meta-item{display:flex; flex-direction:column; align-items:flex-start; gap:3px; flex:1; padding:0 16px;}
+.meta-item:first-child{padding-left:0;}
+.meta-item:not(:first-child){border-left:1px solid var(--line);}
+.meta-item svg{width:18px; height:18px; color:var(--sauge-deep);}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
 /* .ext-links : conteneur pour le(s) lien(s) externes de l'annonce (site
    personnel, avis Google) — 0, 1 ou 2 selon ce que l'hôte a renseigné au
    dépôt de l'annonce (voir le hostform, champs optionnels hf-website/
    hf-google). Un flex-wrap plutôt qu'un empilement d'ancres à marge
-   négative individuelle : propre à N liens, pas juste 1. */
-.ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:-6px 0 10px;}
+   négative individuelle : propre à N liens, pas juste 1. Posé juste sous
+   .tagline (voir extLinksHtml()) — plus de marge négative de compensation
+   ici, elle datait de l'ancienne position en tout premier élément d'une
+   carte fraîche ; .tagline porte déjà sa propre marge basse (10px, voir sa
+   règle), suffisante comme espacement. */
+.ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:0;}
 .google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:16px;
   border:1.5px solid var(--line); font-size:13px; font-weight:600; color:var(--ink);}
 .google-link svg{width:15px; height:15px; color:var(--yellow-deep); flex-shrink:0;}
@@ -500,9 +515,23 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .type-sep{opacity:.55; font-weight:400;}
 .detail-body p.desc{font-size:14.5px; line-height:1.4; color:#4a4636; margin:0 0 14px;}
 .section-title{font-size:15px; font-weight:700; margin:0 0 10px;}
-.amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:8px 14px; margin-bottom:14px;}
-.amenity-list li{list-style:none; display:flex; align-items:center; gap:8px; font-size:13.5px;}
-.amenity-list svg{width:16px; height:16px; color:var(--sauge); flex-shrink:0;}
+/* Prestations groupées (voir detailAmenitiesHtml()) : un sous-titre par
+   catégorie au-dessus de sa propre grille — retour utilisateur, "moderne,
+   originale et claire". .detail-amen-group porte l'espacement ENTRE
+   groupes ; .amenity-list, nichée dedans, n'a plus besoin de sa propre
+   marge basse (elle datait d'avant, une seule liste à plat par carte). */
+.detail-amen-group{margin-bottom:16px;}
+.detail-amen-group:last-child{margin-bottom:0;}
+.detail-amen-group-title{font-size:11px; font-weight:800; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;}
+.detail-amen-group .amenity-list{margin-bottom:0;}
+.amenity-list{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; margin-bottom:14px;}
+.amenity-list li{list-style:none; display:flex; align-items:center; gap:9px; font-size:13px; font-weight:600; color:var(--ink);}
+/* Pastille pleine derrière chaque picto (retour utilisateur, "pictos cool
+   tout en restant simple dans le dessin") plutôt que le trait nu d'avant —
+   même famille visuelle que les vignettes carrées à coins arrondis déjà
+   en place ailleurs sur le site (Mes annonces), pas une nouvelle idée. */
+.amen-badge{width:30px; height:30px; border-radius:10px; background:var(--sauge-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.amenity-list svg{width:16px; height:16px; color:var(--sauge-deep); flex-shrink:0;}
 .unit-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
 .unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden; width:100%; border:none; text-align:left; font-family:inherit; cursor:pointer;}
 /* Onglets façon navigateur plutôt que des pilules isolées ("boudins") : coins
@@ -1199,6 +1228,67 @@ function taglineHtml(l){
   var typePart = type ? '<span class="type-label">'+type+'</span>'+(claim ? ' <span class="type-sep">•</span> ' : '') : '';
   return '<p class="tagline claim">'+typePart+claim+'</p>';
 }
+/* Site perso + avis Google : retour utilisateur, "j'aimerais que ça soit
+   directement sous le nom et la phrase d'accroche dans la même carte et
+   sur la même ligne" — déplacé de sa propre carte (juste au-dessus de la
+   description) à ici, juste après taglineHtml() dans la carte nom+région+
+   accroche, commune aux deux vues (établissement entier ET une chambre
+   précise — avant, ces liens disparaissaient en choisissant un onglet de
+   chambre, plus le cas maintenant qu'ils sont dans l'en-tête, toujours
+   affiché). .ext-links est déjà en display:flex (voir sa règle CSS), mais
+   ça ne suffisait pas à lui seul : avec les libellés d'origine ("Voir le
+   site" + "Voir les avis sur Google"), les deux boutons dépassaient la
+   largeur d'une carte en mobile et le flex-wrap les repassait chacun sur
+   sa propre ligne — repéré en testant à la largeur d'écran réelle (390px),
+   pas visible en lisant juste le CSS. Libellés raccourcis ("Site web" /
+   "Avis Google", le picto porte déjà le sens) pour que les deux tiennent
+   côte à côte, vraiment "sur la même ligne" comme demandé. */
+function extLinksHtml(l){
+  if(!l.websiteUrl && !l.googleUrl) return "";
+  return '<div class="ext-links">'+
+    (l.websiteUrl ? '<a class="google-link" href="'+l.websiteUrl+'" target="_blank" rel="noopener">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z"/></svg>'+
+      '<span>Site web</span>'+
+      '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+    '</a>' : '')+
+    (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
+      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
+      '<span>Avis Google</span>'+
+      '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
+    '</a>' : '')+
+  '</div>';
+}
+/* Prix/distance/conversion, ligne de stats en tête de fiche : retour
+   utilisateur, "j'aimerais que ce soit graphiquement plus clair et
+   attractif (...) pictogrammes ou diviser la carte avec des lignes de
+   séparation" — un picto par statistique (voir META_ICON_*, mêmes tracés
+   simples que le reste), et un filet vertical entre chaque item plutôt
+   qu'un simple espace (voir .meta-item + border-left en CSS). */
+var META_ICON_PRICE = "<path d='M3 3h8l10 10-8 8L3 11V3z'/><circle cx='8' cy='8' r='1.5'/>";
+var META_ICON_DISTANCE = "<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>";
+var META_ICON_CONVERSION = "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>";
+var META_ICON_GUESTS = "<circle cx='12' cy='8' r='3.5'/><path d='M5 21c0-4 3-7 7-7s7 3 7 7'/>";
+function metaItemHtml(iconPath, value, label){
+  return '<div class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg><b>'+value+'</b><span>'+label+'</span></div>';
+}
+/* Prestations groupées par catégorie (AMEN_GROUPS) plutôt qu'une seule
+   liste à plat — retour utilisateur, "étoffe cette partie-là (...) que la
+   lecture des atouts soit moderne, originale et claire". Seuls les
+   groupes où CETTE annonce a coché au moins une case s'affichent (jamais
+   un sous-titre "Équipement" suivi de rien) ; l'ordre suit AMEN_GROUPS,
+   cohérent avec le volet filtre et le formulaire de dépôt, jamais un
+   ordre différent à trois endroits. */
+function detailAmenitiesHtml(l){
+  var groupsHtml = AMEN_GROUPS.map(function(g){
+    var have = g.items.filter(function(a){ return l.amen.indexOf(a)!==-1; });
+    if(!have.length) return "";
+    return '<div class="detail-amen-group"><div class="detail-amen-group-title">'+esc(g.title)+'</div>'+
+      '<ul class="amenity-list">'+have.map(function(a){
+        return '<li><span class="amen-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg></span>'+esc(a)+'</li>';
+      }).join("")+'</ul></div>';
+  }).join("");
+  return groupsHtml || '<p class="sheet-sub" style="margin:0;">Aucune prestation renseignée pour le moment.</p>';
+}
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
   '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>'+
@@ -1632,29 +1722,55 @@ function fetchListingIndex(){
   });
 }
 
-var ALL_AMENITIES = ["Piscine","Vue mer","Vue montagne","Vue campagne","Vue eau","Jacuzzi","Animaux acceptés",
-  "Cheminée","Sauna","Jardin","Cuisine équipée","Parking privé","Wifi","Accès PMR",
-  "Professionnels","Familial","Romantique"];
-
-/* Regroupement des prestations par catégorie — même liste ALL_AMENITIES
-   (aucune donnée existante à migrer, c'est juste l'affichage du volet
-   filtre + du formulaire de dépôt qui se lit maintenant par groupe au
-   lieu d'une seule grille plate).
-   single:true (Spécialisation, Vue) : groupe à choix UNIQUE — retour
+/* Regroupement des prestations par catégorie (aucune liste à plat séparée
+   à maintenir en double — AMEN_GROUPS EST la liste, ALL_AMENITIES a été
+   retiré : plus rien ne le lisait, seul AMEN_GROUPS pilotait déjà
+   réellement amenityGroupsHtml()/AMEN_ICONS).
+   single:true (Séjours, Environnement) : groupe à choix UNIQUE — retour
    utilisateur explicite, contrairement aux autres groupes qui restent à
    choix multiples. Rien de neuf côté données : toujours des entrées de
    amen[] comme les autres prestations (même stockage, mêmes règles
    Firestore, amen n'étant validé sur aucune liste fermée côté règles) ;
    seule la sélection est contrainte à une seule valeur active à la fois
    dans ces deux groupes, imposée côté UI (voir wireSheet(), kind==="amen"
-   et kind==="hostform") plutôt que par un nouveau champ dédié. */
+   et kind==="hostform") plutôt que par un nouveau champ dédié.
+   Retour utilisateur (étoffer les prestations, catégorie par catégorie,
+   pour mieux cibler les annonces) : "Spécialisation" -> "Séjours" (même
+   items, juste le titre) ; "Vue" -> "Environnement", ses items perdent le
+   préfixe "Vue " (redondant sous ce titre) et se précisent — "Vue
+   campagne" devient "Champêtre" (terme demandé), "Vue eau" (trop vague)
+   est remplacé par "Lac" (terme demandé, un vrai plan d'eau plutôt qu'une
+   rivière/étang flous), nouveau "Urbain" ajouté (terme demandé). ATTENTION
+   migration : ces trois renommages changent la VALEUR de chaîne stockée
+   dans amen[] — une annonce déjà cochée "Vue campagne"/"Vue eau" avant ce
+   chantier ne correspondra plus à "Champêtre"/"Lac" tant que son hôte ne
+   rouvre pas le formulaire et ne recoche pas la nouvelle case (aucune
+   migration Firestore possible depuis ce fichier, en lecture seule côté
+   base — voir README). "Vue mer"/"Vue montagne" gardent leur sens, juste
+   renommés "Mer"/"Montagne" pour la même raison de préfixe redondant :
+   même impact de compatibilité, à re-cocher une fois par annonce déjà
+   publiée qui les utilisait.
+   Nouveau groupe "Intimité & tranquillité" : retour utilisateur, "il
+   faudrait peut-être caler quelque part un truc intimiste ? Et aucun
+   vis-à-vis." — "Intimiste" et "Aucun vis-à-vis" ajoutés tels quels, plus
+   "Au calme" (même famille, déjà une notion qui revient dans les
+   descriptions d'annonces). "Naturiste" proposé dans la même phrase,
+   volontairement PAS repris : un tag de recherche filtrable expose
+   publiquement un critère de nature différente (une pratique, pas un
+   équipement) sur une plateforme généraliste chambres d'hôtes/gîtes,
+   affichée à côté d'un tag "Familial" existant — un vrai choix de
+   positionnement, pas un détail technique, qui mérite une décision
+   déportée sur des annonces dédiées/vérifiées plutôt qu'une case à cocher
+   glissée dans une liste générale. À rouvrir si la volonté reste la même
+   après réflexion. */
 var AMEN_GROUPS = [
-  {title:"Spécialisation", items:["Professionnels","Familial","Romantique"], single:true},
-  {title:"Vue", items:["Vue mer","Vue montagne","Vue campagne","Vue eau"], single:true},
-  {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna"]},
-  {title:"Extérieur & ambiance", items:["Jardin","Cheminée"]},
-  {title:"Équipement", items:["Cuisine équipée","Parking privé","Wifi","Accès PMR"]},
-  {title:"Accueil", items:["Animaux acceptés"]}
+  {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true},
+  {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac"], single:true},
+  {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque"]},
+  {title:"Extérieur & ambiance", items:["Jardin","Terrasse","Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Grand écran TV"]},
+  {title:"Équipement", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Chauffage","Wifi","Parking privé","Accès PMR"]},
+  {title:"Intimité & tranquillité", items:["Intimiste","Aucun vis-à-vis","Au calme"]},
+  {title:"Accueil", items:["Accueil en personne","Installation autonome","Animaux acceptés"]}
 ];
 /* Grille de prestations par groupe — utilisée à la fois par le volet
    filtre (kind==="amen") et par le formulaire de dépôt/édition d'annonce,
@@ -1829,28 +1945,68 @@ function detailLocationLineFor(l){
   return l.region || "";
 }
 
+/* Un tracé simple (2 à 4 formes) par prestation, même esprit que les
+   icônes déjà en place — jamais de détail fin qui se perdrait à 16-18px.
+   Groupées ici dans le même ordre que AMEN_GROUPS, pour s'y retrouver. */
 var AMEN_ICONS = {
+  // Séjours (ex-Spécialisation) — icônes inchangées, seul le titre du groupe a changé.
+  "Professionnels":"<rect x='3' y='7' width='18' height='13' rx='2'/><path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/>",
+  "Familial":"<circle cx='8' cy='8' r='3'/><circle cx='16' cy='9' r='2.5'/><path d='M2 21c0-3.5 2.7-6 6-6s6 2.5 6 6M13 21c.3-2.8 2-5 4.5-5s4.5 2 4.8 5'/>",
+  "Romantique":"<path d='M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z'/>",
+  // Environnement (ex-Vue) — Mer/Montagne reprennent leurs tracés (ex-"Vue
+  // mer"/"Vue montagne"), Champêtre celui de l'ex-"Vue campagne". Lac et
+  // Urbain sont nouveaux.
+  "Mer":"<path d='M3 15q3-3 6 0t6 0 6 0M3 19q3-3 6 0t6 0 6 0'/>",
+  "Montagne":"<path d='M3 18l6-10 4 6 3-5 5 9z'/>",
+  "Champêtre":"<path d='M3 18c3-6 6-6 9 0s6 6 9 0'/>",
+  "Urbain":"<rect x='4' y='10' width='4' height='11'/><rect x='10' y='5' width='4' height='16'/><rect x='16' y='13' width='4' height='8'/>",
+  "Lac":"<circle cx='12' cy='6' r='2'/><path d='M4 16q4-3 8 0t8 0'/>",
+  // Loisirs & bien-être
   "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
-  "Vue mer":"<path d='M3 15q3-3 6 0t6 0 6 0M3 19q3-3 6 0t6 0 6 0'/>",
-  "Vue montagne":"<path d='M3 18l6-10 4 6 3-5 5 9z'/>",
-  "Vue campagne":"<path d='M3 18c3-6 6-6 9 0s6 6 9 0'/>",
-  "Vue eau":"<path d='M3 15q3-3 6 0t6 0 6 0'/>",
   "Jacuzzi":"<circle cx='12' cy='13' r='7'/><path d='M9 6c0-1 1-2 1-3M13 6c0-1 1-2 1-3'/>",
-  "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>",
-  "Cheminée":"<path d='M8 21V11l4-7 4 7v10z'/><path d='M8 15h8'/>",
   "Sauna":"<path d='M4 20h16M6 20V9l6-5 6 5v11'/>",
+  "Hammam":"<path d='M12 3c2 3 2 5 0 7s-2 4 0 7'/><path d='M7 8c1.5 2 1.5 3.5 0 5.5'/><path d='M17 8c-1.5 2-1.5 3.5 0 5.5'/>",
+  "Spa":"<path d='M12 3c4 3 6 7 6 10a6 6 0 01-12 0c0-3 2-7 6-10z'/>",
+  "Salle de sport":"<path d='M4 12h16M4 9v6M20 9v6M7 7v10M17 7v10'/>",
+  "Vélos à disposition":"<circle cx='6' cy='17' r='3'/><circle cx='18' cy='17' r='3'/><path d='M6 17l5-10 4 5h5M11 7h3'/>",
+  "Ping-pong":"<circle cx='12' cy='5' r='1.5'/><path d='M5 19l5-9M19 19l-5-9'/><circle cx='6' cy='19' r='2.5'/><circle cx='18' cy='19' r='2.5'/>",
+  "Billard":"<circle cx='7' cy='14' r='3'/><circle cx='14' cy='10' r='3'/><circle cx='17' cy='17' r='2.5'/>",
+  "Pétanque":"<path d='M3 19h18'/><circle cx='8' cy='16' r='2.5'/><circle cx='14' cy='16' r='2.5'/><circle cx='18' cy='17' r='1'/>",
+  // Extérieur & ambiance
   "Jardin":"<path d='M12 21v-8M12 13c0-4-3-6-7-6 0 4 3 7 7 6zM12 13c0-5 3-8 8-8 0 5-3 9-8 8z'/>",
+  "Terrasse":"<path d='M12 3a8 8 0 018 8H4a8 8 0 018-8z'/><path d='M12 11v8a2 2 0 01-4 0'/>",
+  "Cheminée":"<path d='M8 21V11l4-7 4 7v10z'/><path d='M8 15h8'/>",
+  "Poêle à bois":"<rect x='6' y='9' width='12' height='10' rx='2'/><circle cx='12' cy='14' r='3'/><path d='M9 9V6a3 3 0 016 0v3'/>",
+  "Barbecue":"<path d='M5 12a7 4 0 0114 0z'/><path d='M5 12v2a7 4 0 0014 0v-2'/><path d='M12 5v3'/>",
+  "Plancha":"<rect x='4' y='11' width='16' height='6' rx='2'/><path d='M8 8c0-1 1-1 1-2M12 8c0-1 1-1 1-2M16 8c0-1 1-1 1-2'/>",
+  "Brasero":"<path d='M4 18h16'/><path d='M7 18a5 2 0 0010 0'/><path d='M12 6c2 2 2 4 0 6-2-2-2-4 0-6z'/>",
+  "Enceintes connectées":"<rect x='7' y='3' width='10' height='18' rx='2'/><circle cx='12' cy='8' r='2'/><circle cx='12' cy='15' r='3'/>",
+  "Home cinéma":"<rect x='3' y='5' width='18' height='13' rx='2'/><path d='M10 9l6 3-6 3z'/>",
+  "Grand écran TV":"<rect x='3' y='5' width='18' height='11' rx='2'/><path d='M9 20h6M12 16v4'/>",
+  // Équipement
   "Cuisine équipée":"<path d='M6 3v8a3 3 0 006 0V3M9 11v10M17 3v18M15 3h4'/>",
+  "Micro-ondes":"<rect x='3' y='6' width='18' height='12' rx='2'/><circle cx='9' cy='12' r='4'/><path d='M16 10h2M16 14h2'/>",
+  "Four":"<rect x='4' y='4' width='16' height='16' rx='2'/><rect x='7' y='10' width='10' height='7' rx='1'/><path d='M7 7h.01M11 7h.01M15 7h.01'/>",
+  "Lave-vaisselle":"<rect x='4' y='3' width='16' height='18' rx='2'/><circle cx='12' cy='14' r='5'/><path d='M8 7h8'/>",
+  "Lave-linge":"<rect x='4' y='3' width='16' height='18' rx='2'/><circle cx='12' cy='14' r='5'/><path d='M9.5 12a3 3 0 015-2.2'/>",
+  "Sèche-linge":"<rect x='4' y='3' width='16' height='18' rx='2'/><circle cx='12' cy='14' r='5'/><path d='M9 6h2M13 6h2'/>",
+  "Machine à café à capsules":"<rect x='7' y='3' width='10' height='7' rx='1'/><path d='M12 10v3'/><path d='M8 16h8l-1 5H9z'/>",
+  "Climatisation":"<rect x='3' y='6' width='18' height='6' rx='2'/><path d='M7 15l-1 3M12 15v4M17 15l1 3'/>",
+  "Chauffage":"<rect x='5' y='6' width='14' height='12' rx='1'/><path d='M8 6v12M12 6v12M16 6v12'/>",
   "Parking privé":"<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M9 8h3.5a2.5 2.5 0 010 5H9V8zm0 5v4'/>",
   "Wifi":"<path d='M5 12a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0M11.5 19a1.5 1.5 0 011 0'/>",
   "Accès PMR":"<circle cx='12' cy='5' r='2'/><path d='M6 20l4-9 2 3h5M10 11l1-4 5 1'/>",
-  /* Mêmes tracés que des icônes déjà utilisées ailleurs dans le fichier
-     (mallette de l'onglet "Mes annonces"/tuile Espace hôtes, cœur du
-     bouton favori/onglet Mes séjours) — cohérence visuelle plutôt que de
-     nouvelles icônes inventées pour ces trois entrées. */
-  "Professionnels":"<rect x='3' y='7' width='18' height='13' rx='2'/><path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/>",
-  "Familial":"<circle cx='8' cy='8' r='3'/><circle cx='16' cy='9' r='2.5'/><path d='M2 21c0-3.5 2.7-6 6-6s6 2.5 6 6M13 21c.3-2.8 2-5 4.5-5s4.5 2 4.8 5'/>",
-  "Romantique":"<path d='M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z'/>"
+  // Intimité & tranquillité
+  "Intimiste":"<path d='M12 3c1 1.5 1 2.5 0 4-1-1.5-1-2.5 0-4z'/><rect x='10' y='7' width='4' height='12' rx='1'/>",
+  "Aucun vis-à-vis":"<path d='M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z'/><circle cx='12' cy='12' r='3'/><path d='M3 3l18 18'/>",
+  "Au calme":"<path d='M4 9v6h4l5 4V5L8 9z'/><path d='M17 8l4 8M21 8l-4 8'/>",
+  // Accueil
+  "Accueil en personne":"<path d='M4 21V3h10v18'/><circle cx='17' cy='9' r='2'/><path d='M17 13v8'/>",
+  "Installation autonome":"<rect x='5' y='10' width='14' height='9' rx='2'/><circle cx='12' cy='14' r='2'/><path d='M9 10V7a3 3 0 016 0v3'/>",
+  /* Même tracé qu'ailleurs dans le fichier (cœur du bouton favori/onglet
+     Mes séjours) pour Animaux acceptés — cohérence visuelle plutôt qu'une
+     icône réinventée, comme les trois de Séjours plus haut. */
+  "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>"
 };
 
 /* ---------------- state ---------------- */
@@ -3368,27 +3524,17 @@ function openDetail(id){
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
     var convLabel = (authState.uid && l.ownerUid && l.ownerUid===authState.uid) ? conversionLabelFor(l) : null;
-    metaRowHtml = '<div class="detail-card"><div class="meta-row"><div class="meta-item"><b>'+(hasTabs ? "dès "+l.price : l.price)+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div>'+
-      (convLabel ? '<div class="meta-item"><b>'+convLabel+'</b><span>demandes &rarr; séjours</span></div>' : '')+
+    metaRowHtml = '<div class="detail-card"><div class="meta-row">'+
+      metaItemHtml(META_ICON_PRICE, (hasTabs ? "dès "+l.price : l.price)+"€", "par nuit")+
+      metaItemHtml(META_ICON_DISTANCE, listingDistanceKm(l)+" km", "de vous")+
+      (convLabel ? metaItemHtml(META_ICON_CONVERSION, convLabel, "demandes &rarr; séjours") : "")+
     '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
-      ((l.websiteUrl || l.googleUrl) ? '<div class="ext-links">'+
-        (l.websiteUrl ? '<a class="google-link" href="'+l.websiteUrl+'" target="_blank" rel="noopener">'+
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z"/></svg>'+
-          '<span>Voir le site</span>'+
-          '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
-        '</a>' : '')+
-        (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
-          '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
-          '<span>Voir les avis sur Google</span>'+
-          '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
-        '</a>' : '')+
-      '</div>' : '')+
       '<p class="desc">'+esc(l.desc)+'</p>'+
       '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
-      '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul></div>'+
+      detailAmenitiesHtml(l)+'</div>'+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -3401,12 +3547,17 @@ function openDetail(id){
       (!hasTabs ? '<div class="detail-card"><div class="section-title">Créneaux libres (aperçu)</div><div class="avail-row">'+(l.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div></div>' : '');
   } else {
     // chambre sélectionnée : ses propres infos, photos (déjà gérées ci-dessus) et son propre planning —
-    // pas la description/Google/liste des chambres de l'établissement, déjà sur la vue d'ensemble.
+    // pas la description/liste des chambres de l'établissement, déjà sur la vue d'ensemble (le site/
+    // Google, eux, sont désormais dans la carte nom+accroche tout en haut, commune aux deux vues).
     metaRowHtml = '<div class="detail-card"><h2 class="section-title" style="margin-top:0">'+esc(activeUnit.name)+'</h2>'+
-      '<div class="meta-row"><div class="meta-item"><b>'+activeUnit.price+'€</b><span>par nuit</span></div><div class="meta-item"><b>'+activeUnit.maxPersons+'</b><span>voyageurs max</span></div><div class="meta-item"><b>'+listingDistanceKm(l)+' km</b><span>de vous</span></div></div></div>';
+      '<div class="meta-row">'+
+      metaItemHtml(META_ICON_PRICE, activeUnit.price+"€", "par nuit")+
+      metaItemHtml(META_ICON_GUESTS, activeUnit.maxPersons, "voyageurs max")+
+      metaItemHtml(META_ICON_DISTANCE, listingDistanceKm(l)+" km", "de vous")+
+      '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
-      '<ul class="amenity-list">'+l.amen.map(function(a){ return '<li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</li>'; }).join("")+'</ul></div>'+
+      detailAmenitiesHtml(l)+'</div>'+
       '<div class="detail-card"><div class="section-title">Créneaux libres de cette chambre (aperçu)</div>'+
       '<div class="avail-row">'+(activeUnit.avail||[]).map(function(d){ return '<span class="avail-chip">'+d+'</span>'; }).join("")+'</div></div>';
   }
@@ -3427,6 +3578,7 @@ function openDetail(id){
       '<div class="detail-card"><div class="region">'+esc(detailLocationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
+      extLinksHtml(l)+
       '</div>'+
       tabsHtml+
       '<div class="detail-cards">'+
