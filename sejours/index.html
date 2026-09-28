@@ -826,31 +826,24 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-reject{background:none; border:1.5px solid var(--line); border-radius:16px; padding:8px 14px; font-size:12.5px; font-weight:700; color:var(--danger);}
 /* .host-listing-card : variante de .admin-card réservée à "Mes annonces"
    (retour utilisateur, capture d'écran) — fond blanc plutôt que --cream-deep
-   (même convention que .map-list-item, déjà en #fff ailleurs sur le site) et
-   vignette qui remplit tout le bord gauche de la carte au lieu d'un petit
-   carré 64px. Scopée en modificateur plutôt qu'appliquée à .admin-card
-   directement : la file d'admin (Annonces à valider) réutilise la même
-   classe de base avec sa mise en page compacte d'origine, inchangée. Nom
-   distinct de .host-card (déjà pris ailleurs — mini-ligne avatar+nom de
-   l'hôte dans le panneau de demande rapide, display:flex en ligne — les
-   deux collisionnaient et écrasaient la mise en page en colonne voulue ici
-   avant ce renommage). Padding retiré du conteneur (report sur
-   .admin-card-body/.cal-disclose/.host-cal-panel) + overflow:hidden pour
-   que la vignette, sans coins arrondis propres, se fasse quand même rogner
-   par les coins 16px de la carte. align-items par défaut du flex (stretch)
-   suffit à faire remplir la vignette sur toute la hauteur de la ligne —
-   pas de hauteur fixe. */
-.admin-card.host-listing-card{background:#fff; padding:0; overflow:hidden;}
-.admin-card.host-listing-card .admin-card-row{gap:0;}
-.admin-card.host-listing-card .admin-thumb{width:112px; height:auto; border-radius:0;}
-.admin-card.host-listing-card .admin-card-body{padding:12px 14px 12px 0; margin-left:14px; gap:5px;}
-/* width:calc(...) plutôt que width:auto : .cal-disclose est display:flex
-   (voir sa règle de base) — un conteneur flex en width:auto se dimensionne
-   par défaut à son contenu (fit-content), pas en remplissant son parent
-   comme le ferait un bloc ordinaire ; sans ce calc() explicite, la ligne
-   "Calendrier" se réduisait à la largeur de son seul texte. */
-.admin-card.host-listing-card .cal-disclose{margin-left:14px; margin-right:14px; width:calc(100% - 28px);}
-.admin-card.host-listing-card .host-cal-panel{margin-left:14px; margin-right:14px;}
+   (même convention que .map-list-item, déjà en #fff ailleurs sur le site).
+   Scopée en modificateur plutôt qu'appliquée à .admin-card directement :
+   la file d'admin (Annonces à valider) réutilise la même classe de base
+   avec sa mise en page compacte d'origine, inchangée. Nom distinct de
+   .host-card (déjà pris ailleurs — mini-ligne avatar+nom de l'hôte dans le
+   panneau de demande rapide, display:flex en ligne — les deux
+   collisionnaient et écrasaient la mise en page en colonne voulue ici
+   avant ce renommage).
+   Vignette : un premier essai la faisait remplir tout le bord gauche de la
+   carte (bord à bord, coins carrés) — retour utilisateur ensuite :
+   « j'aimerais que l'image aperçu reste quand même dans un picto style
+   application carré, bords arrondis, mais plus gros qu'avant ». Revenu à
+   la mise en page carrée d'origine (héritée de .admin-card, padding/gap
+   inchangés), juste agrandie : 64px -> 96px, rayon 12px -> 20px (un
+   "squircle" d'icône d'appli, proportionnellement plus arrondi qu'un petit
+   badge). */
+.admin-card.host-listing-card{background:#fff;}
+.admin-card.host-listing-card .admin-thumb{width:96px; height:96px; border-radius:20px;}
 /* Bouton pause/reprise, à côté du badge de statut (retour utilisateur :
    "au niveau de l'info sur le statut de l'annonce, mettre aussi un bouton
    mettre en pause qui retire temporairement l'annonce du fil"). Même
@@ -5591,7 +5584,7 @@ function hostListingCardHtml(l){
   // L'INTÉRIEUR de cette même carte plutôt que de renvoyer vers un bouton
   // séparé au-dessus d'une seconde carte.
   // .host-listing-card (retour utilisateur, capture d'écran) : fond blanc +
-  // grande vignette plutôt que le style compact d'origine — voir le
+  // vignette agrandie plutôt que le style compact d'origine — voir le
   // commentaire CSS de .admin-card.host-listing-card, qui documente
   // pourquoi c'est un modificateur et non .admin-card lui-même (la file
   // d'admin partage la classe de base, pas ce style).
