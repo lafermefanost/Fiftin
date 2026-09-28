@@ -729,6 +729,16 @@ Construite dans la foulée (retour utilisateur : « il faut y passer maintenant 
 
 **Nécessite le déploiement de la nouvelle Cloud Function** (`firebase deploy --only functions`, même étape que pour la disponibilité) **et la règle Firestore `listingIndex` ci-dessus collée dans Firebase Console** — voir « Important, ter » plus haut. Sans les deux, le filet de secours ci-dessus maintient le fil fonctionnel (sans pagination ni carte) — mais mieux vaut déployer les deux : la pagination et la carte sont, avec ce chantier, le vrai mécanisme censé tenir la charge à mesure que le catalogue grossit.
 
+### Bug : fiche détail vide alors que la carte du fil montrait déjà des photos
+
+Signalé par capture d'écran (une annonce à une seule chambre, section "Vue d'ensemble" de la fiche détail totalement blanche, ni photo ni dégradé de secours) puis confirmé sur un cas réel (l'annonce d'Adeline, dont la galerie "maison" avait été vidée par erreur — épisode séparé, sans rapport avec ce bug-ci) : « Les photos sont présentes dans le carrousel du fil mais pas après dans le détail, c'est étrange non ? ».
+
+**Cause : une incohérence entre trois endroits qui affichent une galerie de photos, présente depuis bien avant cette session.** `coverHtml()` (la carte du fil) retombe déjà sur les photos de la ou des chambres si la galerie de la maison est vide. La fiche détail d'une annonce à **plusieurs** chambres fait la même chose sur son onglet "Vue d'ensemble" (maison + toutes les chambres concaténées). Mais la fiche détail d'une annonce à **une seule** chambre (`!hasTabs`, le cas le plus courant) n'affichait que `l.gallery` — jamais les photos de son unique chambre, même quand la galerie maison est vide et que la chambre, elle, a bien des photos. Résultat concret : dès qu'une annonce à une seule location a des photos de chambre mais pas de photo de maison, sa carte les montre (via le repli déjà en place) mais sa fiche détail affichait un carrousel entièrement vide — carte et fiche se contredisaient.
+
+**Corrigé en unifiant** (`openDetail()`) : le cas `!hasTabs` n'existe plus comme branche à part, il partage désormais exactement la même logique que "Vue d'ensemble" d'une annonce à plusieurs chambres — maison + chambre(s) toujours concaténées quand aucune chambre précise n'est affichée. Comportement inchangé pour une annonce avec une vraie galerie maison (les photos maison restent toujours en premier) et pour l'onglet d'une chambre précise sur une annonce à plusieurs chambres.
+
+**Testé** (Playwright) : reproduit d'abord le bug exact (galerie maison vide, une chambre avec 3 photos, `!hasTabs`) — carte : 3 photos affichées (déjà correct) ; fiche détail avant correctif : 0 photo ; après correctif : 3 photos, mêmes URLs que la carte. Vérifié aussi qu'une annonce à plusieurs chambres n'a pas changé de comportement (vue d'ensemble : maison + toutes les chambres ; onglet d'une chambre précise : juste les siennes). Aucune régression sur le reste de la suite.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

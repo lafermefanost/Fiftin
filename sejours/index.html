@@ -3187,14 +3187,25 @@ function openDetail(id){
     if(!activeUnit) state.detailTab = "overview"; // chambre retirée entre-temps -> retombe sur la vue d'ensemble
   }
 
+  /* Bug réel repéré en usage (retour utilisateur, capture à l'appui) : une
+     annonce à une seule location (!hasTabs) n'affichait QUE l.gallery
+     (les photos "maison"), sans jamais retomber sur les photos de son
+     unique chambre — contrairement à coverHtml() (carte du fil), qui a
+     déjà ce repli, et contrairement à la "vue d'ensemble" d'une annonce à
+     PLUSIEURS chambres, qui concatène déjà maison + chambres. Résultat
+     concret : une annonce dont les photos "maison" manquent (jamais
+     renseignées, ou perdues) mais dont la chambre a bien des photos
+     montrait sa carte normalement (via le repli de coverHtml()) mais une
+     fiche détail vide — la carte et la fiche se contredisaient. Corrigé
+     en unifiant : plus de cas particulier !hasTabs, la vue "pas de
+     chambre précise sélectionnée" (établissement entier, qu'il ait 1 ou
+     plusieurs chambres) concatène toujours maison + chambre(s). */
   var gallery;
-  if(!hasTabs){
-    gallery = l.gallery || [];
-  } else if(activeUnit){
+  if(activeUnit){
     gallery = (activeUnit.gallery && activeUnit.gallery.length) ? activeUnit.gallery : (l.gallery || []);
   } else {
-    gallery = (l.gallery || []).slice(); // vue d'ensemble : toutes les photos, maison puis chaque chambre
-    l.units.forEach(function(u){ gallery = gallery.concat(u.gallery || []); });
+    gallery = (l.gallery || []).slice();
+    (l.units || []).forEach(function(u){ gallery = gallery.concat(u.gallery || []); });
   }
   var galleryAlt = activeUnit ? activeUnit.name : l.name;
   var total = Math.max(l.photos, gallery.length);
