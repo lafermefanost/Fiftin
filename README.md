@@ -881,6 +881,16 @@ Retour utilisateur, plusieurs points en une fois : encart des pictos de stats en
 
 **Testé** (Playwright) : couleurs vérifiées par calcul de style (`.meta-icon`/`.google-link`/`.cal-cell.avail`/`.range-mid`/`.selected` tous en `rgb(78,111,83)`/`rgb(139,157,134)`/`rgb(29,40,32)` selon le cas, texte blanc/crème confirmé) ; "Créneaux libres" confirmée absente de la fiche ; champ Présentation confirmé présent, pré-rempli correctement à l'édition, accepté à la saisie, inclus dans le payload de sauvegarde (lecture de code) — la sauvegarde complète bout-en-bout n'a pas pu être rejouée jusqu'au bout dans ce bac à sable, le géocodage d'adresse réel étant bloqué par la politique réseau de l'environnement de test (sans rapport avec ce code). Suite de régression rejouée (prestations, calendrier hôte, collections), aucune casse. Zéro erreur JS.
 
+### Reprendre Présentation/Description d'une autre annonce, sans les centraliser
+
+Retour utilisateur, en réaction directe au point ci-dessus : « pour le moment laisse une description de l'hôte par annonce (au pire ajoute juste un champ de récupération d'une description déjà remplie sur une autre annonce ?) » puis, dans la foulée, « idem pour les description de l'annonce (...) souvent les gens font la même structure, ça ferait gagner du temps ». Un entre-deux délibérément choisi plutôt que la centralisation en profil évoquée plus haut : pas de nouvelle règle Firestore, pas de nouvel écran, un vrai gain de temps de saisie quand même.
+
+**`hfReuseCandidates()`/`hfReuseSelectHtml()`/`wireHfReuseSelect()`** — un seul mécanisme générique pour les deux champs plutôt que deux implémentations copiées-collées : chacune des AUTRES annonces du même hôte (`ensureHostListingsLoaded()`, déjà utilisée par "Mes annonces" — aucune lecture Firestore supplémentaire) qui a déjà ce champ (`hostBio` ou `desc`) non vide devient un candidat ; l'annonce en cours d'édition est exclue d'elle-même. Un `<select>` apparaît sous le champ SEULEMENT s'il y a au moins un candidat — rien de vide et déroutant sur une première annonce, ou tant qu'aucune autre annonce du même hôte n'a encore ce champ rempli.
+
+**Copie, pas lien.** Choisir une annonce dans le sélecteur COPIE le texte dans le champ (librement modifiable tout de suite après — retour utilisateur, "récupérer ET modifier"), puis le sélecteur se réinitialise sur son option vide : ce n'est qu'un raccourci de saisie ponctuel, pas une liaison permanente entre deux annonces ni un nouveau champ à part entière dans le payload envoyé (`submitHostForm()` continue de lire `#hf-hostbio`/`#hf-desc` normalement, sans rien savoir de ce sélecteur).
+
+**Testé** (Playwright, deux annonces du même hôte dans le mock, l'une avec présentation+description déjà remplies) : les deux sélecteurs apparaissent bien à l'édition de l'autre annonce, listent la bonne annonce candidate, copient le bon texte dans le bon champ au choix, se réinitialisent après coup. Absence confirmée quand aucun candidat n'existe (première annonce du compte, ou aucune autre annonce du même hôte n'a encore ce champ renseigné). Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

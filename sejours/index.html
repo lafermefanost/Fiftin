@@ -1455,6 +1455,54 @@ var HOST_FORMULAS = [
 var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
 var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[], linkedRoomId}]
 var hfAvailableRooms = []; // accounts/{uid}.settings.rooms de l'hôte (compte gestion), lecture seule — pour proposer un lien dès la création d'une chambre
+/* Retour utilisateur : "laisse une description [présentation] par annonce,
+   au pire ajoute un champ de récupération d'une description déjà remplie
+   sur une autre annonce", puis "idem pour les description de l'annonce
+   (...) souvent les gens font la même structure" — un même mécanisme de
+   reprise pour deux champs (hf-hostbio/hf-desc), généralisé ici plutôt que
+   dupliqué deux fois. Candidats {id, name, text} : les AUTRES annonces du
+   même hôte (listings/{id}.ownerUid===authState.uid, via
+   ensureHostListingsLoaded(), déjà utilisée par Mes annonces — pas une
+   nouvelle lecture Firestore) qui ont déjà ce champ non vide, annonce en
+   cours d'édition exclue. Rempli en asynchrone à l'ouverture du
+   formulaire (voir wireSheet(), kind==="hostform"), même pattern que
+   hfAvailableRooms juste au-dessus — hfBioCandidates/hfDescCandidates
+   restent deux variables (pas un objet partagé) : chaque select ne doit
+   garder que SES propres candidats au moment du clic. */
+var hfBioCandidates = [];
+var hfDescCandidates = [];
+function hfReuseCandidates(list, editId, field){
+  return list.filter(function(l){ return l[field] && l[field].trim() && l.id!==editId; })
+    .map(function(l){ return {id:l.id, name:l.name, text:l[field]}; });
+}
+/* Rendu d'un sélecteur de reprise — chaîne vide tant qu'aucun candidat
+   n'est chargé (voir hfReuseCandidates) : rien à proposer plutôt qu'un
+   sélecteur vide et déroutant sur un tout premier compte, une toute
+   première annonce, ou une annonce dont aucune autre du même hôte n'a
+   encore ce champ renseigné. */
+function hfReuseSelectHtml(selectId, candidates, placeholder){
+  if(!candidates.length) return "";
+  return '<select class="text-input" id="'+selectId+'" style="margin-top:8px;">'+
+    '<option value="">'+esc(placeholder)+'</option>'+
+    candidates.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>'; }).join("")+
+  '</select>';
+}
+/* Choisir une annonce COPIE son champ dans le formulaire (texte normal,
+   librement modifiable ensuite) plutôt que de le lier — retour
+   utilisateur, "récupérer ET modifier", pas garder un lien vivant entre
+   deux annonces. Le sélecteur se réinitialise après coup : ce n'est qu'un
+   raccourci de saisie, pas un champ de formulaire à part entière avec sa
+   propre valeur à soumettre. */
+function wireHfReuseSelect(selectId, candidates, targetFieldId){
+  var el = document.getElementById(selectId);
+  if(!el) return;
+  el.addEventListener("change", function(){
+    var pickedId = this.value;
+    var c = candidates.filter(function(x){ return x.id===pickedId; })[0];
+    if(c) document.getElementById(targetFieldId).value = c.text;
+    this.value = "";
+  });
+}
 /* null = dépôt d'une nouvelle annonce ; sinon l'annonce (doc complet, avec
    son id) en cours de modification — submitHostForm() fait un .update()
    sur ce document au lieu d'un .add(). Remis à null par chaque point
@@ -3797,7 +3845,8 @@ function openSheet(kind){
       '</div>'+
       '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
       '<div class="field-block"><label>Présentation (facultatif)</label><textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
-        '<p class="field-hint">Affichée sous votre nom dans la fiche de l\'annonce, section "Votre hôte". Si vous avez plusieurs annonces, la même présentation doit être ressaisie sur chacune (voir README).</p>'+
+        '<p class="field-hint">Affichée sous votre nom dans la fiche de l\'annonce, section "Votre hôte".</p>'+
+        '<div id="hf-bio-reuse-wrap"></div>'+
       '</div>'+
       '<div class="field-block" style="position:relative;"><label>Adresse complète du logement</label>'+
         '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
@@ -3813,7 +3862,9 @@ function openSheet(kind){
       '</select></div>'+
       '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
-      '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea></div>'+
+      '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
+        '<div id="hf-desc-reuse-wrap"></div>'+
+      '</div>'+
       '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
       '<div class="field-block"><label>E-mail de contact</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
         '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
@@ -4001,6 +4052,23 @@ function openSheet(kind){
       var pruned = pruneStaleLinkedRoomIds(hfUnits, hfAvailableRooms);
       if(pruned.changed) hfUnits = pruned.units;
       if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
+    });
+    hfBioCandidates = [];
+    hfDescCandidates = [];
+    ensureHostListingsLoaded(function(list){
+      var editId = hostFormEditListing && hostFormEditListing.id;
+      hfBioCandidates = hfReuseCandidates(list, editId, "hostBio");
+      hfDescCandidates = hfReuseCandidates(list, editId, "desc");
+      var bioWrap = document.getElementById("hf-bio-reuse-wrap");
+      if(bioWrap && hfBioCandidates.length){
+        bioWrap.innerHTML = hfReuseSelectHtml("hf-bio-reuse", hfBioCandidates, "Reprendre la présentation d'une autre annonce…");
+        wireHfReuseSelect("hf-bio-reuse", hfBioCandidates, "hf-hostbio");
+      }
+      var descWrap = document.getElementById("hf-desc-reuse-wrap");
+      if(descWrap && hfDescCandidates.length){
+        descWrap.innerHTML = hfReuseSelectHtml("hf-desc-reuse", hfDescCandidates, "Reprendre la description d'une autre annonce…");
+        wireHfReuseSelect("hf-desc-reuse", hfDescCandidates, "hf-desc");
+      }
     });
     return;
   } else if(kind==="hostbooking"){
