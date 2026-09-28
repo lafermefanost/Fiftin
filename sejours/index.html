@@ -839,11 +839,14 @@ body.detail-open nav.tabbar{z-index:220;}
    « j'aimerais que l'image aperçu reste quand même dans un picto style
    application carré, bords arrondis, mais plus gros qu'avant ». Revenu à
    la mise en page carrée d'origine (héritée de .admin-card, padding/gap
-   inchangés), juste agrandie : 64px -> 96px, rayon 12px -> 20px (un
-   "squircle" d'icône d'appli, proportionnellement plus arrondi qu'un petit
-   badge). */
+   inchangés), juste agrandie : 64px -> 96px. Rayon 16px, PAS 20px comme
+   un premier essai l'avait mis (retour utilisateur : « les coins ont un
+   rayon d'arrondi différent du reste du site ») — 16px est le palier
+   standard du site (voir README, « Détail visuel » : .admin-card lui-même,
+   .stat-tile, .map-list-item… tous à 16px), 20px cassait cette cohérence
+   sans raison. */
 .admin-card.host-listing-card{background:#fff;}
-.admin-card.host-listing-card .admin-thumb{width:96px; height:96px; border-radius:20px;}
+.admin-card.host-listing-card .admin-thumb{width:96px; height:96px; border-radius:16px;}
 /* Bouton pause/reprise, à côté du badge de statut (retour utilisateur :
    "au niveau de l'info sur le statut de l'annonce, mettre aussi un bouton
    mettre en pause qui retire temporairement l'annonce du fil"). Même
@@ -884,18 +887,28 @@ body.detail-open nav.tabbar{z-index:220;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
 .host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
 .host-status-badge.paused{background:var(--cream-deep); color:var(--gray-mid);}
-/* Ligne "volet" pleine largeur, à l'intérieur de la carte d'annonce
-   (.admin-card) — retour utilisateur : "j'aimerais que le calendrier soit
-   sur la même carte que l'annonce (...) le bouton calendrier devrait
-   plutôt être un encart volet et déplier le calendrier quand on clique
-   dessus". Même idiome que .cal-mini-head (accordéon des mois) : ligne
-   cliquable pleine largeur, chevron qui pivote. Séparée de la rangée
-   couverture+infos par un filet, comme .cal-mini entre deux mois. */
-.cal-disclose{display:flex; align-items:center; justify-content:space-between; width:100%;
-  background:none; border:none; border-top:1px solid var(--line); margin-top:10px; padding:10px 2px 0;
-  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-align:left; cursor:pointer;}
-.cal-disclose-chevron{width:16px; height:16px; color:var(--gray-mid); flex-shrink:0; transition:transform .18s ease; transform:rotate(-90deg);}
-.cal-disclose.expanded .cal-disclose-chevron{transform:rotate(0deg);}
+/* Encart "volet" pleine largeur, à l'intérieur de la carte d'annonce
+   (.admin-card) — retour utilisateur d'origine : "j'aimerais que le
+   calendrier soit sur la même carte que l'annonce (...) le bouton
+   calendrier devrait plutôt être un encart volet et déplier le calendrier
+   quand on clique dessus". D'abord une simple ligne séparée par un filet
+   (même idiome que .cal-mini-head, l'accordéon des mois) ; retour
+   utilisateur suivant : "j'aimerais que tu passes l'encart calendrier en
+   jaune acide sur le fond avec typo centrée et flèche en dessous" — plus
+   un filet discret, un vrai encart plein (même paire fond/texte que
+   .btn.primary/.cal-add-pill, --yellow + --sauge-deep, déjà utilisée
+   ailleurs sur le site pour une action qui doit se voir), texte centré,
+   colonne plutôt que ligne (flèche sous le texte, pas à côté). Le chevron
+   pointe vers le bas au repos (son tracé de base) et se retourne vers le
+   haut une fois déplié — inversé par rapport à l'ancienne variante en
+   ligne (qui partait tournée à -90°, vers la droite) : posée sous un
+   texte centré, une flèche vers le bas se lit naturellement comme
+   "dérouler en dessous". */
+.cal-disclose{display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;
+  background:var(--yellow); border:none; border-radius:16px; margin-top:10px; padding:12px 10px; gap:4px;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-align:center; cursor:pointer;}
+.cal-disclose-chevron{width:16px; height:16px; color:var(--sauge-deep); flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
+.cal-disclose.expanded .cal-disclose-chevron{transform:rotate(180deg);}
 /* Contenu du calendrier déplié — toujours DANS .admin-card désormais (une
    seule carte, retour utilisateur), juste un peu d'espace sous la ligne
    .cal-disclose qui l'ouvre. */
