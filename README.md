@@ -915,6 +915,16 @@ Taille de l'accroche (tagline italique) sur les cartes du fil : 14.5px -> 16px, 
 
 **Testé** (Playwright) : libellés renommés confirmés ; tuile "Ajouter" présente et fonctionnelle dans les deux vues ; bascule grille/liste confirmée, persistée après rechargement de page ; suppression directe confirmée (grille et liste) ; `#feed` en `min-height` pleine hauteur d'écran confirmé ; position du bouton carte vérifiée par calcul de style ; `text-shadow`/taille de tagline vérifiées par calcul de style ; opacité du dégradé confirmée à 1 sur Explorer et 0 ailleurs, visible par capture d'écran une fois repositionné sous la barre de filtres. Suite de régression complète rejouée (un script existant, `shot_collections.py`, mis à jour au passage : ses sélecteurs ciblaient directement l'ancienne `.collection-tile`, devenue un simple conteneur non cliquable après l'ajout du bouton supprimer — corrigés vers `[data-open-coll]`). Zéro erreur JS.
 
+### Dégradé du fil Explorer : de clair à sombre, et corrigé pour être vraiment visible en bas
+
+Retour utilisateur sur l'essai précédent : « j'aime pas le dégradé clair sur le haut des annonces, je préférerais qu'il soit plutôt foncé, comme un vignettage. Et n'oublie pas de le mettre en bas et en haut. »
+
+**Couleur.** `.fade-edge-top`/`.fade-edge-bottom` passent de blanc (`rgba(255,255,255,…)`) à la même teinte sombre que les autres scrims du site (`rgba(20,26,20,…)`, voir `.cover .scrim`/`.collection-tile-scrim`) — pas une couleur réinventée pour l'occasion.
+
+**Bug trouvé en vérifiant le bas au pixel près, pas juste à l'œil.** Le bas était bien codé (`bottom:0`) et bien présent en haut ET en bas dès le premier essai — mais vérifié avec une comparaison de capture d'écran AVEC/SANS l'encart (mêmes coordonnées de pixel des deux côtés), la différence de couleur au-dessus de `nav.tabbar` restait minime. Cause : `nav.tabbar` (opaque, ~77px de haut) recouvre tout le bas de l'écran, et la partie la plus sombre du dégradé (`linear-gradient(to top, sombre, transparent)`, la couleur pleine posée à `bottom:0` de l'encart) tombait précisément dans cette zone cachée — seule la fin, presque transparente, du dégradé dépassait au-dessus de la barre, quasi invisible. Corrigé en décalant `.fade-edge-bottom` à `bottom:calc(77px + safe-area)` : tout le dégradé tient désormais dans la bande réellement visible, sans rien gâcher derrière la barre.
+
+**Testé** (Playwright) : comparaison de pixels avant/après le correctif à plusieurs coordonnées (ex. écart RGB ~105→53 après repositionnement, contre ~114→109 avant — une différence à peine perceptible devenue nette), confirmée aussi par capture d'écran. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

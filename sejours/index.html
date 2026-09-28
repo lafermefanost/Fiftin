@@ -653,9 +653,19 @@ body.detail-open nav.tabbar{z-index:220;}
 .fade-edge{position:fixed; left:0; right:0; max-width:520px; margin:0 auto; z-index:15; pointer-events:none; opacity:0;}
 /* top décalé sous .filters (barre sticky, z-index:70, opaque — mesurée à
    55px de haut) : posé à top:0 comme .map-back-btn, le dégradé restait
-   invisible, entièrement caché sous cette barre à chaque instant. */
-.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:56px; background:linear-gradient(to bottom, rgba(255,255,255,.85), transparent);}
-.fade-edge-bottom{bottom:0; height:90px; background:linear-gradient(to top, rgba(255,255,255,.85), transparent);}
+   invisible, entièrement caché sous cette barre à chaque instant.
+   Retour utilisateur, après un premier essai clair : "plutôt foncé, comme
+   un vignettage" — même teinte sombre que les autres scrims du site
+   (rgba(20,26,20,…), voir .cover .scrim/.collection-tile-scrim), pas une
+   couleur réinventée pour l'occasion. */
+.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.55), transparent);}
+/* bottom:0 posait tout le dégradé DERRIÈRE nav.tabbar (opaque, ~77px de
+   haut sans zone de sécurité) : vérifié au pixel près (screenshot avec/
+   sans l'encart), la vraie différence de couleur visible au-dessus de la
+   barre restait minime — la partie la plus sombre du dégradé (proche de
+   bottom:0) était justement celle entièrement masquée. Décalé pour tenir
+   tout entier dans la bande visible juste au-dessus de la barre. */
+.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.65), transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
