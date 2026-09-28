@@ -488,9 +488,16 @@ textarea.text-input{resize:vertical; min-height:80px;}
    taux de conversion, 3 sinon : le filet doit s'adapter à ce nombre
    variable, pas être câblé en dur sur "toujours 3"). */
 .meta-row{display:flex; gap:0;}
-.meta-item{display:flex; flex-direction:column; align-items:flex-start; gap:3px; flex:1; padding:0 16px;}
+.meta-item{display:flex; flex-direction:column; align-items:flex-start; gap:6px; flex:1; padding:0 16px;}
 .meta-item:first-child{padding-left:0;}
 .meta-item:not(:first-child){border-left:1px solid var(--line);}
+/* Retour utilisateur : "mettre les 3 pictos dans un petit encart carré de
+   couleur" — même pastille que .amen-badge (avant sa dépose lors du
+   passage des prestations aux chips lavande) : fond sauge clair, coins
+   arrondis, picto sauge foncé dessus. Reprend cette famille visuelle-là
+   plutôt que la lavande des prestations, pour ne pas laisser croire que
+   ces stats et les prestations sont liées. */
+.meta-icon{width:34px; height:34px; border-radius:11px; background:var(--sauge-bg); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .meta-item svg{width:18px; height:18px; color:var(--sauge-deep);}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
@@ -1274,7 +1281,7 @@ var META_ICON_DISTANCE = "<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-
 var META_ICON_CONVERSION = "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>";
 var META_ICON_GUESTS = "<circle cx='12' cy='8' r='3.5'/><path d='M5 21c0-4 3-7 7-7s7 3 7 7'/>";
 function metaItemHtml(iconPath, value, label){
-  return '<div class="meta-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg><b>'+value+'</b><span>'+label+'</span></div>';
+  return '<div class="meta-item"><span class="meta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg></span><b>'+value+'</b><span>'+label+'</span></div>';
 }
 /* Prestations groupées par catégorie (AMEN_GROUPS) plutôt qu'une seule
    liste à plat — retour utilisateur, "étoffe cette partie-là (...) que la

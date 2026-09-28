@@ -859,6 +859,12 @@ Retour utilisateur avec capture d'écran (site déployé, iPhone) : les trois bl
 
 **Testé** (Playwright, mock Firestore, compte hôte connecté pour faire apparaître les 3 stats y compris le taux de conversion) : `.meta-row` confirmé en `display:flex` après correctif, 3 colonnes visibles côte à côte avec filets de séparation. Suite de régression complète rejouée (prestations, calendrier hôte, collections), aucune casse. Zéro erreur JS.
 
+### Stats prix/distance/conversion : pictos dans un encart carré
+
+Retour utilisateur, après correction du bug d'empilement ci-dessus : « mettre les 3 petits pictos dans un petit encart carré de couleur ». `metaItemHtml()` enveloppe désormais le SVG dans un `<span class="meta-icon">` — pastille 34×34px, coins arrondis (11px), fond `--sauge-bg`. Sauge plutôt que lavande (déjà prise par les prestations juste en dessous dans la fiche) pour ne pas laisser croire que stats et prestations sont liées visuellement.
+
+**Testé** (Playwright) : 3 badges carrés confirmés, fond `rgb(229,233,228)` (`--sauge-bg`). Suite de régression rejouée, aucune casse.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
