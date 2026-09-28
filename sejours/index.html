@@ -607,13 +607,13 @@ body.detail-open nav.tabbar{z-index:220;}
    l'écran à elle seule comme quand elle avait son propre onglet plein
    écran. */
 .map-canvas{position:relative; z-index:0; height:240px; border-radius:26px; overflow:hidden; background:var(--cream-deep);
-  transition:height .25s ease;}
-/* 80vh plutôt qu'un pourcentage du bloc lui-même (retour utilisateur :
-   "une petite flèche qui permet d'agrandir la carte pour travailler un peu
-   plus dessus") — 4/5 de la hauteur d'écran visible, largement assez pour
-   placer un repère précisément sans faire disparaître complètement le fil
-   en dessous (qui reste accessible d'un scroll). */
-.map-canvas.expanded{height:80vh;}
+  transition:height .25s ease, aspect-ratio .25s ease;}
+/* Format photo unique 4:5 du reste du site (retour utilisateur, voir
+   .cover/.detail-gallery) — pas un pourcentage arbitraire de l'écran :
+   même ratio que les cartes/la fiche détail, agrandir la carte suit la
+   même cohérence visuelle que le reste. height:auto nécessaire pour que
+   aspect-ratio prenne le dessus sur la hauteur fixe ci-dessus. */
+.map-canvas.expanded{height:auto; aspect-ratio:4/5;}
 .map-canvas .leaflet-container{width:100%; height:100%; background:var(--cream-deep); font-family:'Jost',sans-serif;}
 .map-canvas .leaflet-control-attribution{font-size:9.5px; background:rgba(239,238,234,.85);}
 .map-pin-icon{background:none; border:none;}
@@ -639,15 +639,12 @@ body.detail-open nav.tabbar{z-index:220;}
 .map-zone-controls-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
 .map-zone-controls-head button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
-/* Rayons prédéfinis (retour utilisateur : "tu cliques, tac, tu as juste le
-   nombre de kilomètres") plutôt que le curseur continu d'avant — une ligne
-   de puces qui s'enroule proprement sur mobile plutôt qu'un slider qui
-   aurait dû cohabiter avec .map-zone-controls-head sur la même largeur
-   réduite. */
-.map-zone-radius-chips{display:flex; flex-wrap:wrap; gap:8px;}
-.radius-chip{background:var(--cream); border:1.5px solid var(--line); border-radius:12px; padding:7px 12px;
-  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);}
-.radius-chip.active{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
+/* Même curseur, même amplitude (1 à MAX_DISTANCE_KM) que le volet Distance
+   du bandeau du haut (retour utilisateur : "je resterais sur la même
+   jauge que celle de distance, exactement le même outil") — un seul
+   <input type=range> suffit, sans classe dédiée : le style global
+   input[type=range]{...} (voir plus haut) s'applique déjà identiquement
+   ici et dans le volet, la cohérence visuelle vient gratuitement. */
 .map-list{display:flex; flex-direction:column; gap:10px;}
 .map-list-item{display:flex; align-items:center; gap:12px; background:#fff; border-radius:16px; padding:10px 12px;}
 .map-list-item .sw{width:68px; height:68px; border-radius:12px; flex-shrink:0; object-fit:cover; display:block;}
@@ -4764,13 +4761,6 @@ var mapZoneCircleLayer = null;
    déjà choisi par le voyageur. Jamais persisté : repart toujours repliée
    à l'ouverture. */
 var mapExpanded = false;
-/* Rayons proposés en un clic une fois un repère posé (retour utilisateur :
-   "tu cliques sur Le Mans, tac, tu as juste le nombre de kilomètres et
-   basta" — plutôt qu'un curseur continu à faire glisser, "un peu idiot"
-   pour ce geste précis). Le curseur continu du volet Distance du bandeau
-   du haut reste disponible pour un réglage plus fin — même champ
-   (filters.distance), voir son grand commentaire plus haut. */
-var MAP_RADIUS_PRESETS = [10, 25, 50, 100, 200];
 
 /* Repère posé à la main sur la carte (centre + rayon, filters.zoneOrigin/
    filters.distance), pas un polygone libre — plus simple à poser et
@@ -4890,10 +4880,8 @@ function exploreMapBlockHtml(){
       '</button>'+
     '</div>'+
     (hasZone ? '<div class="map-zone-controls">'+
-      '<div class="map-zone-controls-head"><span>Rayon autour du repère</span><button type="button" id="map-zone-clear">Effacer le repère</button></div>'+
-      '<div class="map-zone-radius-chips">'+MAP_RADIUS_PRESETS.map(function(km){
-        return '<button type="button" class="radius-chip'+(f.distance===km?' active':'')+'" data-radius="'+km+'">'+km+' km</button>';
-      }).join("")+'</div>'+
+      '<div class="map-zone-controls-head"><span>Rayon : <b id="map-zone-radius-label">'+f.distance+' km</b></span><button type="button" id="map-zone-clear">Effacer le repère</button></div>'+
+      '<input type="range" id="map-zone-radius" min="1" max="'+MAX_DISTANCE_KM+'" value="'+f.distance+'">'+
     '</div>' : '')+
   '</div>';
 }
@@ -4943,17 +4931,31 @@ function wireExploreMap(){
     f.zoneOrigin = null; f.distance = null; mapZoneArmed = false;
     persist(); renderFilterBar(); renderFeed(); renderResultLine();
   });
-  // Rayons prédéfinis (retour utilisateur, voir MAP_RADIUS_PRESETS) :
-  // chaque clic applique tout de suite (pas de bouton "Appliquer" séparé
-  // ici, comme le reste des contrôles de la carte embarquée, déjà en
-  // dehors des volets de filtre habituels) et met à jour la puce Distance
-  // du bandeau du haut — même champ filters.distance, voir currentOrigin().
-  Array.prototype.forEach.call(document.querySelectorAll(".radius-chip"), function(btn){
-    btn.addEventListener("click", function(){
-      f.distance = Number(btn.getAttribute("data-radius"));
-      persist(); renderFilterBar(); renderFeed(); renderResultLine();
+  // Même curseur, même amplitude que le volet Distance du bandeau du haut
+  // (retour utilisateur : "je resterais sur la même jauge que celle de
+  // distance, exactement le même outil") — id différent (#s-distance
+  // n'existe que dans le volet, jamais affiché en même temps que la carte),
+  // mais même type d'élément, même style global input[type=range], même
+  // champ filters.distance derrière. "input" (à chaque cran du glissement)
+  // ne fait que le strict nécessaire pour rester fluide : label + cercle +
+  // punaises (refreshExploreMapMarkers(), qui relit déjà filters.distance
+  // via matchingIndexListings()) + puce Distance du bandeau, jamais de
+  // renderFeed() complet à chaque cran (démonterait/remonterait Leaflet en
+  // continu). Les cartes du fil en dessous, elles, se resynchronisent une
+  // seule fois au relâchement ("change"), comme une puce de filtre validée.
+  var radiusInput = document.getElementById("map-zone-radius");
+  if(radiusInput){
+    radiusInput.addEventListener("input", function(){
+      f.distance = Number(radiusInput.value);
+      document.getElementById("map-zone-radius-label").textContent = f.distance+" km";
+      if(mapZoneCircleLayer) mapZoneCircleLayer.setRadius(f.distance*1000);
+      refreshExploreMapMarkers();
+      renderFilterBar();
     });
-  });
+    radiusInput.addEventListener("change", function(){
+      persist(); renderFeed(); renderResultLine();
+    });
+  }
 
   if(mapInstance){ mapInstance.remove(); mapInstance = null; mapMarkerLayer = null; mapZoneCircleLayer = null; }
   if(!window.L) return;
