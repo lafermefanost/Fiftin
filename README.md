@@ -951,6 +951,12 @@ Retour utilisateur : « baisse encore très légèrement l'effet et après c'est
 
 Retour utilisateur : « augmente un peu l'ombre que tu avais mise derrière les textes des annonces ». `.cover-info{text-shadow:...}` passe de `0 1px 3px rgba(0,0,0,.25)` à `0 1px 4px rgba(0,0,0,.4)`.
 
+### Cartes du fil : Département, Ville plutôt que Région, Département
+
+Retour utilisateur : « mets département et ville plutôt que région et département sur les titres d'annonces ». Jusqu'ici, "Région, Département" n'existait que sur les cartes du fil (`locationLineFor()`) — "Département, Ville" était déjà réservé à la fiche détail (`detailLocationLineFor()`, ajoutée dans un chantier précédent, "plus parlant une fois qu'on est déjà sur l'annonce"). Les deux écrans affichent désormais le même format : `detailLocationLineFor()` a été retirée, `locationLineFor()` reprend directement sa logique (Département, Ville, avec les replis habituels si l'un des deux manque) — plus deux fonctions identiques à maintenir en double une fois les deux écrans alignés.
+
+**Testé** (Playwright) : ligne de localisation vérifiée identique ("Essonne, Milly-la-Forêt") sur la carte du fil et sur la fiche détail. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

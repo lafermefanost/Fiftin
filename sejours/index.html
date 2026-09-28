@@ -2098,22 +2098,17 @@ function listingDistanceKm(l){
   return Math.round(haversineKm(o.lat, o.lng, l.lat, l.lng));
 }
 /* Ligne de localisation au-dessus du titre (fil et fiche détail) :
-   "Région, Département" à chaque fois qu'ils sont connus, plutôt que
+   "Département, Ville" à chaque fois qu'ils sont connus, plutôt que
    l'ancien champ libre l.region — trop hétérogène d'une annonce à l'autre
    (une ville seule, un département seul, une région seule, selon ce que
    l'hôte avait tapé). Repli sur l.region pour une annonce plus ancienne
-   sans regionName/deptName renseignés, plutôt que de ne rien afficher. */
+   sans deptName/city renseignés, plutôt que de ne rien afficher.
+   Département/Ville plutôt que Région/Département : d'abord réservé à la
+   fiche détail (plus parlant une fois qu'on est déjà sur l'annonce), puis
+   étendu aux cartes du fil sur retour utilisateur — une seule fonction
+   partagée désormais (detailLocationLineFor() a fusionné ici, devenue un
+   pur doublon une fois les deux écrans alignés sur le même format). */
 function locationLineFor(l){
-  if(l.regionName && l.deptName) return l.regionName+", "+l.deptName;
-  if(l.regionName) return l.regionName;
-  if(l.deptName) return l.deptName;
-  return l.region || "";
-}
-/* Même principe que locationLineFor(), mais Département, Ville plutôt que
-   Région, Département — demandé pour la fiche détail spécifiquement (plus
-   parlant une fois qu'on est déjà sur l'annonce), la carte du fil garde
-   Région, Département (locationLineFor() ci-dessus, inchangée). */
-function detailLocationLineFor(l){
   if(l.deptName && l.city) return l.deptName+", "+l.city;
   if(l.deptName) return l.deptName;
   if(l.city) return l.city;
@@ -3845,7 +3840,7 @@ function openDetail(id){
       // Nom de l'annonce dans sa propre carte (retour utilisateur : "une
       // carte pour quasiment tout") — auparavant du texte nu, posé à même
       // le fond --cream, seule section sans carte de toute la fiche.
-      '<div class="detail-card"><div class="region">'+esc(detailLocationLineFor(l))+'</div>'+
+      '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
       extLinksHtml(l)+
