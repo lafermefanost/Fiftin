@@ -891,6 +891,30 @@ Retour utilisateur, en réaction directe au point ci-dessus : « pour le moment 
 
 **Testé** (Playwright, deux annonces du même hôte dans le mock, l'une avec présentation+description déjà remplies) : les deux sélecteurs apparaissent bien à l'édition de l'autre annonce, listent la bonne annonce candidate, copient le bon texte dans le bon champ au choix, se réinitialisent après coup. Absence confirmée quand aucun candidat n'existe (première annonce du compte, ou aucune autre annonce du même hôte n'a encore ce champ renseigné). Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Mes séjours : grille/liste de collections, tuile "Ajouter", suppression directe, sous-onglets renommés ; Explorer : bouton remonté, texte plus lisible, essai de dégradé
+
+Retour utilisateur, en plusieurs points sur deux écrans distincts (Mes séjours / Explorer).
+
+**Mes séjours.** « Mes favoris »/« Mes demandes »/« Mes séjours » remplacent « Favoris »/« Demandes »/« Séjours » (`likesViewToggleHtml()`) — plus cohérent avec le nom de l'onglet lui-même.
+
+Vue liste ajoutée à côté de la grille existante (`layoutToggleHtml()`, choix persisté dans `state.likesLayout`/`localStorage`, même mécanisme que `hostTab`). Retour utilisateur : « on aurait les mêmes vignettes que section demande et section séjours » — la vue liste (`collectionListRowHtml()`) réutilise donc EXACTEMENT `.map-list-item`/`.log-body`/`.log-actions`/`.log-action.decline`, déjà en place pour Demandes/Séjours, pas une variante graphique à part.
+
+Tuile grisée « Ajouter une collection » (`collectionAddTileHtml()`/`collectionAddRowHtml()`), toujours en première position dans les deux vues — contour pointillé plutôt que le fond plein des autres tuiles, pour se lire comme une action. Ouvre un nouveau volet `kind==="collCreate"`, un mini-formulaire nom-seul autonome (distinct de `kind==="collPicker"` en mode création, qui suppose toujours une annonce à ajouter dans la foulée).
+
+Suppression désormais possible directement depuis la grille/la liste (`[data-del-coll]`, bouton corbeille sur la tuile ou la ligne), pas seulement depuis le détail d'une collection comme avant — même `deleteCollection()`, même confirmation. Sur la tuile grille, `.collection-tile-open` (un `<button>`) porte le clic "ouvrir" et `.collection-tile-delete` (un second `<button>`, FRÈRE et non enfant) porte la suppression — deux `<button>` imbriqués auraient été invalides en HTML.
+
+**Bug : fond blanc qui s'arrêtait à mi-écran.** Retour utilisateur avec capture d'écran. Root cause : `#feed` n'a pas de hauteur propre (juste celle de son contenu), et sur cet onglet rien d'autre n'a de hauteur de flux au-dessus (filtres/ligne de résultat réduits à 0, `#hero` déjà démonté) — peu de collections = `#feed` court = `--cream-light` qui s'arrête avant le bas de l'écran, `--cream` d'`#app` visible en dessous comme un changement de teinte. Corrigé avec `#feed.feed-map{min-height:100dvh}` (même convention que `#hero`) : jamais moins d'un écran plein, quel que soit le contenu.
+
+**Explorer.** Bouton "revenir à la carte" remonté de 78px à 104px de marge basse — retour utilisateur, il touchait quasiment `nav.tabbar` sur un appareil avec indicateur d'accueil (barre ~112px de haut une fois son propre safe-area ajouté) au lieu de rester nettement au-dessus.
+
+`text-shadow` légère posée sur `.cover-info` (hérite sur région/nom/accroche en dessous, propriété héritée par défaut) — retour utilisateur, "presque invisible", juste pour la lisibilité sur les photos. Volontairement pas sur `.pill-badge` (distance/prix en haut de la photo) : ces pastilles ont déjà leur propre fond semi-opaque flouté, une ombre de texte n'y ajouterait rien.
+
+Taille de l'accroche (tagline italique) sur les cartes du fil : 14.5px -> 16px, retour utilisateur "grossir légèrement le corps de cette typo".
+
+**Essai de dégradé haut/bas du fil**, explicitement demandé comme un essai à juger sur pièce, pas une décision définitive. Deux `div.fade-edge` fixes, blanc léger vers transparent, posées comme frères de `#feed` dans le HTML et affichées uniquement en Explorer via `#feed.feed-explore ~ .fade-edge` (combinateur de frères suivants — pas de câblage JS séparé à synchroniser avec `switchTab()`). Le haut a dû être décalé sous `.filters` (barre sticky opaque, z-index:70, ~55px de haut) : posé à `top:0` comme un premier essai, le dégradé restait entièrement invisible, cette barre le recouvrant à chaque instant.
+
+**Testé** (Playwright) : libellés renommés confirmés ; tuile "Ajouter" présente et fonctionnelle dans les deux vues ; bascule grille/liste confirmée, persistée après rechargement de page ; suppression directe confirmée (grille et liste) ; `#feed` en `min-height` pleine hauteur d'écran confirmé ; position du bouton carte vérifiée par calcul de style ; `text-shadow`/taille de tagline vérifiées par calcul de style ; opacité du dégradé confirmée à 1 sur Explorer et 0 ailleurs, visible par capture d'écran une fois repositionné sous la barre de filtres. Suite de régression complète rejouée (un script existant, `shot_collections.py`, mis à jour au passage : ses sélecteurs ciblaient directement l'ancienne `.collection-tile`, devenue un simple conteneur non cliquable après l'ajout du bouton supprimer — corrigés vers `[data-open-coll]`). Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

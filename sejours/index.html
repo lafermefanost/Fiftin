@@ -218,7 +218,16 @@ a{color:inherit; text-decoration:none;}
    Les .map-list-item (fond blanc, #fff) gardent leur ombre légère
    ajoutée pour l'étape "fond blanc" — toujours utile ici pour les
    détacher de --cream-light, même principe que .detail-card. */
-#feed.feed-map{background:var(--cream-light);}
+/* Retour utilisateur : "l'arrière-plan blanc s'arrête à mi-écran
+   lorsqu'il n'y a pas beaucoup de collections". #feed n'a pas de hauteur
+   propre, juste celle de son contenu — sur cet onglet, rien d'autre n'a
+   de hauteur de flux au-dessus (filter-bar/result-line réduits à 0 via
+   .chrome-collapsed, #hero déjà démonté), donc peu de contenu = #feed
+   court = --cream-light qui s'arrête avant le bas de l'écran, --cream
+   d'#app qui prend le relais en dessous, visible comme un changement de
+   teinte. min-height:100dvh (même convention que #hero) : jamais moins
+   d'un écran plein, quel que soit le contenu. */
+#feed.feed-map{background:var(--cream-light); min-height:100dvh;}
 #feed.feed-map .map-list-item{box-shadow:0 2px 10px rgba(46,43,34,.1);}
 .card{border-radius:26px; overflow:hidden; background:var(--sauge-deep); position:relative;}
 /* "Charger plus d'hébergements" (pagination du fil, voir README
@@ -261,11 +270,21 @@ a{color:inherit; text-decoration:none;}
 .top-badges{position:absolute; top:14px; left:14px; z-index:5; display:flex; gap:6px;}
 .pill-badge{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600;
   padding:5px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.2);}
-.cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream);}
+/* text-shadow légère (retour utilisateur : "presque invisible", juste pour
+   la lisibilité sur les fonds photo) — posée ici plutôt que sur chaque
+   enfant : hérite naturellement sur .region/h2/.tagline en dessous
+   (propriété héritée par défaut en CSS), sans devoir la répéter trois
+   fois. Volontairement pas sur .top-badges/.pill-badge, plus haut sur la
+   photo : ces pastilles ont déjà leur propre fond semi-opaque flouté,
+   une ombre de texte n'y ajouterait rien. */
+.cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream); text-shadow:0 1px 3px rgba(0,0,0,.25);}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:4px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 4px; letter-spacing:-0.01em;}
 .cover-info .type-label{color:var(--cream);}
-.cover-info .tagline{font-size:14.5px; line-height:1.35; color:rgba(245,240,229,.88); margin:0 0 12px; max-width:88%;}
+/* Retour utilisateur : "grossir légèrement le corps de cette typo" — 14.5
+   -> 16px, line-height ajusté en conséquence (même rapport approximatif
+   qu'avant, pas juste la taille qui grandit sans le reste). */
+.cover-info .tagline{font-size:16px; line-height:1.3; color:rgba(245,240,229,.88); margin:0 0 12px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
   padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
@@ -610,12 +629,34 @@ body.detail-open nav.tabbar{z-index:220;}
    affiché tant qu'on est sur Explorer (masqué sinon, voir switchTab()),
    ramène directement à elle. z-index sous nav.tabbar (50) : les deux ne se
    chevauchent jamais à l'écran (positionné juste au-dessus de la barre),
-   pas besoin de rivaliser avec elle. */
-.map-back-btn{position:fixed; right:14px; bottom:calc(78px + env(safe-area-inset-bottom, 0px)); z-index:40;
+   pas besoin de rivaliser avec elle.
+   78px de marge basse, retour utilisateur ensuite : trop juste sur un
+   appareil avec indicateur d'accueil (nav.tabbar ~112px de haut une fois
+   son propre safe-area-inset-bottom ajouté), le bouton touchait
+   pratiquement la barre au lieu de rester nettement au-dessus — remonté
+   à 104px, avec une vraie marge visible cette fois. */
+.map-back-btn{position:fixed; right:14px; bottom:calc(104px + env(safe-area-inset-bottom, 0px)); z-index:40;
   width:44px; height:44px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;}
 .map-back-btn[hidden]{display:none;}
 .map-back-btn svg{width:20px; height:20px;}
+/* Essai léger (retour utilisateur, demandé explicitement comme un
+   essai à juger sur pièce) : dégradé fixe en haut/bas du fil Explorer,
+   pour fondre un peu les annonces en périphérie du regard et recentrer
+   l'attention sur celle du milieu de l'écran. #feed.feed-explore ~
+   .fade-edge (combinateur de frères suivants, .fade-edge est APRÈS
+   #feed dans le HTML) : visible seulement quand le fil Explorer est la
+   vue active, sans câblage JS séparé à synchroniser avec switchTab().
+   pointer-events:none partout : ne doit jamais intercepter un tap sur
+   une carte en dessous. z-index sous nav.tabbar (50)/.map-back-btn (40)
+   pour ne jamais passer devant eux. */
+.fade-edge{position:fixed; left:0; right:0; max-width:520px; margin:0 auto; z-index:15; pointer-events:none; opacity:0;}
+/* top décalé sous .filters (barre sticky, z-index:70, opaque — mesurée à
+   55px de haut) : posé à top:0 comme .map-back-btn, le dégradé restait
+   invisible, entièrement caché sous cette barre à chaque instant. */
+.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:56px; background:linear-gradient(to bottom, rgba(255,255,255,.85), transparent);}
+.fade-edge-bottom{bottom:0; height:90px; background:linear-gradient(to top, rgba(255,255,255,.85), transparent);}
+#feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
    app/ où .mbnav-btn.on colore tout le bouton, rectangle qui suit la
@@ -715,7 +756,7 @@ body.detail-open nav.tabbar{z-index:220;}
    voir plus bas) puisque la ligne entière n'est plus cliquable une fois
    les deux boutons d'action ajoutés. */
 .log-body{display:flex; align-items:center; gap:12px; flex:1; min-width:0;}
-.log-body[data-open-log]{cursor:pointer;}
+.log-body[data-open-log],.log-body[data-open-coll]{cursor:pointer;}
 .log-actions{display:flex; gap:6px; flex-shrink:0;}
 .log-action{width:32px; height:32px; border-radius:10px; border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .log-action svg{width:16px; height:16px;}
@@ -767,8 +808,37 @@ body.detail-open nav.tabbar{z-index:220;}
    adapté de l'écran Collections de Photos iOS (retour utilisateur,
    capture d'écran fournie en référence), avec notre style graphique
    propre (coins 20px cohérents avec .card/.admin-card, typo Jost). */
+/* Bascule grille/liste (retour utilisateur) — même paire active/inactive
+   que .stat-tile.active (fond sauge foncé + crème), en plus compact et à
+   droite, juste au-dessus de la grille/liste elle-même. */
+.layout-toggle{display:flex; justify-content:flex-end; gap:6px; margin:10px 0 4px;}
+.layout-toggle-btn{width:34px; height:34px; border-radius:10px; border:none; background:var(--cream-deep); color:var(--sauge); display:flex; align-items:center; justify-content:center;}
+.layout-toggle-btn svg{width:17px; height:17px;}
+.layout-toggle-btn.active{background:var(--sauge-deep); color:var(--cream);}
 .collections-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:4px;}
-.collection-tile{position:relative; aspect-ratio:1/1; border-radius:20px; overflow:hidden; background:var(--cream-deep); border:none; padding:0; text-align:left; cursor:pointer;}
+.collection-tile{position:relative; aspect-ratio:1/1; border-radius:20px; overflow:hidden; background:var(--cream-deep);}
+/* .collection-tile-open porte tout ce que .collection-tile portait avant
+   l'ajout du bouton supprimer (voir collectionTileHtml()) : lui-même un
+   <button>, il ne peut pas être imbriqué dans un autre <button> — d'où
+   .collection-tile qui n'est plus QUE le conteneur positionné, plus le
+   déclencheur cliquable. */
+.collection-tile-open{position:absolute; inset:0; width:100%; border:none; padding:0; text-align:left; cursor:pointer; background:none; font:inherit; color:inherit;}
+.collection-tile-delete{position:absolute; top:8px; right:8px; z-index:2; width:28px; height:28px; border-radius:50%; border:none; background:rgba(20,26,20,.55); color:#fff; display:flex; align-items:center; justify-content:center;}
+.collection-tile-delete svg{width:14px; height:14px;}
+/* Tuile "Ajouter une collection" (retour utilisateur : "mettre une
+   collection grise/vide avec la mention ajouter une collection") —
+   contour pointillé plutôt que le fond plein des autres tuiles, pour
+   qu'elle se lise tout de suite comme une action et non comme une
+   collection existante parmi d'autres. */
+.collection-tile-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; text-align:center; padding:12px;}
+.collection-tile-add svg{width:26px; height:26px;}
+/* Même logique en vue liste, sur la base de .map-list-item (voir plus
+   bas) — fond transparent + contour pointillé au lieu du fond blanc plein
+   des autres lignes, même raison qu'en grille ci-dessus. */
+.coll-list-add{width:100%; border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;}
+.coll-list-add-icon{width:44px; height:44px; border-radius:12px; background:var(--cream-deep); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.coll-list-add-icon svg{width:20px; height:20px;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
 .collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
@@ -1167,6 +1237,9 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
   <div class="result-line" id="result-line"></div>
 
   <main id="feed"></main>
+
+  <div class="fade-edge fade-edge-top" aria-hidden="true"></div>
+  <div class="fade-edge fade-edge-bottom" aria-hidden="true"></div>
 
   <button type="button" class="map-back-btn" id="map-back-btn" hidden aria-label="Revenir à la carte">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>
@@ -2145,7 +2218,7 @@ var MAX_DISTANCE_KM = 1200;
    position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
 var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[]}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
-  detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null,
+  detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null, likesLayout:"grid",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
 // likesCollectionId : collection actuellement ouverte dans Mes séjours ->
 // Favoris (voir renderFavorisView() plus bas) — null = grille des
@@ -2208,8 +2281,13 @@ try{
   // avant cette fusion pourrait encore porter cette valeur, ramenée sur
   // "listings" plutôt que de planter sur un onglet qui n'existe plus.
   if(saved.hostMode){ state.hostMode = true; state.hostTab = (saved.hostTab==="calendar" ? "listings" : saved.hostTab) || "profile"; }
+  // Vue grille/liste des collections (retour utilisateur) : persistée comme
+  // hostTab ci-dessus, un choix d'affichage plutôt qu'une position dans la
+  // navigation — doit survivre à un rechargement de page, contrairement à
+  // likesCollectionId/likesView qui repartent toujours de la grille.
+  if(saved.likesLayout==="list") state.likesLayout = "list";
 }catch(e){}
-function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, hostMode:state.hostMode, hostTab:state.hostTab})); }catch(e){} }
+function persist(){ try{ localStorage.setItem("fiftin_state", JSON.stringify({filters:state.filters, sort:state.sort, hostMode:state.hostMode, hostTab:state.hostTab, likesLayout:state.likesLayout})); }catch(e){} }
 
 /* ---------------- Favoris en collections (retour utilisateur) ----------------
    "Les favoris devraient être construits avec un principe de collection,
@@ -2755,9 +2833,9 @@ function likesViewToggleHtml(){
   var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
   var favLoaded = !authState.uid || collectionsCache!=null;
   return '<div class="profile-stats">'+
-    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+(favLoaded?savedListingsCount():"…")+'</b><span>Favoris</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Demandes</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Séjours</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><b>'+(favLoaded?savedListingsCount():"…")+'</b><span>Mes favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b><span>Mes demandes</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b><span>Mes séjours</span></button>'+
   '</div>';
 }
 function wireLikesToggle(){
@@ -2871,17 +2949,60 @@ function renderFavorisView(){
     });
   });
 }
+/* Bascule grille/liste (retour utilisateur : "j'aimerais aussi une vue
+   liste et une vue carré comme actuellement") — n'a de sens que sur la
+   grille des collections elle-même, jamais dans le détail d'une
+   collection (déjà une liste de cartes .card, pas concerné). Choix
+   persisté (voir state.likesLayout/persist()) : une préférence
+   d'affichage, pas une position de navigation. */
+function layoutToggleHtml(){
+  return '<div class="layout-toggle">'+
+    '<button type="button" class="layout-toggle-btn'+(state.likesLayout==="grid"?" active":"")+'" data-likes-layout="grid" aria-label="Vue grille"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>'+
+    '<button type="button" class="layout-toggle-btn'+(state.likesLayout==="list"?" active":"")+'" data-likes-layout="list" aria-label="Vue liste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6h12M9 12h12M9 18h12"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></button>'+
+  '</div>';
+}
 function renderCollectionsGrid(feed, toggle, cols){
-  var body = !cols.length
-    ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg>'+
-      '<p>Aucune collection pour l\'instant.<br>Touchez le cœur sur un hébergement pour en créer une.</p></div>'
-    : '<div class="collections-grid">'+cols.map(collectionTileHtml).join("")+'</div>';
-  feed.innerHTML = toggle + body;
+  var isList = state.likesLayout==="list";
+  var addTile = isList ? collectionAddRowHtml() : collectionAddTileHtml();
+  var body = !cols.length ? addTile
+    : isList
+      ? addTile + cols.map(collectionListRowHtml).join("")
+      : '<div class="collections-grid">'+addTile+cols.map(collectionTileHtml).join("")+'</div>';
+  feed.innerHTML = toggle + layoutToggleHtml() + body;
   wireLikesToggle();
+  document.getElementById("coll-add-tile").addEventListener("click", function(){
+    openSheet("collCreate");
+  });
+  Array.prototype.forEach.call(feed.querySelectorAll("[data-likes-layout]"), function(btn){
+    btn.addEventListener("click", function(){
+      state.likesLayout = btn.getAttribute("data-likes-layout");
+      persist();
+      renderCollectionsGrid(feed, toggle, cols);
+    });
+  });
   Array.prototype.forEach.call(feed.querySelectorAll("[data-open-coll]"), function(el){
     el.addEventListener("click", function(){
       state.likesCollectionId = el.getAttribute("data-open-coll");
       renderFavorisView();
+    });
+  });
+  // Retour utilisateur : "il faudrait aussi pouvoir supprimer une
+  // collection" — jusqu'ici possible seulement depuis SON détail
+  // (#coll-detail-delete) ; exposée en plus directement sur la tuile/ligne,
+  // sans avoir à l'ouvrir d'abord. stopPropagation : le bouton est niché
+  // dans/à côté d'un déclencheur data-open-coll, un clic dessus ne doit
+  // jamais aussi ouvrir la collection qu'on est en train de supprimer.
+  Array.prototype.forEach.call(feed.querySelectorAll("[data-del-coll]"), function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var col = cols.filter(function(c){ return c.id===btn.getAttribute("data-del-coll"); })[0];
+      if(!col) return;
+      if(!confirm('Supprimer la collection "'+col.name+'" ? Les annonces elles-mêmes ne sont pas supprimées, seulement retirées de cette collection.')) return;
+      deleteCollection(col, function(err){
+        if(err){ alert("Erreur : "+(err.message||err.code)); return; }
+        renderLikeBadge();
+        renderFavorisView();
+      });
     });
   });
 }
@@ -2890,7 +3011,11 @@ function renderCollectionsGrid(feed, toggle, cols){
    vraies photos de l'album plutôt qu'une couverture choisie à la main :
    "personnalisable" se joue ici sur le NOM, voir renameCollection(), pas
    sur un choix de couverture séparé — pas de champ dédié à alourdir la
-   création pour un gain marginal, la mosaïque parle déjà d'elle-même). */
+   création pour un gain marginal, la mosaïque parle déjà d'elle-même).
+   .collection-tile-open (plutôt que .collection-tile lui-même) porte le
+   clic "ouvrir" : .collection-tile-delete est un second bouton, FRÈRE et
+   non enfant du premier (deux <button> imbriqués seraient invalides en
+   HTML) — voir CSS, .collection-tile reste le conteneur positionné. */
 function collectionTileHtml(c){
   var covers = c.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean).slice(0,3);
   var n = covers.length;
@@ -2901,11 +3026,50 @@ function collectionTileHtml(c){
         return thumb ? '<img src="'+thumb+'" alt="" loading="lazy">' : '<div class="collection-tile-empty" style="background:'+GRADIENTS[l.grad]+'"></div>';
       }).join("")+'</div>';
   var count = c.listingIds.length;
-  return '<button type="button" class="collection-tile" data-open-coll="'+esc(c.id)+'">'+
-    photosHtml+
-    '<div class="collection-tile-scrim"></div>'+
-    '<div class="collection-tile-info"><b>'+esc(c.name)+'</b><span>'+count+' hébergement'+(count>1?'s':'')+'</span></div>'+
-  '</button>';
+  return '<div class="collection-tile">'+
+    '<button type="button" class="collection-tile-open" data-open-coll="'+esc(c.id)+'">'+
+      photosHtml+
+      '<div class="collection-tile-scrim"></div>'+
+      '<div class="collection-tile-info"><b>'+esc(c.name)+'</b><span>'+count+' hébergement'+(count>1?'s':'')+'</span></div>'+
+    '</button>'+
+    '<button type="button" class="collection-tile-delete" data-del-coll="'+esc(c.id)+'" aria-label="Supprimer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+  '</div>';
+}
+/* Tuile grisée "Ajouter une collection", toujours en première position
+   (grille comme liste) — retour utilisateur, pour créer une collection
+   directement d'ici sans devoir passer par le cœur d'une annonce. Ouvre
+   kind==="collCreate", un mini-formulaire nom-seul autonome (pas
+   kind==="collPicker" : ce volet-là suppose toujours une annonce à y
+   ajouter dans la foulée, collectionPickerContext.listing, qu'on n'a pas
+   ici). */
+function collectionAddTileHtml(){
+  return '<button type="button" class="collection-tile collection-tile-add" id="coll-add-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter une collection</span></button>';
+}
+function collectionAddRowHtml(){
+  return '<button type="button" class="map-list-item coll-list-add" id="coll-add-tile"><span class="coll-list-add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span><b>Ajouter une collection</b></button>';
+}
+/* Vue liste (retour utilisateur : "on aurait les mêmes vignettes que
+   section demande et section séjours") — réutilise EXACTEMENT
+   .map-list-item/.log-body/.log-actions/.log-action.decline (voir
+   contactLogRowHtml() plus bas pour Demandes/Séjours), pas une variante :
+   même vignette 68×68, même agencement nom/sous-ligne, même bouton
+   d'action à droite. Couverture = première annonce de la collection
+   (déjà chargée pour la mosaïque de la vue grille, voir renderFavorisView()). */
+function collectionListRowHtml(c){
+  var cover = c.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean)[0];
+  var thumb = cover ? listingThumbUrl(cover) : null;
+  var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">'
+    : '<div class="sw" style="background:'+(cover ? GRADIENTS[cover.grad] : "var(--cream-deep)")+'"></div>';
+  var count = c.listingIds.length;
+  return '<div class="map-list-item coll-list-row">'+
+    '<div class="log-body" data-open-coll="'+esc(c.id)+'">'+
+      swHtml+
+      '<div><b>'+esc(c.name)+'</b><span>'+count+' hébergement'+(count>1?'s':'')+'</span></div>'+
+    '</div>'+
+    '<div class="log-actions">'+
+      '<button type="button" class="log-action decline" data-del-coll="'+esc(c.id)+'" aria-label="Supprimer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+    '</div>'+
+  '</div>';
 }
 function renderCollectionDetail(feed, toggle){
   var col = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
@@ -3966,6 +4130,15 @@ function openSheet(kind){
     inner = '<h3>Renommer la collection</h3>'+
       '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-rename-name" value="'+esc(collectionRenameContext.name)+'"></div>'+
       '<div class="auth-err" id="coll-rename-err"></div>';
+  } else if(kind==="collCreate"){
+    /* "Ajouter une collection" depuis la grille elle-même (voir
+       collectionAddTileHtml()) : un mini-formulaire nom-seul, sans
+       annonce à y ajouter dans la foulée — contrairement à
+       kind==="collPicker" en mode création, toujours lié à
+       collectionPickerContext.listing. */
+    inner = '<h3>Nouvelle collection</h3>'+
+      '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-create-name" placeholder="Ex. Vacances d\'été" autofocus></div>'+
+      '<div class="auth-err" id="coll-create-err"></div>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
@@ -3974,6 +4147,7 @@ function openSheet(kind){
     : kind==="loginPrompt" ? "Se connecter"
     : kind==="collPicker" ? (collectionPickerContext.creating ? "Créer" : "Terminé")
     : kind==="collRename" ? "Enregistrer"
+    : kind==="collCreate" ? "Créer"
     : kind==="roomlink" ? "Fermer"
     : "Voir les résultats";
 
@@ -4157,6 +4331,21 @@ function openSheet(kind){
       var btn = document.getElementById("sheet-apply");
       btn.disabled = true;
       renameCollection(collectionRenameContext, name, function(err){
+        if(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; return; }
+        closeSheet();
+        renderFavorisView();
+      });
+    });
+    return;
+  } else if(kind==="collCreate"){
+    document.getElementById("sheet-apply").addEventListener("click", function(){
+      var name = document.getElementById("coll-create-name").value.trim();
+      var errEl = document.getElementById("coll-create-err");
+      errEl.textContent = "";
+      if(!name){ errEl.textContent = "Donnez un nom à cette collection."; return; }
+      var btn = document.getElementById("sheet-apply");
+      btn.disabled = true;
+      createCollection(name, function(col, err){
         if(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; return; }
         closeSheet();
         renderFavorisView();
