@@ -270,14 +270,14 @@ a{color:inherit; text-decoration:none;}
 .top-badges{position:absolute; top:14px; left:14px; z-index:5; display:flex; gap:6px;}
 .pill-badge{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600;
   padding:5px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.2);}
-/* text-shadow légère (retour utilisateur : "presque invisible", juste pour
-   la lisibilité sur les fonds photo) — posée ici plutôt que sur chaque
+/* text-shadow (retour utilisateur : d'abord "presque invisible", puis
+   "augmente un peu l'ombre" ensuite) — posée ici plutôt que sur chaque
    enfant : hérite naturellement sur .region/h2/.tagline en dessous
    (propriété héritée par défaut en CSS), sans devoir la répéter trois
    fois. Volontairement pas sur .top-badges/.pill-badge, plus haut sur la
    photo : ces pastilles ont déjà leur propre fond semi-opaque flouté,
    une ombre de texte n'y ajouterait rien. */
-.cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream); text-shadow:0 1px 3px rgba(0,0,0,.25);}
+.cover-info{position:absolute; left:0; right:0; bottom:0; z-index:4; padding:18px 18px 16px; color:var(--cream); text-shadow:0 1px 4px rgba(0,0,0,.4);}
 .cover-info .region{font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--yellow); margin-bottom:4px;}
 .cover-info h2{font-family:'Jost',sans-serif; font-weight:700; font-size:26px; line-height:1.08; margin:0 0 4px; letter-spacing:-0.01em;}
 .cover-info .type-label{color:var(--cream);}

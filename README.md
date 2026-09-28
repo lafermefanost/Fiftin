@@ -947,6 +947,10 @@ Retour utilisateur : « diminue de moitié l'effet ». Toutes les opacités du d
 
 Retour utilisateur : « baisse encore très légèrement l'effet et après c'est bon ». Dernier ajustement (haut `.15→.12`, bas `.18→.14`) — point d'arrêt de ce réglage, pas d'autre changement prévu sur ce dégradé sauf nouveau retour.
 
+### Ombre des textes de carte (Explorer) : augmentée
+
+Retour utilisateur : « augmente un peu l'ombre que tu avais mise derrière les textes des annonces ». `.cover-info{text-shadow:...}` passe de `0 1px 3px rgba(0,0,0,.25)` à `0 1px 4px rgba(0,0,0,.4)`.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
