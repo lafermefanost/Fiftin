@@ -1007,6 +1007,18 @@ Retour utilisateur : « il me manque un endroit où je mets les pictos de résea
 
 **Testé** (Playwright) : les 4 pastilles (Site web, Avis Google, Instagram, Facebook) confirmées sur la même ligne (mêmes coordonnées Y) à 390px ; champs `hf-instagram`/`hf-facebook` confirmés présents et fonctionnels dans le formulaire hôte. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Photo de l'hôte : dans le formulaire d'annonce (Présentation) et sur le Profil hôte
+
+Retour utilisateur : « quand tu clique sur la photo de ton profil, on devrait te proposer d'ajouter une photo (dans l'annonce modifiée section présentation ou dans la section profil). »
+
+**Deux entrées pour la même donnée.** Nouveau champ `hostPhotoUrl`, optionnel, porté par chaque annonce (même mécanique que `hostName`/`hostBio` déjà en place) — jamais un `accounts/{uid}`, qu'aucun code de ce fichier n'écrit (voir le grand commentaire au-dessus de `resolveHostAccount()`). Deux façons de le renseigner :
+- **Formulaire d'annonce, section Présentation** (`hf-host-photo-avatar`, juste avant "Votre nom") : avatar cliquable, même mécanique de recadrage/compression que les photos du logement (`cropAndCompressFiles()`, upload différé à l'enregistrement via `resolvePhotoEntries()`) — change la photo de CETTE annonce seulement.
+- **Profil hôte** (`wireHostProfileAvatar()`) : cliquer l'avatar (badge appareil photo superposé) uploade et écrit `hostPhotoUrl` sur TOUTES les annonces du compte en un seul batch Firestore — une seule photo pour tout le compte, gardée synchronisée, plutôt qu'à choisir annonce par annonce à chaque fois. Sans aucune annonce déposée, l'avatar reste simplement non cliquable (rien où enregistrer une photo pour l'instant) plutôt que de proposer un geste qui ne mènerait nulle part.
+
+**Affichage** : `host.photo` (dérivé de `hostPhotoUrl` dans `normalizeHostListing()`) remplace l'initiale dans `.host-avatar` (host-card de la fiche détail) dès qu'il est renseigné.
+
+**Testé** (Playwright, mock Storage/Firestore) : avatar Profil hôte confirmé non cliquable sans annonce puis cliquable/badge visible avec au moins une annonce ; upload depuis le Profil confirmé écrire `hostPhotoUrl` sur l'annonce du compte et rafraîchir l'avatar ; host-card de la fiche détail confirmé afficher l'image une fois le champ renseigné ; formulaire d'annonce confirmé précharger la photo existante et permettre son changement (recadrage inclus) ; enregistrement du formulaire confirmé conserver/écrire `hostPhotoUrl` sans erreur. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
