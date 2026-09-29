@@ -523,22 +523,33 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .meta-item b{font-size:15px;}
 .meta-item span{font-size:11px; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
 /* .ext-links : conteneur pour le(s) lien(s) externes de l'annonce (site
-   personnel, avis Google) — 0, 1 ou 2 selon ce que l'hôte a renseigné au
-   dépôt de l'annonce (voir le hostform, champs optionnels hf-website/
-   hf-google). Un flex-wrap plutôt qu'un empilement d'ancres à marge
+   personnel, avis Google, Instagram, Facebook — voir socialLinksHtml())
+   — de 0 à 4 selon ce que l'hôte a renseigné au dépôt de l'annonce (voir
+   le hostform, champs optionnels hf-website/hf-google/hf-instagram/
+   hf-facebook). Un flex-wrap plutôt qu'un empilement d'ancres à marge
    négative individuelle : propre à N liens, pas juste 1. Posé juste sous
    .tagline (voir extLinksHtml()) — plus de marge négative de compensation
    ici, elle datait de l'ancienne position en tout premier élément d'une
    carte fraîche ; .tagline porte déjà sa propre marge basse (10px, voir sa
    règle), suffisante comme espacement. */
-.ext-links{display:flex; flex-wrap:wrap; gap:8px; margin:0;}
+.ext-links{display:flex; flex-wrap:wrap; gap:6px; margin:0;}
 /* Retour utilisateur : "Site web/Avis Google : passe les deux encarts en
    vert moyen typo blanche" — --sauge-mid plein, texte et pictos blancs,
-   plus de bordure (elle ne servait qu'à délimiter le fond crème d'avant). */
-.google-link{display:inline-flex; align-items:center; gap:7px; padding:9px 14px; border-radius:16px;
+   plus de bordure (elle ne servait qu'à délimiter le fond crème d'avant).
+   padding resserré (9px 14px -> 8px 11px) à l'ajout d'Instagram/Facebook
+   ensuite : les 4 pastilles dépassaient de justeste sur une 2e ligne à
+   390px (mesuré : 362px de large pour 340px de place), sans toucher aux
+   libellés eux-mêmes. */
+.google-link{display:inline-flex; align-items:center; gap:6px; padding:8px 11px; border-radius:16px;
   background:var(--sauge-mid); font-size:13px; font-weight:600; color:#fff;}
 .google-link svg{width:15px; height:15px; color:#fff; flex-shrink:0;}
 .google-link svg.ext{width:12px; height:12px; color:rgba(255,255,255,.75); margin-left:2px;}
+/* Réseaux sociaux (voir socialLinksHtml()) : même fond/coins que
+   .google-link, juste carrées et sans libellé — un picto suffit à
+   identifier Instagram/Facebook, pas la peine du texte qui ferait
+   déborder la ligne. */
+.google-link.icon-only{padding:8px; width:30px; height:30px; justify-content:center;}
+.google-link.icon-only svg{width:14px; height:14px;}
 /* Type d'hébergement, sur la même ligne que l'accroche (claim), séparés par
    "•" (voir taglineHtml()) — visible dès le début (fil et fiche détail),
    pas noyé plus bas dans la description, et sans bloc à part qui prenait
@@ -1367,8 +1378,31 @@ function taglineHtml(l){
    pas visible en lisant juste le CSS. Libellés raccourcis ("Site web" /
    "Avis Google", le picto porte déjà le sens) pour que les deux tiennent
    côte à côte, vraiment "sur la même ligne" comme demandé. */
+/* Réseaux sociaux (retour utilisateur : "un endroit où mettre les pictos
+   de réseau social (...) sur la même ligne que site web, dans le même
+   style") — Instagram et Facebook seulement, les deux jugés nécessaires
+   pour un hôte particulier/petite structure ; ni TikTok/X/Pinterest
+   (rares chez ce profil d'hôte, alourdiraient la ligne pour peu d'usage
+   réel), ni Airbnb/Booking (ce sont des plateformes de réservation
+   concurrentes, pas des réseaux sociaux — les afficher irait à l'encontre
+   du principe même du site, la réservation EN DIRECT sans commission).
+   Rendues en pictos SEULS, sans libellé, contrairement à Site web/Avis
+   Google : avec leurs deux libellés déjà pleins, la ligne déborderait sur
+   deux lignes à 390px en ajoutant deux pastilles textuelles de plus
+   (contrainte déjà rencontrée une fois, voir plus haut) — même fond/
+   couleur (.google-link) pour rester "dans le même style" comme demandé,
+   juste plus compactes. */
+function socialLinksHtml(l){
+  if(!l.instagramUrl && !l.facebookUrl) return "";
+  return (l.instagramUrl ? '<a class="google-link icon-only" href="'+l.instagramUrl+'" target="_blank" rel="noopener" aria-label="Instagram">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>'+
+    '</a>' : '')+
+    (l.facebookUrl ? '<a class="google-link icon-only" href="'+l.facebookUrl+'" target="_blank" rel="noopener" aria-label="Facebook">'+
+      '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 4h-2a4 4 0 0 0-4 4v3H7v4h2v7h4v-7h2.6l.9-4H13V8a1 1 0 0 1 1-1h3V4z"/></svg>'+
+    '</a>' : '');
+}
 function extLinksHtml(l){
-  if(!l.websiteUrl && !l.googleUrl) return "";
+  if(!l.websiteUrl && !l.googleUrl && !l.instagramUrl && !l.facebookUrl) return "";
   return '<div class="ext-links">'+
     (l.websiteUrl ? '<a class="google-link" href="'+l.websiteUrl+'" target="_blank" rel="noopener">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z"/></svg>'+
@@ -1380,6 +1414,7 @@ function extLinksHtml(l){
       '<span>Avis Google</span>'+
       '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
     '</a>' : '')+
+    socialLinksHtml(l)+
   '</div>';
 }
 /* Prix/distance/conversion, ligne de stats en tête de fiche : retour
@@ -1769,6 +1804,7 @@ function normalizeHostListing(doc){
     amen: l.amen || [],
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
+    instagramUrl: l.instagramUrl || "", facebookUrl: l.facebookUrl || "",
     regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
     accomType: l.accomType || "",
     host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || ""},
@@ -4089,6 +4125,8 @@ function openSheet(kind){
       '</div>'+
       '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
+      '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
+      '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; })+'</div>'+
       '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
         '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
@@ -5213,6 +5251,8 @@ function submitHostForm(){
   var email = document.getElementById("hf-email").value.trim();
   var websiteUrl = document.getElementById("hf-website").value.trim();
   var googleUrl = document.getElementById("hf-google").value.trim();
+  var instagramUrl = document.getElementById("hf-instagram").value.trim();
+  var facebookUrl = document.getElementById("hf-facebook").value.trim();
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
@@ -5267,7 +5307,7 @@ function submitHostForm(){
           name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
-          websiteUrl:websiteUrl, googleUrl:googleUrl,
+          websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
           gallery:house.urls, galleryThumb:house.thumbs,
           units:units
         };

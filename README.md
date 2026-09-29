@@ -995,6 +995,18 @@ Retour utilisateur : « dans la vue liste de la collection, j'aimerais que le no
 
 **Testé** (Playwright) : encart blanc du titre confirmé, ligne `.map-list-item` confirmée pour l'annonce de la collection, clic sur la ligne confirmé ouvrir la fiche détail. Suite de régression rejouée (un script existant mis à jour au passage : ses sélecteurs `main#feed .card`/nombre de cœurs visaient l'ancien format carte, désormais sans objet). Zéro erreur JS.
 
+### Réseaux sociaux sur la fiche détail : Instagram et Facebook, même ligne que Site web
+
+Retour utilisateur : « il me manque un endroit où je mets les pictos de réseau social (...) pour que ça n'occupe pas toute l'image dans le fil et que ça reste accessible rapidement (Instagram, Facebook, …) » — recommandation donnée d'abord (fiche détail plutôt que carte du fil, pour ne rien ajouter sur la photo), confirmée ensuite : « mets sur la fiche détail sur la même ligne que site web dans le même style. Ajoute ceux que tu dirais nécessaires. »
+
+**Seulement Instagram et Facebook.** Les deux seuls réseaux vraiment pertinents pour un hôte particulier/petite structure — ni TikTok/X/Pinterest (rares chez ce profil d'hôte, alourdiraient la ligne pour peu d'usage réel), ni Airbnb/Booking : ce sont des plateformes de réservation concurrentes, pas des réseaux sociaux, et les afficher irait à l'encontre du principe même du site (réservation en direct, sans commission).
+
+**Nouveaux champs** `instagramUrl`/`facebookUrl`, optionnels, même mécanique que `websiteUrl`/`googleUrl` déjà en place (`hf-instagram`/`hf-facebook` dans le formulaire de dépôt, `normalizeHostListing()`, payload de `submitHostForm()`).
+
+**`socialLinksHtml()`**, intégrée à `extLinksHtml()` : mêmes pastilles `.google-link` (fond vert moyen, coins arrondis) que Site web/Avis Google — "même style" comme demandé — mais SANS libellé texte, juste le picto (`.google-link.icon-only`, carrée) : avec leurs deux libellés déjà pleins, la ligne aurait débordé sur deux lignes à 390px en ajoutant deux pastilles textuelles de plus (mesuré : 362px de contenu pour 340px de place disponible). Padding de toutes les pastilles resserré au passage (9px 14px -> 8px 11px, gap 8px -> 6px) pour regagner la marge nécessaire sans toucher aux libellés existants.
+
+**Testé** (Playwright) : les 4 pastilles (Site web, Avis Google, Instagram, Facebook) confirmées sur la même ligne (mêmes coordonnées Y) à 390px ; champs `hf-instagram`/`hf-facebook` confirmés présents et fonctionnels dans le formulaire hôte. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
