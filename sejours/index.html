@@ -4302,6 +4302,17 @@ function openSheet(kind){
     });
     wireHfAddressAutocomplete();
     hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl} : null;
+    // Repli sur la photo de compte (hostProfiles/{uid}, voir
+    // wireHostProfileAvatar()) si cette annonce précise n'a pas encore la
+    // sienne — une nouvelle annonce démarre avec la photo déjà choisie
+    // côté Profil, plutôt qu'une case vide à reremplir à chaque fois.
+    if(!hfHostPhoto && authState.uid && typeof firebase!=="undefined"){
+      firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+        if(hfHostPhoto || !document.getElementById("hf-host-photo-avatar")) return; // l'hôte a déjà choisi une photo entre-temps, ou le volet a changé
+        var url = doc.exists && doc.data().photoUrl;
+        if(url){ hfHostPhoto = {type:"existing", url:url}; renderHfHostPhotoPreview(); }
+      });
+    }
     document.getElementById("hf-host-photo-avatar").addEventListener("click", function(){
       document.getElementById("hf-host-photo-input").click();
     });
@@ -6025,50 +6036,54 @@ function renderHostTabContent(){
    n'écrivant jamais sur un accounts/{uid} existant (voir le commentaire
    de resolveHostAccount()), changer de formule reste à faire depuis
    Fiftin app (Réglages → Compte), pas d'ici. */
-/* Photo de profil hôte : pas de accounts/{uid} inscriptible (voir le grand
-   commentaire au-dessus de resolveHostAccount()), donc rien à écrire tant
-   qu'aucune annonce n'existe — la photo est enregistrée sur hostPhotoUrl de
-   CHAQUE annonce du compte (une seule photo pour tout le compte, gardée
-   synchronisée), plutôt que sur un compte qu'on ne peut pas modifier.
-   Retour utilisateur : "quand tu clique sur la photo de ton profil, on
-   devrait te proposer d'ajouter une photo" — même geste que la photo de
-   l'hôte dans le formulaire d'annonce (voir hf-host-photo-avatar), qui
-   reste la façon de changer la photo au cas par cas, annonce par annonce,
-   si besoin. */
+/* Photo de profil hôte : associée au COMPTE (uid), pas à chaque annonce
+   (retour utilisateur : "je préfère que tu l'associe au compte hôte" —
+   trouvait bizarre qu'elle dépende des annonces). Enregistrée dans
+   hostProfiles/{uid} — une collection à part, propre à Séjours, PAS
+   accounts/{uid} : ce document-là appartient à l'app Fiftin (outil de
+   planning), jamais modifié ici après sa création initiale (voir le grand
+   commentaire au-dessus de resolveHostAccount() et bootstrapHostAccount()).
+   hostPhotoUrl reste aussi recopié sur chaque annonce du compte juste en
+   dessous — un simple cache d'affichage pour que le host-card de la fiche
+   détail (lecture synchrone de listings/{id}, voir normalizeHostListing())
+   n'ait pas besoin d'aller lire une collection en plus : hostProfiles/{uid}
+   reste la seule source éditée/vraie. */
 function wireHostProfileAvatar(){
   var avatarEl = document.getElementById("host-profile-avatar");
   var inputEl = document.getElementById("host-profile-photo-input");
-  if(!avatarEl || !inputEl) return;
-  ensureHostListingsLoaded(function(list){
-    if(state.hostTab!=="profile" || document.getElementById("host-profile-avatar")!==avatarEl) return; // a changé d'onglet / re-rendu pendant la lecture
-    var withPhoto = list.filter(function(l){ return l.hostPhotoUrl; })[0];
-    if(withPhoto) avatarEl.innerHTML = '<img src="'+esc(withPhoto.hostPhotoUrl)+'" alt="">';
-    if(!list.length) return; // aucune annonce : nulle part où enregistrer une photo pour l'instant
-    avatarEl.classList.add("editable");
-    avatarEl.innerHTML += avatarBadgeSvg();
-    avatarEl.addEventListener("click", function(){ inputEl.click(); });
-    inputEl.addEventListener("change", function(e){
-      var file = e.target.files[0];
-      e.target.value = "";
-      if(!file || !/^image\//.test(file.type)) return;
-      avatarEl.style.opacity = ".5";
-      cropAndCompressFiles([file]).then(function(files){
-        return uploadPhotoFiles(files, authState.uid, "hote", "Envoi de votre photo…");
-      }).then(function(res){
-        var url = res.urls[0];
-        if(!url) return null;
+  if(!avatarEl || !inputEl || !authState.uid) return;
+  avatarEl.classList.add("editable");
+  avatarEl.innerHTML += avatarBadgeSvg();
+  firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+    if(document.getElementById("host-profile-avatar")!==avatarEl) return; // re-rendu entre-temps
+    var url = doc.exists && doc.data().photoUrl;
+    if(url) avatarEl.innerHTML = '<img src="'+esc(url)+'" alt="">'+avatarBadgeSvg();
+  });
+  avatarEl.addEventListener("click", function(){ inputEl.click(); });
+  inputEl.addEventListener("change", function(e){
+    var file = e.target.files[0];
+    e.target.value = "";
+    if(!file || !/^image\//.test(file.type)) return;
+    avatarEl.style.opacity = ".5";
+    var uploadedUrl = null;
+    cropAndCompressFiles([file]).then(function(files){
+      return uploadPhotoFiles(files, authState.uid, "hote", "Envoi de votre photo…");
+    }).then(function(res){
+      uploadedUrl = res.urls[0];
+      if(!uploadedUrl) return null;
+      return firebase.firestore().collection("hostProfiles").doc(authState.uid)
+        .set({photoUrl:uploadedUrl, updated:new Date().toISOString()}, {merge:true});
+    }).then(function(){
+      if(!uploadedUrl) return;
+      ensureHostListingsLoaded(function(list){
+        if(!list.length) return;
         var batch = firebase.firestore().batch();
-        list.forEach(function(l){
-          l.hostPhotoUrl = url;
-          batch.update(firebase.firestore().collection("listings").doc(l.id), {hostPhotoUrl:url});
-        });
-        return batch.commit();
-      }).then(function(){
-        hostListingsCache = []; // Mes annonces / fiche détail doivent relire hostPhotoUrl à jour
-        if(state.hostTab==="profile") renderHostProfile();
-      }).catch(function(){
-        avatarEl.style.opacity = "";
+        list.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostPhotoUrl:uploadedUrl}); });
+        batch.commit().then(function(){ hostListingsCache = []; });
       });
+      if(state.hostTab==="profile") renderHostProfile();
+    }).catch(function(){
+      avatarEl.style.opacity = "";
     });
   });
 }

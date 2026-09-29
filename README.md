@@ -1019,6 +1019,16 @@ Retour utilisateur : « quand tu clique sur la photo de ton profil, on devrait t
 
 **Testé** (Playwright, mock Storage/Firestore) : avatar Profil hôte confirmé non cliquable sans annonce puis cliquable/badge visible avec au moins une annonce ; upload depuis le Profil confirmé écrire `hostPhotoUrl` sur l'annonce du compte et rafraîchir l'avatar ; host-card de la fiche détail confirmé afficher l'image une fois le champ renseigné ; formulaire d'annonce confirmé précharger la photo existante et permettre son changement (recadrage inclus) ; enregistrement du formulaire confirmé conserver/écrire `hostPhotoUrl` sans erreur. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Photo de l'hôte, suite : associée au COMPTE (uid) plutôt qu'aux annonces
+
+Retour utilisateur, après avoir demandé pourquoi la photo dépendait des annonces plutôt que du compte : « ça veut dire que tu peux pas associer directement la photo à l'adresse mail plutôt qu'à des annonces, c'est un petit peu bizarre, non ? » puis, une fois la contrainte technique expliquée (`accounts/{uid}` appartient à l'app Fiftin, jamais modifié ici) : « je préfère que tu l'associe au compte hôte. »
+
+**Nouvelle collection `hostProfiles/{uid}`**, propre à Séjours — jamais `accounts/{uid}` : ce document reste réservé à l'app Fiftin (voir le grand commentaire au-dessus de `resolveHostAccount()`/`bootstrapHostAccount()`, et le garde-fou du mock de test qui détecte tout `.update()` dessus comme une régression). `hostProfiles/{uid}.photoUrl` devient la SEULE source éditée de la photo de compte — un simple document par hôte, `.set(…, {merge:true})`, sans dépendre d'avoir déjà déposé une annonce (contrairement à la version précédente : un hôte "compte simple annonce", sans aucun `accounts/{uid}`, peut désormais aussi avoir une photo).
+
+**`hostPhotoUrl` sur chaque annonce redevient un simple cache d'affichage** : toujours recopié en batch sur toutes les annonces du compte à chaque changement de photo (pour que `normalizeHostListing()`/le host-card de la fiche détail restent une lecture synchrone, sans requête supplémentaire), mais ce n'est plus là que la photo est éditée. Une nouvelle annonce reprend automatiquement la photo de compte à l'ouverture du formulaire (repli sur `hostProfiles/{uid}` si l'annonce n'a pas encore la sienne) — plus besoin de la re-choisir à chaque dépôt.
+
+**Testé** (Playwright) : hôte "compte simple" (aucun `accounts/{uid}`) confirmé pouvoir tout de même ajouter une photo ; écriture confirmée sur `hostProfiles/{uid}` uniquement (`accounts/{uid}` toujours absent après coup, aucun `.set()`/`.update()` détecté dessus par le mock) ; photo confirmée recopiée sur les annonces existantes ; photo confirmée persister à la réouverture du Profil ; nouvelle annonce confirmée préremplie avec la photo de compte. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
