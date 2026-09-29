@@ -977,6 +977,24 @@ Ordre chiffre/picto inversé dans `.stat-num` pour les trois tuiles (chiffre d'a
 
 **Testé** (Playwright, capture d'écran zoomée sur le picto) : ordre chiffre-puis-picto confirmé sur les trois tuiles. Suite de régression rejouée, aucune casse. Zéro erreur JS.
 
+### Bandeau Mes séjours : valise pour Séjours, "Mes" retiré des trois libellés
+
+Retour utilisateur : « as-tu un picto plus clair pour évoquer séjours ? D'ailleurs, enlève "mes" sur les 3 catégories. »
+
+Le palmier du chantier précédent, jugé pas assez clair non plus — remplacé par une valise (`STAT_ICON_SEJOURS`), reprise telle quelle du tracé déjà utilisé pour "Professionnels" dans les prestations (voir `AMEN_ICONS`) plutôt qu'un 3e dessin inventé à la main : une silhouette nette, déjà éprouvée à cette taille ailleurs dans le fichier. « Favoris »/« Contacts »/« Séjours » remplacent « Mes favoris »/« Mes contacts »/« Mes séjours ».
+
+**Testé** (Playwright, capture d'écran) : les trois libellés confirmés sans "Mes", valise confirmée sur la tuile Séjours. Suite de régression rejouée, aucune casse. Zéro erreur JS.
+
+### Détail d'une collection : nom en volet, annonces en encarts compacts (image à gauche)
+
+Retour utilisateur : « dans la vue liste de la collection, j'aimerais que le nom de la collection soit un volet et les articles du volet soient présentés comme les annonces dans mes contacts (en un encart, image à gauche). »
+
+**En-tête devenu un vrai encart.** `.collection-detail-head` passe d'une simple ligne posée à même le fond crème à un encart blanc à coins arrondis (`background:#fff; border-radius:16px; padding:12px 14px`) — même famille visuelle que le reste de l'écran, plutôt que de rester la seule ligne "nue" une fois les annonces elles-mêmes passées en encarts.
+
+**Annonces en lignes compactes.** `collectionListingRowHtml()` remplace les grandes cartes `.card`/`coverHtml()` (même format que le fil Explorer, photo pleine largeur) par des lignes `.map-list-item` — exactement le composant déjà utilisé pour Contacts/Séjours (`contactLogRowHtml()`) : vignette 68×68 à gauche, nom et région/prix à droite. Pas de sous-ligne canal/date (une collection n'a pas de "contacté par…", contrairement à une demande) ni de boutons confirmer/refuser (propres aux demandes). Clic sur la ligne → ouvre directement la fiche complète (`data-open`, repris par `wireFeedEvents()` déjà appelé pour cet écran) — plus de panneau de demande rapide intégré à la carte comme avant, ni de cœur inline pour ajouter une 2e annonce depuis cet écran : ces deux affordances appartenaient au format `.card`, pas transposées telles quelles au format ligne compacte (revenir par le fil Explorer pour ces deux gestes).
+
+**Testé** (Playwright) : encart blanc du titre confirmé, ligne `.map-list-item` confirmée pour l'annonce de la collection, clic sur la ligne confirmé ouvrir la fiche détail. Suite de régression rejouée (un script existant mis à jour au passage : ses sélecteurs `main#feed .card`/nombre de cœurs visaient l'ancien format carte, désormais sans objet). Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

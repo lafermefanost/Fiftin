@@ -876,15 +876,21 @@ body.detail-open nav.tabbar{z-index:220;}
 .collection-tile-info b{display:block; font-size:14px; font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .collection-tile-info span{font-size:11px; font-weight:600; opacity:.9;}
 /* En-tête du détail d'une collection (retour aux collections + nom +
-   renommer/supprimer) — même hauteur/esprit que .detail-back, mais en
-   ligne plutôt qu'en superposition sur une galerie photo. */
-.collection-detail-head{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+   renommer/supprimer). Retour utilisateur : "le nom de la collection
+   soit un volet" — passé d'une simple ligne posée à même le fond crème à
+   un vrai encart blanc (même famille que .map-list-item/.detail-card en
+   dessous), plutôt que de rester la seule ligne "nue" de tout l'écran une
+   fois les annonces elles-mêmes passées en encarts blancs (voir
+   collectionListingRowHtml()). */
+.collection-detail-head{display:flex; align-items:center; gap:8px; margin-bottom:14px; background:#fff; border-radius:16px; padding:12px 14px;}
 .collection-detail-back{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:var(--ink);}
 .collection-detail-back svg{width:18px; height:18px;}
 .collection-detail-title{flex:1; font-size:18px; font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .collection-detail-actions{display:flex; gap:6px; flex-shrink:0;}
 .collection-detail-actions button{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--ink);}
 .collection-detail-actions button svg{width:16px; height:16px;}
+.coll-listing-list{display:flex; flex-direction:column; gap:8px;}
+.coll-listing-list .map-list-item{cursor:pointer;}
 #coll-detail-delete{color:var(--danger);}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
@@ -2853,20 +2859,23 @@ function contactLogCounts(docs){
    quels dans .stat-num, sans wrapper <svg> séparé à écrire à chaque
    appel — un seul endroit par icône plutôt que trois.
    Séjours : la coche de "confirmer" (.log-action.confirm) essayée
-   d'abord, jugée pas assez claire ensuite ("un palmier, ou je sais pas,
-   quelque chose de plus clair") — remplacée par un palmier, qui se lit
-   sans ambiguïté comme "séjour/vacances" plutôt qu'une coche générique. */
+   d'abord, puis un palmier — retour utilisateur, ni l'une ni l'autre pas
+   assez claire ("as-tu un picto plus clair pour évoquer séjours ?").
+   Repris la valise déjà utilisée pour "Professionnels" (voir AMEN_ICONS) :
+   un séjour, c'est avant tout un bagage qui part en voyage — silhouette
+   nette et sans ambiguïté même en tout petit, plutôt qu'une 3e tentative
+   dessinée à la main. */
 var STAT_ICON_FAVORIS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M12 2l2.9 6.3 6.9.6-5.2 4.6 1.6 6.8L12 16.9 5.8 20.3l1.6-6.8L2.2 8.9l6.9-.6z'/></svg>";
 var STAT_ICON_CONTACTS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><path d='M4 4h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H9l-4 4v-4H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z'/></svg>";
-var STAT_ICON_SEJOURS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.7'><path d='M12 21V11'/><path d='M12 11C9 9 8 6 9 3c3 1 4 4 3 8z'/><path d='M12 11c3-2 4-5 3-8-3 1-4 4-3 8z'/><path d='M12 11c-4-1-7-3-8-6 3 0 6 1 8 6z'/><path d='M12 11c4-1 7-3 8-6-3 0-6 1-8 6z'/></svg>";
+var STAT_ICON_SEJOURS = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.8'><rect x='3' y='7' width='18' height='13' rx='2'/><path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/></svg>";
 function likesViewToggleHtml(){
   var loaded = !authState.uid || contactLogCache!=null;
   var counts = loaded && authState.uid ? contactLogCounts(contactLogCache) : {enCours:0, confirmed:0};
   var favLoaded = !authState.uid || collectionsCache!=null;
   return '<div class="profile-stats">'+
-    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><span class="stat-num"><b>'+(favLoaded?savedListingsCount():"…")+'</b>'+STAT_ICON_FAVORIS+'</span><span>Mes favoris</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><span class="stat-num"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b>'+STAT_ICON_CONTACTS+'</span><span>Mes contacts</span></button>'+
-    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><span class="stat-num"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b>'+STAT_ICON_SEJOURS+'</span><span>Mes séjours</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="favoris"?" active":"")+'" data-likes-view="favoris"><span class="stat-num"><b>'+(favLoaded?savedListingsCount():"…")+'</b>'+STAT_ICON_FAVORIS+'</span><span>Favoris</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="demandes"?" active":"")+'" data-likes-view="demandes"><span class="stat-num"><b id="stat-count-demandes">'+(loaded?counts.enCours:"…")+'</b>'+STAT_ICON_CONTACTS+'</span><span>Contacts</span></button>'+
+    '<button type="button" class="stat-tile'+(state.likesView==="sejours"?" active":"")+'" data-likes-view="sejours"><span class="stat-num"><b id="stat-count-sejours">'+(loaded?counts.confirmed:"…")+'</b>'+STAT_ICON_SEJOURS+'</span><span>Séjours</span></button>'+
   '</div>';
 }
 function wireLikesToggle(){
@@ -3102,6 +3111,24 @@ function collectionListRowHtml(c){
     '</div>'+
   '</div>';
 }
+/* Retour utilisateur : "les articles du volet soient présentés comme les
+   annonces dans mes contacts (en un encart, image à gauche)" — remplace
+   les grandes cartes .card/coverHtml() d'origine (même format que le fil
+   Explorer) par des lignes compactes, exactement .map-list-item comme
+   contactLogRowHtml() (voir plus bas). Pas de sous-ligne canal/date (pas
+   pertinente ici, une collection n'a pas de "contacté par…") ni de
+   .log-actions confirmer/refuser (propre aux demandes) — juste nom et
+   région/prix, plus data-open pour ouvrir la fiche complète au clic,
+   repris par wireFeedEvents() déjà appelé juste après. */
+function collectionListingRowHtml(l){
+  var thumb = listingThumbUrl(l);
+  var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">'
+    : '<div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div>';
+  return '<div class="map-list-item" data-open="'+l.id+'">'+
+    swHtml+
+    '<div><b>'+esc(l.name)+'</b><span>'+esc(l.region)+' · '+esc(listingPriceLabel(l))+'</span></div>'+
+  '</div>';
+}
 function renderCollectionDetail(feed, toggle){
   var col = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
   var listings = col.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean);
@@ -3115,11 +3142,7 @@ function renderCollectionDetail(feed, toggle){
   '</div>';
   var body = !listings.length
     ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><p>Cette collection est vide pour l\'instant.<br>Touchez le cœur sur un hébergement pour l\'y ajouter.</p></div>'
-    : listings.map(function(l){
-        return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
-          '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
-        '</article>';
-      }).join("");
+    : '<div class="coll-listing-list">'+listings.map(collectionListingRowHtml).join("")+'</div>';
   feed.innerHTML = toggle + head + body;
   wireLikesToggle();
   if(listings.length) wireFeedEvents();
