@@ -820,10 +820,10 @@ body.detail-open nav.tabbar{z-index:220;}
 .profile-avatar{width:60px; height:60px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; overflow:hidden; position:relative; flex-shrink:0;}
 .profile-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
-/* .editable seulement une fois qu'on sait où enregistrer la photo (au moins
-   une annonce déposée, voir wireHostProfileAvatar()) — sinon le clic
-   n'aurait nulle part où écrire (accounts/{uid} jamais modifié ici, voir
-   resolveHostAccount()) et ferait miroiter une fonctionnalité inopérante. */
+/* .editable posée par wireAccountAvatar() dès qu'un compte est connecté
+   (photo enregistrée dans hostProfiles/{uid}, jamais accounts/{uid} —
+   voir le grand commentaire au-dessus de wireAccountAvatar()) : plus
+   besoin d'avoir déjà déposé une annonce pour pouvoir en ajouter une. */
 .profile-avatar.editable{cursor:pointer;}
 .profile-avatar-badge{position:absolute; right:-2px; bottom:-2px; width:20px; height:20px; border-radius:50%;
   background:var(--sauge); border:2px solid var(--cream); display:flex; align-items:center; justify-content:center;}
@@ -1018,30 +1018,31 @@ body.detail-open nav.tabbar{z-index:220;}
    sans raison. */
 .admin-card.host-listing-card{background:#fff;}
 .admin-card.host-listing-card .admin-thumb{width:96px; height:96px; border-radius:16px;}
-/* Bouton pause/reprise, à côté du badge de statut (retour utilisateur :
-   "au niveau de l'info sur le statut de l'annonce, mettre aussi un bouton
-   mettre en pause qui retire temporairement l'annonce du fil"). Même
-   gabarit pilule que .host-status-badge, posé juste à côté, pour lire les
-   deux comme une seule ligne d'état + action plutôt que deux éléments sans
-   rapport. Voir toggleListingPause() : bascule status published<->paused,
-   jamais proposé sur une annonce encore "pending" (rien à mettre en pause
-   avant une première publication). */
 .host-status-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-.host-pause-btn{display:inline-flex; align-items:center; gap:5px; background:none; border:1.5px solid var(--line);
-  border-radius:16px; padding:4px 10px 4px 8px; font-family:'Jost',sans-serif; font-size:10.5px; font-weight:700; color:var(--sauge-mid);}
-.host-pause-btn svg{width:12px; height:12px; flex-shrink:0;}
-/* Modifier/Supprimer avec pictogramme (retour utilisateur : "dans l'esprit
-   des autres pages avec picto clair et moderne") — mêmes tracés que
+/* Mettre en pause / Modifier / Supprimer : trois actions au même niveau,
+   même style de pilule, même ligne (.admin-actions) — retour utilisateur :
+   "passe mettre en pause, supprimer et modifier exactement dans le même
+   style et sur la même ligne", le bouton pause vivait avant à côté du
+   badge de statut, dans un gabarit plus petit (10.5px) qui le faisait
+   paraître différent des deux autres. Seule la couleur distingue les
+   actions entre elles (comme Modifier/Supprimer déjà avant ce changement) :
+   Mettre en pause et Modifier en contour neutre (actions réversibles),
+   Supprimer seul en contour danger — mêmes tracés que
    #coll-detail-rename/#coll-detail-delete (favoris), rien de réinventé.
-   Supprimer distinct de Modifier par la couleur seulement (danger, contour
-   discret) plutôt qu'un remplissage plein : une carte de liste n'a pas
-   besoin d'un bouton rouge plein qui saute aux yeux à chaque scroll, le
-   picto poubelle suffit à signaler l'intention. */
-.host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; gap:6px; background:none; border-radius:16px;
-  padding:8px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700;}
-.host-edit-btn{border:1.5px solid var(--line); color:var(--ink);}
+   Voir toggleListingPause() : bascule status published<->paused, jamais
+   proposé sur une annonce encore "pending" (rien à mettre en pause avant
+   une première publication). Pour que les trois tiennent sur une seule
+   ligne à 390px, la ligne d'actions est sortie de la colonne étroite à
+   côté de la vignette (96px) — devenue un rang à part, pleine largeur de
+   la carte, juste au-dessus de l'encart Calendrier (voir hostListingCardHtml())
+   — et le gabarit resserré (padding/gap/icône réduits) : mesuré nécessaire
+   pour "Mettre en pause" (le plus long des trois libellés) à cette largeur. */
+.host-listing-card > .admin-actions{gap:5px; margin-top:10px;}
+.host-pause-btn, .host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; gap:4px; background:none; border-radius:16px;
+  padding:8px 9px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700;}
+.host-pause-btn, .host-edit-btn{border:1.5px solid var(--line); color:var(--ink);}
 .host-delete-btn{border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
-.host-edit-btn svg, .host-delete-btn svg{width:14px; height:14px; flex-shrink:0;}
+.host-pause-btn svg, .host-edit-btn svg, .host-delete-btn svg{width:13px; height:13px; flex-shrink:0;}
 
 .empty-state{text-align:center; padding:60px 30px; color:var(--sauge);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
@@ -1066,19 +1067,21 @@ body.detail-open nav.tabbar{z-index:220;}
    (même idiome que .cal-mini-head, l'accordéon des mois) ; retour
    utilisateur suivant : "j'aimerais que tu passes l'encart calendrier en
    jaune acide sur le fond avec typo centrée et flèche en dessous" — plus
-   un filet discret, un vrai encart plein (même paire fond/texte que
-   .btn.primary/.cal-add-pill, --yellow + --sauge-deep, déjà utilisée
-   ailleurs sur le site pour une action qui doit se voir), texte centré,
-   colonne plutôt que ligne (flèche sous le texte, pas à côté). Le chevron
-   pointe vers le bas au repos (son tracé de base) et se retourne vers le
-   haut une fois déplié — inversé par rapport à l'ancienne variante en
-   ligne (qui partait tournée à -90°, vers la droite) : posée sous un
-   texte centré, une flèche vers le bas se lit naturellement comme
-   "dérouler en dessous". */
+   un filet discret, un vrai encart plein, texte centré, colonne plutôt que
+   ligne (flèche sous le texte, pas à côté). Couleur ensuite repassée en
+   vert moyen (retour utilisateur, capture d'écran de "Mes annonces" :
+   "passe l'onglet calendrier en vert moyen") — --sauge-mid, déjà utilisée
+   ailleurs sur le site en fond plein avec texte blanc (.google-link), pour
+   rester dans la même famille de verts que le reste du site plutôt que le
+   jaune acide, qui détonnait sur cette carte. Le chevron pointe vers le
+   bas au repos (son tracé de base) et se retourne vers le haut une fois
+   déplié — inversé par rapport à l'ancienne variante en ligne (qui partait
+   tournée à -90°, vers la droite) : posée sous un texte centré, une flèche
+   vers le bas se lit naturellement comme "dérouler en dessous". */
 .cal-disclose{display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;
-  background:var(--yellow); border:none; border-radius:16px; margin-top:10px; padding:12px 10px; gap:4px;
-  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-align:center; cursor:pointer;}
-.cal-disclose-chevron{width:16px; height:16px; color:var(--sauge-deep); flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
+  background:var(--sauge-mid); border:none; border-radius:16px; margin-top:10px; padding:12px 10px; gap:4px;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:#fff; text-align:center; cursor:pointer;}
+.cal-disclose-chevron{width:16px; height:16px; color:#fff; flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
 .cal-disclose.expanded .cal-disclose-chevron{transform:rotate(180deg);}
 /* Contenu du calendrier déplié — toujours DANS .admin-card désormais (une
    seule carte, retour utilisateur), juste un peu d'espace sous la ligne
@@ -4303,7 +4306,7 @@ function openSheet(kind){
     wireHfAddressAutocomplete();
     hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl} : null;
     // Repli sur la photo de compte (hostProfiles/{uid}, voir
-    // wireHostProfileAvatar()) si cette annonce précise n'a pas encore la
+    // wireAccountAvatar()) si cette annonce précise n'a pas encore la
     // sienne — une nouvelle annonce démarre avec la photo déjà choisie
     // côté Profil, plutôt qu'une case vide à reremplir à chaque fois.
     if(!hfHostPhoto && authState.uid && typeof firebase!=="undefined"){
@@ -5135,7 +5138,7 @@ function renderHostUnitPhotoGrid(unitId){
    générée (canvas indisponible…) — jamais bloquant, listingThumbUrl()
    retombe alors sur le plein format. */
 function uploadPhotoFiles(files, uid, pathPrefix, progressLabel){
-  // btn absent hors formulaire hôte (voir wireHostProfileAvatar(), qui
+  // btn absent hors formulaire hôte (voir wireAccountAvatar(), qui
   // uploade la photo de profil directement depuis le Profil, sans sheet
   // ouvert) — le texte de progression est alors simplement ignoré.
   var btn = document.getElementById("sheet-apply");
@@ -5725,7 +5728,7 @@ function renderProfile(){
   var hostSub = connected ? "Déposer une annonce" : "Se connecter pour déposer une annonce";
 
   feed.innerHTML = '<div class="profile-view">'+
-    '<div class="profile-head"><div class="profile-avatar">'+initial+'</div><div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
+    '<div class="profile-head"><div class="profile-avatar" id="traveler-profile-avatar">'+initial+'</div>'+(connected ? '<input type="file" id="traveler-profile-photo-input" accept="image/*" style="display:none">' : '')+'<div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur current" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
@@ -5753,6 +5756,10 @@ function renderProfile(){
   });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+    // Même photo de compte qu'en mode hôte (hostProfiles/{uid}, voir
+    // wireAccountAvatar()) — retour utilisateur : "utilise la même photo
+    // pour le mode voyageur", inutile de la reproposer séparément ici.
+    wireAccountAvatar("traveler-profile-avatar", "traveler-profile-photo-input", function(){ if(state.tab==="profile") renderProfile(); });
   } else {
     document.getElementById("btn-signin-profile").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
   }
@@ -6036,26 +6043,32 @@ function renderHostTabContent(){
    n'écrivant jamais sur un accounts/{uid} existant (voir le commentaire
    de resolveHostAccount()), changer de formule reste à faire depuis
    Fiftin app (Réglages → Compte), pas d'ici. */
-/* Photo de profil hôte : associée au COMPTE (uid), pas à chaque annonce
-   (retour utilisateur : "je préfère que tu l'associe au compte hôte" —
-   trouvait bizarre qu'elle dépende des annonces). Enregistrée dans
-   hostProfiles/{uid} — une collection à part, propre à Séjours, PAS
-   accounts/{uid} : ce document-là appartient à l'app Fiftin (outil de
-   planning), jamais modifié ici après sa création initiale (voir le grand
-   commentaire au-dessus de resolveHostAccount() et bootstrapHostAccount()).
+/* Photo de profil : associée au COMPTE (uid), pas à chaque annonce (retour
+   utilisateur : "je préfère que tu l'associe au compte hôte" — trouvait
+   bizarre qu'elle dépende des annonces). Enregistrée dans hostProfiles/{uid}
+   — une collection à part, propre à Séjours, PAS accounts/{uid} : ce
+   document-là appartient à l'app Fiftin (outil de planning), jamais
+   modifié ici après sa création initiale (voir le grand commentaire
+   au-dessus de resolveHostAccount() et bootstrapHostAccount()).
    hostPhotoUrl reste aussi recopié sur chaque annonce du compte juste en
    dessous — un simple cache d'affichage pour que le host-card de la fiche
    détail (lecture synchrone de listings/{id}, voir normalizeHostListing())
    n'ait pas besoin d'aller lire une collection en plus : hostProfiles/{uid}
-   reste la seule source éditée/vraie. */
-function wireHostProfileAvatar(){
-  var avatarEl = document.getElementById("host-profile-avatar");
-  var inputEl = document.getElementById("host-profile-photo-input");
+   reste la seule source éditée/vraie.
+   wireAccountAvatar() est générique (avatarId/inputId/afterUpdate en
+   paramètres) : câblée à la fois sur l'avatar du Profil hôte
+   (renderHostProfile()) ET sur celui du Profil voyageur (renderProfile())
+   — retour utilisateur : "utilise la même photo pour le mode voyageur",
+   la photo de compte reste la même personne des deux côtés, pas la peine
+   de la reproposer/re-uploader séparément par mode. */
+function wireAccountAvatar(avatarId, inputId, afterUpdate){
+  var avatarEl = document.getElementById(avatarId);
+  var inputEl = document.getElementById(inputId);
   if(!avatarEl || !inputEl || !authState.uid) return;
   avatarEl.classList.add("editable");
   avatarEl.innerHTML += avatarBadgeSvg();
   firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
-    if(document.getElementById("host-profile-avatar")!==avatarEl) return; // re-rendu entre-temps
+    if(document.getElementById(avatarId)!==avatarEl) return; // re-rendu entre-temps
     var url = doc.exists && doc.data().photoUrl;
     if(url) avatarEl.innerHTML = '<img src="'+esc(url)+'" alt="">'+avatarBadgeSvg();
   });
@@ -6081,7 +6094,7 @@ function wireHostProfileAvatar(){
         list.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostPhotoUrl:uploadedUrl}); });
         batch.commit().then(function(){ hostListingsCache = []; });
       });
-      if(state.hostTab==="profile") renderHostProfile();
+      afterUpdate();
     }).catch(function(){
       avatarEl.style.opacity = "";
     });
@@ -6124,7 +6137,7 @@ function renderHostProfile(){
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
   }
-  wireHostProfileAvatar();
+  wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ if(state.hostTab==="profile") renderHostProfile(); });
   resolveHostAccount(function(account){
     if(state.hostTab!=="profile") return; // a changé d'onglet pendant la lecture
     var plan = (account && account.settings && account.settings.plan) || "simple";
@@ -6298,18 +6311,18 @@ function hostListingCardHtml(l){
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
         '<div class="host-status-line">'+
           '<span class="host-status-badge '+badgeClass+'">'+statusLabel+'</span>'+
-          (canTogglePause ? '<button type="button" class="host-pause-btn" data-host-pause="'+esc(l.id)+'" data-pause-to="'+(isPaused?"published":"paused")+'">'+
-            (isPaused
-              ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8V4z"/></svg><span>Publier</span>'
-              : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Mettre en pause</span>')+
-          '</button>' : '')+
         '</div>'+
         (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
-        '<div class="admin-actions">'+
-          '<button type="button" class="host-edit-btn" data-host-edit="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span></button>'+
-          '<button type="button" class="host-delete-btn" data-host-delete="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Supprimer</span></button>'+
-        '</div>'+
       '</div>'+
+    '</div>'+
+    '<div class="admin-actions">'+
+      (canTogglePause ? '<button type="button" class="host-pause-btn" data-host-pause="'+esc(l.id)+'" data-pause-to="'+(isPaused?"published":"paused")+'">'+
+        (isPaused
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8V4z"/></svg><span>Publier</span>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Mettre en pause</span>')+
+      '</button>' : '')+
+      '<button type="button" class="host-edit-btn" data-host-edit="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span></button>'+
+      '<button type="button" class="host-delete-btn" data-host-delete="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Supprimer</span></button>'+
     '</div>'+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
       '<span>Calendrier</span>'+

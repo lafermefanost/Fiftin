@@ -1029,6 +1029,16 @@ Retour utilisateur, après avoir demandé pourquoi la photo dépendait des annon
 
 **Testé** (Playwright) : hôte "compte simple" (aucun `accounts/{uid}`) confirmé pouvoir tout de même ajouter une photo ; écriture confirmée sur `hostProfiles/{uid}` uniquement (`accounts/{uid}` toujours absent après coup, aucun `.set()`/`.update()` détecté dessus par le mock) ; photo confirmée recopiée sur les annonces existantes ; photo confirmée persister à la réouverture du Profil ; nouvelle annonce confirmée préremplie avec la photo de compte. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Photo de compte partagée entre Profil hôte et Profil voyageur, et carte "Mes annonces" harmonisée
+
+Retour utilisateur : « utilise la même photo pour le mode voyageur » — après avoir associé la photo au compte (`hostProfiles/{uid}`, voir plus haut), logique qu'elle serve aussi côté voyageur, même personne des deux côtés.
+
+**`wireHostProfileAvatar()` généralisée en `wireAccountAvatar(avatarId, inputId, afterUpdate)`**, câblée à la fois sur l'avatar du Profil hôte (`renderHostProfile()`) et sur celui du Profil voyageur (`renderProfile()`, nouvel avatar `#traveler-profile-avatar`, visible et cliquable uniquement une fois connecté). Même mécanique, même photo, un seul document `hostProfiles/{uid}` — changer la photo d'un côté la met à jour immédiatement de l'autre.
+
+**Carte "Mes annonces" harmonisée**, sur capture d'écran : « passe l'onglet Calendrier en vert moyen (...) et mets Mettre en pause/Modifier/Supprimer exactement dans le même style et sur la même ligne. » L'encart Calendrier passe de `--yellow` (jaune acide) à `--sauge-mid` (texte blanc) — reste dans la même famille de verts que le reste du site. Les trois actions (auparavant : pause à côté du badge de statut dans un gabarit plus petit, Modifier/Supprimer séparément en dessous) rejoignent un même rang `.admin-actions`, même style de pilule pour les trois (seule la couleur distingue Supprimer, danger, des deux autres, neutres) — sorti de la colonne étroite à côté de la vignette (96px) vers un rang pleine largeur de la carte, seule façon de faire tenir les trois sur une ligne à 390px (mesuré : gabarit resserré en conséquence, padding/gap/icône réduits).
+
+**Testé** (Playwright) : photo uploadée côté hôte confirmée immédiatement visible côté voyageur (même URL) ; avatar voyageur confirmé cliquable/éditable une fois connecté ; bouton Calendrier confirmé en `--sauge-mid`/texte blanc ; les trois actions confirmées sur la même ligne (mêmes coordonnées Y) à 390px, ~19px de marge restante. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
