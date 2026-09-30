@@ -1149,6 +1149,16 @@ Retour utilisateur : « fais aussi comme la vue collection avec la carte transpa
 
 **Testé** (Playwright) : fond confirmé transparent (`rgba(0,0,0,0)`), bordure confirmée `1px dashed`. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Contour de l'encart "Ajouter" en gris (comme les pastilles), et cartes tarifs du Profil refaites sur le modèle fiftin.fr
+
+Retour utilisateur : « passe le contour dans le même gris que les pastilles pointillées » puis « fais la partie formule dans la vue profile exactement comme sur fiftin app et fais les mêmes liens et commandes, ajoute juste une troisième en premier qui est formule hôte (gratuit pour cette année, puis 7 €/mois). »
+
+**Contour gris.** `.coll-add-row` passait de `var(--sauge-light)` (vert) à `var(--line)` (le même gris que `.coll-add-ghost-btn`, les pastilles juste à droite) — les deux pointillés de cet encart sont maintenant cohérents entre eux.
+
+**Cartes tarifs de "Votre formule"** (Profil hôte) reprennent le gabarit exact des cartes Tarifs de fiftin.fr (`index.html` racine, section Tarifs — kicker en majuscules, gros prix, sous-ligne, liste à puces de couleurs alternées) plutôt que `.formula-card` (réservée au sélecteur cliquable à l'inscription, `formulaCardHtml()`, jamais touché ici pour ne pas le faire régresser). `planCardHtml()`, nouvelle fonction, lit de nouveaux champs `planName`/`planPrice`/`planPer`/`bullets` ajoutés à `HOST_FORMULAS` SANS toucher `name`/`price`/`desc` (toujours ceux du sélecteur inscription) — deux présentations indépendantes de la même donnée. Texte Essentiel/Avancé repris mot pour mot de la page fiftin.fr. Troisième carte "Formule Hôte" ajoutée en tête : `Gratuit` / `cette année, puis 7 €/mois` — pas de mécanisme de paiement réel derrière, juste l'affichage (comme les deux autres, en lecture seule : ce fichier n'écrit jamais dans un `accounts/{uid}` existant).
+
+**Testé** (Playwright) : 3 cartes confirmées, "Formule Hôte" en premier avec le bon prix/sous-ligne ; carte active confirmée correctement mise en évidence selon le plan réel du compte (`accounts/{uid}.settings.plan`) ; sélecteur d'inscription (`.formula-card`) confirmé strictement inchangé (3 cartes, mêmes libellés qu'avant). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

@@ -916,7 +916,12 @@ body.detail-open nav.tabbar{z-index:220;}
    utilisateur : "fais aussi comme la vue collection, avec la carte
    transparente mais avec contour pointillé") — même traitement que
    .collection-tile-add en vue grille, juste au-dessus. */
-.collection-detail-head.coll-add-row{border:1.5px dashed var(--sauge-light); background:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
+/* Contour de la même couleur que les pastilles fantômes juste à droite
+   (retour utilisateur : "passe le contour dans le même gris que les
+   pastilles pointillées") — var(--line), pas var(--sauge-light), pour que
+   les deux pointillés de cet encart (contour + pastilles) soient
+   cohérents entre eux. */
+.collection-detail-head.coll-add-row{border:1.5px dashed var(--line); background:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
 /* Typo du titre "comme avant" (retour utilisateur), plus légère que
    .collection-detail-title de base (18px/800, poids d'un vrai nom de
    collection) — 14px/700, avec un "+" devant le texte (voir
@@ -1262,6 +1267,29 @@ body.detail-open nav.tabbar{z-index:220;}
 .formula-card-head b{font-size:14px; color:var(--ink);}
 .formula-card-head span{font-size:12.5px; font-weight:700; color:var(--sauge-deep);}
 .formula-card p{font-size:11.5px; color:var(--sauge); font-weight:500; line-height:1.4; margin:0;}
+
+/* ---------- cartes tarifs (vue Profil hôte) ----------
+   Repris du gabarit .plan de fiftin.fr (section Tarifs, index.html
+   racine) — même structure (kicker/prix/sous-ligne/liste à puces
+   colorées), adapté aux jetons de couleur de ce fichier et à une seule
+   colonne pleine largeur (la page marketing les pose côte à côte en
+   grille, ici empilées comme le reste du Profil). Volontairement une
+   famille de classes à part (.plan-card, pas .formula-card) : .formula-card
+   reste celle du sélecteur cliquable à l'inscription (formulaCardHtml()),
+   jamais touchée ici pour ne pas la faire régresser. */
+.plan-card-list{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
+.plan-card{background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:22px 20px;}
+.plan-card.active{border-color:var(--sauge-deep);}
+.plan-card-name{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px;}
+.plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:36px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
+.plan-card-per{font-size:13px; color:var(--sauge); margin-bottom:14px;}
+.plan-card ul{margin:0; padding:0; list-style:none;}
+.plan-card li{font-size:13.5px; line-height:1.45; padding:6px 0 6px 18px; position:relative; color:#4a4636;}
+.plan-card li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:13px; border-radius:2.5px; background:var(--sauge-deep);}
+.plan-card li:nth-child(5n+2)::before{background:var(--lavender);}
+.plan-card li:nth-child(5n+3)::before{background:#C97B5C;}
+.plan-card li:nth-child(5n+4)::before{background:#D88A9A;}
+.plan-card li:nth-child(5n+5)::before{background:var(--yellow);}
 
 /* ─── VERROU TEMPORAIRE DU SITE (page en construction) ───────────────
    Même mot de passe partagé et même clé sessionStorage que le verrou de
@@ -1662,10 +1690,28 @@ var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
    "essentiel"/"pro" correspondent exactement aux mêmes valeurs que
    S.settings.plan dans app/ — mêmes noms, mêmes prix, un seul et même
    concept vu des deux côtés. */
+/* planName/planPrice/planPer/bullets : champs propres à l'affichage en
+   vue Profil (planCardHtml(), voir plus bas — retour utilisateur : "fais
+   la partie formule dans la vue profile exactement comme sur fiftin app"),
+   distincts de name/price/desc qui restent ceux du sélecteur à
+   l'inscription (formulaCardHtml()) — deux présentations différentes de
+   la même donnée, jamais mélangées pour ne pas faire régresser l'une en
+   touchant l'autre. Texte des formules Essentiel/Avancé repris mot pour
+   mot de la page fiftin.fr (section Tarifs, index.html racine) — même
+   copie des deux côtés. "Formule Hôte" ajoutée en tête (retour
+   utilisateur : "ajoute une troisième en premier, formule hôte, gratuit
+   pour cette année, puis 7 €/mois") — pas encore de mécanisme de
+   paiement réel, juste l'affichage. */
 var HOST_FORMULAS = [
-  {value:"simple", name:"Formule Hôte", price:"Gratuit", desc:"Listez votre hébergement, calendrier simplifié inclus."},
-  {value:"essentiel", name:"Formule Gestion simplifiée", price:"24 €/mois", desc:"Planning complet Fiftin app : réservations, fichier client, compta."},
-  {value:"pro", name:"Formule Gestion avancée", price:"47 €/mois", desc:"Tout l'Essentiel + plusieurs structures juridiques, accès équipe."}
+  {value:"simple", name:"Formule Hôte", price:"Gratuit", desc:"Listez votre hébergement, calendrier simplifié inclus.",
+    planName:"Formule Hôte", planPrice:"Gratuit", planPer:"cette année, puis 7 €/mois",
+    bullets:["Listez votre hébergement, calendrier simplifié inclus."]},
+  {value:"essentiel", name:"Formule Gestion simplifiée", price:"24 €/mois", desc:"Planning complet Fiftin app : réservations, fichier client, compta.",
+    planName:"Essentiel", planPrice:"24 €", planPer:"par mois",
+    bullets:["Tous les outils : planning, réservations, fichier client, comptabilité","Une seule structure juridique","Jusqu'à 4 chambres et gîtes","Gestion par une seule personne"]},
+  {value:"pro", name:"Formule Gestion avancée", price:"47 €/mois", desc:"Tout l'Essentiel + plusieurs structures juridiques, accès équipe.",
+    planName:"Avancé", planPrice:"47 €", planPer:"par mois",
+    bullets:["Tout l'Essentiel","Jusqu'à 8 chambres et gîtes","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par logement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
 ];
 /* Chaque entrée de photo est {type:"existing", url} (déjà en ligne, juste
    affichée/retirable) ou {type:"new", file} (à uploader à l'envoi) — les
@@ -4180,16 +4226,22 @@ function formulaCardHtml(value,name,price,desc){
     '<p>'+desc+'</p>'+
   '</button>';
 }
-/* Même carte, mais un <div>, jamais un <button> : affichage en LECTURE
-   SEULE de la formule courante dans le profil hôte (renderHostProfile())
-   — contrairement au sélecteur à l'inscription, ce fichier n'écrit
+/* Affichage en LECTURE SEULE de la formule courante dans le profil hôte
+   (renderHostProfile()) — un <div>, jamais un bouton : ce fichier n'écrit
    jamais dans un accounts/{uid} déjà existant (voir resolveHostAccount()),
-   donc pas question de la rendre cliquable ici sans un vrai mécanisme de
-   changement de formule à construire côté serveur. */
-function formulaCardReadOnlyHtml(f, active){
-  return '<div class="formula-card'+(active?' active':'')+'">'+
-    '<div class="formula-card-head"><b>'+f.name+'</b><span>'+f.price+'</span></div>'+
-    '<p>'+f.desc+'</p>'+
+   donc pas question de la rendre cliquable sans un vrai mécanisme de
+   changement de formule à construire côté serveur. Reprend le gabarit
+   exact des cartes tarifs de fiftin.fr (section Tarifs, .plan/.plan .name/
+   .plan .price/.plan .per/.plan li, voir index.html racine) plutôt que
+   .formula-card (réservée au sélecteur à l'inscription, formulaCardHtml())
+   — retour utilisateur : "fais la partie formule dans la vue profile
+   exactement comme sur fiftin app". */
+function planCardHtml(f, active){
+  return '<div class="plan-card'+(active?' active':'')+'">'+
+    '<div class="plan-card-name">'+esc(f.planName)+'</div>'+
+    '<div class="plan-card-price">'+esc(f.planPrice)+'</div>'+
+    '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
+    '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
   '</div>';
 }
 
@@ -6210,7 +6262,7 @@ function renderHostTabContent(){
    switchTab("explore"), seule différence de câblage), mais des lignes
    différentes en dessous : les formules hôte (HOST_FORMULAS) plutôt que
    les réglages voyageur, qui n'ont pas de sens ici. Formules affichées en
-   LECTURE SEULE (formulaCardReadOnlyHtml()) : la vraie formule vient de
+   LECTURE SEULE (planCardHtml()) : la vraie formule vient de
    accounts/{uid}.settings.plan côté Fiftin app (resolveHostAccount(), déjà
    utilisé ailleurs pour le calendrier) — "simple" par défaut si aucun
    compte de gestion n'existe (hôte "compte simple annonce"). Ce fichier
@@ -6296,8 +6348,8 @@ function renderHostProfile(){
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
     '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
-    '<div class="formula-picker" id="host-formulas">'+
-      HOST_FORMULAS.map(function(f){ return formulaCardReadOnlyHtml(f, f.value==="simple"); }).join("")+
+    '<div class="plan-card-list" id="host-formulas">'+
+      HOST_FORMULAS.map(function(f){ return planCardHtml(f, f.value==="simple"); }).join("")+
     '</div>'+
     '<p class="sheet-sub">Changement de formule depuis Fiftin app (Réglages → Compte) — paiement pas encore activé.</p>'+
     '</div>'+
@@ -6317,7 +6369,7 @@ function renderHostProfile(){
     var plan = (account && account.settings && account.settings.plan) || "simple";
     var container = document.getElementById("host-formulas");
     if(!container) return;
-    container.innerHTML = HOST_FORMULAS.map(function(f){ return formulaCardReadOnlyHtml(f, f.value===plan); }).join("");
+    container.innerHTML = HOST_FORMULAS.map(function(f){ return planCardHtml(f, f.value===plan); }).join("");
   });
 }
 
