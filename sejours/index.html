@@ -296,7 +296,10 @@ a{color:inherit; text-decoration:none;}
    (au contenu), alignés à gauche par défaut (.cover-cta, display:flex sans
    justify-content ni width). */
 .btn.primary{background:var(--yellow); color:var(--sauge-deep);}
-.btn.ghost-dark{background:rgba(245,240,229,0.14); color:var(--cream); border:1.5px solid rgba(245,240,229,.4);}
+/* Même verre dépoli que les pastilles du haut de la carte (.save-btn/
+   .share-btn/.pill-badge) — retour utilisateur : "fais le même style de
+   bouton pour Voir plus que ceux plus haut avec le flou". */
+.btn.ghost-dark{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; border:1px solid rgba(255,255,255,.25);}
 .price-tag b{font-size:15px;}
 
 /* ---------- quick request inline panel ---------- */

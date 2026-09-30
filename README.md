@@ -1047,6 +1047,14 @@ Retour utilisateur : « fais l'encart moins large et du coup fais en sorte que l
 
 **Testé** (Playwright, capture d'écran) : les deux boutons confirmés à leur largeur de contenu (188px + 90px, contre ~354px pleine largeur avant), alignés à gauche de la carte plutôt qu'étirés. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### "Voir plus" en verre dépoli, comme les pastilles du haut
+
+Retour utilisateur : « fais le même style de bouton pour Voir plus que ceux plus haut avec le flou. »
+
+`.btn.ghost-dark` reprend exactement le traitement déjà utilisé par `.save-btn`/`.share-btn`/`.pill-badge` (cœur, partage, km, prix/nuit) : fond `rgba(20,26,20,.4)`, `backdrop-filter:blur(6px)`, bordure `1px solid rgba(255,255,255,.25)`, texte blanc — plutôt que son ancien style (fond crème très transparent, bordure 1.5px, pas de flou), qui détonnait avec le reste des éléments posés sur la photo.
+
+**Testé** (Playwright) : fond/flou/bordure/couleur du bouton confirmés identiques à ceux mesurés sur les pastilles existantes. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
