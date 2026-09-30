@@ -8348,6 +8348,38 @@ function renderWeek(){
 
   h+=`<div class="vnav-now-row">${!isCurrentWeek?`<button class="vnav-now-btn" onclick="thisWeek()">Cette semaine</button>`:''}</div>`;
 
+  // Résumé "Aujourd'hui" — voir .wbrief. Placé avant les encarts verts
+  // (semaine dernière : sous le volet Événements) pour donner le repère
+  // qualitatif avant les chiffres. Seulement si la semaine affichée contient
+  // le jour courant (sinon "aujourd'hui" n'aurait pas de sens ici, voir
+  // weekPrefillDate plus bas pour la même vérification). Omet les catégories
+  // à zéro plutôt que de dire "0 départs" ; sur une journée sans rien de
+  // prévu, un mot rassurant plutôt que de faire disparaître la cartouche
+  // (elle resterait affichée les autres jours — sa disparition ponctuelle
+  // ressemblerait à un bug plutôt qu'à une vraie absence de tâches).
+  if(today>=S.wStart&&today<wEnd){
+    const tArrs=S.bookings.filter(b=>b.checkIn===today).length;
+    const tDeps=S.bookings.filter(b=>b.checkOut===today).length;
+    const tDiners=S.bookings.filter(b=>activeOn(b,today)&&b.dinnerNights&&b.dinnerNights[today])
+        .reduce((s,b)=>s+(b.nbPersons||2),0)
+      +((S.extDiners&&S.extDiners[today])||[]).filter(e=>e.dinner!==false)
+        .reduce((s,e)=>s+(e.count||1),0);
+    const briefParts=[];
+    if(tArrs>0)briefParts.push(`${tArrs} arrivée${tArrs>1?'s':''} à préparer`);
+    if(tDeps>0)briefParts.push(`${tDeps} départ${tDeps>1?'s':''} à facturer`);
+    if(tDiners>0)briefParts.push(`${tDiners} dîner${tDiners>1?'s':''} à prévoir`);
+    let briefMsg;
+    if(!briefParts.length){
+      briefMsg='Journée calme aujourd\'hui : aucune arrivée, départ ni dîner à prévoir.';
+    }else if(briefParts.length===1){
+      briefMsg=`Aujourd'hui, vous avez ${briefParts[0]}.`;
+    }else{
+      const last=briefParts.pop();
+      briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
+    }
+    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+  }
+
   h+=`<div class="week-summary">
     <div class="wsm-total"><div class="wsm-val">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
     <div class="wsm-row">
@@ -8426,37 +8458,6 @@ function renderWeek(){
     </div>
     <div class="tsec-body">${weekEvs.length?weekEvs.map(evCard).join(''):'<div class="tsec-empty">Aucun</div>'}${weekEvAddBtn}</div>
   </div>`;
-
-  // Résumé "Aujourd'hui" — voir .wbrief. Juste sous le volet Événements.
-  // Seulement si la semaine affichée contient le jour courant (sinon
-  // "aujourd'hui" n'aurait pas de sens ici, voir weekPrefillDate ci-dessus
-  // pour la même vérification). Omet les catégories à zéro plutôt que de
-  // dire "0 départs" ; sur une journée sans rien de prévu, un mot rassurant
-  // plutôt que de faire disparaître la cartouche (elle resterait affichée
-  // les autres jours — sa disparition ponctuelle ressemblerait à un bug
-  // plutôt qu'à une vraie absence de tâches).
-  if(today>=S.wStart&&today<wEnd){
-    const tArrs=S.bookings.filter(b=>b.checkIn===today).length;
-    const tDeps=S.bookings.filter(b=>b.checkOut===today).length;
-    const tDiners=S.bookings.filter(b=>activeOn(b,today)&&b.dinnerNights&&b.dinnerNights[today])
-        .reduce((s,b)=>s+(b.nbPersons||2),0)
-      +((S.extDiners&&S.extDiners[today])||[]).filter(e=>e.dinner!==false)
-        .reduce((s,e)=>s+(e.count||1),0);
-    const briefParts=[];
-    if(tArrs>0)briefParts.push(`${tArrs} arrivée${tArrs>1?'s':''} à préparer`);
-    if(tDeps>0)briefParts.push(`${tDeps} départ${tDeps>1?'s':''} à facturer`);
-    if(tDiners>0)briefParts.push(`${tDiners} dîner${tDiners>1?'s':''} à prévoir`);
-    let briefMsg;
-    if(!briefParts.length){
-      briefMsg='Journée calme aujourd\'hui : aucune arrivée, départ ni dîner à prévoir.';
-    }else if(briefParts.length===1){
-      briefMsg=`Aujourd'hui, vous avez ${briefParts[0]}.`;
-    }else{
-      const last=briefParts.pop();
-      briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
-    }
-    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
-  }
 
   for(let i=0;i<7;i++){
     const ds=addDays(S.wStart,i);
@@ -8962,6 +8963,44 @@ function renderMonth(){
   </div>`;
   h+=`<div class="vnav-now-row">${monthDiff!==0?`<button class="vnav-now-btn" onclick="thisMonth()">Ce mois-ci</button>`:''}</div>`;
 
+  // Résumé assistant — placé avant les encarts verts pour donner le repère
+  // qualitatif avant les chiffres. Pas l'équivalent littéral du "Aujourd'hui,
+  // vous avez…" de la vue Semaine (une liste d'arrivées/départs à venir avait
+  // peu d'intérêt ici, déjà couverte par Jour/Semaine, et cette vue parle
+  // surtout rentabilité) : un repère de comparaison, où ce mois se situe
+  // par revenus totaux face aux autres mois suivis (voir monthRevenueRank)
+  // — plus utile pour se situer que pour lister des tâches. N'a de sens que
+  // pour un mois déjà entamé (mois en cours ou passé) : un mois entièrement
+  // futur n'a pas encore assez de réservations pour se comparer aux autres.
+  // Absent si l'historique est trop court (voir monthRevenueRank).
+  if(monthDiff<=0){
+    const cmp=monthRevenueRank(y,m);
+    if(cmp){
+      const{rank,total,rev,avg,reboundPct}=cmp;
+      const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
+      const diffStr=diffPct==null?'':diffPct>=0?` — ${diffPct}% au-dessus de votre moyenne mensuelle`:` — ${Math.abs(diffPct)}% en dessous de votre moyenne mensuelle`;
+      const revStr=rev>0?rev.toLocaleString('fr-FR')+' €':'—';
+      let briefMsg;
+      if(rank===1){
+        briefMsg=`🏆 Meilleur mois enregistré, avec ${revStr} de revenus (sur ${total} mois suivis)${diffStr}.`;
+      }else if(rank<=3){
+        briefMsg=`Ce mois se classe ${rank}ᵉ meilleur mois sur ${total} suivis, avec ${revStr}${diffStr}.`;
+      }else if(total>5&&rank>total-3){
+        // Reste encourageant sur un mois calme (voir reboundPct ci-dessus) :
+        // un vrai chiffre tiré de l'historique quand il y en a assez pour
+        // être parlant, sinon une formule plus générale mais toujours
+        // positive plutôt que de s'arrêter sur le constat d'un mois calme.
+        const reboundClause=(reboundPct!=null&&reboundPct>=50)
+          ?` Bonne nouvelle : sur votre historique, un mois calme est suivi d'un mois meilleur ${reboundPct}% du temps.`
+          :` Statistiquement, les mois calmes sont souvent suivis d'un rebond.`;
+        briefMsg=`Un des mois les plus calmes enregistrés (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}.${reboundClause}`;
+      }else{
+        briefMsg=`Ce mois se classe ${rank}ᵉ sur ${total} mois suivis, avec ${revStr}${diffStr}.`;
+      }
+      h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+    }
+  }
+
   // Revenue breakdown — total chapeau + détail par catégorie. Reste global
   // (toutes structures confondues), comme "Activité globale" en vue Année :
   // le détail par structure vient ensuite, dans les volets ci-dessous.
@@ -9035,43 +9074,6 @@ function renderMonth(){
     </div>
     <div class="tsec-body">${monthEvs.length?monthEvs.map(evCardHTML).join(''):'<div class="tsec-empty">Aucun</div>'}${monthEvAddBtn}</div>
   </div>`;
-
-  // Résumé assistant — pas l'équivalent littéral du "Aujourd'hui, vous
-  // avez…" de la vue Semaine (une liste d'arrivées/départs à venir avait
-  // peu d'intérêt ici, déjà couverte par Jour/Semaine, et cette vue parle
-  // surtout rentabilité) : un repère de comparaison, où ce mois se situe
-  // par revenus totaux face aux autres mois suivis (voir monthRevenueRank)
-  // — plus utile pour se situer que pour lister des tâches. N'a de sens que
-  // pour un mois déjà entamé (mois en cours ou passé) : un mois entièrement
-  // futur n'a pas encore assez de réservations pour se comparer aux autres.
-  // Absent si l'historique est trop court (voir monthRevenueRank).
-  if(monthDiff<=0){
-    const cmp=monthRevenueRank(y,m);
-    if(cmp){
-      const{rank,total,rev,avg,reboundPct}=cmp;
-      const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
-      const diffStr=diffPct==null?'':diffPct>=0?` — ${diffPct}% au-dessus de votre moyenne mensuelle`:` — ${Math.abs(diffPct)}% en dessous de votre moyenne mensuelle`;
-      const revStr=rev>0?rev.toLocaleString('fr-FR')+' €':'—';
-      let briefMsg;
-      if(rank===1){
-        briefMsg=`🏆 Meilleur mois enregistré, avec ${revStr} de revenus (sur ${total} mois suivis)${diffStr}.`;
-      }else if(rank<=3){
-        briefMsg=`Ce mois se classe ${rank}ᵉ meilleur mois sur ${total} suivis, avec ${revStr}${diffStr}.`;
-      }else if(total>5&&rank>total-3){
-        // Reste encourageant sur un mois calme (voir reboundPct ci-dessus) :
-        // un vrai chiffre tiré de l'historique quand il y en a assez pour
-        // être parlant, sinon une formule plus générale mais toujours
-        // positive plutôt que de s'arrêter sur le constat d'un mois calme.
-        const reboundClause=(reboundPct!=null&&reboundPct>=50)
-          ?` Bonne nouvelle : sur votre historique, un mois calme est suivi d'un mois meilleur ${reboundPct}% du temps.`
-          :` Statistiquement, les mois calmes sont souvent suivis d'un rebond.`;
-        briefMsg=`Un des mois les plus calmes enregistrés (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}.${reboundClause}`;
-      }else{
-        briefMsg=`Ce mois se classe ${rank}ᵉ sur ${total} mois suivis, avec ${revStr}${diffStr}.`;
-      }
-      h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
-    }
-  }
 
   // ── Classement par structure — même principe que la vue Année
   // (groupCard/yr-group) : un volet repliable par structure, avec ses
@@ -9886,6 +9888,8 @@ function renderYear(){
     const elapsedCap=totalRooms*daysBetween(yStart,elapsedEnd);
     const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
     const yearCharges=variableChargesForMonth(yStart,yEnd).total;
+    const netMargin=realCA-yearCharges;
+    const netMarginPct=realCA>0?Math.round(netMargin/realCA*100):0;
     return`<div class="yr-group yr-total">
       <div class="yr-stats">
         <div class="mstat-card mstat-rev">
@@ -9907,6 +9911,11 @@ function renderYear(){
           <div class="mstat-val">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
           <div class="mstat-sub">charges réelles</div>
           <div class="mstat-detail">relevé bancaire</div>
+        </div>
+        <div class="mstat-card mstat-rev" style="grid-column:1/-1">
+          <div class="mstat-val">${Math.round(netMargin).toLocaleString('fr-FR')} € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
+          <div class="mstat-sub">marge nette</div>
+          <div class="mstat-detail">CA réalisé − charges</div>
         </div>
       </div>
     </div>`;
@@ -9994,8 +10003,8 @@ function renderYear(){
       <button class="vnav-btn" onclick="chYear(1);renderYear()">${chevR}</button>
     </div>
     <div class="vnav-now-row">${year!==todayYear?`<button class="vnav-now-btn" onclick="thisYear()">Cette année</button>`:''}</div>
-    ${globalHTML}
     ${yearBriefHTML}
+    ${globalHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
   </div>`;
