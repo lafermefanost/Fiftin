@@ -500,7 +500,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .crop-zoom-row span{font-size:15px; color:var(--cream); flex-shrink:0;}
 .crop-hint{font-size:12px; color:rgba(239,238,234,.55); text-align:center; margin:0; max-width:300px;}
 
-/* ---------- aperçu amélioration photo (3 niveaux, comparaison en direct) ----------
+/* ---------- aperçu amélioration photo (3 styles + intensité, comparaison en direct) ----------
    Retour utilisateur : "j'aimerais juste un aperçu plus grand de la photo pour
    appliquer ou non le highlight [...] peux-tu prévoir 3 niveaux de highlight
    différents" — même habillage plein écran que .crop-overlay (cohérence
@@ -512,17 +512,28 @@ textarea.text-input{resize:vertical; min-height:80px;}
    élargi — tous jugés trop coloriques par rapport à l'original ; les noms
    "Léger/Moyen/Fort" (une échelle d'intensité) ont alors été remplacés par
    "Naturel/Lumineux/Vif" (3 styles distincts), seul "Vif" touchant
-   volontairement la couleur. Défaut automatique à l'ajout : "Lumineux" (voir
-   enhancePhotoEntry()). */
+   volontairement la couleur. Puis 3e retour : "permettre une sorte
+   d'opacité pour limiter l'effet" — #enhance-img-base (la photo d'origine,
+   toujours visible) et #enhance-img-over (le style choisi, plein régime)
+   sont désormais deux <img> EMPILÉES dans le même cadre, #enhance-img-over
+   au-dessus avec une opacité CSS pilotée par #enhance-intensity : glisser
+   le curseur mélange les deux en direct, sans recalculer l'algorithme
+   d'amélioration à chaque geste (coûteux, boucle de pixels par photo) —
+   seul un vrai fichier fusionné (canvas, voir blendEnhanceFiles()) est
+   recalculé, et seulement au relâchement du curseur ("change", pas
+   "input"). Défaut automatique à l'ajout : "Lumineux" à pleine intensité
+   (voir enhancePhotoEntry()). */
 .enhance-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
 .enhance-head{width:100%; max-width:340px; display:flex; align-items:center; justify-content:flex-end;}
 .enhance-close{background:none; border:none; font-size:26px; line-height:1; color:var(--cream); padding:4px 8px;}
 .enhance-viewport{position:relative; width:min(78vw,300px); aspect-ratio:4/5; border-radius:16px; overflow:hidden; background:var(--sauge-deep);}
-.enhance-viewport img{width:100%; height:100%; object-fit:cover; display:block;}
-.enhance-spinner{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(20,26,20,.45); color:var(--cream); font-size:12px; font-weight:700;}
+.enhance-viewport img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block;}
+.enhance-spinner{position:absolute; inset:0; z-index:1; display:none; align-items:center; justify-content:center; background:rgba(20,26,20,.45); color:var(--cream); font-size:12px; font-weight:700;}
 .enhance-levels{width:100%; max-width:340px; display:flex; gap:6px;}
 .enhance-level-btn{flex:1; background:rgba(239,238,234,.12); border:none; border-radius:12px; color:var(--cream); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; padding:10px 4px;}
 .enhance-level-btn.active{background:var(--sauge-mid); color:#fff;}
+.enhance-intensity-row{width:100%; max-width:340px; display:flex; align-items:center; gap:10px;}
+.enhance-intensity-row span{font-size:11px; color:rgba(239,238,234,.6); flex-shrink:0;}
 .enhance-hint{font-size:12px; color:rgba(239,238,234,.55); text-align:center; margin:0; max-width:300px;}
 
 /* ---------- detail sheet ---------- */
@@ -1479,7 +1490,8 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
       <button type="button" class="enhance-close" id="enhance-close" aria-label="Fermer">&times;</button>
     </div>
     <div class="enhance-viewport" id="enhance-viewport">
-      <img id="enhance-img" alt="">
+      <img id="enhance-img-base" alt="">
+      <img id="enhance-img-over" alt="">
       <div class="enhance-spinner" id="enhance-spinner">Calcul…</div>
     </div>
     <div class="enhance-levels" id="enhance-levels">
@@ -1487,6 +1499,11 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
       <button type="button" class="enhance-level-btn" data-level="naturel">Naturel</button>
       <button type="button" class="enhance-level-btn" data-level="lumineux">Lumineux</button>
       <button type="button" class="enhance-level-btn" data-level="vif">Vif</button>
+    </div>
+    <div class="enhance-intensity-row" id="enhance-intensity-row" style="display:none">
+      <span>Léger</span>
+      <input type="range" id="enhance-intensity" min="0" max="100" value="100">
+      <span>Plein</span>
     </div>
     <p class="enhance-hint">Touchez un niveau pour comparer — se ferme tout seul sur votre choix</p>
   </div>
@@ -5076,6 +5093,7 @@ function enhancePhotoEntry(entry, rerender, level){
   if(entry.enhancedFiles && entry.enhancedFiles[level]){
     entry.file = entry.enhancedFiles[level];
     entry.level = level;
+    entry.intensity = 1;
     rerender();
     return;
   }
@@ -5087,41 +5105,104 @@ function enhancePhotoEntry(entry, rerender, level){
     entry.enhancedFiles[level] = enhanced;
     entry.file = enhanced;
     entry.level = level;
+    entry.intensity = 1;
     rerender();
   });
 }
-/* Aperçu plein écran pour comparer les 4 versions (Original/Naturel/
+/* Mélange original + version pleine puissance d'un style, poids
+   `intensity` (0 à 1) — retour utilisateur : "permettre une sorte
+   d'opacité pour limiter l'effet". Composition canvas (ctx.globalAlpha),
+   mathématiquement équivalent à une interpolation linéaire par pixel entre
+   les deux fichiers, mais fait par le navigateur plutôt qu'en rejouant
+   autoEnhanceFile() (sa boucle de pixels + histogramme) à chaque geste sur
+   le curseur — nettement moins coûteux. Les deux fichiers viennent
+   toujours de la même photo déjà recadrée, mêmes dimensions garanties. */
+function blendEnhanceFiles(baseFile, overlayFile, intensity){
+  return new Promise(function(resolve){
+    var imgBase = new Image(), imgOver = new Image();
+    var urlBase = URL.createObjectURL(baseFile), urlOver = URL.createObjectURL(overlayFile);
+    var ready = 0;
+    var onErr = function(){ URL.revokeObjectURL(urlBase); URL.revokeObjectURL(urlOver); resolve(null); };
+    var finish = function(){
+      URL.revokeObjectURL(urlBase); URL.revokeObjectURL(urlOver);
+      var w = imgBase.naturalWidth, h = imgBase.naturalHeight;
+      if(!w || !h){ resolve(null); return; }
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ resolve(null); return; }
+      ctx.drawImage(imgBase, 0, 0, w, h);
+      ctx.globalAlpha = intensity;
+      ctx.drawImage(imgOver, 0, 0, w, h);
+      canvas.toBlob(function(blob){
+        if(!blob){ resolve(null); return; }
+        var name = baseFile.name.replace(/\.[^.\/]+$/, "")+"-ameliore.jpg";
+        resolve(new File([blob], name, {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    imgBase.onload = function(){ ready++; if(ready===2) finish(); };
+    imgOver.onload = function(){ ready++; if(ready===2) finish(); };
+    imgBase.onerror = onErr; imgOver.onerror = onErr;
+    imgBase.src = urlBase; imgOver.src = urlOver;
+  });
+}
+/* Aperçu plein écran pour comparer les 4 styles (Original/Naturel/
    Lumineux/Vif) d'une même photo en grand, plutôt que de deviner sur la
-   vignette 64×64 de la ligne. Chaque niveau touché s'applique
-   immédiatement à l'entrée (entry.file/level) ET à l'image affichée : pas
-   d'étape de validation séparée, fermer l'aperçu garde simplement le
-   dernier niveau affiché. */
+   vignette 64×64 de la ligne — plus un curseur d'intensité par style (voir
+   .enhance-overlay plus haut pour le détail du mécanisme base/overlay).
+   Chaque choix s'applique immédiatement à l'entrée (entry.file/level/
+   intensity) ET à l'image affichée : pas d'étape de validation séparée,
+   fermer l'aperçu garde simplement le dernier réglage affiché. */
 function openEnhancePreview(entry, rerenderList){
   var overlay = document.getElementById("enhance-overlay");
-  var imgEl = document.getElementById("enhance-img");
+  var baseImg = document.getElementById("enhance-img-base");
+  var overImg = document.getElementById("enhance-img-over");
   var spinner = document.getElementById("enhance-spinner");
   var levelBtns = overlay.querySelectorAll(".enhance-level-btn");
+  var intensityRow = document.getElementById("enhance-intensity-row");
+  var intensitySlider = document.getElementById("enhance-intensity");
   if(!entry.originalFile) entry.originalFile = entry.file;
-  var currentUrl = null;
-  var setImg = function(file){
-    if(currentUrl) URL.revokeObjectURL(currentUrl);
-    currentUrl = URL.createObjectURL(file);
-    imgEl.src = currentUrl;
+  var baseUrl = null, overUrl = null;
+  var setBase = function(file){
+    if(baseUrl) URL.revokeObjectURL(baseUrl);
+    baseUrl = URL.createObjectURL(file);
+    baseImg.src = baseUrl;
+  };
+  var setOverlay = function(file, opacity){
+    if(overUrl) URL.revokeObjectURL(overUrl);
+    overUrl = file ? URL.createObjectURL(file) : null;
+    overImg.src = overUrl || "";
+    overImg.style.opacity = opacity;
   };
   var setActive = function(level){
     Array.prototype.forEach.call(levelBtns, function(b){
       b.classList.toggle("active", b.getAttribute("data-level")===level);
     });
   };
+  var commitBlend = function(level, intensity){
+    if(intensity>=1){ entry.file = entry.enhancedFiles[level]; entry.intensity = 1; rerenderList(); return; }
+    if(intensity<=0){ entry.file = entry.originalFile; entry.intensity = 0; rerenderList(); return; }
+    spinner.style.display = "flex";
+    blendEnhanceFiles(entry.originalFile, entry.enhancedFiles[level], intensity).then(function(blended){
+      spinner.style.display = "none";
+      if(!blended) return; // échec silencieux, même logique que le reste de cet écran
+      entry.file = blended; entry.intensity = intensity;
+      rerenderList();
+    });
+  };
   var showLevel = function(level){
     if(level==="original"){
-      entry.file = entry.originalFile; entry.level = "original";
-      setImg(entry.originalFile); setActive(level); rerenderList();
+      entry.file = entry.originalFile; entry.level = "original"; entry.intensity = null;
+      setOverlay(null, 0); intensityRow.style.display = "none";
+      setActive(level); rerenderList();
       return;
     }
+    intensityRow.style.display = "flex";
     if(entry.enhancedFiles && entry.enhancedFiles[level]){
-      entry.file = entry.enhancedFiles[level]; entry.level = level;
-      setImg(entry.file); setActive(level); rerenderList();
+      entry.level = level; entry.intensity = 1; intensitySlider.value = 100;
+      setOverlay(entry.enhancedFiles[level], 1);
+      entry.file = entry.enhancedFiles[level];
+      setActive(level); rerenderList();
       return;
     }
     spinner.style.display = "flex";
@@ -5130,23 +5211,46 @@ function openEnhancePreview(entry, rerenderList){
       if(!enhanced) return; // échec silencieux, voir le commentaire plus haut sur les URL Storage/canvas "tainted"
       entry.enhancedFiles = entry.enhancedFiles || {};
       entry.enhancedFiles[level] = enhanced;
-      entry.file = enhanced; entry.level = level;
-      setImg(enhanced); setActive(level); rerenderList();
+      entry.level = level; entry.intensity = 1; intensitySlider.value = 100;
+      setOverlay(enhanced, 1);
+      entry.file = enhanced;
+      setActive(level); rerenderList();
     });
   };
   Array.prototype.forEach.call(levelBtns, function(b){
     b.onclick = function(){ showLevel(b.getAttribute("data-level")); };
   });
+  // "input" (pendant le glissement) : juste l'opacité CSS, instantané, pas de recalcul.
+  intensitySlider.oninput = function(){
+    if(!entry.level || entry.level==="original") return;
+    overImg.style.opacity = Number(intensitySlider.value)/100;
+  };
+  // "change" (au relâchement) : seul moment où le fichier fusionné réel est recalculé.
+  intensitySlider.onchange = function(){
+    if(!entry.level || entry.level==="original") return;
+    if(!entry.enhancedFiles || !entry.enhancedFiles[entry.level]) return; // calcul du style encore en cours, ignorer
+    commitBlend(entry.level, Number(intensitySlider.value)/100);
+  };
   var close = function(){
     overlay.style.display = "none";
-    if(currentUrl) URL.revokeObjectURL(currentUrl);
+    if(baseUrl) URL.revokeObjectURL(baseUrl);
+    if(overUrl) URL.revokeObjectURL(overUrl);
     overlay.removeEventListener("click", onBackdrop);
   };
   var onBackdrop = function(e){ if(e.target===overlay) close(); };
   document.getElementById("enhance-close").onclick = close;
   overlay.addEventListener("click", onBackdrop);
 
-  setImg(entry.file);
+  setBase(entry.originalFile);
+  if(entry.level && entry.level!=="original" && entry.enhancedFiles && entry.enhancedFiles[entry.level]){
+    var startIntensity = entry.intensity!=null ? entry.intensity : 1;
+    intensityRow.style.display = "flex";
+    intensitySlider.value = Math.round(startIntensity*100);
+    setOverlay(entry.enhancedFiles[entry.level], startIntensity);
+  } else {
+    setOverlay(null, 0);
+    intensityRow.style.display = "none";
+  }
   setActive(entry.level || "lumineux");
   overlay.style.display = "flex";
 }

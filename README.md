@@ -1225,6 +1225,16 @@ Renommage complet `leger/moyen/fort` → `naturel/lumineux/vif` dans tout le cod
 
 **Testé** : `shot_enhance_levels_visual.py` remis à jour avec les nouveaux noms et rejoué — confirmé visuellement sur la même photo dégradée que Naturel et Lumineux reproduisent exactement la teinte de l'original (seule la luminosité change entre les deux), et que Vif produit un résultat clairement différent (fort contraste, teinte recorrigée). Suite de régression complète rejouée, aucune casse, zéro erreur JS.
 
+### Curseur d'intensité par style (mélange avec l'original)
+
+Retour utilisateur : « Sur chaque filtre peux-tu juste permettre une sorte d'opacité pour limiter l'effet ? »
+
+`entry.enhancedFiles[level]` reste le fichier "pleine puissance" pour chaque style (calculé une seule fois par `autoEnhanceFile()`, comme avant). Nouvelle fonction `blendEnhanceFiles(baseFile, overlayFile, intensity)` : compose les deux fichiers sur un `<canvas>` via `ctx.globalAlpha`, mathématiquement équivalent à une interpolation linéaire par pixel entre l'original et la version pleine puissance — mais fait par le navigateur plutôt qu'en rejouant la boucle de pixels + histogramme de `autoEnhanceFile()` à chaque geste sur le curseur, nettement moins coûteux.
+
+Dans `openEnhancePreview()`, l'unique `<img>` devient deux images empilées dans le même cadre : `#enhance-img-base` (l'original, fixe) et `#enhance-img-over` (le style choisi, pleine puissance) posée dessus avec une opacité CSS pilotée par le nouveau curseur `#enhance-intensity`. Glisser le curseur ("input") ne fait QUE changer cette opacité CSS — instantané, aucun recalcul. Le relâchement ("change") est le seul moment où `blendEnhanceFiles()` tourne réellement pour produire le fichier fusionné qui sera envoyé (`entry.file`) ; à 100 % ou 0 % le fichier déjà en cache (pleine puissance ou original) est réutilisé tel quel, sans repasser par le canvas. `entry.intensity` (0 à 1) est mémorisé par photo et restauré si l'hôte rouvre l'aperçu.
+
+**Testé** (Playwright, nouveau script `shot_enhance_intensity.py`) : curseur à 100 % par défaut à l'ouverture ; glissement à 40 % confirmé mettant à jour l'opacité CSS en direct sans erreur ; relâchement confirmé sans erreur JS pendant le recalcul ; fermeture puis réouverture confirmée restaurant le curseur à 40 % (pas de retour à 100 %) ; descente à 0 % confirmée sans erreur ; sélection "Original" confirmée masquant le curseur. Capture visuelle à 100/50/15 % confirmant une transition continue et lisible vers l'original. Suite de régression complète rejouée, aucune casse, zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
