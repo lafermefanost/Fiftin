@@ -9910,13 +9910,8 @@ function renderYear(){
           <div class="mstat-sub">charges réelles</div>
           <div class="mstat-detail">relevé bancaire</div>
         </div>
-        <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${netMarginPct}%</div>
-          <div class="mstat-sub">marge nette</div>
-          <div class="mstat-detail">CA réalisé − charges</div>
-        </div>
-        <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(netMargin).toLocaleString('fr-FR')} €</div>
+        <div class="mstat-card mstat-rev" style="grid-column:1/-1">
+          <div class="mstat-val">${Math.round(netMargin).toLocaleString('fr-FR')} € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
           <div class="mstat-sub">marge nette</div>
           <div class="mstat-detail">CA réalisé − charges</div>
         </div>
