@@ -1141,6 +1141,14 @@ Retour utilisateur : « la typo ajouter une collection tu peux la faire comme av
 
 **Testé** (Playwright) : texte et typo confirmés dans les deux vues (`+ Ajouter une collection`, 14px/700 en liste) ; tuile grille confirmée sans SVG. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### "Ajouter une collection" (vue liste) : fond transparent, contour pointillé, comme la vue grille
+
+Retour utilisateur : « fais aussi comme la vue collection avec la carte transparente mais avec contour pointillé. »
+
+`.coll-add-row` gardait le fond blanc plein d'un vrai en-tête de volet depuis le "vrai clone d'encart" du tour précédent — repasse en fond transparent + contour pointillé (`1.5px dashed var(--sauge-light)`), même traitement que `.collection-tile-add` en vue grille, tout en gardant la même hauteur/largeur qu'un vrai en-tête. Sélecteur `.collection-detail-head.coll-add-row` (deux classes combinées, pas `.coll-add-row` seul) : `.collection-detail-head{background:#fff}` est déclarée plus loin dans la feuille de style et l'aurait sinon emporté à spécificité égale.
+
+**Testé** (Playwright) : fond confirmé transparent (`rgba(0,0,0,0)`), bordure confirmée `1px dashed`. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

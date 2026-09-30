@@ -909,19 +909,14 @@ body.detail-open nav.tabbar{z-index:220;}
    picto "+" séparé au-dessus du texte. */
 .collection-tile-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
   border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; text-align:center; padding:12px;}
-/* Vue liste (volets, voir collectionVoletHtml()) — après deux essais
-   (bandeau fin type en-tête, puis gabarit d'une ligne d'annonce), retour
-   utilisateur final, très précis : "un vrai clone d'un encart collection,
-   mais en mode ajouter une collection — même hauteur, même largeur que
-   l'encart Vacances d'été, et à droite les trois petits boutons en
-   pointillé comme s'ils existaient". Donc littéralement
-   .collection-detail-head réutilisée telle quelle (même fond blanc plein,
-   même padding/rayon, .collection-detail-title pour le texte) — plus de
-   contour pointillé sur tout l'encart ni de vignette : la seule
-   différence avec un vrai volet est le texte du titre et les trois
-   pastilles de droite, vides et en pointillé (.coll-add-ghost-btn),
-   plutôt que Renommer/Supprimer/Replier bien réels. */
-.coll-add-row{border:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
+/* Vue liste (volets, voir collectionVoletHtml()) — même hauteur/largeur
+   qu'un vrai en-tête de volet (.collection-detail-head réutilisée telle
+   quelle pour la mise en page/le texte) MAIS fond transparent + contour
+   pointillé plutôt que le fond blanc plein d'un vrai volet (retour
+   utilisateur : "fais aussi comme la vue collection, avec la carte
+   transparente mais avec contour pointillé") — même traitement que
+   .collection-tile-add en vue grille, juste au-dessus. */
+.collection-detail-head.coll-add-row{border:1.5px dashed var(--sauge-light); background:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
 /* Typo du titre "comme avant" (retour utilisateur), plus légère que
    .collection-detail-title de base (18px/800, poids d'un vrai nom de
    collection) — 14px/700, avec un "+" devant le texte (voir
