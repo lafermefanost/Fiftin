@@ -1213,6 +1213,18 @@ Refonte de `autoEnhanceFile()` autour d'un nouveau paramètre `stretch` (0 à 1)
 
 **Testé** : script dédié `shot_enhance_levels_visual.py` (nouveau, image de test 64×64 en dégradé continu plutôt qu'un aplat uni, pour que l'effet d'étirement soit réellement mesurable) capturant l'aperçu aux 4 niveaux — confirmé visuellement une vraie progression (léger proche de l'original avec un léger réchauffement, moyen nettement plus lumineux et coloré, fort en fort contraste noir/blanc). Suite de régression complète rejouée (y compris `shot_hostform_enhance_levels.py`), aucune casse, zéro erreur JS.
 
+### 3 vrais styles (Naturel/Lumineux/Vif) au lieu de 3 intensités du même traitement
+
+Retour utilisateur, encore : « N'as-tu pas d'autres presets plus variés à me proposer. C'est vraiment trop proche et ils changent tous la couleur de l'originale. »
+
+Root cause technique trouvée, pas juste un réglage de plus à ajuster : l'étirement d'histogramme de `autoEnhanceFile()` était calculé **par canal** (R, V, B séparément, chacun étiré vers 0-255 selon son propre histogramme) — c'est exactement la définition d'une correction automatique de balance des blancs. Même à `stretch` faible, ce mécanisme déplace toujours un peu la teinte d'origine : aucun des 3 niveaux n'était donc réellement neutre en couleur, quelle que soit la saturation affichée.
+
+Nouveau paramètre `cfg.perChannel` dans `ENHANCE_LEVELS`, avec une fonction `clipRange()` extraite pour les deux cas : `false` (Naturel, Lumineux) calcule un seul étirement sur la **luminance** (0,299R+0,587V+0,114B) et l'applique identiquement aux 3 canaux — les rapports R/V/B d'origine restent exactement les mêmes, donc aucun déplacement de teinte possible, mathématiquement, quel que soit `stretch`/`contrast`/`bright`. Combiné à `sat:1` (saturation inchangée), Naturel et Lumineux ne touchent **plus du tout** à la couleur : seuls exposition et contraste bougent. `perChannel:true` (Vif) garde l'ancien étirement par canal + saturation relevée (×1,45) — le seul des 3 pensé pour changer la couleur, assumé et nommé comme tel plutôt que présenté comme une simple "intensité" de plus.
+
+Renommage complet `leger/moyen/fort` → `naturel/lumineux/vif` dans tout le code (boutons, `entry.level`, `enhancePhotoEntry()`) pour que les noms reflètent des styles, pas une échelle. Défaut automatique à l'ajout passé de "moyen" à "lumineux" (`stretch:0.7, sat:1, contrast:0.90, bright:26` — un simple coup de clair/contraste, sans le moindre risque de teinte inattendue à l'insu de l'hôte).
+
+**Testé** : `shot_enhance_levels_visual.py` remis à jour avec les nouveaux noms et rejoué — confirmé visuellement sur la même photo dégradée que Naturel et Lumineux reproduisent exactement la teinte de l'original (seule la luminosité change entre les deux), et que Vif produit un résultat clairement différent (fort contraste, teinte recorrigée). Suite de régression complète rejouée, aucune casse, zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

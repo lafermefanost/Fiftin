@@ -503,15 +503,17 @@ textarea.text-input{resize:vertical; min-height:80px;}
 /* ---------- aperçu amélioration photo (3 niveaux, comparaison en direct) ----------
    Retour utilisateur : "j'aimerais juste un aperçu plus grand de la photo pour
    appliquer ou non le highlight [...] peux-tu prévoir 3 niveaux de highlight
-   différents [...] celui que tu as appliqué est fort en contraste" — même
-   habillage plein écran que .crop-overlay (cohérence visuelle, code éprouvé),
-   mais ici pas de recadrage : juste l'image en grand + 4 choix (Original/Léger/
-   Moyen/Fort) qui s'appliquent en direct sur cette même image, voir
-   openEnhancePreview(). Retour utilisateur suivant, sur cette 1ère version des
-   3 niveaux : "peux-tu faire 3 niveaux [...] bien différents en couleur,
-   contrastes et luminosité [...] là c'est un peu trop similaire" — écart entre
-   niveaux nettement élargi depuis (voir ENHANCE_LEVELS), défaut automatique
-   toujours sur "Moyen" (voir enhancePhotoEntry()). */
+   différents" — même habillage plein écran que .crop-overlay (cohérence
+   visuelle, code éprouvé), mais ici pas de recadrage : juste l'image en grand
+   + 4 choix (Original/Naturel/Lumineux/Vif) qui s'appliquent en direct sur
+   cette même image, voir openEnhancePreview(). Deux retours utilisateur
+   suivants ont fait évoluer ces 3 niveaux (voir le commentaire détaillé sur
+   ENHANCE_LEVELS) : d'abord jugés trop proches, puis — une fois l'écart
+   élargi — tous jugés trop coloriques par rapport à l'original ; les noms
+   "Léger/Moyen/Fort" (une échelle d'intensité) ont alors été remplacés par
+   "Naturel/Lumineux/Vif" (3 styles distincts), seul "Vif" touchant
+   volontairement la couleur. Défaut automatique à l'ajout : "Lumineux" (voir
+   enhancePhotoEntry()). */
 .enhance-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
 .enhance-head{width:100%; max-width:340px; display:flex; align-items:center; justify-content:flex-end;}
 .enhance-close{background:none; border:none; font-size:26px; line-height:1; color:var(--cream); padding:4px 8px;}
@@ -1482,9 +1484,9 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
     </div>
     <div class="enhance-levels" id="enhance-levels">
       <button type="button" class="enhance-level-btn" data-level="original">Original</button>
-      <button type="button" class="enhance-level-btn" data-level="leger">Léger</button>
-      <button type="button" class="enhance-level-btn" data-level="moyen">Moyen</button>
-      <button type="button" class="enhance-level-btn" data-level="fort">Fort</button>
+      <button type="button" class="enhance-level-btn" data-level="naturel">Naturel</button>
+      <button type="button" class="enhance-level-btn" data-level="lumineux">Lumineux</button>
+      <button type="button" class="enhance-level-btn" data-level="vif">Vif</button>
     </div>
     <p class="enhance-hint">Touchez un niveau pour comparer — se ferme tout seul sur votre choix</p>
   </div>
@@ -5040,7 +5042,7 @@ function renderHfHostPhotoPreview(){
    de Storage ne garantissent pas de permettre sans configuration CORS
    dédiée (canvas "tainted" sinon) — jamais vérifié en conditions réelles,
    donc jamais tenté ici. Ré-ajouter la photo (elle redevient "new") est le
-   contournement si besoin. entry.level ("original"/"leger"/"moyen"/"fort")
+   contournement si besoin. entry.level ("original"/"naturel"/"lumineux"/"vif")
    remplace l'ancien booléen entry.enhanced : le bouton "active" dès que
    level n'est pas "original", et n'ouvre plus qu'un aperçu en grand
    (openEnhancePreview()) au lieu de basculer directement au clic — voir ce
@@ -5062,13 +5064,13 @@ function photoListRowHtml(entry, i, total){
 }
 /* Calcule (si besoin) et applique un niveau d'amélioration donné à une
    entrée "new" — utilisé à la fois pour l'amélioration automatique à
-   l'ajout (niveau "moyen" par défaut, voir les deux points d'appel) et
+   l'ajout (niveau "lumineux" par défaut, voir les deux points d'appel) et
    depuis openEnhancePreview() quand l'hôte compare les niveaux. Idempotent
    par niveau : entry.enhancedFiles met en cache chaque niveau déjà calculé
-   (objet {leger:File, moyen:File, fort:File}), jamais recalculé deux fois
-   pour la même photo. */
+   (objet {naturel:File, lumineux:File, vif:File}), jamais recalculé deux
+   fois pour la même photo. */
 function enhancePhotoEntry(entry, rerender, level){
-  level = level || "moyen";
+  level = level || "lumineux";
   if(entry.busy) return;
   if(!entry.originalFile) entry.originalFile = entry.file;
   if(entry.enhancedFiles && entry.enhancedFiles[level]){
@@ -5088,14 +5090,12 @@ function enhancePhotoEntry(entry, rerender, level){
     rerender();
   });
 }
-/* Aperçu plein écran pour comparer les 4 versions (Original/Léger/Moyen/
-   Fort) d'une même photo en grand, plutôt que de deviner sur la vignette
-   64×64 de la ligne — retour utilisateur : "j'aimerais juste un aperçu plus
-   grand de la photo pour appliquer ou non le highlight [...] prévoir 3
-   niveaux [...] celui que tu as appliqué est fort en contraste". Chaque
-   niveau touché s'applique immédiatement à l'entrée (entry.file/level) ET
-   à l'image affichée : pas d'étape de validation séparée, fermer
-   l'aperçu garde simplement le dernier niveau affiché. */
+/* Aperçu plein écran pour comparer les 4 versions (Original/Naturel/
+   Lumineux/Vif) d'une même photo en grand, plutôt que de deviner sur la
+   vignette 64×64 de la ligne. Chaque niveau touché s'applique
+   immédiatement à l'entrée (entry.file/level) ET à l'image affichée : pas
+   d'étape de validation séparée, fermer l'aperçu garde simplement le
+   dernier niveau affiché. */
 function openEnhancePreview(entry, rerenderList){
   var overlay = document.getElementById("enhance-overlay");
   var imgEl = document.getElementById("enhance-img");
@@ -5147,7 +5147,7 @@ function openEnhancePreview(entry, rerenderList){
   overlay.addEventListener("click", onBackdrop);
 
   setImg(entry.file);
-  setActive(entry.level || "moyen");
+  setActive(entry.level || "lumineux");
   overlay.style.display = "flex";
 }
 /* Câblage commun Monter/Descendre/Améliorer/Supprimer, réutilisé pour la
@@ -5387,38 +5387,45 @@ function compressImageFile(file){
    téléphone en intérieur, mais n'invente rien qu'une vraie retouche plus
    poussée ne ferait mieux — présenté comme un bouton optionnel par photo,
    jamais appliqué automatiquement à l'insu de l'hôte. */
-/* 3 niveaux d'amélioration, franchement différenciés (retour utilisateur
-   après une 1ère version jugée trop proche d'un niveau à l'autre : "peux-tu
-   faire 3 niveaux de réglages bien différents en couleur, contrastes et
-   luminosité pour avoir un vrai choix, là c'est un peu trop similaire").
-   Chaque niveau agit sur les 3 axes nommés par l'utilisateur :
-     - couleur      -> sat (saturation, multiplicateur autour du gris)
-     - contrastes   -> contrast (écart autour du milieu 128) + stretch
-     - luminosité   -> bright (décalage additif, appliqué en dernier)
-   `stretch` (0 à 1) mérite une explication : un essai précédent faisait
-   varier seulement "clip" (le seuil d'ignorance de l'histogramme) d'un
-   niveau à l'autre, en gardant la même formule d'étirement pleine plage
-   pour les 3 — MAUVAISE IDÉE, détectée en testant sur une vraie photo
-   dégradée (pas juste les aplats unis des tests Playwright) : dès que clip
-   > 0, l'étirement pousse presque toujours vers 0-255 quasi complet même
-   au niveau le plus bas, ce qui rendait "léger" aussi extrême que "fort"
-   au lieu d'être un vrai premier palier. `stretch` mélange maintenant
-   explicitement entre AUCUN étirement (plage 0-255 inchangée, stretch:0 —
-   "léger" ne touche quasiment plus à la balance des tons, seulement
-   sat/contrast/bright très légers) et l'étirement complet basé sur
-   l'histogramme (stretch:1 — "fort"), avec "moyen" à mi-chemin. Le clip
-   servant à calculer la plage réelle (lo/hi) est désormais une seule
-   constante partagée (CLIP_PCT), inutile de la faire varier aussi
-   puisque `stretch` porte maintenant toute la progression d'intensité.
-   Défaut automatique à l'ajout : "moyen" (voir enhancePhotoEntry()). */
+/* 3 vrais styles, pas 3 intensités du même traitement (retour utilisateur,
+   2e itération : "ils changent tous la couleur de l'originale, c'est vraiment
+   trop proche"). Diagnostic technique du problème précédent : l'étirement
+   d'histogramme était calculé PAR CANAL (R, V, B indépendamment) — c'est
+   exactement la définition d'une balance des blancs automatique, donc même
+   à faible dose ça déplace la teinte d'origine, aucun des 3 niveaux
+   n'était donc neutre en couleur. `cfg.perChannel` distingue maintenant
+   deux modes :
+     - false ("Naturel"/"Lumineux") : un seul étirement calculé sur la
+       LUMINANCE (0.299R+0.587V+0.114B), appliqué identiquement aux 3
+       canaux — les rapports R/V/B d'origine sont conservés à l'identique,
+       donc aucun déplacement de teinte, quels que soient stretch/contrast/
+       bright. Combiné à sat:1 (aucun changement de saturation), ces deux
+       presets ne touchent mathématiquement PAS la couleur : seuls exposition
+       et contraste bougent.
+     - true ("Vif") : étirement par canal comme avant (corrige/accentue
+       activement la balance des couleurs) + saturation relevée — le seul
+       des 3 pensé pour changer la couleur, assumé et nommé comme tel.
+   `stretch` (0 à 1, mélange avec la plage neutre 0-255) toujours utile pour
+   éviter qu'un étirement, même neutre en couleur, ne pousse trop fort vers
+   le noir/blanc sur une photo au faible écart de tons. Défaut automatique
+   à l'ajout : "lumineux" (voir enhancePhotoEntry()) — un simple coup de
+   clair/contraste, sans risque de teinte inattendue à l'insu de l'hôte. */
 var CLIP_PCT = 0.004;
 var ENHANCE_LEVELS = {
-  leger: {stretch:0,    sat:1.05, contrast:1.03, bright:4},
-  moyen: {stretch:0.55, sat:1.22, contrast:1.14, bright:12},
-  fort:  {stretch:1,    sat:1.50, contrast:1.30, bright:24}
+  naturel:  {perChannel:false, stretch:0.4, sat:1.00, contrast:1.06, bright:6},
+  lumineux: {perChannel:false, stretch:0.7, sat:1.00, contrast:0.90, bright:26},
+  vif:      {perChannel:true,  stretch:1.0, sat:1.45, contrast:1.25, bright:8}
 };
+function clipRange(hist, clip){
+  var lo=0, hi=255, acc=0, v;
+  for(v=0;v<256;v++){ acc+=hist[v]; if(acc>clip){ lo=v; break; } }
+  acc=0;
+  for(v=255;v>=0;v--){ acc+=hist[v]; if(acc>clip){ hi=v; break; } }
+  if(hi<=lo){ lo=0; hi=255; } // image quasi unie (ciel, mur…) : pas d'étirement, plage déjà correcte
+  return [lo, hi];
+}
 function autoEnhanceFile(file, level){
-  var cfg = ENHANCE_LEVELS[level] || ENHANCE_LEVELS.moyen;
+  var cfg = ENHANCE_LEVELS[level] || ENHANCE_LEVELS.lumineux;
   return new Promise(function(resolve){
     var img = new Image();
     var url = URL.createObjectURL(file);
@@ -5435,16 +5442,20 @@ function autoEnhanceFile(file, level){
       try { imgData = ctx.getImageData(0, 0, w, h); }
       catch(e){ resolve(null); return; } // fichier local : ne devrait jamais être "tainted", filet de sécurité quand même
       var d = imgData.data;
-      var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
-      for(var i=0;i<d.length;i+=4){ histR[d[i]]++; histG[d[i+1]]++; histB[d[i+2]]++; }
       var clip = Math.round((d.length/4) * CLIP_PCT); // proportion de l'histogramme ignorée de chaque côté, fixe (voir cfg.stretch plus haut)
-      var lo = [0,0,0], hi = [255,255,255], hists = [histR,histG,histB];
+      var lo = [0,0,0], hi = [255,255,255];
+      if(cfg.perChannel){
+        var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
+        for(var i=0;i<d.length;i+=4){ histR[d[i]]++; histG[d[i+1]]++; histB[d[i+2]]++; }
+        var rR = clipRange(histR, clip), rG = clipRange(histG, clip), rB = clipRange(histB, clip);
+        lo = [rR[0], rG[0], rB[0]]; hi = [rR[1], rG[1], rB[1]];
+      } else {
+        var histL = new Uint32Array(256);
+        for(var j=0;j<d.length;j+=4){ histL[Math.round(0.299*d[j]+0.587*d[j+1]+0.114*d[j+2])]++; }
+        var rL = clipRange(histL, clip);
+        lo = [rL[0], rL[0], rL[0]]; hi = [rL[1], rL[1], rL[1]]; // même plage sur les 3 canaux -> aucun déplacement de teinte
+      }
       for(var c=0;c<3;c++){
-        var acc=0, v;
-        for(v=0;v<256;v++){ acc+=hists[c][v]; if(acc>clip){ lo[c]=v; break; } }
-        acc=0;
-        for(v=255;v>=0;v--){ acc+=hists[c][v]; if(acc>clip){ hi[c]=v; break; } }
-        if(hi[c]<=lo[c]){ lo[c]=0; hi[c]=255; } // image quasi unie (ciel, mur…) : pas d'étirement, plage déjà correcte
         // mélange avec la plage neutre 0-255 selon cfg.stretch : 0 = pas d'étirement, 1 = étirement complet
         lo[c] = lo[c]*cfg.stretch;
         hi[c] = 255 + (hi[c]-255)*cfg.stretch;
