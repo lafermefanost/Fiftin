@@ -288,7 +288,14 @@ a{color:inherit; text-decoration:none;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
   padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
-.btn.primary{background:var(--yellow); color:var(--sauge-deep); flex:1;}
+/* Retour utilisateur : "fais l'encart moins large, que les deux bulles ne
+   fassent pas toute la largeur de l'annonce" — flex:1 étirait Contact et
+   disponibilités pour remplir tout l'espace restant à côté de Voir plus,
+   ce qui donnait à la ligne l'air de courir sur toute la largeur de la
+   carte. Sans flex:1, les deux boutons reprennent leur largeur naturelle
+   (au contenu), alignés à gauche par défaut (.cover-cta, display:flex sans
+   justify-content ni width). */
+.btn.primary{background:var(--yellow); color:var(--sauge-deep);}
 .btn.ghost-dark{background:rgba(245,240,229,0.14); color:var(--cream); border:1.5px solid rgba(245,240,229,.4);}
 .price-tag b{font-size:15px;}
 

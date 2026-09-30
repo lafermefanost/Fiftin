@@ -1039,6 +1039,14 @@ Retour utilisateur : « utilise la même photo pour le mode voyageur » — apr�
 
 **Testé** (Playwright) : photo uploadée côté hôte confirmée immédiatement visible côté voyageur (même URL) ; avatar voyageur confirmé cliquable/éditable une fois connecté ; bouton Calendrier confirmé en `--sauge-mid`/texte blanc ; les trois actions confirmées sur la même ligne (mêmes coordonnées Y) à 390px, ~19px de marge restante. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Fil d'annonces : "Contact et disponibilités"/"Voir plus" plus étroits
+
+Retour utilisateur : « fais l'encart moins large et du coup fais en sorte que les deux bulles ne fassent pas toute la largeur de l'annonce. »
+
+`.btn.primary` ("Contact et disponibilités") avait `flex:1` : étiré pour remplir tout l'espace restant à côté de "Voir plus" dans `.cover-cta`, ce qui faisait courir la ligne des deux boutons sur toute la largeur de la carte. `flex:1` retiré — les deux boutons reprennent leur largeur naturelle (au contenu) et s'alignent à gauche par défaut.
+
+**Testé** (Playwright, capture d'écran) : les deux boutons confirmés à leur largeur de contenu (188px + 90px, contre ~354px pleine largeur avant), alignés à gauche de la carte plutôt qu'étirés. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
