@@ -61,12 +61,12 @@ function listingIndexPrice(listing) {
 // Même repli que listingThumbUrl() côté client (sejours/index.html) :
 // galerie de l'établissement, sinon la 1ère chambre qui en a une.
 function listingIndexThumb(listing) {
-  if (listing.galleryThumb && listing.galleryThumb.length) return listing.galleryThumb[0];
+  if (listing.galleryThumb && listing.galleryThumb.length && listing.galleryThumb[0]) return listing.galleryThumb[0];
   if (listing.gallery && listing.gallery.length) return listing.gallery[0];
   var units = listing.units || [];
   for (var i = 0; i < units.length; i++) {
     var u = units[i];
-    if (u.galleryThumb && u.galleryThumb.length) return u.galleryThumb[0];
+    if (u.galleryThumb && u.galleryThumb.length && u.galleryThumb[0]) return u.galleryThumb[0];
     if (u.gallery && u.gallery.length) return u.gallery[0];
   }
   return null;
