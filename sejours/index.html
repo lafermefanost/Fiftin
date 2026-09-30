@@ -507,10 +507,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
    habillage plein écran que .crop-overlay (cohérence visuelle, code éprouvé),
    mais ici pas de recadrage : juste l'image en grand + 4 choix (Original/Léger/
    Moyen/Fort) qui s'appliquent en direct sur cette même image, voir
-   openEnhancePreview(). Le réglage "Fort" reprend exactement les valeurs
-   utilisées jusqu'ici comme seul et unique niveau (voir ENHANCE_LEVELS) —
-   devenu trop appuyé une fois comparé aux deux autres, d'où le nouveau défaut
-   automatique sur "Moyen" (voir enhancePhotoEntry()). */
+   openEnhancePreview(). Retour utilisateur suivant, sur cette 1ère version des
+   3 niveaux : "peux-tu faire 3 niveaux [...] bien différents en couleur,
+   contrastes et luminosité [...] là c'est un peu trop similaire" — écart entre
+   niveaux nettement élargi depuis (voir ENHANCE_LEVELS), défaut automatique
+   toujours sur "Moyen" (voir enhancePhotoEntry()). */
 .enhance-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
 .enhance-head{width:100%; max-width:340px; display:flex; align-items:center; justify-content:flex-end;}
 .enhance-close{background:none; border:none; font-size:26px; line-height:1; color:var(--cream); padding:4px 8px;}
@@ -5386,19 +5387,35 @@ function compressImageFile(file){
    téléphone en intérieur, mais n'invente rien qu'une vraie retouche plus
    poussée ne ferait mieux — présenté comme un bouton optionnel par photo,
    jamais appliqué automatiquement à l'insu de l'hôte. */
-/* 3 niveaux d'amélioration (retour utilisateur : "peux-tu prévoir 3 niveaux
-   de highlight différents [...] celui que tu as appliqué est fort en
-   contraste") — "fort" reprend mot pour mot les réglages qui étaient
-   jusqu'ici la seule version existante, "léger"/"moyen" les atténuent.
-   Seul "clip" (seuil d'ignorance de l'histogramme) et "contrast" varient
-   beaucoup entre niveaux : c'est l'étirement de plage + le contraste final
-   qui donnaient l'effet jugé trop appuyé, la saturation était déjà
-   modérée. Nouveau défaut automatique à l'ajout : "moyen" (voir
-   enhancePhotoEntry()), plus "fort" comme avant. */
+/* 3 niveaux d'amélioration, franchement différenciés (retour utilisateur
+   après une 1ère version jugée trop proche d'un niveau à l'autre : "peux-tu
+   faire 3 niveaux de réglages bien différents en couleur, contrastes et
+   luminosité pour avoir un vrai choix, là c'est un peu trop similaire").
+   Chaque niveau agit sur les 3 axes nommés par l'utilisateur :
+     - couleur      -> sat (saturation, multiplicateur autour du gris)
+     - contrastes   -> contrast (écart autour du milieu 128) + stretch
+     - luminosité   -> bright (décalage additif, appliqué en dernier)
+   `stretch` (0 à 1) mérite une explication : un essai précédent faisait
+   varier seulement "clip" (le seuil d'ignorance de l'histogramme) d'un
+   niveau à l'autre, en gardant la même formule d'étirement pleine plage
+   pour les 3 — MAUVAISE IDÉE, détectée en testant sur une vraie photo
+   dégradée (pas juste les aplats unis des tests Playwright) : dès que clip
+   > 0, l'étirement pousse presque toujours vers 0-255 quasi complet même
+   au niveau le plus bas, ce qui rendait "léger" aussi extrême que "fort"
+   au lieu d'être un vrai premier palier. `stretch` mélange maintenant
+   explicitement entre AUCUN étirement (plage 0-255 inchangée, stretch:0 —
+   "léger" ne touche quasiment plus à la balance des tons, seulement
+   sat/contrast/bright très légers) et l'étirement complet basé sur
+   l'histogramme (stretch:1 — "fort"), avec "moyen" à mi-chemin. Le clip
+   servant à calculer la plage réelle (lo/hi) est désormais une seule
+   constante partagée (CLIP_PCT), inutile de la faire varier aussi
+   puisque `stretch` porte maintenant toute la progression d'intensité.
+   Défaut automatique à l'ajout : "moyen" (voir enhancePhotoEntry()). */
+var CLIP_PCT = 0.004;
 var ENHANCE_LEVELS = {
-  leger: {clip:0.002,  sat:1.05, contrast:1.015},
-  moyen: {clip:0.0028, sat:1.08, contrast:1.03},
-  fort:  {clip:0.004,  sat:1.12, contrast:1.05}
+  leger: {stretch:0,    sat:1.05, contrast:1.03, bright:4},
+  moyen: {stretch:0.55, sat:1.22, contrast:1.14, bright:12},
+  fort:  {stretch:1,    sat:1.50, contrast:1.30, bright:24}
 };
 function autoEnhanceFile(file, level){
   var cfg = ENHANCE_LEVELS[level] || ENHANCE_LEVELS.moyen;
@@ -5420,7 +5437,7 @@ function autoEnhanceFile(file, level){
       var d = imgData.data;
       var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
       for(var i=0;i<d.length;i+=4){ histR[d[i]]++; histG[d[i+1]]++; histB[d[i+2]]++; }
-      var clip = Math.round((d.length/4) * cfg.clip); // proportion de l'histogramme ignorée de chaque côté, selon le niveau
+      var clip = Math.round((d.length/4) * CLIP_PCT); // proportion de l'histogramme ignorée de chaque côté, fixe (voir cfg.stretch plus haut)
       var lo = [0,0,0], hi = [255,255,255], hists = [histR,histG,histB];
       for(var c=0;c<3;c++){
         var acc=0, v;
@@ -5428,14 +5445,17 @@ function autoEnhanceFile(file, level){
         acc=0;
         for(v=255;v>=0;v--){ acc+=hists[c][v]; if(acc>clip){ hi[c]=v; break; } }
         if(hi[c]<=lo[c]){ lo[c]=0; hi[c]=255; } // image quasi unie (ciel, mur…) : pas d'étirement, plage déjà correcte
+        // mélange avec la plage neutre 0-255 selon cfg.stretch : 0 = pas d'étirement, 1 = étirement complet
+        lo[c] = lo[c]*cfg.stretch;
+        hi[c] = 255 + (hi[c]-255)*cfg.stretch;
       }
-      var sat = cfg.sat, contrast = cfg.contrast, mid = 128;
+      var sat = cfg.sat, contrast = cfg.contrast, bright = cfg.bright, mid = 128;
       var rangeR = hi[0]-lo[0] || 1, rangeG = hi[1]-lo[1] || 1, rangeB = hi[2]-lo[2] || 1;
       for(var p=0;p<d.length;p+=4){
         var r = (d[p]-lo[0])*255/rangeR, g = (d[p+1]-lo[1])*255/rangeG, b = (d[p+2]-lo[2])*255/rangeB;
         var gray = 0.299*r+0.587*g+0.114*b;
         r = gray+(r-gray)*sat; g = gray+(g-gray)*sat; b = gray+(b-gray)*sat;
-        r = mid+(r-mid)*contrast; g = mid+(g-mid)*contrast; b = mid+(b-mid)*contrast;
+        r = mid+(r-mid)*contrast+bright; g = mid+(g-mid)*contrast+bright; b = mid+(b-mid)*contrast+bright;
         d[p] = r<0?0:r>255?255:r; d[p+1] = g<0?0:g>255?255:g; d[p+2] = b<0?0:b>255?255:b;
       }
       ctx.putImageData(imgData, 0, 0);

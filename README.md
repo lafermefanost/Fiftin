@@ -1203,6 +1203,16 @@ Cadrage volontairement écarté (décision utilisateur, « on ne devrait pas res
 
 **Testé** (Playwright, nouveau script `shot_hostform_enhance_levels.py`) : niveau "moyen" confirmé actif automatiquement après ajout ; ouverture de l'aperçu confirmée (4 boutons de niveau, "Moyen" pré-sélectionné) ; bascule vers "Fort" puis "Original" confirmée en direct sur les boutons de niveau ; fermeture sur "Original" confirmée répercutée sur le bouton de la ligne (inactif) ; réouverture confirmée repartant sur le dernier niveau choisi (pas system "Moyen" par défaut) ; nouveau choix "Léger" confirmé persistant après fermeture. `shot_hostform_photos.py` et `shot_hostform_autoenhance.py` mis à jour (un clic ouvre désormais l'aperçu au lieu de basculer directement). Suite de régression complète rejouée, aucune casse, zéro erreur JS.
 
+### Les 3 niveaux, cette fois vraiment différenciés
+
+Retour utilisateur sur la version ci-dessus : « Peux-tu faire 3 niveaux de réglages bien différents en couleur, contrastes et luminosité pour avoir un vrai choix, là c'est un peu trop similaire les 3 ajustements. »
+
+Le diagnostic en testant sur une vraie photo dégradée (pas les aplats de couleur unie des tests Playwright, insensibles à ce problème) : faire varier seulement `clip` (le seuil d'ignorance de l'histogramme) d'un niveau à l'autre était une mauvaise approche — dès que `clip` est non nul, l'étirement pousse presque toujours vers un 0-255 quasi complet, même au niveau le plus bas. Résultat : "léger" finissait presque aussi extrême que "fort", exactement le problème signalé.
+
+Refonte de `autoEnhanceFile()` autour d'un nouveau paramètre `stretch` (0 à 1) par niveau, qui mélange explicitement entre aucun étirement de la plage tonale (`stretch:0`, la photo garde sa balance d'origine) et l'étirement complet basé sur l'histogramme (`stretch:1`) — `leger:{stretch:0, sat:1.05, contrast:1.03, bright:4}`, `moyen:{stretch:0.55, sat:1.22, contrast:1.14, bright:12}`, `fort:{stretch:1, sat:1.50, contrast:1.30, bright:24}`. `clip` redevient une seule constante partagée (`CLIP_PCT`, 0,4 %) puisque c'est `stretch` qui porte maintenant toute la progression d'intensité entre les 3 niveaux, sur les 3 axes que l'utilisateur a nommés (couleur = saturation, contrastes = contrast+stretch, luminosité = bright).
+
+**Testé** : script dédié `shot_enhance_levels_visual.py` (nouveau, image de test 64×64 en dégradé continu plutôt qu'un aplat uni, pour que l'effet d'étirement soit réellement mesurable) capturant l'aperçu aux 4 niveaux — confirmé visuellement une vraie progression (léger proche de l'original avec un léger réchauffement, moyen nettement plus lumineux et coloré, fort en fort contraste noir/blanc). Suite de régression complète rejouée (y compris `shot_hostform_enhance_levels.py`), aucune casse, zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
