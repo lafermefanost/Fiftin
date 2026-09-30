@@ -409,43 +409,63 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
-/* Vue Location — calendrier annuel d'un seul logement : grille de 12
-   mini-calendriers (3 par ligne, voir monthBlock), chacun avec ses vraies
-   semaines lundi→dimanche en lignes — le format calendrier habituel,
-   plutôt qu'une bande de 31 colonnes par mois. Tous les mois restent
-   visibles sans défiler ; le numéro de semaine ISO figure dans la marge
-   gauche de chaque mini-calendrier. */
+/* Vue Location — calendrier annuel d'un seul logement : liste de 12
+   mini-calendriers (un seul par ligne — retour utilisateur : deux par
+   ligne restait peu lisible), chacun avec ses vraies semaines
+   lundi→dimanche en lignes — le format calendrier habituel, plutôt qu'une
+   bande de 31 colonnes par mois. Chaque mois est un volet dépliable (voir
+   .rv-month-block.collapsed plus bas et isPastMonth dans monthBlock) :
+   passés repliés par défaut, mois en cours et à venir dépliés — pour
+   repérer le mois actuel d'un coup d'œil sans que les mois passés,
+   généralement sans intérêt, n'encombrent l'écran. Le numéro de semaine
+   ISO figure dans la marge gauche de chaque mini-calendrier. */
 .rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
-  display:grid;grid-template-columns:repeat(2,1fr);gap:20px 16px;}
+  display:flex;flex-direction:column;}
 /* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
-   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear.
-   grid-column:1/-1 pour occuper toute la largeur de la bulle blanche,
-   au-dessus de la grille des mois plutôt que dans une de ses colonnes. */
-.rv-year-nav{grid-column:1/-1;display:flex;align-items:center;
-  justify-content:center;gap:16px;margin-bottom:2px;}
+   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear. */
+.rv-year-nav{display:flex;align-items:center;
+  justify-content:center;gap:16px;margin-bottom:10px;}
 .rv-year-btn{background:none;border:1.5px solid var(--light);border-radius:8px;
   width:28px;height:28px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--dark);flex-shrink:0;}
 .rv-year-btn:active{filter:brightness(.96);}
 .rv-year-label{font-size:16px;font-weight:700;color:var(--dark);
   min-width:44px;text-align:center;}
-.rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;}
-.rv-month-label{font-size:13px;font-weight:700;color:var(--gray);
-  text-transform:uppercase;letter-spacing:.04em;text-align:center;}
-/* Mois en cours (voir isCurMonth dans monthBlock) : bulle verte plutôt que
-   le simple texte gris — repère visuel immédiat dans la grille des 12 mois. */
-.rv-month-label.rv-month-cur{background:var(--green);color:#fff;
-  border-radius:999px;padding:3px 12px;width:fit-content;margin:0 auto;}
+.rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
+  border-top:1.5px solid var(--light);padding:4px 0;}
+.rv-month-block:first-child{border-top:none;}
+.rv-month-label{display:flex;align-items:center;justify-content:space-between;width:100%;
+  background:none;border:none;padding:8px 2px;font-family:inherit;
+  font-size:13.5px;font-weight:700;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.04em;text-align:left;cursor:pointer;}
+/* Mois en cours (voir isCurMonth dans monthBlock) : nom en vert + étiquette
+   à côté — remplace l'ancienne bulle pleine (incompatible avec un
+   en-tête pleine largeur cliquable, texte à gauche/chevron à droite). */
+.rv-month-label.rv-month-cur{color:var(--green);}
+.rv-month-cur-tag{font-size:10.5px;font-weight:700;text-transform:none;letter-spacing:0;
+  color:#fff;background:var(--green);border-radius:8px;padding:2px 8px;margin-left:8px;}
+.rv-month-chevron{width:16px;height:16px;color:var(--gray);opacity:.7;
+  flex-shrink:0;transition:transform .18s ease;}
+.rv-month-block.collapsed .rv-month-chevron{transform:rotate(-90deg);}
+.rv-month-block.collapsed .rv-dow-hd,
+.rv-month-block.collapsed .rv-monthgrid-wrap{display:none;}
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
 .rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
   text-align:center;text-transform:uppercase;}
-.rv-monthgrid-wrap{display:flex;gap:2px;}
-.rv-wknum-col{flex:none;width:14px;display:flex;flex-direction:column;gap:2px;}
-.rv-wknum{height:26px;display:flex;align-items:center;justify-content:center;
+/* Numéro de semaine + jours dans UNE seule grille à 8 colonnes (14px + 7
+   colonnes égales), comme .cal-mini-grid côté Séjours — pas deux mises en
+   page séparées (colonne flex des numéros + grille des jours) synchronisées
+   seulement par une même hauteur de ligne fixe en dur : c'est justement ce
+   qui empêchait les cases d'être carrées (aspect-ratio et hauteur de ligne
+   fixe entrent en conflit) — retour utilisateur, capture d'écran à
+   l'appui : "cases carrées partout comme sur la vue séjours". Une seule
+   grille laisse chaque case carrée (aspect-ratio:1) dicter elle-même la
+   hauteur de sa ligne ; le numéro de semaine, simple item de la même
+   grille, s'y cale automatiquement (étirement par défaut). */
+.rv-monthgrid-wrap{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
+.rv-wknum{display:flex;align-items:center;justify-content:center;
   font-size:7px;color:var(--gray);opacity:.5;}
-.rv-month-grid{flex:1;min-width:0;display:grid;grid-template-columns:repeat(7,1fr);
-  grid-auto-rows:26px;gap:2px;}
-.rv-day-cell{position:relative;background:var(--light);border-radius:4px;
+.rv-day-cell{position:relative;aspect-ratio:1;background:var(--light);border-radius:4px;
   overflow:hidden;cursor:pointer;}
 .rv-day-cell.rv-day-blank{background:transparent;cursor:default;}
 /* Sélection de plage pour créer une réservation — mêmes couleurs que la
@@ -477,18 +497,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
    pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
    choisie en JS selon le fond (voir light()) pour rester lisible quelle que
-   soit la couleur du client/statut ; gris discret sur une case vide. Pas de
-   lettre jour-de-semaine ici : elle est déjà donnée par la colonne, via
-   l'en-tête .rv-dow-hd, une seule fois par mini-calendrier. */
+   soit la couleur du client/statut ; --dark (pas --gray, plus discret) sur
+   une case vide — même contraste marqué que .cal-mini-day côté Séjours
+   (--ink), retour utilisateur : "même design partout où le calendrier
+   apparaît". Pas de lettre jour-de-semaine ici : elle est déjà donnée par
+   la colonne, via l'en-tête .rv-dow-hd, une seule fois par mini-calendrier. */
 .rv-num{position:absolute;inset:0;display:flex;align-items:center;
-  justify-content:center;font-size:11px;font-weight:600;color:var(--gray);
+  justify-content:center;font-size:11px;font-weight:600;color:var(--dark);
   pointer-events:none;}
-@media (max-width:520px){
-  .rv-calendar{gap:16px 12px;}
-}
 @media (max-width:420px){
-  .rv-month-grid{grid-auto-rows:24px;}
-  .rv-wknum{height:24px;}
   .rv-num{font-size:10px;}
 }
 /* Shared nav header — identical across Jour / Semaine / Mois / Année,
@@ -2252,6 +2269,24 @@ Gardez la main.</div>
       <button class="mclose" onclick="closeM('modalSettings')">✕</button>
     </div>
     <div class="modal-scrollarea"><div id="settingsBody"></div></div>
+  </div>
+</div>
+
+<!-- ─── NOUVELLE CHAMBRE : proposer de reprendre une chambre Fiftin Séjours ───
+     Ouvert par addRoom() (depuis le panneau Chambres, donc modalSettings déjà
+     affiché) uniquement s'il existe des chambres Séjours pas encore reprises
+     (roomAddChoiceEntries) ; sinon addRoom() crée directement une chambre
+     vierge, comportement inchangé. Placé APRÈS modalSettings dans le
+     document : tous les .overlay partagent le même z-index (empilement par
+     ordre du DOM, voir CSS), donc ce modal doit venir après pour s'afficher
+     au-dessus de celui des Paramètres plutôt que dessous. -->
+<div class="overlay" id="modalRoomAdd" style="display:none" onclick="ovClose(event,'modalRoomAdd')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Nouvelle chambre</div>
+      <button class="mclose" onclick="closeM('modalRoomAdd')">✕</button>
+    </div>
+    <div id="roomAddBody"></div>
   </div>
 </div>
 
@@ -4086,6 +4121,13 @@ function chLocYear(d){
   byId('yrLabel').textContent=S.year;
   renderToday();
 }
+// Déplie/replie un mois du calendrier annuel de la vue Location (voir
+// monthBlock dans renderToday()) — état purement visuel, jamais persisté :
+// chaque re-rendu (changement d'année/chambre, goToday…) reprend le repli
+// par défaut (passé replié, en cours/à venir déplié).
+function toggleRvMonth(btn){
+  btn.closest('.rv-month-block').classList.toggle('collapsed');
+}
 function renderToday(){
   const rooms=ROOMS;
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
@@ -4161,7 +4203,11 @@ function renderToday(){
       const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
       const isCin=ds===bk.checkIn;
       const isCout=addDays(ds,1)===bk.checkOut;
-      numCol=light(dispCol)?'#2C2C2C':'#fff';
+      // var(--cream), pas #fff : même blanc cassé que les numéros de jour
+      // occupé côté Séjours (.cal-mini-day.occ), pour un rendu identique
+      // sur les deux apps — seule la couleur de fond change (une par
+      // réservation ici, un seul vert côté Séjours), jamais ce blanc.
+      numCol=light(dispCol)?'#2C2C2C':'var(--cream)';
       seg=`<div class="rv-seg${isCin?' cin':''}${isCout?' cout':''}${sc}" style="background:${dispCol}" title="${g?g.name:'?'} — ${fmtDate(bk.checkIn)} → ${fmtDate(bk.checkOut)}" onclick="openEditModal('${bk.id}')"></div>`;
     }
     // Case libre : même sélection de plage au clic que la Grille (1er clic =
@@ -4172,32 +4218,43 @@ function renderToday(){
     const emptyClick=bk?'':` onclick="startOrExtendRange('${rm.id}','${ds}')"`;
     const cellTitle=bk?wTitle:`${wTitle} — cliquer pour réserver`;
     const isToday=ds===todayIso;
-    return`<div class="rv-day-cell${isToday?' rv-day-today':''}" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numCol?` style="color:${numCol}"`:''}>${day}</span></div>`;
+    // Numéro en gras (800) sur une case occupée — même poids que
+    // .cal-mini-day.occ côté Séjours ; poids normal (voir .rv-num) sur une
+    // case libre, où la même graisse épaisse serait hors de propos.
+    const numStyle=numCol?` style="color:${numCol};font-weight:800"`:'';
+    return`<div class="rv-day-cell${isToday?' rv-day-today':''}" data-room="${rm.id}" data-date="${ds}" title="${cellTitle}"${emptyClick}>${seg}<span class="rv-num"${numStyle}>${day}</span></div>`;
   };
   const monthBlock=(m)=>{
     const dim=new Date(year,m+1,0).getDate();
     const firstDow=(new Date(year,m,1).getDay()+6)%7; // 0=lundi..6=dimanche
     const totalCells=Math.ceil((firstDow+dim)/7)*7;
     const rows=totalCells/7;
-    let gridCells='';
-    for(let i=0;i<totalCells;i++){
-      const day=i-firstDow+1;
-      gridCells+=(day<1||day>dim)?'<div class="rv-day-cell rv-day-blank"></div>':dayCellHtml(m,day);
-    }
-    // Numéro de semaine ISO dans la marge gauche, une fois par ligne.
-    let wknums='';
+    // Numéro de semaine ISO puis les 7 jours de la ligne, dans cet ordre —
+    // une seule grille à 8 colonnes (voir .rv-monthgrid-wrap), comme
+    // .cal-mini-grid côté Séjours : la case carrée dicte la hauteur de sa
+    // ligne, le numéro de semaine s'y cale tout seul.
+    let gridRows='';
     for(let r=0;r<rows;r++){
       const anyDay=Math.min(Math.max(r*7-firstDow+1,1),dim);
-      wknums+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
+      gridRows+=`<div class="rv-wknum">S${weekNum(new Date(year,m,anyDay))}</div>`;
+      for(let c=0;c<7;c++){
+        const day=r*7+c-firstDow+1;
+        gridRows+=(day<1||day>dim)?'<div class="rv-day-cell rv-day-blank"></div>':dayCellHtml(m,day);
+      }
     }
     const isCurMonth=year===todayY&&m===todayM;
-    return`<div class="rv-month-block">
-      <div class="rv-month-label${isCurMonth?' rv-month-cur':''}">${MON[m]}</div>
+    // Passé = replié par défaut, comparé à la vraie date du jour et non à
+    // l'année affichée (voir le commentaire CSS de .rv-calendar) : une
+    // année entièrement passée s'ouvre donc tout entière repliée, une
+    // année future tout entière dépliée.
+    const isPastMonth=year<todayY||(year===todayY&&m<todayM);
+    return`<div class="rv-month-block${isPastMonth?' collapsed':''}">
+      <button type="button" class="rv-month-label${isCurMonth?' rv-month-cur':''}" onclick="toggleRvMonth(this)">
+        <span>${MON[m]}${isCurMonth?'<span class="rv-month-cur-tag">Ce mois-ci</span>':''}</span>
+        <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
       <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
-      <div class="rv-monthgrid-wrap">
-        <div class="rv-wknum-col">${wknums}</div>
-        <div class="rv-month-grid">${gridCells}</div>
-      </div>
+      <div class="rv-monthgrid-wrap">${gridRows}</div>
     </div>`;
   };
   let monthsHtml='';
@@ -6799,6 +6856,7 @@ function openSettings(){
   settingsPanelOpen={};
   renderSettings();
   openM('modalSettings');
+  prefetchSejoursListings();
 }
 // Accordéon : ouvrir une section referme celle qui était ouverte — plus
 // facile à lire qu'avoir plusieurs volets dépliés en même temps.
@@ -6903,18 +6961,18 @@ function renderSettings(){
       <div class="set-card-sub-title">Formule</div>
       <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Le paiement en ligne n'est pas encore actif — ce réglage sert pour l'instant à essayer les deux formules.</div>
       <select class="set-fi" onchange="setPlan(this.value)">
-        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 19 €/mois</option>
-        <option value="pro"${st.plan==='pro'?' selected':''}>Pro — 29 €/mois</option>
+        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 24 €/mois</option>
+        <option value="pro"${st.plan==='pro'?' selected':''}>Avancé — 47 €/mois</option>
       </select>
     </div>`;
   h+=settingsPanel('compte','Compte',accountBody);
 
-  // — Équipe : comptes Personnel à droits limités (formule Pro) — un
+  // — Équipe : comptes Personnel à droits limités (formule Avancé) — un
   // propriétaire seulement, jamais un compte Personnel lui-même.
   if(currentRole==='owner'){
     let teamBody;
     if(st.plan!=='pro'){
-      teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Pro permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
+      teamBody=`<div style="font-size:11px;color:var(--gray);">La formule Avancé permet d'inviter votre équipe (femme de ménage…) avec un accès limité au planning et au ménage, sans les chiffres. Changez de formule dans Réglages → Compte.</div>`;
     }else{
       teamBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Un compte Staff voit uniquement la Grille, la vue du jour, le Ménage et les Événements — jamais les chiffres, les réglages ni les transactions. 2 comptes inclus, 5 €/mois au-delà.</div>
         <button class="btn-p" style="width:100%" onclick="generateInviteLink()">+ Générer un lien d'invitation</button>
@@ -6970,7 +7028,7 @@ function renderSettings(){
   if(st.plan==='pro'||structsForThr.length<1){
     structBody+=`<button class="set-add" onclick="addStructure()">+ Ajouter une structure</button>`;
   }else{
-    structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro (Réglages → Compte) pour en ajouter d'autres.</div>`;
+    structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Avancé (Réglages → Compte) pour en ajouter d'autres.</div>`;
   }
   h+=settingsPanel('structures','Structures juridiques',structBody);
 
@@ -7440,13 +7498,127 @@ function updateContractField(field,val){
   saveSettings();
 }
 
+// Lien Fiftin Séjours → app (lecture seule) : à la création d'une chambre,
+// propose de reprendre le nom/capacité/prix d'une chambre déjà déposée sur
+// Séjours plutôt que de repartir d'une chambre vierge. Uniquement une
+// lecture de listings/{id} (même règle Firestore que tout propriétaire lisant
+// sa propre annonce, pending ou publiée) — aucune écriture dans ce sens, et
+// le chemin d'écriture des chambres (saveSettings→pushToFirebase, déjà en
+// place) n'est pas touché : addRoomBlank() et addRoomFromListingUnit()
+// poussent toutes deux dans S.settings.rooms exactement comme avant.
+let sejoursListingsCache; // undefined = pas encore chargé, [] = chargé et vide
+function resolveSejoursListings(cb){
+  if(sejoursListingsCache!==undefined){cb(sejoursListingsCache);return;}
+  if(!db||!currentUid){cb([]);return;}
+  db.collection('listings').where('ownerUid','==',currentUid).get().then(snap=>{
+    sejoursListingsCache=snap.docs.map(d=>Object.assign({id:d.id},d.data()));
+    cb(sejoursListingsCache);
+  }).catch(()=>{sejoursListingsCache=[];cb([]);});
+}
+// Appelé à l'ouverture des Paramètres (openSettings) : le temps que l'hôte
+// atteigne le panneau Chambres, la lecture a généralement déjà répondu — pas
+// de re-rendu forcé ici sauf si un nettoyage de lien caduc s'impose (voir
+// pruneStaleRoomLinks).
+function prefetchSejoursListings(){
+  resolveSejoursListings(function(listings){
+    if(pruneStaleRoomLinks(listings)){
+      saveSettings();applySettings();
+      if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
+    }
+  });
+}
+// Une chambre reliée (linkedListingId/linkedUnitId, voir addRoomFromListingUnit)
+// dont la chambre Séjours d'origine a été supprimée (annonce entière ou juste
+// cette chambre retirée côté édition) garde sinon un lien qui ne pointe plus
+// sur rien — sans danger immédiat (juste utilisé pour ne pas la reproposer
+// dans roomAddChoiceEntries), mais jamais nettoyé tout seul. Retire le lien
+// dès qu'on constate qu'il ne correspond plus à rien ; ne touche jamais au
+// nom/prix/capacité déjà enregistrés sur la chambre app, seulement au lien.
+function pruneStaleRoomLinks(listings){
+  const validUnitIds=new Set();
+  (listings||[]).forEach(l=>(l.units||[]).forEach(u=>validUnitIds.add(u.id)));
+  let changed=false;
+  (S.settings.rooms||[]).forEach(r=>{
+    if(r.linkedUnitId && !validUnitIds.has(r.linkedUnitId)){
+      delete r.linkedListingId; delete r.linkedUnitId; changed=true;
+    }
+  });
+  return changed;
+}
+
+// Chambres Séjours pas encore reprises comme chambre app (join local, aucune
+// écriture) : exclut celles déjà liées via linkedUnitId sur une chambre
+// existante, pour ne jamais proposer deux fois la même chambre Séjours.
+function roomAddChoiceEntries(){
+  const listings=sejoursListingsCache||[];
+  const linkedIds=new Set((S.settings.rooms||[]).map(r=>r.linkedUnitId).filter(Boolean));
+  const entries=[];
+  listings.forEach(l=>{
+    (l.units||[]).forEach(u=>{
+      if(linkedIds.has(u.id))return;
+      if(u.linkedRoomId)return; // déjà reliée depuis Séjours (unit.linkedRoomId) -> ne pas la reproposer
+      entries.push({listingId:l.id, listingName:l.name||'(sans nom)', unit:u});
+    });
+  });
+  return entries;
+}
+function openRoomAddChoice(entries){
+  const body=byId('roomAddBody');
+  body.innerHTML =
+    '<p style="padding:0 2px 12px;color:var(--gray);font-size:13px">Chambres déposées sur Fiftin Séjours pas encore reliées à votre planning — reprendre l\'une d\'elles, ou repartir d\'une chambre vierge :</p>'+
+    entries.map(e=>`<button type="button" class="set-card set-card-row" style="width:100%;text-align:left;cursor:pointer" onclick="addRoomFromListingUnit('${e.listingId}','${e.unit.id}')"><div><b>${escHtml(e.unit.name||'(sans nom)')}</b><div style="font-size:12px;color:var(--gray)">${escHtml(e.listingName)}${e.unit.maxPersons?' · '+e.unit.maxPersons+' pers':''}</div></div></button>`).join('')+
+    '<button type="button" class="set-add" style="width:100%;margin-top:8px" onclick="closeM(\'modalRoomAdd\');addRoomBlank();">+ Chambre vierge</button>';
+  openM('modalRoomAdd');
+}
+
 // Room CRUD
 function addRoom(){
+  const entries=roomAddChoiceEntries();
+  if(!entries.length){ addRoomBlank(); return; }
+  openRoomAddChoice(entries);
+}
+function addRoomBlank(){
   const n=S.settings.rooms.length+1;
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
   S.settings.rooms.push({id:uid(),name:'Chambre '+n,short:'C'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
+}
+function addRoomFromListingUnit(listingId,unitId){
+  const entry=roomAddChoiceEntries().find(e=>e.listingId===listingId&&e.unit.id===unitId);
+  closeM('modalRoomAdd');
+  if(!entry){addRoomBlank();return;}
+  const unit=entry.unit;
+  const n=S.settings.rooms.length+1;
+  const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const max=unit.maxPersons||2;
+  const prices=defaultRoomPrices(max);
+  if(unit.price) prices[max]=Number(unit.price);
+  const newRoomId=uid();
+  S.settings.rooms.push({id:newRoomId,name:(unit.name||'Chambre '+n).trim()||('Chambre '+n),short:'C'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
+  saveSettings();applySettings();renderSettings();renderGrid();
+  refreshRevenueViews();
+  writeBackSejoursLink(listingId,unitId,newRoomId);
+}
+// Referme la boucle du lien créé ci-dessus : écrit unit.linkedRoomId sur
+// l'annonce Séjours d'origine, pour que son calendrier (Espace hôtes,
+// côté Séjours) affiche directement les réservations de cette chambre app
+// sans étape manuelle supplémentaire — avant ce correctif, seul le côté
+// app savait que les deux chambres étaient reliées (linkedListingId/
+// linkedUnitId), le calendrier Séjours restait "non relié". Seul champ
+// touché (le tableau units réécrit en entier, comme le fait déjà Séjours
+// lui-même pour ce même champ) ; jamais status/ownerUid/createdAt, et
+// jamais accounts/{uid} bien sûr. Best-effort : un échec (annonce
+// supprimée entre-temps, etc.) ne doit pas remettre en cause la chambre
+// déjà créée côté app — pas de blocage ni de message d'erreur ici.
+function writeBackSejoursLink(listingId,unitId,roomId){
+  if(!db) return;
+  db.collection('listings').doc(listingId).get().then(doc=>{
+    if(!doc.exists) return;
+    const data=doc.data();
+    const units=(data.units||[]).map(u=>u.id===unitId?Object.assign({},u,{linkedRoomId:roomId}):u);
+    return db.collection('listings').doc(listingId).update({units});
+  }).catch(err=>console.error('[sejours-link] échec de l\'écriture retour',err));
 }
 function delRoom(id){
   if(!confirm('Supprimer cette chambre ? Les réservations associées ne seront pas supprimées.'))return;
@@ -7512,7 +7684,7 @@ function addStructure(){
   // masqué côté interface dans ce cas — ce garde-fou évite juste un contournement
   // trivial (ex. appel direct de la fonction depuis la console du navigateur).
   if(S.settings.plan!=='pro'&&S.settings.structures.length>=1){
-    alert("La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Pro pour en ajouter d'autres.");
+    alert("La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Avancé pour en ajouter d'autres.");
     return;
   }
   const n=S.settings.structures.length+1;
@@ -9379,7 +9551,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
-  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd'];
+  const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
   for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
 });
 
