@@ -1159,6 +1159,16 @@ Retour utilisateur : « passe le contour dans le même gris que les pastilles po
 
 **Testé** (Playwright) : 3 cartes confirmées, "Formule Hôte" en premier avec le bon prix/sous-ligne ; carte active confirmée correctement mise en évidence selon le plan réel du compte (`accounts/{uid}.settings.plan`) ; sélecteur d'inscription (`.formula-card`) confirmé strictement inchangé (3 cartes, mêmes libellés qu'avant). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Formule active : encart vert moyen plein, typo blanche
+
+Retour utilisateur (après avoir demandé confirmation que le module formule n'a encore aucun effet réel, voir plus bas) : « la formule sélectionnée doit être dans un encart vert moyen (vert propriétaire), typo blanche. »
+
+`.plan-card.active` passe d'un simple contour `--sauge-deep` à un fond plein `--sauge-mid` (le même vert déjà utilisé ailleurs sur le site pour ce rôle "propriétaire" : `.cal-disclose`, `.google-link`, `.coll-toggle-btn`) avec nom/prix/sous-ligne/puces en blanc. Le premier picto de puce (`--sauge-deep`, un vert plus sombre) se fondait dans ce nouveau fond : reblanchi spécifiquement pour la carte active, les 4 autres couleurs de puces gardent assez de contraste telles quelles.
+
+**Précision technique demandée par l'utilisateur, répondue ici** : ce module formule n'a aujourd'hui AUCUN effet réel dans Séjours — `accounts/{uid}.settings.plan` n'y est utilisé qu'à un seul endroit (`renderHostProfile()`), uniquement pour savoir quelle carte surligner en lecture seule ; aucune fonctionnalité de ce fichier n'est restreinte par la formule, et aucun paiement n'est branché (ni Stripe, ni autre, confirmé par recherche dans tout le dépôt). Côté `app/` (l'outil de planning, fichier séparé), la formule bloque bien deux choses côté client — plusieurs structures juridiques et les sous-comptes Staff, réservés à la formule Avancé — mais via une simple alerte JS, pas une règle serveur : je n'ai pas trouvé de fichier `firestore.rules` dans ce dépôt, donc je ne peux pas confirmer si une limite existe aussi côté base de données (peut-être configurée uniquement dans la console Firebase, hors de ce que je peux voir ici).
+
+**Testé** (Playwright) : carte "Avancé" placée active (compte de test sur la formule `pro`) confirmée en fond `--sauge-mid` avec nom/prix/première puce en blanc. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

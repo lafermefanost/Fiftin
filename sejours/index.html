@@ -1279,7 +1279,20 @@ body.detail-open nav.tabbar{z-index:220;}
    jamais touchée ici pour ne pas la faire régresser. */
 .plan-card-list{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
 .plan-card{background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:22px 20px;}
-.plan-card.active{border-color:var(--sauge-deep);}
+/* Formule active en encart vert moyen plein, typo blanche (retour
+   utilisateur : "la formule sélectionnée doit être dans un encart vert
+   moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
+   pour ce même vert "propriétaire" (.cal-disclose, .google-link,
+   .coll-toggle-btn). Le premier picto de puce (--sauge-deep, un vert plus
+   sombre encore) se fondrait dans ce fond : reblanchi spécifiquement ici,
+   les 4 autres couleurs de puces gardent assez de contraste telles
+   quelles. */
+.plan-card.active{background:var(--sauge-mid); border-color:var(--sauge-mid);}
+.plan-card.active .plan-card-name,
+.plan-card.active .plan-card-price,
+.plan-card.active .plan-card-per,
+.plan-card.active li{color:#fff;}
+.plan-card.active li:nth-child(5n+1)::before{background:#fff;}
 .plan-card-name{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px;}
 .plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:36px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
 .plan-card-per{font-size:13px; color:var(--sauge); margin-bottom:14px;}
