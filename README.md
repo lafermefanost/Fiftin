@@ -1271,6 +1271,26 @@ Trois retours utilisateur d'un coup : « 1- que le picto agrandissement mette la
 
 **Testé** (Playwright) : `shot_map_fullscreen.py` (nouveau) — clic agrandir confirmé posant `position:fixed`, `z-index:40`, et une géométrie exacte (haut collé au bas de `.filters`, bas collé au haut de `nav.tabbar`, à 1px près) ; `body.map-fullscreen` posé/retiré correctement, y compris au changement d'onglet. `shot_date_filter.py` (nouveau) — 3 annonces avant filtre ; après avoir posé des dates chevauchant une chambre occupée semée dans le mock : l'annonce entièrement occupée confirmée absente du fil (mais reste éligible à la carte via `keepOccupied`) ; l'annonce avec une chambre libre confirmée en tête (disponible avant non-renseigné) ; puce "Dates · 12 juil. → 16 juil." confirmée ; compteur passé de 3 à 2 ; champ Arrivée de "Contact et disponibilités" confirmé pré-rempli avec la date du filtre. Suite de régression complète rejouée, aucune casse, zéro erreur JS.
 
+### Six correctifs après premier essai en vrai (hors sandbox, où Leaflet charge)
+
+Retour utilisateur après avoir testé le chantier précédent en conditions réelles — ce que le sandbox ne permettait pas de voir (Leaflet bloqué, voir plus haut) a effectivement révélé plusieurs bugs :
+
+**1. Plein écran cassé en venant de la page commerciale.** Confirmé le diagnostic posé plus haut en théorie : `applyMapFullscreenOffsets()` mesurait `.filters` avant qu'il ne soit réellement "collé" (hero plein écran du 1er chargement pas encore dépassé). `#map-expand-btn` fait maintenant `document.getElementById("map-canvas").scrollIntoView({block:"start"})` (sans "smooth" : la lecture de position juste après doit refléter le nouveau scroll immédiatement) avant de calculer quoi que ce soit.
+
+**2. Vignettes sans image.** Cause réelle, rien à voir avec une manipulation manquante côté utilisateur : `mapPinPopupHtml()` lisait `listingThumbUrl()`, qui a besoin de `gallery`/`units[].gallery` — des champs que `listingIndexCache` (la source de la quasi-totalité des pins sur Explorer) ne porte justement jamais, par conception (voir le grand commentaire de `listingIndex` plus haut). `functions/index.js` publie maintenant aussi `thumbUrl` (une seule URL texte, pas la galerie complète — exception documentée et justifiée dans le commentaire de `syncPublicListingIndex`) ; `mapPinThumbUrl()` côté client le lit en priorité, avec `listingThumbUrl()` en repli pour le cas `LISTINGS` (détail déjà chargé).
+
+**3. Clic sur la miniature : navigation invisible, derrière la carte.** En plein écran, `.map-canvas` est `position:fixed` par-dessus le fil — `scrollToFeedCard()`/`openDetail()` agissaient bien mais restaient masqués dessous. Le clic sur la miniature referme maintenant d'abord le plein écran (`setMapExpanded(false)`, même chemin que le bouton réduire) avant de naviguer.
+
+**4. Aucune légende de couleurs.** Ajoutée : `.map-date-legend`, affichée uniquement quand un filtre Date est actif, mêmes couleurs que les pins (`--sauge` disponible/non renseigné, `--gray-mid` indisponible).
+
+**5. Curseur de rayon invisible en plein écran.** Root cause : `.map-zone-controls` (le module rayon) était un FRÈRE de `.map-canvas`, en flux normal — invisible une fois `.map-canvas` passée en `position:fixed` par-dessus tout, le frère restant lui scrollé hors champ. Restructuré : légende (point 4) et module rayon vivent maintenant TOUS LES DEUX dans `.map-canvas`, dans un wrapper commun `.map-bottom-stack` (`position:absolute`, ancré en bas) — fonctionne à l'identique en mode compact et en plein écran, `.map-canvas` fournissant le contexte de positionnement dans les deux cas.
+
+**6. Le "picto carte" du fil ne menait pas directement au plein écran.** `#map-back-btn` ("revenir à la carte", visible dès qu'on est sur Explorer) fait maintenant `scrollIntoView` + `setMapExpanded(true)` — un seul geste, direct, plutôt que scroll puis agrandir manuellement. `setMapExpanded()`, nouvelle fonction, factorise ce que faisaient jusqu'ici séparément `#map-expand-btn` et ce bouton.
+
+**Testé** : `shot_map_bugfixes.py` (nouveau). Points 1 et 6 — géométrie plein écran confirmée exacte en cliquant SANS défiler au préalable (`scrollY` à 0 avant clic) ; clic sur le picto carte confirmé ouvrant directement `position:fixed` avec une hauteur non nulle. Point 4 — légende confirmée DANS `#map-canvas` (`canvas.querySelector('.map-date-legend')`), texte vérifié. Point 2 (couche données) — `listingIndex` interrogé directement en Firestore : `thumbUrl` et `unitIds` confirmés présents sur les documents. Points 3 et 5 — dépendent d'un vrai clic sur la carte Leaflet (ouverture de popup, pose d'un repère), non simulables dans ce sandbox ; vérifiés par relecture du code et par le fait qu'ils partagent l'un `setMapExpanded()` (déjà testé), l'autre le même wrapper `.map-bottom-stack` que la légende (déjà confirmée DANS `#map-canvas`). Suite de régression complète rejouée, aucune casse, zéro erreur JS.
+
+**Rappel important** : ce chantier touche encore `functions/index.js` (ajout de `thumbUrl`) — nécessite un nouveau `firebase deploy --only functions` pour apparaître en production, en plus du déploiement déjà requis pour `unitIds` du chantier précédent si ce n'est pas encore fait.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

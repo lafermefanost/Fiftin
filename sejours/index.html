@@ -861,8 +861,31 @@ body.map-fullscreen{overflow:hidden;}
   border-radius:16px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
   box-shadow:0 3px 8px rgba(0,0,0,.18);}
 .map-zone-btn.armed{background:var(--sauge-deep); color:var(--cream); border-color:var(--sauge-deep);}
+/* .map-bottom-stack : empile légende de dates + module de rayon, posés EN
+   BAS DE LA CARTE ELLE-MÊME plutôt qu'en dessous (retour utilisateur :
+   "je n'ai pas le curseur qui me permet de modifier le rayon, il faudrait
+   que ce module apparaisse bien sur la carte") — avant ce correctif,
+   .map-zone-controls était un FRÈRE de .map-canvas, posé en flux normal
+   sous elle : invisible en plein écran, .map-canvas étant devenue
+   position:fixed par-dessus tout, le frère restant lui en flux normal,
+   scrollé hors champ. Les deux (légende/module rayon) sont maintenant DANS
+   .map-canvas, absolument positionnés par ce wrapper commun — fonctionne
+   à l'identique en mode compact (position:relative) et plein écran
+   (position:fixed), .map-canvas fournissant le contexte de positionnement
+   dans les deux cas. */
+.map-bottom-stack{position:absolute; left:12px; right:12px; bottom:12px; z-index:1000; display:flex; flex-direction:column; gap:8px;}
+/* Légende des couleurs de pin (retour utilisateur : "je ne vois pas les
+   différentes couleurs de pin [...] faudrait ajouter la légende aussi") —
+   affichée uniquement quand un filtre Date est actif (hasDateFilter()),
+   mêmes couleurs que .map-pin.date-available/.date-unavailable .dot. */
+.map-date-legend{display:flex; align-items:center; flex-wrap:wrap; gap:6px; background:var(--cream); border-radius:16px;
+  padding:8px 12px; font-family:'Jost',sans-serif; font-size:11px; font-weight:700; color:var(--ink);
+  box-shadow:0 3px 8px rgba(0,0,0,.18);}
+.map-date-legend-dot{width:9px; height:9px; border-radius:50%; flex-shrink:0;}
+.map-date-legend-dot.avail{background:var(--sauge);}
+.map-date-legend-dot.occ{background:var(--gray-mid); margin-left:10px;}
 .map-zone-controls{display:flex; flex-direction:column; gap:10px; background:var(--cream-deep); border-radius:16px;
-  padding:10px 14px; margin:12px 0; font-size:12.5px; font-weight:600;}
+  padding:10px 14px; font-size:12.5px; font-weight:600; box-shadow:0 3px 8px rgba(0,0,0,.18);}
 .map-zone-controls-head{display:flex; align-items:center; justify-content:space-between; gap:10px;}
 .map-zone-controls-head button{background:none; border:none; padding:0; font-family:inherit; font-size:12px; font-weight:700;
   color:var(--danger); text-decoration:underline; flex-shrink:0;}
@@ -6424,12 +6447,24 @@ function scrollToFeedCard(id){
   setTimeout(function(){ card.classList.remove("card-pulse"); }, 1200);
 }
 
-/* Contenu de la popup ouverte au clic sur un pin : miniature + nom,
-   listingThumbUrl() (même repli annonce -> 1ère chambre que coverHtml(),
-   voir son commentaire) plutôt qu'une vraie galerie — la popup doit rester
-   petite sur la carte. */
+// Retour utilisateur : "les vignettes n'ont pas d'aperçu image" —
+// listingThumbUrl() lit l.gallery/l.units[].gallery, des champs que
+// listingIndexCache (la source de mapPinsFromIndex() pour la quasi-
+// totalité des annonces affichées sur Explorer) ne porte justement jamais
+// (voir le grand commentaire de listingIndex dans functions/index.js) :
+// rien à voir avec une manipulation manquante côté utilisateur, c'était
+// une incohérence entre la fonction utilisée ici et la source de données
+// réellement disponible à cet endroit. l.thumbUrl (nouveau champ léger de
+// listingIndex, voir functions/index.js) prime désormais ; listingThumbUrl()
+// reste le repli pour LISTINGS (détail déjà chargé, qui lui a bien
+// gallery/units).
+function mapPinThumbUrl(l){
+  return l.thumbUrl || listingThumbUrl(l);
+}
+/* Contenu de la popup ouverte au clic sur un pin : miniature + nom, la
+   popup doit rester petite sur la carte, pas une vraie galerie. */
 function mapPinPopupHtml(l){
-  var thumbUrl = listingThumbUrl(l);
+  var thumbUrl = mapPinThumbUrl(l);
   return '<button type="button" class="map-pin-thumb" aria-label="Voir l\'annonce '+esc(l.name)+'">'+
     (thumbUrl ? '<img src="'+thumbUrl+'" alt="">' : '<div class="map-pin-thumb-empty"></div>')+
     '<span class="map-pin-thumb-name">'+esc(l.name)+'</span>'+
@@ -6483,7 +6518,16 @@ function refreshExploreMapMarkers(){
     // popup est fermée/rouverte plusieurs fois sur le même marker.
     var popupEl = document.createElement("div");
     popupEl.innerHTML = mapPinPopupHtml(l);
-    popupEl.querySelector(".map-pin-thumb").addEventListener("click", function(){ scrollToFeedCard(l.id); });
+    popupEl.querySelector(".map-pin-thumb").addEventListener("click", function(){
+      // Retour utilisateur : "je pense que le site le fait mais en arrière
+      // plan derrière la carte" — en plein écran, .map-canvas est
+      // position:fixed par-dessus le fil ; scrollToFeedCard()/openDetail()
+      // agissaient bien mais restaient masqués dessous. Referme d'abord le
+      // plein écran (même chemin que le bouton réduire) pour que la
+      // destination soit visible immédiatement.
+      if(mapExpanded) setMapExpanded(false);
+      scrollToFeedCard(l.id);
+    });
     marker.bindPopup(popupEl, {closeButton:false, className:"map-pin-popup", offset:L.point(0,-8)});
     clusterGroup.addLayer(marker);
   });
@@ -6500,17 +6544,22 @@ function refreshExploreMapMarkers(){
 function exploreMapBlockHtml(){
   var f = state.filters;
   var hasZone = !!f.zoneOrigin;
+  var showDateLegend = hasDateFilter(f);
+  var bottomStackHtml = (showDateLegend || hasZone) ? '<div class="map-bottom-stack">'+
+    (showDateLegend ? '<div class="map-date-legend"><span class="map-date-legend-dot avail"></span>Disponible / non renseigné<span class="map-date-legend-dot occ"></span>Indisponible</div>' : '')+
+    (hasZone ? '<div class="map-zone-controls">'+
+      '<div class="map-zone-controls-head"><span>Rayon : <b id="map-zone-radius-label">'+f.distance+' km</b></span><button type="button" id="map-zone-clear">Effacer le repère</button></div>'+
+      '<input type="range" id="map-zone-radius" min="1" max="'+MAX_DISTANCE_KM+'" value="'+f.distance+'">'+
+    '</div>' : '')+
+  '</div>' : '';
   return '<div class="explore-map-block">'+
     '<div class="map-canvas'+(mapExpanded?' expanded':'')+'" id="map-canvas">'+
       '<button type="button" class="map-expand-btn" id="map-expand-btn" aria-label="'+(mapExpanded?"Réduire la carte":"Agrandir la carte")+'">'+MAP_EXPAND_ICON(mapExpanded)+'</button>'+
       '<button type="button" class="map-zone-btn'+(mapZoneArmed?' armed':'')+'" id="map-zone-btn">'+
         (mapZoneArmed ? "Touchez la carte pour choisir un lieu…" : (hasZone ? "Déplacer le repère" : "Choisir un lieu sur la carte"))+
       '</button>'+
+      bottomStackHtml+
     '</div>'+
-    (hasZone ? '<div class="map-zone-controls">'+
-      '<div class="map-zone-controls-head"><span>Rayon : <b id="map-zone-radius-label">'+f.distance+' km</b></span><button type="button" id="map-zone-clear">Effacer le repère</button></div>'+
-      '<input type="range" id="map-zone-radius" min="1" max="'+MAX_DISTANCE_KM+'" value="'+f.distance+'">'+
-    '</div>' : '')+
   '</div>';
 }
 /* Deux flèches diagonales, sens inversé selon l'état — même geste visuel
@@ -6546,6 +6595,29 @@ function applyMapFullscreenOffsets(canvas, on){
   // l'emporte de toute façon sur la règle CSS .map-canvas{height:240px}.
   canvas.style.height = Math.max(0, window.innerHeight-topPx-bottomPx)+"px";
 }
+/* Bascule le plein écran de la carte — factorisé pour être appelé à la
+   fois par #map-expand-btn (bascule manuelle) et par #map-back-btn (retour
+   utilisateur : "quand je clique sur le picto carte, j'aimerais que ça
+   m'amène directement la carte en full screen"), avec le même calcul
+   d'offsets et la même icône dans les deux cas. */
+function setMapExpanded(expanded){
+  mapExpanded = expanded;
+  var canvas = document.getElementById("map-canvas");
+  if(!canvas) return;
+  canvas.classList.toggle("expanded", expanded);
+  applyMapFullscreenOffsets(canvas, expanded);
+  var btn = document.getElementById("map-expand-btn");
+  if(btn){
+    btn.setAttribute("aria-label", expanded ? "Réduire la carte" : "Agrandir la carte");
+    btn.innerHTML = MAP_EXPAND_ICON(expanded);
+  }
+  // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
+  // (voir .map-canvas), Leaflet doit attendre qu'elle soit terminée pour
+  // mesurer la bonne taille — appeler invalidateSize() trop tôt le
+  // laisserait dessiner sur l'ancienne taille jusqu'au prochain geste
+  // (zoom, pan...) qui le forcerait à se corriger.
+  setTimeout(function(){ if(mapInstance) mapInstance.invalidateSize(); }, 260);
+}
 /* Monte/remonte l'instance Leaflet dans #map-canvas et câble les contrôles
    de zone — appelée par renderFeed() juste après avoir posé
    exploreMapBlockHtml() dans le DOM. Détruit et recrée systématiquement
@@ -6566,18 +6638,18 @@ function wireExploreMap(){
   if(mapCanvasEl) applyMapFullscreenOffsets(mapCanvasEl, mapExpanded);
 
   document.getElementById("map-expand-btn").addEventListener("click", function(){
-    mapExpanded = !mapExpanded;
-    var canvas = document.getElementById("map-canvas");
-    canvas.classList.toggle("expanded", mapExpanded);
-    applyMapFullscreenOffsets(canvas, mapExpanded);
-    this.setAttribute("aria-label", mapExpanded ? "Réduire la carte" : "Agrandir la carte");
-    this.innerHTML = MAP_EXPAND_ICON(mapExpanded);
-    // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
-    // (voir .map-canvas), Leaflet doit attendre qu'elle soit terminée pour
-    // mesurer la bonne taille — appeler invalidateSize() trop tôt le
-    // laisserait dessiner sur l'ancienne taille jusqu'au prochain geste
-    // (zoom, pan...) qui le forcerait à se corriger.
-    setTimeout(function(){ if(mapInstance) mapInstance.invalidateSize(); }, 260);
+    // Retour utilisateur : "lorsqu'on n'est pas descendu en position
+    // définitive pour les menus du haut et du bas (en venant de la page
+    // commerciale), l'ouverture en grand de la carte crée un bug" —
+    // .filters (position:sticky) n'est "collé" en haut qu'une fois défilé
+    // au moins jusqu'à sa position naturelle ; tant que le hero plein écran
+    // du tout premier chargement n'a pas été dépassé, applyMapFullscreenOffsets()
+    // mesurait .filters bien plus bas que sa position réelle une fois
+    // collée, et calculait un top/bottom faux. scrollIntoView SANS
+    // "smooth" : la lecture de position juste après doit refléter le
+    // nouveau scroll immédiatement, pas un état intermédiaire d'animation.
+    if(!mapExpanded) document.getElementById("map-canvas").scrollIntoView({block:"start"});
+    setMapExpanded(!mapExpanded);
   });
 
   document.getElementById("map-zone-btn").addEventListener("click", function(){
@@ -7623,10 +7695,17 @@ document.getElementById("hero-scroll-btn").addEventListener("click", function(){
    à chaque renderFeed() ; .map-canvas est toujours présent quand ce bouton
    est visible (uniquement affiché sur Explorer, voir switchTab()), sauf
    pendant le tout premier "Chargement…" avant que renderFeed() n'ait posé
-   la carte — querySelector renvoie alors null, d'où la garde. */
+   la carte — querySelector renvoie alors null, d'où la garde. Retour
+   utilisateur : "dans le fil, quand je clique sur le picto carte,
+   j'aimerais que ça m'amène directement la carte en full screen" — scroll
+   SANS "smooth" (comme #map-expand-btn, voir son commentaire) pour que
+   setMapExpanded(), juste après, mesure .filters déjà "collé" plutôt
+   qu'un état intermédiaire d'animation. */
 document.getElementById("map-back-btn").addEventListener("click", function(){
   var mc = document.querySelector(".map-canvas");
-  if(mc) mc.scrollIntoView({behavior:"smooth", block:"start"});
+  if(!mc) return;
+  mc.scrollIntoView({block:"start"});
+  setMapExpanded(true);
 });
 
 

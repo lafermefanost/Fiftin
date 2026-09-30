@@ -36,10 +36,17 @@ const db = getFirestore();
  * avec beaucoup d'annonces : la carte (tous les pins, en permanence,
  * même sans filtre) et le calcul filtres/tri/distance ont besoin de
  * connaître TOUTES les annonces publiées, mais seulement de leurs champs
- * légers (position, prix, lieu, prestations) — jamais des photos ni du
- * détail des chambres, le vrai poids d'une annonce. Sans cet index, le
- * client devrait télécharger chaque document COMPLET (galeries comprises)
- * juste pour savoir où placer un point sur la carte.
+ * légers (position, prix, lieu, prestations) — jamais la GALERIE complète
+ * ni le détail des chambres, le vrai poids d'une annonce. Sans cet index,
+ * le client devrait télécharger chaque document COMPLET (galeries
+ * comprises) juste pour savoir où placer un point sur la carte.
+ * thumbUrl fait exception, volontairement : une seule URL (texte, pas des
+ * octets d'image) vers la plus petite miniature déjà générée
+ * (galleryThumb, voir makeThumbFile() côté client), nécessaire à la
+ * popup miniature de la carte (retour utilisateur : "une miniature soit
+ * affichée au niveau du point") — sans elle, cette popup n'a tout
+ * simplement aucune image à montrer, listingIndex étant sa seule source
+ * pour la quasi-totalité des annonces affichées sur Explorer.
  *
  * Republié à chaque écriture sur listings/{listingId} (création,
  * modification, suppression, validation/refus par un admin) — supprimé
@@ -50,6 +57,19 @@ function listingIndexPrice(listing) {
     return Math.min.apply(null, listing.units.map(function (u) { return u.price; }));
   }
   return listing.price;
+}
+// Même repli que listingThumbUrl() côté client (sejours/index.html) :
+// galerie de l'établissement, sinon la 1ère chambre qui en a une.
+function listingIndexThumb(listing) {
+  if (listing.galleryThumb && listing.galleryThumb.length) return listing.galleryThumb[0];
+  if (listing.gallery && listing.gallery.length) return listing.gallery[0];
+  var units = listing.units || [];
+  for (var i = 0; i < units.length; i++) {
+    var u = units[i];
+    if (u.galleryThumb && u.galleryThumb.length) return u.galleryThumb[0];
+    if (u.gallery && u.gallery.length) return u.gallery[0];
+  }
+  return null;
 }
 
 exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async (event) => {
@@ -82,6 +102,7 @@ exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async
     // savoir quels listings/{listingId}/publicAvail/{unitId} interroger
     // sans avoir à charger l'annonce complète.
     unitIds: (after.units || []).map(function (u) { return u.id; }),
+    thumbUrl: listingIndexThumb(after),
   });
 });
 
