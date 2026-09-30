@@ -769,6 +769,15 @@ body.detail-open nav.tabbar{z-index:220;}
 .tab.active{color:var(--sauge-deep);}
 .tab.active .tab-icon{background:var(--sauge);}
 .tab.active .tab-icon svg{fill:var(--cream); stroke:var(--cream);}
+/* Espace hôtes (nav.tabbar.host-mode, voir renderTabbar()) : même
+   mécanique de sélection carrée que côté voyageur, mais en lavande
+   --lavender-deep — la couleur de l'encart "Espace hôtes" du Profil
+   (.switch-tile.hotes{background:var(--lavender-deep)}) — plutôt qu'en
+   vert propriétaire --sauge, pour que la barre du bas signale visuellement
+   qu'on est dans l'espace hôte, pas dans l'espace voyageur. */
+.tabbar.host-mode .tab{color:var(--lavender-icon);}
+.tabbar.host-mode .tab.active{color:var(--lavender-deep);}
+.tabbar.host-mode .tab.active .tab-icon{background:var(--lavender-deep);}
 .tab .badge{position:absolute; top:2px; right:22%; background:var(--danger); color:#fff; font-size:9px; font-weight:800;
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
@@ -6984,6 +6993,7 @@ var HOST_TABS_HTML =
 
 function renderTabbar(){
   var nav = document.getElementById("tabbar");
+  nav.classList.toggle("host-mode", !!state.hostMode);
   if(state.hostMode){
     nav.innerHTML = HOST_TABS_HTML;
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
