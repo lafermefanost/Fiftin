@@ -907,19 +907,24 @@ body.detail-open nav.tabbar{z-index:220;}
 .collection-tile-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
   border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; text-align:center; padding:12px;}
 .collection-tile-add svg{width:26px; height:26px;}
-/* Vue liste (volets, voir collectionVoletHtml()) : même forme qu'un vrai
-   volet — retour utilisateur : "ajouter une collection fais le exactement
-   de la même forme qu'une vraie collection (forme de l'encart)" — donc
-   mêmes padding/rayon que .collection-detail-head (12px 14px / 16px),
-   plutôt que l'ancien gabarit .map-list-item hérité d'avant les volets
-   (une simple ligne fine, qui ne ressemblait plus à rien une fois les
-   vraies collections passées en encarts). Contour pointillé + fond
-   transparent conservés (comme .collection-tile-add en grille) : sans ça,
-   posée à côté de vrais volets à fond plein, elle se lirait comme une
-   collection vide plutôt que comme une action. */
-.coll-add-row{display:flex; align-items:center; gap:10px; width:100%; border:1.5px dashed var(--sauge-light); border-radius:16px;
-  background:none; padding:12px 14px; color:var(--sauge); font-family:'Jost',sans-serif; font-weight:700; font-size:14px;}
-.coll-add-row svg{width:18px; height:18px; flex-shrink:0;}
+/* Vue liste (volets, voir collectionVoletHtml()) — retour utilisateur :
+   "ajouter une collection fais le exactement de la même forme qu'une
+   vraie collection" puis, en voyant le résultat (un simple bandeau fin
+   type en-tête) : "l'encart pointillé n'est pas exactement pareil que les
+   annonces, il est plus étroit" — largeur déjà identique (100% de la même
+   carte), la vraie différence était le GABARIT : .collection-detail-head
+   est un bandeau de 58px (juste un titre), une ligne .map-list-item fait
+   88px (vignette 68×68 + texte). Repris sur .map-list-item (même padding
+   10px 12px, même vignette 68×68 — ici en pointillé, sans image, avec un
+   "+" au milieu) pour que l'encart "Ajouter" ait exactement le même
+   gabarit qu'une vraie ligne d'annonce dans le volet juste en dessous.
+   Contour pointillé + fond transparent conservés (comme .collection-tile-add
+   en grille) : sans ça, elle se lirait comme une annonce plutôt que comme
+   une action. */
+.coll-add-row{display:flex; align-items:center; gap:12px; width:100%; border:1.5px dashed var(--sauge-light); border-radius:16px;
+  background:none; padding:10px 12px; color:var(--sauge); font-family:'Jost',sans-serif; font-weight:700; font-size:14px;}
+.coll-add-icon{width:68px; height:68px; border-radius:12px; border:1.5px dashed var(--sauge-light); flex-shrink:0; display:flex; align-items:center; justify-content:center;}
+.coll-add-icon svg{width:22px; height:22px;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
 .collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
@@ -939,7 +944,11 @@ body.detail-open nav.tabbar{z-index:220;}
    dessous), plutôt que de rester la seule ligne "nue" de tout l'écran une
    fois les annonces elles-mêmes passées en encarts blancs (voir
    collectionListingRowHtml()). */
-.collection-detail-head{display:flex; align-items:center; gap:8px; margin-bottom:14px; background:#fff; border-radius:16px; padding:12px 14px;}
+/* margin-bottom resserré (retour utilisateur : "trop d'espace entre la
+   collection et les annonces, colle les plus") — 14px -> 6px, plus proche
+   du gap:8px déjà utilisé entre les lignes d'annonces elles-mêmes
+   (.coll-listing-list) que d'un espacement de section. */
+.collection-detail-head{display:flex; align-items:center; gap:8px; margin-bottom:6px; background:#fff; border-radius:16px; padding:12px 14px;}
 .collection-detail-back{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; flex-shrink:0; display:flex; align-items:center; justify-content:center; color:var(--ink);}
 .collection-detail-back svg{width:18px; height:18px;}
 .collection-detail-title{flex:1; font-size:18px; font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
@@ -3236,7 +3245,10 @@ function collectionAddTileHtml(){
   return '<button type="button" class="collection-tile collection-tile-add" id="coll-add-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter une collection</span></button>';
 }
 function collectionAddRowHtml(){
-  return '<button type="button" class="coll-add-row" id="coll-add-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter une collection</span></button>';
+  return '<button type="button" class="coll-add-row" id="coll-add-tile">'+
+    '<span class="coll-add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>'+
+    '<span>Ajouter une collection</span>'+
+  '</button>';
 }
 /* Vue liste (retour utilisateur : "j'aimerais que la vue liste des séjours
    serve à avoir tous les favoris en une page avec plusieurs volets, 1

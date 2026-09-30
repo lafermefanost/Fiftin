@@ -1113,6 +1113,16 @@ Retour utilisateur : « passe le rond de la flèche pour ouvrir la collection en
 
 **Testé** (Playwright) : fond/couleur de la flèche confirmés vert/blanc, Renommer confirmé resté gris ; un volet replié confirmé faire remonter le suivant de 100px (18px de gap normal retombant à 6px) ; padding/rayon de l'encart "Ajouter" confirmés identiques à `.collection-detail-head`. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Ajustements : "Ajouter" au vrai gabarit d'une annonce, en-tête collé à ses annonces
+
+Retour utilisateur : « l'encart pointillé n'est pas exactement pareil que les annonces (il est plus étroit). Aussi il y a encore trop d'espace entre la collection et les annonces. Colle-les plus. »
+
+**"Ajouter une collection" au gabarit exact d'une annonce.** Largeur déjà identique (100% de la même carte) — la vraie différence était le GABARIT : `.collection-detail-head` (essayé au tour précédent) est un bandeau de 58px, juste un titre, alors qu'une ligne `.map-list-item` fait 88px (vignette 68×68 + texte). `.coll-add-row` reprend maintenant le padding de `.map-list-item` (10px 12px) et une vraie vignette 68×68 (`.coll-add-icon`, en pointillé avec un "+" au milieu, sans image) — 90px de haut, quasi identique à une vraie ligne d'annonce (88px). Contour pointillé + fond transparent conservés : sans ça, elle se lirait comme une annonce plutôt que comme une action.
+
+**En-tête collé à ses annonces.** `margin-bottom` de `.collection-detail-head` réduit de 14px à 6px — plus proche du `gap:8px` déjà utilisé entre les lignes d'annonces elles-mêmes que d'un espacement de section.
+
+**Testé** (Playwright) : hauteur de l'encart "Ajouter" confirmée à 90px contre 88px pour une vraie ligne d'annonce, vignette pointillée confirmée aux mêmes 68×68px que `.sw` ; espace entre l'en-tête d'un volet et sa première annonce confirmé à 6px (contre 14px avant). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
