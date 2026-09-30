@@ -1269,6 +1269,17 @@ body.map-fullscreen{overflow:hidden;}
 
 /* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
 .host-view{padding:24px 0 110px;}
+/* Page promo "App gestion" (renderHostAppPromo()) : mêmes captures déjà
+   utilisées sur la page marketing (shot-planning.webp, shot-clients.webp),
+   simplement empilées en une colonne mobile — contrairement à .phone-stage/
+   .phone2 côté fiftin.fr (desktop, hauteurs fixes en px, parallax JS), pas
+   besoin de ce décor ici : le cadre du téléphone est déjà dans l'image. */
+.gestion-promo-title{font-size:19px; margin:0 0 4px;}
+.gestion-promo-shot{margin:22px 0; text-align:center;}
+.gestion-promo-shot img{width:72%; max-width:260px; height:auto; display:block; margin:0 auto 12px; border-radius:18px; box-shadow:0 8px 24px rgba(20,26,20,.16);}
+.gestion-promo-caption{font-size:13.5px; line-height:1.5; color:var(--ink); opacity:.78; margin:0; padding:0 12px;}
+.gestion-promo-caption b{font-size:14.5px;}
+#gestion-promo-upgrade{margin-top:10px;}
 /* Statut du compte (géré depuis Fiftin app / calendrier simplifié) — sa
    propre ligne, alignée à droite, en tête du volet calendrier déplié d'une
    annonce : c'est une propriété du COMPTE, pas de cette annonce en
@@ -6977,6 +6988,19 @@ var HOST_TABS_HTML =
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>'+
     '<span>Mes annonces</span>'+
   '</button>'+
+  /* Onglet central, entre Mes annonces et Profil (retour utilisateur :
+     "un 3e picto au centre") : pas une vue de plus côté Séjours, juste un
+     raccourci vers l'outil de planning Fiftin app (même lien ../app/ que
+     .host-app-link/.cal-add-pill ailleurs dans ce fichier) — jamais marqué
+     .active (data-host-tab="app" ne correspond à aucune valeur possible de
+     state.hostTab), câblé à part dans renderTabbar() vers
+     openHostGestionApp() plutôt que switchHostTab(). Réservé aux comptes
+     gestion (formule Essentiel/Avancé, voir openHostGestionApp()) : une
+     formule Hôte simple n'a pas de compte Fiftin app à ouvrir. */
+  '<button class="tab" data-host-tab="app">'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></span>'+
+    '<span>App gestion</span>'+
+  '</button>'+
   /* Profil reste accessible en mode hôte, comme demandé — même icône que
      TRAVELER_TABS_HTML, en dernière position. Contenu différent de la
      vue voyageur (renderHostProfile(), pas renderProfile()) : formules
@@ -6997,8 +7021,16 @@ function renderTabbar(){
   if(state.hostMode){
     nav.innerHTML = HOST_TABS_HTML;
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
-      el.classList.toggle("active", el.getAttribute("data-host-tab")===state.hostTab);
-      el.addEventListener("click", function(){ switchHostTab(el.getAttribute("data-host-tab")); });
+      var hostTab = el.getAttribute("data-host-tab");
+      el.classList.toggle("active", hostTab===state.hostTab);
+      // "app" n'est pas un onglet classique : le clic doit d'abord savoir
+      // si le compte a accès à Fiftin app avant de décider où aller (voir
+      // openHostGestionApp()) — switchHostTab() directement ouvrirait la
+      // page promo même pour un compte gestion qui devrait partir tout de
+      // suite vers ../app/.
+      el.addEventListener("click", function(){
+        if(hostTab==="app") openHostGestionApp(); else switchHostTab(hostTab);
+      });
     });
   } else {
     nav.innerHTML = TRAVELER_TABS_HTML;
@@ -7075,9 +7107,51 @@ function renderHostTabContent(){
   // n'est pas concerné (déjà le cas avant la fusion du calendrier dedans) :
   // ses propres cartes (.admin-card) et, une fois dépliée, la carte blanche
   // du calendrier (.cal-card) se détachent très bien du fond crème normal.
-  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile");
+  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile"||state.hostTab==="app");
   if(state.hostTab==="profile") renderHostProfile();
+  else if(state.hostTab==="app") renderHostAppPromo();
   else renderHostListings();
+}
+/* Onglet central "App gestion" (HOST_TABS_HTML) : direction différente
+   selon la formule réelle du compte (accounts/{uid}.settings.plan, voir
+   resolveHostAccount()) — retour utilisateur, "si essentiel ou avancé,
+   l'app s'ouvre, sinon un lien pour upgrader sa formule". Un compte
+   gestion (essentiel/pro) part directement sur Fiftin app dans un nouvel
+   onglet ; une formule Hôte simple (ou aucun compte gestion) atterrit sur
+   renderHostAppPromo() plutôt que de partir sur un lien mort. */
+function openHostGestionApp(){
+  resolveHostAccount(function(account){
+    var plan = (account && account.settings && account.settings.plan) || "simple";
+    if(plan==="essentiel" || plan==="pro"){
+      window.open("../app/", "_blank", "noopener");
+    } else {
+      switchHostTab("app");
+    }
+  });
+}
+/* Page in-app plutôt qu'un simple popup (retour utilisateur : "tu rentres
+   sur une page qui te montre un peu l'outil mais dans des téléphones en
+   situation et après tu as un lien pour upgrader ta formule") — mêmes
+   visuels déjà utilisés sur la page marketing fiftin.fr (assets/shot-
+   planning.webp, assets/shot-clients.webp, section "Ce que Fiftin fait"
+   de index.html racine) : le mockup téléphone est déjà incrusté dans
+   l'image elle-même, pas besoin de reprendre le décor CSS desktop
+   (.phone-stage/.phone2, parallax JS) pensé pour une page large — ici,
+   une seule colonne mobile, simplement affichées les unes sous les
+   autres. Le bouton en pied ramène vers le Profil hôte (planCardHtml()) :
+   pas encore de vrai paiement (voir renderHostProfile()), la formule se
+   change aujourd'hui depuis Fiftin app, donc pas de raccourci plus direct
+   à proposer ici. */
+function renderHostAppPromo(){
+  var feed = document.getElementById("feed");
+  feed.innerHTML = '<div class="host-view gestion-promo">'+
+    '<h2 class="gestion-promo-title">Fiftin app, votre outil de gestion</h2>'+
+    '<p class="sheet-sub" style="margin-top:0;">Réservé aux formules Essentiel et Avancé : planning, fichier client, comptabilité, consommations — tout au même endroit, pensé pour être utilisé du téléphone.</p>'+
+    '<div class="gestion-promo-shot"><img src="../assets/shot-planning.webp" alt="Fiftin app — le planning, en situation"><p class="gestion-promo-caption"><b>Le planning</b><br>Toute votre année, en un coup d\'œil. Une réservation saisie en 15 secondes.</p></div>'+
+    '<div class="gestion-promo-shot"><img src="../assets/shot-clients.webp" alt="Fiftin app — le fichier client, en situation"><p class="gestion-promo-caption"><b>Le fichier client</b><br>Vos habitués reconnus : nom, email, préférences, historique.</p></div>'+
+    '<button type="button" class="btn-apply" id="gestion-promo-upgrade">Changer de formule</button>'+
+  '</div>';
+  document.getElementById("gestion-promo-upgrade").addEventListener("click", function(){ switchHostTab("profile"); });
 }
 /* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
    (data-switch="voyageur" y mène désormais à exitHostMode() plutôt qu'à
