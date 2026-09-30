@@ -1171,20 +1171,27 @@ body.detail-open nav.tabbar{z-index:220;}
       actions puisqu'il n'y a alors que Modifier/Supprimer à afficher.
    2) "faire les 3 boutons sur toute la largeur de la ligne" + "faire le
       bouton modifier aussi en fond vert" — flex:1 sur les 3 (au lieu d'une
-      largeur au contenu), .host-edit-btn passe en fond plein --sauge-mid
-      comme .host-status-toggle.on (même vert "propriétaire" que
-      .cal-disclose/.google-link/.plan-card.active, PAS --sauge-light,
-      plus clair et utilisé nulle part ailleurs pour ce rôle — voir aussi
-      la correction de .host-status-badge.published ci-dessous). Seul
-      Supprimer reste en contour rouge : storieusement la seule action
-      irréversible des 3, garder un traitement visuel à part reste
-      pertinent (même logique que #coll-detail-delete). */
+      largeur au contenu), .host-edit-btn passe en fond plein comme
+      .host-status-toggle.on. Couleur corrigée une 2e fois (retour
+      utilisateur, capture de la tuile "Espace voyageur" à l'appui : "c'est
+      ça le vert propriétaire") : --sauge (#354B38, celui de
+      .switch-tile.voyageur), PAS --sauge-mid (#4E6F53, plus clair) malgré
+      son nom "vert moyen (vert propriétaire)" donné plus tôt pour
+      .plan-card.active — les deux couleurs ont été désignées "vert
+      propriétaire" à des moments différents de ce chantier, contradiction
+      non résolue, tranchée ici au profit de la capture d'écran la plus
+      récente. --sauge-mid n'est PAS touché ailleurs (.cal-disclose,
+      .google-link, .plan-card.active, .coll-toggle-btn) — seul ce bouton
+      Modifier/Statut de "Mes annonces" est concerné par cette correction.
+      Seul Supprimer reste en contour rouge : la seule action irréversible
+      des 3, garder un traitement visuel à part reste pertinent (même
+      logique que #coll-detail-delete). */
 .host-listing-card > .admin-actions{gap:6px; margin-top:10px;}
 .host-status-toggle, .host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1;
   border:none; border-radius:16px; padding:9px 6px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700;}
-.host-status-toggle.on{background:var(--sauge-mid); color:#fff;}
+.host-status-toggle.on{background:var(--sauge); color:#fff;}
 .host-status-toggle.off{background:var(--cream-deep); color:var(--gray-mid);}
-.host-edit-btn{background:var(--sauge-mid); color:#fff;}
+.host-edit-btn{background:var(--sauge); color:#fff;}
 .host-delete-btn{background:none; border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
 .host-status-toggle svg, .host-edit-btn svg, .host-delete-btn svg{width:13px; height:13px; flex-shrink:0;}
 

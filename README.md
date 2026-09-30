@@ -1249,6 +1249,14 @@ Six retours utilisateur d'un coup sur cette carte (capture d'écran à l'appui) 
 
 **Testé** (Playwright, nouveau script `shot_host_listing_card.py`) : bouton statut confirmé en classe `.on` (vert `--sauge-mid`, PAS `--sauge-light`) sur une annonce publiée, `.off` (gris) sur une annonce mise en pause pour le test ; 3 boutons confirmés de largeurs quasi égales remplissant la ligne ; fond de "Modifier" confirmé en `--sauge-mid` ; clic sur le statut confirmé sans erreur JS (bascule le statut). Capture visuelle avant/après bascule. Suite de régression complète rejouée (y compris `shot_listingcard_and_shared_avatar.py`, qui vérifiait déjà l'alignement des 3 boutons), aucune casse, zéro erreur JS.
 
+### Correction du "vert propriétaire" : `--sauge`, pas `--sauge-mid`
+
+Retour utilisateur, capture d'écran de la tuile "Espace voyageur" à l'appui : « C'est ça le vert propriétaire. »
+
+Contradiction avec un retour antérieur de ce même chantier, non résolue mais tranchée : plus haut (« Formule active : encart vert moyen plein »), l'utilisateur avait lui-même désigné `--sauge-mid` (#4E6F53) comme « vert moyen (vert propriétaire) » pour `.plan-card.active`. Cette capture-ci montre une couleur différente et plus foncée — `--sauge` (#354B38), celle de `.switch-tile.voyageur`. Tranché au profit de la preuve visuelle la plus récente (une capture d'écran prévaut sur une description verbale antérieure) : `.host-status-toggle.on` et `.host-edit-btn` passent de `--sauge-mid` à `--sauge`. Aucun autre usage de `--sauge-mid` touché (`.cal-disclose`, `.google-link`, `.plan-card.active`, `.coll-toggle-btn`) — seuls ces deux boutons de "Mes annonces" étaient concernés par cette capture précise ; il reste une incohérence de fond entre les deux verts dans le reste du site, non résolue ici faute de demande explicite de l'utilisateur d'harmoniser plus largement.
+
+**Testé** : `shot_host_listing_card.py` remis à jour et rejoué — confirmé `rgb(53, 75, 56)` (= `--sauge`) sur "En ligne" et "Modifier". Suite de régression complète rejouée, aucune casse, zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
