@@ -1235,6 +1235,20 @@ Dans `openEnhancePreview()`, l'unique `<img>` devient deux images empilées dans
 
 **Testé** (Playwright, nouveau script `shot_enhance_intensity.py`) : curseur à 100 % par défaut à l'ouverture ; glissement à 40 % confirmé mettant à jour l'opacité CSS en direct sans erreur ; relâchement confirmé sans erreur JS pendant le recalcul ; fermeture puis réouverture confirmée restaurant le curseur à 40 % (pas de retour à 100 %) ; descente à 0 % confirmée sans erreur ; sélection "Original" confirmée masquant le curseur. Capture visuelle à 100/50/15 % confirmant une transition continue et lisible vers l'original. Suite de régression complète rejouée, aucune casse, zéro erreur JS.
 
+### "Mes annonces" : statut fusionné avec le bouton pause, vert propriétaire, boutons pleine largeur
+
+Six retours utilisateur d'un coup sur cette carte (capture d'écran à l'appui) : « le vert utilisé dans les encarts n'est pas le vert propriétaire [...] le bouton mettre en pause et le statut de l'annonce, c'est deux infos qui pourraient cohabiter sur le même bouton : en ligne avec fond vert lorsque c'est actif et en pause en fond gris quand l'annonce est inactive [...] grossir un peu l'image [...] faire les 3 boutons sur toute la largeur de la ligne [...] faire le bouton modifier aussi en fond vert [...] mettre titre de l'annonce et le texte un peu plus gros. »
+
+**Fusion statut/pause.** L'ancien badge `.host-status-badge` (lecture seule, à côté du titre) et l'ancien bouton `.host-pause-btn` (action, dans `.admin-actions`) deviennent un seul élément, `.host-status-toggle` : `.on` (publiée) en fond plein `--sauge-mid` texte blanc, libellé "En ligne" ; `.off` (en pause) en fond `--cream-deep` texte `--gray-mid`, libellé "En pause". Mêmes attributs `data-host-pause`/`data-pause-to` qu'avant, donc `toggleListingPause()` et son câblage restent inchangés — seul le rendu HTML/CSS bouge. Le badge séparé ne survit que pour le statut "en attente de validation" (rien à cliquer avant une 1ère validation, jamais mélangé aux 3 actions).
+
+**Vert propriétaire.** L'ancien badge utilisait `--sauge-light` (un vert plus clair, pâle) — pas la couleur "propriétaire" du site (`--sauge-mid`, déjà utilisée pour `.cal-disclose`/`.google-link`/`.plan-card.active`). `.host-status-toggle.on` ET `.host-edit-btn` (désormais en fond plein lui aussi, remplaçant son ancien contour neutre) utilisent maintenant `--sauge-mid`. Seul `.host-delete-btn` reste en contour rouge — la seule action irréversible des 3, un traitement visuel à part reste justifié.
+
+**Pleine largeur.** Les 3 boutons passent de "largeur au contenu" à `flex:1`, comblant toute la ligne au lieu de laisser de l'espace vide à droite.
+
+**Vignette et texte.** `.admin-thumb` en `.host-listing-card` : 96px → 112px. Titre (`.admin-card-body b`) et sous-texte (`.admin-card-body span`) : 14px/12px → 16px/13px, mais scopés à `.host-listing-card` uniquement (ces mêmes classes servent aussi à la file d'admin et au panneau "Demande rapide", que ce changement ne devait pas affecter).
+
+**Testé** (Playwright, nouveau script `shot_host_listing_card.py`) : bouton statut confirmé en classe `.on` (vert `--sauge-mid`, PAS `--sauge-light`) sur une annonce publiée, `.off` (gris) sur une annonce mise en pause pour le test ; 3 boutons confirmés de largeurs quasi égales remplissant la ligne ; fond de "Modifier" confirmé en `--sauge-mid` ; clic sur le statut confirmé sans erreur JS (bascule le statut). Capture visuelle avant/après bascule. Suite de régression complète rejouée (y compris `shot_listingcard_and_shared_avatar.py`, qui vérifiait déjà l'alignement des 3 boutons), aucune casse, zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

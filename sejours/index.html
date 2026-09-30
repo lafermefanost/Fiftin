@@ -1119,6 +1119,13 @@ body.detail-open nav.tabbar{z-index:220;}
 .admin-card-body{display:flex; flex-direction:column; gap:3px; min-width:0;}
 .admin-card-body b{font-size:14px;}
 .admin-card-body span{font-size:12px; color:var(--sauge); font-weight:600;}
+/* Titre + sous-texte un peu plus gros sur "Mes annonces" spécifiquement
+   (retour utilisateur, capture d'écran) — .admin-card-body sert aussi à la
+   file d'admin (Annonces à valider, .admin-card sans host-listing-card) et
+   au panneau "Demande rapide" ailleurs : grossir b/span directement les
+   aurait fait grossir partout, d'où ce scope .host-listing-card. */
+.host-listing-card .admin-card-body b{font-size:16px;}
+.host-listing-card .admin-card-body span{font-size:13px;}
 .admin-owner{color:var(--gray-mid)!important; font-weight:500!important;}
 .admin-actions{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
 .admin-actions .btn-apply{padding:8px 14px; font-size:12.5px; width:auto;}
@@ -1138,39 +1145,48 @@ body.detail-open nav.tabbar{z-index:220;}
    « j'aimerais que l'image aperçu reste quand même dans un picto style
    application carré, bords arrondis, mais plus gros qu'avant ». Revenu à
    la mise en page carrée d'origine (héritée de .admin-card, padding/gap
-   inchangés), juste agrandie : 64px -> 96px. Rayon 16px, PAS 20px comme
-   un premier essai l'avait mis (retour utilisateur : « les coins ont un
-   rayon d'arrondi différent du reste du site ») — 16px est le palier
-   standard du site (voir README, « Détail visuel » : .admin-card lui-même,
-   .stat-tile, .map-list-item… tous à 16px), 20px cassait cette cohérence
-   sans raison. */
+   inchangés), agrandie une 2e fois (retour utilisateur, capture d'écran
+   suivante : « grossir un peu l'image ») : 64px -> 96px -> 112px. Rayon
+   16px, PAS 20px comme un premier essai l'avait mis (retour utilisateur :
+   « les coins ont un rayon d'arrondi différent du reste du site ») — 16px
+   est le palier standard du site (voir README, « Détail visuel » :
+   .admin-card lui-même, .stat-tile, .map-list-item… tous à 16px), 20px
+   cassait cette cohérence sans raison. */
 .admin-card.host-listing-card{background:#fff;}
-.admin-card.host-listing-card .admin-thumb{width:96px; height:96px; border-radius:16px;}
+.admin-card.host-listing-card .admin-thumb{width:112px; height:112px; border-radius:16px;}
 .host-status-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 /* Mettre en pause / Modifier / Supprimer : trois actions au même niveau,
-   même style de pilule, même ligne (.admin-actions) — retour utilisateur :
-   "passe mettre en pause, supprimer et modifier exactement dans le même
-   style et sur la même ligne", le bouton pause vivait avant à côté du
-   badge de statut, dans un gabarit plus petit (10.5px) qui le faisait
-   paraître différent des deux autres. Seule la couleur distingue les
-   actions entre elles (comme Modifier/Supprimer déjà avant ce changement) :
-   Mettre en pause et Modifier en contour neutre (actions réversibles),
-   Supprimer seul en contour danger — mêmes tracés que
-   #coll-detail-rename/#coll-detail-delete (favoris), rien de réinventé.
-   Voir toggleListingPause() : bascule status published<->paused, jamais
-   proposé sur une annonce encore "pending" (rien à mettre en pause avant
-   une première publication). Pour que les trois tiennent sur une seule
-   ligne à 390px, la ligne d'actions est sortie de la colonne étroite à
-   côté de la vignette (96px) — devenue un rang à part, pleine largeur de
-   la carte, juste au-dessus de l'encart Calendrier (voir hostListingCardHtml())
-   — et le gabarit resserré (padding/gap/icône réduits) : mesuré nécessaire
-   pour "Mettre en pause" (le plus long des trois libellés) à cette largeur. */
-.host-listing-card > .admin-actions{gap:5px; margin-top:10px;}
-.host-pause-btn, .host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; gap:4px; background:none; border-radius:16px;
-  padding:8px 9px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700;}
-.host-pause-btn, .host-edit-btn{border:1.5px solid var(--line); color:var(--ink);}
-.host-delete-btn{border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
-.host-pause-btn svg, .host-edit-btn svg, .host-delete-btn svg{width:13px; height:13px; flex-shrink:0;}
+   même style de pilule, même ligne (.admin-actions). Deux retours
+   utilisateur successifs ont fait évoluer ce rang (capture d'écran) :
+   1) "le bouton mettre en pause et le statut de l'annonce, c'est deux
+      infos qui pourraient cohabiter sur le même bouton : en ligne avec
+      fond vert quand actif, en pause en fond gris quand inactif" —
+      l'ancien badge .host-status-badge (lecture seule, à côté du titre)
+      et l'ancien bouton .host-pause-btn (action, dans .admin-actions)
+      fusionnent en un seul élément, .host-status-toggle : un bouton qui
+      EST l'indicateur de statut (même data-host-pause/data-pause-to
+      qu'avant, le câblage JS de toggleListingPause() est inchangé). Le
+      badge séparé ne survit que pour "pending" (rien à cliquer avant une
+      1ère validation, voir hostListingCardHtml()) — jamais mélangé aux 3
+      actions puisqu'il n'y a alors que Modifier/Supprimer à afficher.
+   2) "faire les 3 boutons sur toute la largeur de la ligne" + "faire le
+      bouton modifier aussi en fond vert" — flex:1 sur les 3 (au lieu d'une
+      largeur au contenu), .host-edit-btn passe en fond plein --sauge-mid
+      comme .host-status-toggle.on (même vert "propriétaire" que
+      .cal-disclose/.google-link/.plan-card.active, PAS --sauge-light,
+      plus clair et utilisé nulle part ailleurs pour ce rôle — voir aussi
+      la correction de .host-status-badge.published ci-dessous). Seul
+      Supprimer reste en contour rouge : storieusement la seule action
+      irréversible des 3, garder un traitement visuel à part reste
+      pertinent (même logique que #coll-detail-delete). */
+.host-listing-card > .admin-actions{gap:6px; margin-top:10px;}
+.host-status-toggle, .host-edit-btn, .host-delete-btn{display:inline-flex; align-items:center; justify-content:center; gap:4px; flex:1;
+  border:none; border-radius:16px; padding:9px 6px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700;}
+.host-status-toggle.on{background:var(--sauge-mid); color:#fff;}
+.host-status-toggle.off{background:var(--cream-deep); color:var(--gray-mid);}
+.host-edit-btn{background:var(--sauge-mid); color:#fff;}
+.host-delete-btn{background:none; border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
+.host-status-toggle svg, .host-edit-btn svg, .host-delete-btn svg{width:13px; height:13px; flex-shrink:0;}
 
 .empty-state{text-align:center; padding:60px 30px; color:var(--sauge);}
 .empty-state svg{width:44px; height:44px; margin-bottom:14px; opacity:.4;}
@@ -6950,9 +6966,12 @@ function hostListingCardHtml(l){
   var coverUrl = listingCoverUrl(l);
   var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
   var isPaused = l.status==="paused";
-  var statusLabel = l.status==="published" ? "Publiée" : isPaused ? "En pause" : "En attente de validation";
-  var badgeClass = l.status==="published" ? "published" : isPaused ? "paused" : "pending";
   var canTogglePause = l.status==="published" || isPaused;
+  // "pending" n'a ni bouton de bascule (rien à publier/mettre en pause
+  // avant une 1ère validation) ni fusion possible avec .host-status-toggle
+  // (voir commentaire CSS plus haut) : seul cas qui garde l'ancien badge
+  // séparé, à côté du titre.
+  var isPending = !canTogglePause;
   var expanded = l.id===state.hostListingId;
   // Retour utilisateur : "j'aimerais que le calendrier soit sur la même
   // carte que l'annonce (...) le bouton calendrier devrait plutôt être un
@@ -6972,17 +6991,15 @@ function hostListingCardHtml(l){
     '<div class="admin-card-row">'+cover+
       '<div class="admin-card-body">'+
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-        '<div class="host-status-line">'+
-          '<span class="host-status-badge '+badgeClass+'">'+statusLabel+'</span>'+
-        '</div>'+
+        (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">En attente de validation</span></div>' : '')+
         (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
       '</div>'+
     '</div>'+
     '<div class="admin-actions">'+
-      (canTogglePause ? '<button type="button" class="host-pause-btn" data-host-pause="'+esc(l.id)+'" data-pause-to="'+(isPaused?"published":"paused")+'">'+
+      (canTogglePause ? '<button type="button" class="host-status-toggle '+(isPaused?"off":"on")+'" data-host-pause="'+esc(l.id)+'" data-pause-to="'+(isPaused?"published":"paused")+'">'+
         (isPaused
-          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4l12 8-12 8V4z"/></svg><span>Publier</span>'
-          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>Mettre en pause</span>')+
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v14M16 5v14"/></svg><span>En pause</span>'
+          : '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><circle cx="12" cy="12" r="6"/></svg><span>En ligne</span>')+
       '</button>' : '')+
       '<button type="button" class="host-edit-btn" data-host-edit="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span></button>'+
       '<button type="button" class="host-delete-btn" data-host-delete="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Supprimer</span></button>'+
