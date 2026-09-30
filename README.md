@@ -1055,6 +1055,16 @@ Retour utilisateur : « fais le même style de bouton pour Voir plus que ceux pl
 
 **Testé** (Playwright) : fond/flou/bordure/couleur du bouton confirmés identiques à ceux mesurés sur les pastilles existantes. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Vue liste des favoris : tous les volets sur une seule page, sans navigation
+
+Retour utilisateur : « j'aimerais que la vue liste des séjours serve à avoir tous les favoris en une page avec plusieurs volets (1 volet par collection) mais je ne veux pas que cliquer sur une collection te redirige vers le contenu de la collection. »
+
+**`collectionVoletHtml()`** remplace l'ancienne ligne-résumé cliquable de la vue liste (`collectionListRowHtml()`, retirée, plus aucun appelant) : au lieu d'un `data-open-coll` qui ouvrait `renderCollectionDetail()` sur un écran séparé, chaque collection devient un volet DÉPLIÉ EN PERMANENCE sur cette même page — même en-tête que le détail (nom + actions), sans bouton retour (rien à quitter), suivi directement de ses annonces (`collectionListingRowHtml()`, déjà utilisées par le détail). Renommer/Supprimer restent accessibles depuis cet en-tête (`data-rename-coll` nouveau, `data-del-coll` déjà existant) — seule l'ouverture d'un écran séparé disparaît. La vue grille garde son comportement d'origine (clic sur une tuile → détail) : seule la vue liste change.
+
+**Chargement complet des annonces par volet.** La vue grille ne charge que les 3 premières annonces de chaque collection (mosaïque de couverture, voir `collectionTileHtml()`) ; la vue liste a maintenant besoin de TOUTES les annonces de chaque collection pour remplir ses volets — `renderFavorisView()` charge l'ensemble de `listingIds` de toutes les collections quand `state.likesLayout==="list"`. Le bouton de bascule grille/liste appelle désormais `renderFavorisView()` plutôt que de ré-empiler `renderCollectionsGrid()` directement avec les mêmes annonces déjà en cache : sans ça, basculer vers la vue liste depuis la grille laissait les volets de plus de 3 annonces incomplets tant qu'un rechargement complet n'avait pas eu lieu.
+
+**Testé** (Playwright) : 2 collections (2 puis 1 annonce) confirmées en 2 volets distincts, chacun avec TOUTES ses annonces ; clic sur le titre d'un volet confirmé sans effet (toujours sur la même page, aucun écran de détail ouvert) ; clic sur une annonce À L'INTÉRIEUR d'un volet confirmé ouvrir sa fiche complète ; renommage depuis l'en-tête d'un volet confirmé fonctionnel ; vue grille confirmée inchangée (clic sur une tuile ouvre toujours le détail séparé). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
