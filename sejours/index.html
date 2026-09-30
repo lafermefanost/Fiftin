@@ -907,24 +907,21 @@ body.detail-open nav.tabbar{z-index:220;}
 .collection-tile-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
   border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; text-align:center; padding:12px;}
 .collection-tile-add svg{width:26px; height:26px;}
-/* Vue liste (volets, voir collectionVoletHtml()) — retour utilisateur :
-   "ajouter une collection fais le exactement de la même forme qu'une
-   vraie collection" puis, en voyant le résultat (un simple bandeau fin
-   type en-tête) : "l'encart pointillé n'est pas exactement pareil que les
-   annonces, il est plus étroit" — largeur déjà identique (100% de la même
-   carte), la vraie différence était le GABARIT : .collection-detail-head
-   est un bandeau de 58px (juste un titre), une ligne .map-list-item fait
-   88px (vignette 68×68 + texte). Repris sur .map-list-item (même padding
-   10px 12px, même vignette 68×68 — ici en pointillé, sans image, avec un
-   "+" au milieu) pour que l'encart "Ajouter" ait exactement le même
-   gabarit qu'une vraie ligne d'annonce dans le volet juste en dessous.
-   Contour pointillé + fond transparent conservés (comme .collection-tile-add
-   en grille) : sans ça, elle se lirait comme une annonce plutôt que comme
-   une action. */
-.coll-add-row{display:flex; align-items:center; gap:12px; width:100%; border:1.5px dashed var(--sauge-light); border-radius:16px;
-  background:none; padding:10px 12px; color:var(--sauge); font-family:'Jost',sans-serif; font-weight:700; font-size:14px;}
-.coll-add-icon{width:68px; height:68px; border-radius:12px; border:1.5px dashed var(--sauge-light); flex-shrink:0; display:flex; align-items:center; justify-content:center;}
-.coll-add-icon svg{width:22px; height:22px;}
+/* Vue liste (volets, voir collectionVoletHtml()) — après deux essais
+   (bandeau fin type en-tête, puis gabarit d'une ligne d'annonce), retour
+   utilisateur final, très précis : "un vrai clone d'un encart collection,
+   mais en mode ajouter une collection — même hauteur, même largeur que
+   l'encart Vacances d'été, et à droite les trois petits boutons en
+   pointillé comme s'ils existaient". Donc littéralement
+   .collection-detail-head réutilisée telle quelle (même fond blanc plein,
+   même padding/rayon, .collection-detail-title pour le texte) — plus de
+   contour pointillé sur tout l'encart ni de vignette : la seule
+   différence avec un vrai volet est le texte du titre et les trois
+   pastilles de droite, vides et en pointillé (.coll-add-ghost-btn),
+   plutôt que Renommer/Supprimer/Replier bien réels. */
+.coll-add-row{border:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
+.coll-add-row .collection-detail-title{color:var(--sauge);}
+.coll-add-ghost-btn{width:34px; height:34px; border-radius:50%; border:1.5px dashed var(--line); background:none; flex-shrink:0;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
 .collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
@@ -3245,9 +3242,13 @@ function collectionAddTileHtml(){
   return '<button type="button" class="collection-tile collection-tile-add" id="coll-add-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter une collection</span></button>';
 }
 function collectionAddRowHtml(){
-  return '<button type="button" class="coll-add-row" id="coll-add-tile">'+
-    '<span class="coll-add-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg></span>'+
-    '<span>Ajouter une collection</span>'+
+  return '<button type="button" class="collection-detail-head coll-add-row" id="coll-add-tile">'+
+    '<span class="collection-detail-title">Ajouter une collection</span>'+
+    '<div class="collection-detail-actions">'+
+      '<span class="coll-add-ghost-btn"></span>'+
+      '<span class="coll-add-ghost-btn"></span>'+
+      '<span class="coll-add-ghost-btn"></span>'+
+    '</div>'+
   '</button>';
 }
 /* Vue liste (retour utilisateur : "j'aimerais que la vue liste des séjours

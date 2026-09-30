@@ -1123,6 +1123,14 @@ Retour utilisateur : « l'encart pointillé n'est pas exactement pareil que les 
 
 **Testé** (Playwright) : hauteur de l'encart "Ajouter" confirmée à 90px contre 88px pour une vraie ligne d'annonce, vignette pointillée confirmée aux mêmes 68×68px que `.sw` ; espace entre l'en-tête d'un volet et sa première annonce confirmé à 6px (contre 14px avant). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### "Ajouter une collection" : un vrai clone de l'encart collection
+
+Retour utilisateur, très précis, après le gabarit "annonce" essayé au tour précédent : « un vrai clone d'un encart collection, mais en mode ajouter une collection — même hauteur, même largeur que l'encart Vacances d'été, et à droite les trois petits boutons en pointillé comme s'ils existaient. »
+
+`collectionAddRowHtml()` réutilise littéralement `.collection-detail-head`/`.collection-detail-title`/`.collection-detail-actions` — même fond blanc plein, même padding/rayon (58px de haut, comme un vrai en-tête), plus de contour pointillé ni de vignette sur l'ensemble de l'encart. Seules deux différences avec un vrai volet : le texte du titre ("Ajouter une collection", en `--sauge` plutôt que la couleur d'un vrai titre) et trois pastilles vides en pointillé (`.coll-add-ghost-btn`, même 34×34px que Renommer/Supprimer/Replier) à la place de vrais boutons — de simples silhouettes, pas de picto ni de fonction, juste pour compléter la ressemblance.
+
+**Testé** (Playwright) : dimensions de l'encart "Ajouter" confirmées identiques (58×354px) à un vrai en-tête de volet, même fond blanc ; trois pastilles fantômes confirmées présentes, à la même taille (34×34px) que les vrais boutons de l'en-tête. Suite de régression complète rejouée (un script existant mis à jour au passage : son sélecteur `.collection-detail-title` global attrapait désormais aussi le nouveau titre "Ajouter une collection", qui partage volontairement la même classe qu'un vrai titre — recentré sur `.coll-panel .collection-detail-title`, sans rapport avec une régression). Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
