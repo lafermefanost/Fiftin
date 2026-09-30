@@ -458,7 +458,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
    Améliorer/Supprimer à droite. Même structure réutilisée pour les
    photos de la maison (#hf-photo-grid) et celles de chaque location
    (.hf-unit-photo-grid) — voir photoListRowHtml()/renderHostPhotoGrid()/
-   renderHostUnitPhotoGrid(). */
+   renderHostUnitPhotoGrid(). Depuis le retour "y'a-t-il une possibilité de
+   highlight un peu automatiquement les photos", l'amélioration
+   (enhancePhotoEntry()) tourne automatiquement dès l'ajout d'une photo —
+   .busy pendant le calcul — et reste réversible via le bouton Améliorer,
+   qui bascule original/amélioré au lieu de partir d'un état neutre. */
 .hf-photo-list{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
 .hf-photo-list:empty{margin-top:0;}
 .hf-photo-row{display:flex; align-items:center; gap:10px; background:#fff; border-radius:14px; padding:8px;}
@@ -4615,7 +4619,9 @@ function openSheet(kind){
       cropAndCompressFiles(accepted).then(function(files){
         files.forEach(function(file){
           if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-          hfSelectedFiles.push({type:"new", file:file});
+          var entry = {type:"new", file:file};
+          hfSelectedFiles.push(entry);
+          enhancePhotoEntry(entry, renderHostPhotoGrid);
         });
         renderHostPhotoGrid();
       });
@@ -5004,10 +5010,30 @@ function photoListRowHtml(entry, i, total){
     '<div class="hf-photo-row-actions">'+
       '<button type="button" class="hf-photo-move" data-dir="-1" data-i="'+i+'" aria-label="Monter"'+(i===0?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>'+
       '<button type="button" class="hf-photo-move" data-dir="1" data-i="'+i+'" aria-label="Descendre"'+(i===total-1?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>'+
-      (canEnhance ? '<button type="button" class="hf-photo-enhance'+(entry.enhanced?' active':'')+'" data-i="'+i+'" aria-label="'+(entry.enhanced?"Annuler l’amélioration":"Améliorer automatiquement")+'"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(entry.enhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
+      (canEnhance ? '<button type="button" class="hf-photo-enhance'+(entry.enhanced?' active':'')+'" data-i="'+i+'" aria-label="'+(entry.enhanced?"Revenir à la photo originale":(entry.enhancedFile?"Réappliquer l’amélioration":"Améliorer automatiquement"))+'"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(entry.enhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
       '<button type="button" class="hf-photo-remove" data-i="'+i+'" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
     '</div>'+
   '</div>';
+}
+/* Calcule (ou recalcule) la version améliorée d'une entrée "new" et
+   l'applique — utilisé à la fois juste après l'ajout d'une photo
+   (amélioration automatique, retour utilisateur "y'a-t-il une possibilité
+   de highlight un peu automatiquement les photos") et en repli manuel
+   depuis le bouton si jamais rien n'est encore en cache (ex. premier essai
+   ayant échoué sur une image particulière). Idempotent : n'écrase pas un
+   enhancedFile déjà calculé, ré-entrant grâce à entry.busy. */
+function enhancePhotoEntry(entry, rerender){
+  if(entry.busy) return;
+  entry.busy = true; rerender();
+  autoEnhanceFile(entry.file).then(function(enhanced){
+    entry.busy = false;
+    if(!enhanced){ rerender(); return; }
+    entry.originalFile = entry.file;
+    entry.enhancedFile = enhanced;
+    entry.file = enhanced;
+    entry.enhanced = true;
+    rerender();
+  });
 }
 /* Câblage commun Monter/Descendre/Améliorer/Supprimer, réutilisé pour la
    liste maison (hfSelectedFiles) et chaque liste de location
@@ -5027,16 +5053,7 @@ function wirePhotoListRows(container, arr, rerender){
       if(!entry || entry.type!=="new" || entry.busy) return;
       if(entry.enhanced){ entry.file = entry.originalFile; entry.enhanced = false; rerender(); return; }
       if(entry.enhancedFile){ entry.originalFile = entry.file; entry.file = entry.enhancedFile; entry.enhanced = true; rerender(); return; }
-      entry.busy = true; rerender();
-      autoEnhanceFile(entry.file).then(function(enhanced){
-        entry.busy = false;
-        if(!enhanced){ rerender(); return; }
-        entry.originalFile = entry.file;
-        entry.enhancedFile = enhanced;
-        entry.file = enhanced;
-        entry.enhanced = true;
-        rerender();
-      });
+      enhancePhotoEntry(entry, rerender);
     });
   });
   Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-remove"), function(el){
@@ -5191,7 +5208,9 @@ function renderHostUnits(){
       cropAndCompressFiles(accepted).then(function(files){
         files.forEach(function(file){
           if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-          unit.photos.push({type:"new", file:file});
+          var entry = {type:"new", file:file};
+          unit.photos.push(entry);
+          enhancePhotoEntry(entry, function(){ renderHostUnitPhotoGrid(unitId); });
         });
         renderHostUnitPhotoGrid(unitId);
       });
