@@ -813,8 +813,11 @@ body.detail-open nav.tabbar{z-index:220;}
    de suite une action sur CETTE annonce d'une action sur LA collection.
    Scopé à .coll-listing-list (jamais .log-action tout court) : ne doit pas
    affecter .log-action.decline du "refuser une demande" ailleurs sur le
-   site (contactLogRowHtml()), qui reste plein comme avant. */
-.coll-listing-list .log-action{background:#fff; border:1.5px solid var(--line);}
+   site (contactLogRowHtml()), qui reste plein comme avant. Ronds (retour
+   utilisateur : "peux-tu utiliser des ronds plutôt") plutôt que le carré à
+   coins arrondis de .log-action de base — même forme que les icônes de
+   l'en-tête du volet (.collection-detail-actions button, déjà 50%). */
+.coll-listing-list .log-action{background:#fff; border:1.5px solid var(--line); border-radius:50%;}
 .coll-listing-list .log-action.decline{color:var(--danger); border-color:rgba(178,84,59,.35);}
 .coll-listing-list .log-action.move{color:var(--ink);}
 

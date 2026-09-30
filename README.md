@@ -1093,6 +1093,14 @@ Les deux boutons de `collectionListingRowHtml()` (changer de collection, retirer
 
 **Testé** (Playwright, capture d'écran) : fond/bordure des deux boutons confirmés blancs contourés, contre le fond gris plein toujours en place sur l'en-tête du volet (Renommer). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Boutons changer/retirer : ronds plutôt que carrés à coins arrondis
+
+Retour utilisateur : « peux-tu utiliser des ronds plutôt. »
+
+`.coll-listing-list .log-action` passe à `border-radius:50%` — même forme que les icônes de l'en-tête du volet (`.collection-detail-actions button`, déjà en rond), au lieu du carré à coins arrondis (`10px`) hérité de `.log-action` de base.
+
+**Testé** (Playwright) : `border-radius:50%` confirmé sur les deux boutons. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
