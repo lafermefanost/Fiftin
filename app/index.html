@@ -30,6 +30,13 @@ html,body{height:100%;overflow:hidden;}
      pour rester visible en simple contour (le fond, lui, reste --lavender-bg
      inchangé). */
   --lavender-strong:#7B94E8;
+  /* Lavande foncé, distinct de --lavender-strong ci-dessus (réservé
+     .wbrief/filtres événements) : seul usage, le bouton #backToSejoursBtn
+     du header (retour vers Fiftin Séjours) — même teinte que
+     --lavender-deep côté sejours/index.html (.switch-tile.hotes), pour
+     que la couleur de "vous êtes dans Fiftin app" / "revenir à Séjours"
+     soit cohérente entre les deux sites. */
+  --lavender-deep:#4E67BC;
   /* Nouveau vert (vert sauge) : accent des volets secondaires et des petits
      éléments graphiques qui ponctuent l'appli (pictos chiffrés départs/
      arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
@@ -105,6 +112,12 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   display:flex;align-items:center;justify-content:center;font-size:16px;
   transition:background .15s;}
 .hbtn:hover{background:rgba(255,255,255,.2);}
+/* Retour utilisateur : bulle pleine lavande + picto blanc (au lieu du
+   fond transparent standard des autres .hbtn) pour que ce bouton précis
+   se distingue visuellement des autres icônes du header — celui qui
+   ramène vers Fiftin Séjours, pas une action interne à l'appli. */
+#backToSejoursBtn{background:var(--lavender-deep);color:#fff;}
+#backToSejoursBtn:hover{background:var(--lavender-deep);opacity:.85;}
 .sync-pip{width:8px;height:8px;border-radius:50%;background:#666;flex-shrink:0;}
 .sync-pip.ok{background:#4CAF50;}
 .sync-pip.busy{background:var(--lavender);animation:blink 1s infinite;}
@@ -1647,6 +1660,14 @@ Gardez la main.</div>
        Réglages → Compte juste pour ça. -->
   <button class="hbtn" id="logoutBtn" onclick="signOutUser()" title="Se déconnecter">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+  </button>
+  <!-- Retour utilisateur : venant de Fiftin Séjours (bouton "App gestion",
+       voir HOST_TABS_HTML dans sejours/index.html), il faut un chemin
+       retour symétrique — même picto exactement (carré + flèche sortante)
+       que ce bouton côté Séjours, bulle pleine lavande pour le distinguer
+       des autres icônes du header (voir #backToSejoursBtn, CSS plus haut). -->
+  <button class="hbtn" id="backToSejoursBtn" onclick="location.href='../sejours/'" title="Retour à Fiftin Séjours">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
   </button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
 </header>
