@@ -903,10 +903,12 @@ body.detail-open nav.tabbar{z-index:220;}
    collection grise/vide avec la mention ajouter une collection") —
    contour pointillé plutôt que le fond plein des autres tuiles, pour
    qu'elle se lise tout de suite comme une action et non comme une
-   collection existante parmi d'autres. */
+   collection existante parmi d'autres. Texte seul avec un "+" devant
+   (retour utilisateur : "comme pour la vue vignette", après le même
+   changement en vue liste, voir collectionAddRowHtml()) plutôt qu'un
+   picto "+" séparé au-dessus du texte. */
 .collection-tile-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
   border:1.5px dashed var(--sauge-light); background:none; color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; text-align:center; padding:12px;}
-.collection-tile-add svg{width:26px; height:26px;}
 /* Vue liste (volets, voir collectionVoletHtml()) — après deux essais
    (bandeau fin type en-tête, puis gabarit d'une ligne d'annonce), retour
    utilisateur final, très précis : "un vrai clone d'un encart collection,
@@ -920,7 +922,11 @@ body.detail-open nav.tabbar{z-index:220;}
    pastilles de droite, vides et en pointillé (.coll-add-ghost-btn),
    plutôt que Renommer/Supprimer/Replier bien réels. */
 .coll-add-row{border:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
-.coll-add-row .collection-detail-title{color:var(--sauge);}
+/* Typo du titre "comme avant" (retour utilisateur), plus légère que
+   .collection-detail-title de base (18px/800, poids d'un vrai nom de
+   collection) — 14px/700, avec un "+" devant le texte (voir
+   collectionAddRowHtml()) plutôt qu'un poids aussi lourd qu'un vrai titre. */
+.coll-add-row .collection-detail-title{color:var(--sauge); font-size:14px; font-weight:700;}
 .coll-add-ghost-btn{width:34px; height:34px; border-radius:50%; border:1.5px dashed var(--line); background:none; flex-shrink:0;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
@@ -3239,11 +3245,11 @@ function collectionTileHtml(c){
    ajouter dans la foulée, collectionPickerContext.listing, qu'on n'a pas
    ici). */
 function collectionAddTileHtml(){
-  return '<button type="button" class="collection-tile collection-tile-add" id="coll-add-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg><span>Ajouter une collection</span></button>';
+  return '<button type="button" class="collection-tile collection-tile-add" id="coll-add-tile"><span>+ Ajouter une collection</span></button>';
 }
 function collectionAddRowHtml(){
   return '<button type="button" class="collection-detail-head coll-add-row" id="coll-add-tile">'+
-    '<span class="collection-detail-title">Ajouter une collection</span>'+
+    '<span class="collection-detail-title">+ Ajouter une collection</span>'+
     '<div class="collection-detail-actions">'+
       '<span class="coll-add-ghost-btn"></span>'+
       '<span class="coll-add-ghost-btn"></span>'+

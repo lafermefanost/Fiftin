@@ -1131,6 +1131,16 @@ Retour utilisateur, très précis, après le gabarit "annonce" essayé au tour p
 
 **Testé** (Playwright) : dimensions de l'encart "Ajouter" confirmées identiques (58×354px) à un vrai en-tête de volet, même fond blanc ; trois pastilles fantômes confirmées présentes, à la même taille (34×34px) que les vrais boutons de l'en-tête. Suite de régression complète rejouée (un script existant mis à jour au passage : son sélecteur `.collection-detail-title` global attrapait désormais aussi le nouveau titre "Ajouter une collection", qui partage volontairement la même classe qu'un vrai titre — recentré sur `.coll-panel .collection-detail-title`, sans rapport avec une régression). Zéro erreur JS.
 
+### "+ Ajouter une collection" : typo plus légère, avec le "+" devant (grille et liste)
+
+Retour utilisateur : « la typo ajouter une collection tu peux la faire comme avant avec le plus devant, après c'est bon » puis, tout de suite après : « comme pour la vue vignette. »
+
+**Vue liste.** Le titre de `.coll-add-row` (qui héritait de `.collection-detail-title`, 18px/800 — le même poids qu'un vrai nom de collection) repasse à une typo plus légère, 14px/700 (comme avant le passage en "vrai clone d'encart"), avec un "+" ajouté devant le texte : `+ Ajouter une collection`.
+
+**Vue grille**, même geste : `collectionAddTileHtml()` perd son picto "+" séparé (SVG, posé au-dessus du texte) au profit d'un simple `+` en tête du texte, cohérent avec la vue liste.
+
+**Testé** (Playwright) : texte et typo confirmés dans les deux vues (`+ Ajouter une collection`, 14px/700 en liste) ; tuile grille confirmée sans SVG. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
