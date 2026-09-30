@@ -923,6 +923,12 @@ body.detail-open nav.tabbar{z-index:220;}
 .coll-listing-list{display:flex; flex-direction:column; gap:8px;}
 .coll-listing-list .map-list-item{cursor:pointer;}
 #coll-detail-delete{color:var(--danger);}
+/* Flèche replier/déplier d'un volet (vue liste des favoris, voir
+   collectionVoletHtml()) — même idiome que .cal-mini-chevron : vers le bas
+   au repos (déplié), tournée à -90° une fois repliée. */
+.coll-toggle-chevron{transition:transform .18s ease;}
+.coll-panel.collapsed .coll-toggle-chevron{transform:rotate(-90deg);}
+.coll-panel.collapsed .coll-panel-body{display:none;}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
 .profile-row svg{width:16px; height:16px; opacity:.5;}
@@ -3118,6 +3124,17 @@ function renderCollectionsGrid(feed, toggle, cols){
       openSheet("collRename");
     });
   });
+  // Retour utilisateur : "une espèce de flèche qui ouvre et qui ferme la
+  // collection" — pur CSS (classList.toggle), même mécanique que
+  // data-cal-toggle pour l'accordéon des mois (voir monthMiniHtml()/le
+  // wiring plus bas dans le calendrier hôte) : pas de re-rendu, pas d'état
+  // à suivre en JS.
+  Array.prototype.forEach.call(feed.querySelectorAll("[data-coll-toggle]"), function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      btn.closest(".coll-panel").classList.toggle("collapsed");
+    });
+  });
   // Retour utilisateur : "il faudrait aussi pouvoir supprimer une
   // collection" — jusqu'ici possible seulement depuis SON détail
   // (#coll-detail-delete) ; exposée en plus directement sur la tuile/ligne/
@@ -3193,7 +3210,16 @@ function collectionAddRowHtml(){
    directement de ses annonces (collectionListingRowHtml(), déjà utilisées
    pour le détail d'une collection). Renommer/Supprimer restent possibles
    depuis cet en-tête (voir renderCollectionsGrid()) — seule l'ouverture
-   d'un écran séparé disparaît. */
+   d'un écran séparé disparaît.
+   Flèche replier/déplier (retour utilisateur : "une espèce de flèche qui
+   ouvre et qui ferme la collection") : même idiome que .cal-mini-chevron
+   (accordéon des mois, voir monthMiniHtml()) — chevron vers le bas au repos
+   (déplié, l'état par défaut ici, pour garder "tous les favoris en une
+   page" comme demandé juste avant), tourné à -90° une fois replié. Pur
+   CSS (classList.toggle("collapsed"), voir renderCollectionsGrid()) : pas
+   de re-rendu, pas d'état à persister — un volet repayé referme au
+   prochain rendu de toute façon (changement de filtre, ajout d'annonce…),
+   comme .cal-mini pour les mois. */
 function collectionVoletHtml(c){
   var listings = c.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean);
   var head = '<div class="collection-detail-head">'+
@@ -3201,12 +3227,13 @@ function collectionVoletHtml(c){
     '<div class="collection-detail-actions">'+
       '<button type="button" data-rename-coll="'+esc(c.id)+'" aria-label="Renommer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'+
       '<button type="button" data-del-coll="'+esc(c.id)+'" aria-label="Supprimer la collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>'+
+      '<button type="button" data-coll-toggle aria-label="Replier ou déplier la collection"><svg class="coll-toggle-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>'+
     '</div>'+
   '</div>';
   var body = !listings.length
     ? '<p class="sheet-sub" style="margin:0 0 4px;">Cette collection est vide pour l\'instant.</p>'
     : '<div class="coll-listing-list">'+listings.map(collectionListingRowHtml).join("")+'</div>';
-  return '<div class="coll-panel">'+head+body+'</div>';
+  return '<div class="coll-panel">'+head+'<div class="coll-panel-body">'+body+'</div></div>';
 }
 /* Retour utilisateur : "les articles du volet soient présentés comme les
    annonces dans mes contacts (en un encart, image à gauche)" — remplace

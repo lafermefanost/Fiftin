@@ -1065,6 +1065,14 @@ Retour utilisateur : « j'aimerais que la vue liste des séjours serve à avoir 
 
 **Testé** (Playwright) : 2 collections (2 puis 1 annonce) confirmées en 2 volets distincts, chacun avec TOUTES ses annonces ; clic sur le titre d'un volet confirmé sans effet (toujours sur la même page, aucun écran de détail ouvert) ; clic sur une annonce À L'INTÉRIEUR d'un volet confirmé ouvrir sa fiche complète ; renommage depuis l'en-tête d'un volet confirmé fonctionnel ; vue grille confirmée inchangée (clic sur une tuile ouvre toujours le détail séparé). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Volets de la vue liste : flèche pour replier/déplier
+
+Retour utilisateur : « peux-tu faire une espèce de flèche qui ouvre et qui ferme la collection. »
+
+Chevron ajouté dans l'en-tête de chaque volet (`data-coll-toggle`, dernier bouton après Renommer/Supprimer) — même idiome que `.cal-mini-chevron` (accordéon des mois, `monthMiniHtml()`) : vers le bas au repos (déplié, l'état par défaut, pour garder "tous les favoris en une page" comme demandé juste avant), tourné à -90° une fois replié. Pur CSS (`classList.toggle("collapsed")` sur `.coll-panel`, `.coll-panel-body` alors masqué) — pas de re-rendu, pas d'état à suivre en JS, comme pour l'accordéon des mois.
+
+**Testé** (Playwright) : volet confirmé déplié par défaut ; clic sur la flèche confirmé masquer le corps du volet et faire tourner le chevron, sans navigation (toujours sur la vue liste) ; reclic confirmé redéplier. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
