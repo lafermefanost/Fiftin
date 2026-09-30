@@ -9714,6 +9714,8 @@ function renderYear(){
     const elapsedCap=totalRooms*daysBetween(yStart,elapsedEnd);
     const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
     const yearCharges=variableChargesForMonth(yStart,yEnd).total;
+    const netMargin=realCA-yearCharges;
+    const netMarginPct=realCA>0?Math.round(netMargin/realCA*100):0;
     return`<div class="yr-group yr-total">
       <div class="yr-stats">
         <div class="mstat-card mstat-rev">
@@ -9735,6 +9737,16 @@ function renderYear(){
           <div class="mstat-val">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
           <div class="mstat-sub">charges réelles</div>
           <div class="mstat-detail">relevé bancaire</div>
+        </div>
+        <div class="mstat-card mstat-rev">
+          <div class="mstat-val">${netMarginPct}%</div>
+          <div class="mstat-sub">marge nette</div>
+          <div class="mstat-detail">CA réalisé − charges</div>
+        </div>
+        <div class="mstat-card mstat-rev">
+          <div class="mstat-val">${Math.round(netMargin).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-sub">marge nette</div>
+          <div class="mstat-detail">CA réalisé − charges</div>
         </div>
       </div>
     </div>`;
