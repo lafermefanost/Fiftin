@@ -1073,6 +1073,18 @@ Chevron ajouté dans l'en-tête de chaque volet (`data-coll-toggle`, dernier bou
 
 **Testé** (Playwright) : volet confirmé déplié par défaut ; clic sur la flèche confirmé masquer le corps du volet et faire tourner le chevron, sans navigation (toujours sur la vue liste) ; reclic confirmé redéplier. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Changer une annonce de collection / la retirer, ligne par ligne
+
+Retour utilisateur : « as-tu une solution pour que je puisse changer l'annonce de collection le plus facilement et rapidement possible, et en supprimer aussi » — recommandation donnée d'abord (deux gestes existants déjà en interne, juste jamais exposés directement sur une ligne : `openCollectionPicker()` pour changer, `toggleListingInCollection()` pour retirer ; deux boutons séparés proposés plutôt qu'un seul menu, plus rapide mais un peu plus chargé visuellement), confirmée ensuite : « le deuxième. »
+
+**`collectionListingRowHtml(l, col)`** prend désormais la collection en second paramètre : `data-open` (fiche complète) porté par `.log-body` seul, plus par la ligne entière — `.log-actions`, à droite, ajoute deux gestes propres à une annonce DANS une collection, même gabarit que `.log-action.confirm`/`.decline` déjà utilisées pour Demandes/Séjours (nouveau modificateur neutre `.log-action.move`) :
+- **Changer de collection** (icône échange) réouvre le même volet "Ajouter à une collection" que le cœur ailleurs sur le site (`openCollectionPicker()`), pré-coché sur les collections actuelles — décocher l'une et cocher une autre EST le geste déplacer, pas de mécanisme dédié à écrire.
+- **Retirer de cette collection** (icône ×, même tracé que le refus d'une demande) agit en un seul tap, sans volet, via `toggleListingInCollection(l, col, false)` — `data-coll-remove-from` cible la collection de CE volet précisément (une annonce peut être dans plusieurs collections à la fois).
+
+**`wireCollListingActions()`**, une seule fonction câblée aux deux endroits qui affichent des annonces de collection (les volets de la vue liste ET le détail d'une collection en vue grille) plutôt que dupliquée : les deux boutons rappellent `renderFavorisView()` après coup, qui retombe naturellement sur le bon écran dans les deux cas (même détail redessiné, ou volets de la vue liste), sans que ce câblage ait besoin de savoir lequel des deux appelants l'a posé.
+
+**Testé** (Playwright) : bouton changer confirmé ouvrir le sélecteur de collections pré-coché sur la collection actuelle ; bouton retirer confirmé retirer l'annonce en un clic sans navigation (le volet reste sur la même page, une ligne en moins) ; les deux boutons confirmés présents et fonctionnels aussi dans le détail d'une collection en vue grille (même fonction de wiring, deux appelants). Suite de régression complète rejouée (un script existant mis à jour au passage : son sélecteur `.map-list-item` cliquable visait l'ancienne structure, désormais `.log-body` — comportement plus correct, pas une régression : cliquer près des boutons d'action n'ouvre plus accidentellement la fiche). Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

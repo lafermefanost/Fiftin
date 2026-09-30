@@ -795,12 +795,20 @@ body.detail-open nav.tabbar{z-index:220;}
    voir plus bas) puisque la ligne entière n'est plus cliquable une fois
    les deux boutons d'action ajoutés. */
 .log-body{display:flex; align-items:center; gap:12px; flex:1; min-width:0;}
-.log-body[data-open-log],.log-body[data-open-coll]{cursor:pointer;}
+.log-body[data-open-log],.log-body[data-open-coll],.log-body[data-open]{cursor:pointer;}
 .log-actions{display:flex; gap:6px; flex-shrink:0;}
 .log-action{width:32px; height:32px; border-radius:10px; border:none; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .log-action svg{width:16px; height:16px;}
 .log-action.confirm{background:var(--sauge); color:var(--cream);}
 .log-action.decline{background:var(--cream-deep); color:var(--danger);}
+/* Changer une annonce de collection / la retirer d'une collection, ligne
+   par ligne (retour utilisateur : "changer l'annonce de collection le
+   plus facilement et rapidement possible et en supprimer aussi") — même
+   gabarit .log-action que confirm/decline, juste une variante neutre
+   (aucune des deux n'est une action "positive" ou "dangereuse" au sens où
+   confirm/decline le sont) : même gris que les icônes de l'en-tête d'un
+   volet (.collection-detail-actions button). */
+.log-action.move{background:var(--cream-deep); color:var(--ink);}
 
 /* ---------- Mes séjours : Favoris / Demandes / Séjours ----------
    .stat-tile (défini plus bas, historiquement pour profile-stats)
@@ -3105,7 +3113,7 @@ function renderCollectionsGrid(feed, toggle, cols){
       renderFavorisView();
     });
   });
-  if(isList && cols.length) wireFeedEvents(); // data-open sur chaque annonce des volets (voir collectionListingRowHtml())
+  if(isList && cols.length){ wireFeedEvents(); wireCollListingActions(); } // data-open + boutons changer/retirer sur chaque annonce des volets (voir collectionListingRowHtml())
   else Array.prototype.forEach.call(feed.querySelectorAll("[data-open-coll]"), function(el){
     el.addEventListener("click", function(){
       state.likesCollectionId = el.getAttribute("data-open-coll");
@@ -3232,26 +3240,80 @@ function collectionVoletHtml(c){
   '</div>';
   var body = !listings.length
     ? '<p class="sheet-sub" style="margin:0 0 4px;">Cette collection est vide pour l\'instant.</p>'
-    : '<div class="coll-listing-list">'+listings.map(collectionListingRowHtml).join("")+'</div>';
+    : '<div class="coll-listing-list">'+listings.map(function(l){ return collectionListingRowHtml(l, c); }).join("")+'</div>';
   return '<div class="coll-panel">'+head+'<div class="coll-panel-body">'+body+'</div></div>';
 }
 /* Retour utilisateur : "les articles du volet soient présentés comme les
    annonces dans mes contacts (en un encart, image à gauche)" — remplace
    les grandes cartes .card/coverHtml() d'origine (même format que le fil
    Explorer) par des lignes compactes, exactement .map-list-item comme
-   contactLogRowHtml() (voir plus bas). Pas de sous-ligne canal/date (pas
-   pertinente ici, une collection n'a pas de "contacté par…") ni de
-   .log-actions confirmer/refuser (propre aux demandes) — juste nom et
-   région/prix, plus data-open pour ouvrir la fiche complète au clic,
-   repris par wireFeedEvents() déjà appelé juste après. */
-function collectionListingRowHtml(l){
+   contactLogRowHtml() (voir plus bas). data-open (fiche complète) porté
+   par .log-body, pas la ligne entière — .log-actions, à droite, porte
+   maintenant deux gestes propres à une annonce DANS une collection (retour
+   utilisateur suivant : "changer l'annonce de collection le plus
+   facilement et rapidement possible, et en supprimer aussi") :
+   - "Changer de collection" (data-coll-move-listing) réouvre le même volet
+     de choix que le cœur ailleurs sur le site (openCollectionPicker()),
+     plusieurs cases à cocher/décocher — décocher l'actuelle et cocher une
+     autre EST le geste "déplacer", pas la peine d'un mécanisme dédié.
+   - "Retirer de cette collection" (data-coll-remove-listing +
+     data-coll-remove-from, ce dernier pour cibler LA collection de CE
+     volet précisément — une même annonce peut être dans plusieurs
+     collections à la fois) agit en un seul tap, sans volet, via
+     toggleListingInCollection(l, col, false), déjà utilisée ailleurs.
+   Wiring : wireCollListingActions(), voir plus bas. */
+function collectionListingRowHtml(l, col){
   var thumb = listingThumbUrl(l);
   var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">'
     : '<div class="sw" style="background:'+GRADIENTS[l.grad]+'"></div>';
-  return '<div class="map-list-item" data-open="'+l.id+'">'+
+  return '<div class="map-list-item">'+
+    '<div class="log-body" data-open="'+l.id+'">'+
     swHtml+
     '<div><b>'+esc(l.name)+'</b><span>'+esc(l.region)+' · '+esc(listingPriceLabel(l))+'</span></div>'+
+    '</div>'+
+    '<div class="log-actions">'+
+      '<button type="button" class="log-action move" data-coll-move-listing="'+l.id+'" aria-label="Changer de collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3M17 17H6l3 3"/></svg></button>'+
+      '<button type="button" class="log-action decline" data-coll-remove-listing="'+l.id+'" data-coll-remove-from="'+esc(col.id)+'" aria-label="Retirer de cette collection"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>'+
   '</div>';
+}
+/* Câblage des deux boutons de collectionListingRowHtml() — utilisé à la
+   fois par la vue liste des favoris (renderCollectionsGrid(), plusieurs
+   volets) et par le détail d'une collection en vue grille
+   (renderCollectionDetail(), un seul volet) : même geste, même endroit du
+   code, plutôt que dupliqué aux deux appelants. renderFavorisView() (pas
+   un simple re-rendu local) après coup : elle retombe naturellement sur le
+   bon écran dans les deux cas (state.likesCollectionId encore posé -> même
+   détail redessiné ; sinon -> volets de la vue liste), sans que ce wiring
+   ait besoin de savoir dans lequel des deux appelants il tourne. */
+function wireCollListingActions(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-coll-move-listing]"), function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var l = LISTINGS.filter(function(x){ return x.id===Number(btn.getAttribute("data-coll-move-listing")); })[0];
+      if(!l) return;
+      openCollectionPicker(l, function(){
+        renderLikeBadge();
+        if(state.tab==="likes" && state.likesView==="favoris") renderFavorisView();
+      });
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-coll-remove-listing]"), function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      var l = LISTINGS.filter(function(x){ return x.id===Number(btn.getAttribute("data-coll-remove-listing")); })[0];
+      var col = collectionsCache.filter(function(c){ return c.id===btn.getAttribute("data-coll-remove-from"); })[0];
+      if(!l || !col) return;
+      btn.disabled = true;
+      toggleListingInCollection(l, col, false).then(function(){
+        renderLikeBadge();
+        if(state.tab==="likes" && state.likesView==="favoris") renderFavorisView();
+      }).catch(function(err){
+        btn.disabled = false;
+        alert("Erreur : "+(err.message||err.code));
+      });
+    });
+  });
 }
 function renderCollectionDetail(feed, toggle){
   var col = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
@@ -3266,10 +3328,10 @@ function renderCollectionDetail(feed, toggle){
   '</div>';
   var body = !listings.length
     ? '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><p>Cette collection est vide pour l\'instant.<br>Touchez le cœur sur un hébergement pour l\'y ajouter.</p></div>'
-    : '<div class="coll-listing-list">'+listings.map(collectionListingRowHtml).join("")+'</div>';
+    : '<div class="coll-listing-list">'+listings.map(function(l){ return collectionListingRowHtml(l, col); }).join("")+'</div>';
   feed.innerHTML = toggle + head + body;
   wireLikesToggle();
-  if(listings.length) wireFeedEvents();
+  if(listings.length){ wireFeedEvents(); wireCollListingActions(); }
   document.getElementById("coll-detail-back").addEventListener("click", function(){
     state.likesCollectionId = null;
     renderFavorisView();
