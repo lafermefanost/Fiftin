@@ -500,6 +500,28 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .crop-zoom-row span{font-size:15px; color:var(--cream); flex-shrink:0;}
 .crop-hint{font-size:12px; color:rgba(239,238,234,.55); text-align:center; margin:0; max-width:300px;}
 
+/* ---------- aperçu amélioration photo (3 niveaux, comparaison en direct) ----------
+   Retour utilisateur : "j'aimerais juste un aperçu plus grand de la photo pour
+   appliquer ou non le highlight [...] peux-tu prévoir 3 niveaux de highlight
+   différents [...] celui que tu as appliqué est fort en contraste" — même
+   habillage plein écran que .crop-overlay (cohérence visuelle, code éprouvé),
+   mais ici pas de recadrage : juste l'image en grand + 4 choix (Original/Léger/
+   Moyen/Fort) qui s'appliquent en direct sur cette même image, voir
+   openEnhancePreview(). Le réglage "Fort" reprend exactement les valeurs
+   utilisées jusqu'ici comme seul et unique niveau (voir ENHANCE_LEVELS) —
+   devenu trop appuyé une fois comparé aux deux autres, d'où le nouveau défaut
+   automatique sur "Moyen" (voir enhancePhotoEntry()). */
+.enhance-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
+.enhance-head{width:100%; max-width:340px; display:flex; align-items:center; justify-content:flex-end;}
+.enhance-close{background:none; border:none; font-size:26px; line-height:1; color:var(--cream); padding:4px 8px;}
+.enhance-viewport{position:relative; width:min(78vw,300px); aspect-ratio:4/5; border-radius:16px; overflow:hidden; background:var(--sauge-deep);}
+.enhance-viewport img{width:100%; height:100%; object-fit:cover; display:block;}
+.enhance-spinner{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:rgba(20,26,20,.45); color:var(--cream); font-size:12px; font-weight:700;}
+.enhance-levels{width:100%; max-width:340px; display:flex; gap:6px;}
+.enhance-level-btn{flex:1; background:rgba(239,238,234,.12); border:none; border-radius:12px; color:var(--cream); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; padding:10px 4px;}
+.enhance-level-btn.active{background:var(--sauge-mid); color:#fff;}
+.enhance-hint{font-size:12px; color:rgba(239,238,234,.55); text-align:center; margin:0; max-width:300px;}
+
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
 .detail-gallery{position:relative; aspect-ratio:4/5; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
@@ -1447,6 +1469,23 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
       <span>＋</span>
     </div>
     <p class="crop-hint">Faites glisser pour cadrer, ajustez le zoom si besoin</p>
+  </div>
+
+  <div class="enhance-overlay" id="enhance-overlay" style="display:none">
+    <div class="enhance-head">
+      <button type="button" class="enhance-close" id="enhance-close" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="enhance-viewport" id="enhance-viewport">
+      <img id="enhance-img" alt="">
+      <div class="enhance-spinner" id="enhance-spinner">Calcul…</div>
+    </div>
+    <div class="enhance-levels" id="enhance-levels">
+      <button type="button" class="enhance-level-btn" data-level="original">Original</button>
+      <button type="button" class="enhance-level-btn" data-level="leger">Léger</button>
+      <button type="button" class="enhance-level-btn" data-level="moyen">Moyen</button>
+      <button type="button" class="enhance-level-btn" data-level="fort">Fort</button>
+    </div>
+    <p class="enhance-hint">Touchez un niveau pour comparer — se ferme tout seul sur votre choix</p>
   </div>
 </div>
 
@@ -5000,9 +5039,14 @@ function renderHfHostPhotoPreview(){
    de Storage ne garantissent pas de permettre sans configuration CORS
    dédiée (canvas "tainted" sinon) — jamais vérifié en conditions réelles,
    donc jamais tenté ici. Ré-ajouter la photo (elle redevient "new") est le
-   contournement si besoin. */
+   contournement si besoin. entry.level ("original"/"leger"/"moyen"/"fort")
+   remplace l'ancien booléen entry.enhanced : le bouton "active" dès que
+   level n'est pas "original", et n'ouvre plus qu'un aperçu en grand
+   (openEnhancePreview()) au lieu de basculer directement au clic — voir ce
+   commentaire plus haut sur .enhance-overlay pour le pourquoi. */
 function photoListRowHtml(entry, i, total){
   var canEnhance = entry.type==="new";
+  var isEnhanced = canEnhance && entry.level && entry.level!=="original";
   return '<div class="hf-photo-row'+(entry.busy?' busy':'')+'">'+
     '<div class="hf-photo-row-thumb"><img src="'+photoEntryUrl(entry)+'" alt="">'+
       (i===0 ? '<span class="hf-photo-cover-badge">Couverture</span>' : '')+
@@ -5010,30 +5054,100 @@ function photoListRowHtml(entry, i, total){
     '<div class="hf-photo-row-actions">'+
       '<button type="button" class="hf-photo-move" data-dir="-1" data-i="'+i+'" aria-label="Monter"'+(i===0?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>'+
       '<button type="button" class="hf-photo-move" data-dir="1" data-i="'+i+'" aria-label="Descendre"'+(i===total-1?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>'+
-      (canEnhance ? '<button type="button" class="hf-photo-enhance'+(entry.enhanced?' active':'')+'" data-i="'+i+'" aria-label="'+(entry.enhanced?"Revenir à la photo originale":(entry.enhancedFile?"Réappliquer l’amélioration":"Améliorer automatiquement"))+'"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(entry.enhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
+      (canEnhance ? '<button type="button" class="hf-photo-enhance'+(isEnhanced?' active':'')+'" data-i="'+i+'" aria-label="Ajuster l’amélioration"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(isEnhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
       '<button type="button" class="hf-photo-remove" data-i="'+i+'" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
     '</div>'+
   '</div>';
 }
-/* Calcule (ou recalcule) la version améliorée d'une entrée "new" et
-   l'applique — utilisé à la fois juste après l'ajout d'une photo
-   (amélioration automatique, retour utilisateur "y'a-t-il une possibilité
-   de highlight un peu automatiquement les photos") et en repli manuel
-   depuis le bouton si jamais rien n'est encore en cache (ex. premier essai
-   ayant échoué sur une image particulière). Idempotent : n'écrase pas un
-   enhancedFile déjà calculé, ré-entrant grâce à entry.busy. */
-function enhancePhotoEntry(entry, rerender){
+/* Calcule (si besoin) et applique un niveau d'amélioration donné à une
+   entrée "new" — utilisé à la fois pour l'amélioration automatique à
+   l'ajout (niveau "moyen" par défaut, voir les deux points d'appel) et
+   depuis openEnhancePreview() quand l'hôte compare les niveaux. Idempotent
+   par niveau : entry.enhancedFiles met en cache chaque niveau déjà calculé
+   (objet {leger:File, moyen:File, fort:File}), jamais recalculé deux fois
+   pour la même photo. */
+function enhancePhotoEntry(entry, rerender, level){
+  level = level || "moyen";
   if(entry.busy) return;
+  if(!entry.originalFile) entry.originalFile = entry.file;
+  if(entry.enhancedFiles && entry.enhancedFiles[level]){
+    entry.file = entry.enhancedFiles[level];
+    entry.level = level;
+    rerender();
+    return;
+  }
   entry.busy = true; rerender();
-  autoEnhanceFile(entry.file).then(function(enhanced){
+  autoEnhanceFile(entry.originalFile, level).then(function(enhanced){
     entry.busy = false;
     if(!enhanced){ rerender(); return; }
-    entry.originalFile = entry.file;
-    entry.enhancedFile = enhanced;
+    entry.enhancedFiles = entry.enhancedFiles || {};
+    entry.enhancedFiles[level] = enhanced;
     entry.file = enhanced;
-    entry.enhanced = true;
+    entry.level = level;
     rerender();
   });
+}
+/* Aperçu plein écran pour comparer les 4 versions (Original/Léger/Moyen/
+   Fort) d'une même photo en grand, plutôt que de deviner sur la vignette
+   64×64 de la ligne — retour utilisateur : "j'aimerais juste un aperçu plus
+   grand de la photo pour appliquer ou non le highlight [...] prévoir 3
+   niveaux [...] celui que tu as appliqué est fort en contraste". Chaque
+   niveau touché s'applique immédiatement à l'entrée (entry.file/level) ET
+   à l'image affichée : pas d'étape de validation séparée, fermer
+   l'aperçu garde simplement le dernier niveau affiché. */
+function openEnhancePreview(entry, rerenderList){
+  var overlay = document.getElementById("enhance-overlay");
+  var imgEl = document.getElementById("enhance-img");
+  var spinner = document.getElementById("enhance-spinner");
+  var levelBtns = overlay.querySelectorAll(".enhance-level-btn");
+  if(!entry.originalFile) entry.originalFile = entry.file;
+  var currentUrl = null;
+  var setImg = function(file){
+    if(currentUrl) URL.revokeObjectURL(currentUrl);
+    currentUrl = URL.createObjectURL(file);
+    imgEl.src = currentUrl;
+  };
+  var setActive = function(level){
+    Array.prototype.forEach.call(levelBtns, function(b){
+      b.classList.toggle("active", b.getAttribute("data-level")===level);
+    });
+  };
+  var showLevel = function(level){
+    if(level==="original"){
+      entry.file = entry.originalFile; entry.level = "original";
+      setImg(entry.originalFile); setActive(level); rerenderList();
+      return;
+    }
+    if(entry.enhancedFiles && entry.enhancedFiles[level]){
+      entry.file = entry.enhancedFiles[level]; entry.level = level;
+      setImg(entry.file); setActive(level); rerenderList();
+      return;
+    }
+    spinner.style.display = "flex";
+    autoEnhanceFile(entry.originalFile, level).then(function(enhanced){
+      spinner.style.display = "none";
+      if(!enhanced) return; // échec silencieux, voir le commentaire plus haut sur les URL Storage/canvas "tainted"
+      entry.enhancedFiles = entry.enhancedFiles || {};
+      entry.enhancedFiles[level] = enhanced;
+      entry.file = enhanced; entry.level = level;
+      setImg(enhanced); setActive(level); rerenderList();
+    });
+  };
+  Array.prototype.forEach.call(levelBtns, function(b){
+    b.onclick = function(){ showLevel(b.getAttribute("data-level")); };
+  });
+  var close = function(){
+    overlay.style.display = "none";
+    if(currentUrl) URL.revokeObjectURL(currentUrl);
+    overlay.removeEventListener("click", onBackdrop);
+  };
+  var onBackdrop = function(e){ if(e.target===overlay) close(); };
+  document.getElementById("enhance-close").onclick = close;
+  overlay.addEventListener("click", onBackdrop);
+
+  setImg(entry.file);
+  setActive(entry.level || "moyen");
+  overlay.style.display = "flex";
 }
 /* Câblage commun Monter/Descendre/Améliorer/Supprimer, réutilisé pour la
    liste maison (hfSelectedFiles) et chaque liste de location
@@ -5051,9 +5165,7 @@ function wirePhotoListRows(container, arr, rerender){
     el.addEventListener("click", function(){
       var entry = arr[Number(el.getAttribute("data-i"))];
       if(!entry || entry.type!=="new" || entry.busy) return;
-      if(entry.enhanced){ entry.file = entry.originalFile; entry.enhanced = false; rerender(); return; }
-      if(entry.enhancedFile){ entry.originalFile = entry.file; entry.file = entry.enhancedFile; entry.enhanced = true; rerender(); return; }
-      enhancePhotoEntry(entry, rerender);
+      openEnhancePreview(entry, rerender);
     });
   });
   Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-remove"), function(el){
@@ -5274,7 +5386,22 @@ function compressImageFile(file){
    téléphone en intérieur, mais n'invente rien qu'une vraie retouche plus
    poussée ne ferait mieux — présenté comme un bouton optionnel par photo,
    jamais appliqué automatiquement à l'insu de l'hôte. */
-function autoEnhanceFile(file){
+/* 3 niveaux d'amélioration (retour utilisateur : "peux-tu prévoir 3 niveaux
+   de highlight différents [...] celui que tu as appliqué est fort en
+   contraste") — "fort" reprend mot pour mot les réglages qui étaient
+   jusqu'ici la seule version existante, "léger"/"moyen" les atténuent.
+   Seul "clip" (seuil d'ignorance de l'histogramme) et "contrast" varient
+   beaucoup entre niveaux : c'est l'étirement de plage + le contraste final
+   qui donnaient l'effet jugé trop appuyé, la saturation était déjà
+   modérée. Nouveau défaut automatique à l'ajout : "moyen" (voir
+   enhancePhotoEntry()), plus "fort" comme avant. */
+var ENHANCE_LEVELS = {
+  leger: {clip:0.002,  sat:1.05, contrast:1.015},
+  moyen: {clip:0.0028, sat:1.08, contrast:1.03},
+  fort:  {clip:0.004,  sat:1.12, contrast:1.05}
+};
+function autoEnhanceFile(file, level){
+  var cfg = ENHANCE_LEVELS[level] || ENHANCE_LEVELS.moyen;
   return new Promise(function(resolve){
     var img = new Image();
     var url = URL.createObjectURL(file);
@@ -5293,7 +5420,7 @@ function autoEnhanceFile(file){
       var d = imgData.data;
       var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
       for(var i=0;i<d.length;i+=4){ histR[d[i]]++; histG[d[i+1]]++; histB[d[i+2]]++; }
-      var clip = Math.round((d.length/4) * 0.004); // ~0.4 % de chaque côté de l'histogramme, ignoré
+      var clip = Math.round((d.length/4) * cfg.clip); // proportion de l'histogramme ignorée de chaque côté, selon le niveau
       var lo = [0,0,0], hi = [255,255,255], hists = [histR,histG,histB];
       for(var c=0;c<3;c++){
         var acc=0, v;
@@ -5302,7 +5429,7 @@ function autoEnhanceFile(file){
         for(v=255;v>=0;v--){ acc+=hists[c][v]; if(acc>clip){ hi[c]=v; break; } }
         if(hi[c]<=lo[c]){ lo[c]=0; hi[c]=255; } // image quasi unie (ciel, mur…) : pas d'étirement, plage déjà correcte
       }
-      var sat = 1.12, contrast = 1.05, mid = 128;
+      var sat = cfg.sat, contrast = cfg.contrast, mid = 128;
       var rangeR = hi[0]-lo[0] || 1, rangeG = hi[1]-lo[1] || 1, rangeB = hi[2]-lo[2] || 1;
       for(var p=0;p<d.length;p+=4){
         var r = (d[p]-lo[0])*255/rangeR, g = (d[p+1]-lo[1])*255/rangeG, b = (d[p+2]-lo[2])*255/rangeB;
