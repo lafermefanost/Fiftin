@@ -1101,6 +1101,18 @@ Retour utilisateur : « peux-tu utiliser des ronds plutôt. »
 
 **Testé** (Playwright) : `border-radius:50%` confirmé sur les deux boutons. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
 
+### Volets : flèche verte, espacement resserré une fois repliés, "Ajouter une collection" en forme d'encart
+
+Retour utilisateur : « passe le rond de la flèche pour ouvrir la collection en vert (celui de l'encart favoris) flèche blanche. Aussi, fais en sorte que les espacements soient plus petits entre les collections quand le tout est fermé. Et ajouter une collection fais-le exactement de la même forme qu'une vraie collection (forme de l'encart). »
+
+**Flèche verte.** `.coll-toggle-btn` (nouvelle classe sur le bouton `data-coll-toggle`) passe en fond `--sauge` (le même vert que le bandeau actif Favoris/Contacts/Séjours, `.stat-tile.active`) et icône blanche — Renommer/Supprimer, juste à côté, restent gris. Sélecteur `.collection-detail-actions .coll-toggle-btn` (pas `.coll-toggle-btn` seul) : `.collection-detail-actions button` est plus spécifique et l'aurait sinon emporté silencieusement.
+
+**Espacement resserré une fois replié.** `#feed` impose un `gap:18px` fixe entre tous ses enfants directs, impossible à moduler par enfant via ce gap seul — `.coll-panel.collapsed{margin-bottom:-12px;}` mange une partie de ce gap pour resserrer l'espace juste après un volet replié (18px → 6px), sans toucher aux volets encore dépliés.
+
+**"Ajouter une collection" en forme d'encart.** `collectionAddRowHtml()` abandonne son ancien gabarit `.map-list-item` (une ligne fine héritée d'avant les volets, qui ne ressemblait plus à rien une fois les vraies collections passées en encarts) pour `.coll-add-row` — mêmes padding/rayon que `.collection-detail-head` (12px 14px / 16px). Contour pointillé + fond transparent conservés (comme `.collection-tile-add` en vue grille) : sans ça, posée à côté de vrais volets à fond plein, elle se lirait comme une collection vide plutôt que comme une action.
+
+**Testé** (Playwright) : fond/couleur de la flèche confirmés vert/blanc, Renommer confirmé resté gris ; un volet replié confirmé faire remonter le suivant de 100px (18px de gap normal retombant à 6px) ; padding/rayon de l'encart "Ajouter" confirmés identiques à `.collection-detail-head`. Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
