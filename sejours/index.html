@@ -799,12 +799,24 @@ body.detail-open nav.tabbar{z-index:220;}
    écran. */
 .map-canvas{position:relative; z-index:0; height:240px; border-radius:26px; overflow:hidden; background:var(--cream-deep);
   transition:height .25s ease, aspect-ratio .25s ease;}
-/* Format photo unique 4:5 du reste du site (retour utilisateur, voir
-   .cover/.detail-gallery) — pas un pourcentage arbitraire de l'écran :
-   même ratio que les cartes/la fiche détail, agrandir la carte suit la
-   même cohérence visuelle que le reste. height:auto nécessaire pour que
-   aspect-ratio prenne le dessus sur la hauteur fixe ci-dessus. */
-.map-canvas.expanded{height:auto; aspect-ratio:4/5;}
+/* Plein écran (retour utilisateur : "que le picto agrandissement mette la
+   carte en full screen, juste en laissant les deux barres de menu en haut
+   et en bas") — remplace l'ancien format 4:5 en ligne (gardé un temps, pas
+   assez "plein écran" pour ce retour). position:fixed plutôt qu'une
+   simple hauteur 100dvh : la carte devait rester DANS le fil (#feed) sinon
+   elle aurait poussé tout le contenu en dessous hors écran au lieu de le
+   recouvrir. top/bottom posés en JS (wireExploreMap()), pas en CSS : ils
+   dépendent de la hauteur réelle de .filters (variable — env(safe-area-
+   inset-top), chips qui wrappent) et de nav.tabbar (fixe mais pas une
+   constante à dupliquer ici). z-index 40 : sous .filters (70) ET
+   nav.tabbar (50, même z-index qu'une carte ouverte ailleurs sur le site)
+   pour qu'aucune des deux ne soit jamais recouverte — exactement les
+   "deux barres de menu" du retour utilisateur, qui restent cliquables
+   par-dessus. body.map-fullscreen (posé/retiré au même moment) bloque le
+   scroll de la page derrière — sans lui, le fil sous la carte pourrait
+   continuer à défiler alors qu'il est invisible. */
+.map-canvas.expanded{position:fixed; left:0; right:0; max-width:520px; margin:0 auto; z-index:40; border-radius:0; height:auto; aspect-ratio:auto;}
+body.map-fullscreen{overflow:hidden;}
 .map-canvas .leaflet-container{width:100%; height:100%; background:var(--cream-deep); font-family:'Jost',sans-serif;}
 .map-canvas .leaflet-control-attribution{font-size:9.5px; background:rgba(239,238,234,.85);}
 .map-pin-icon{background:none; border:none;}
@@ -813,10 +825,34 @@ body.detail-open nav.tabbar{z-index:220;}
   display:flex; align-items:center; justify-content:center; box-shadow:0 4px 10px rgba(0,0,0,.25);}
 .map-pin .dot span{transform:rotate(45deg); color:var(--yellow); font-size:9.5px; font-weight:800; letter-spacing:-.02em;}
 .map-pin.liked .dot{background:var(--danger);}
+/* Couleur selon disponibilité quand un filtre Date est actif (retour
+   utilisateur, capture "Espace voyageur" à l'appui pour le vert
+   "propriétaire" déjà tranché ailleurs sur "Mes annonces" — --sauge, pas
+   --sauge-deep, la couleur par défaut de .map-pin .dot juste au-dessus). */
+.map-pin.date-available .dot{background:var(--sauge);}
+.map-pin.date-unavailable .dot{background:var(--gray-mid);}
 .map-cluster-icon{background:none; border:none;}
 .map-cluster{width:38px; height:38px; border-radius:50%; background:var(--lavender-deep); color:#fff;
   display:flex; align-items:center; justify-content:center; font-weight:800; font-size:13px;
   box-shadow:0 4px 10px rgba(0,0,0,.25); border:2px solid var(--cream);}
+/* Popup miniature au clic sur un pin (retour utilisateur : "une miniature
+   soit affichée au niveau du point [...] lorsqu'on reclic sur cette
+   miniature on est amené [...] sur l'annonce") — dépouille l'habillage par
+   défaut de Leaflet (cadre blanc, ombre, bouton fermer) pour ne garder que
+   la petite pointe .leaflet-popup-tip (repère visuel vers le pin d'origine,
+   gardée) et notre propre carte .map-pin-thumb par-dessus. closeButton:false
+   posé au bindPopup() (voir refreshExploreMapMarkers()) : un clic ailleurs
+   sur la carte suffit déjà à la refermer (comportement par défaut de
+   Leaflet), pas besoin d'une croix en plus. */
+.map-pin-popup .leaflet-popup-content-wrapper{background:none; box-shadow:none; border-radius:0; padding:0;}
+.map-pin-popup .leaflet-popup-content{margin:0; width:auto!important;}
+.map-pin-popup .leaflet-popup-tip{background:#fff;}
+.map-pin-thumb{display:flex; flex-direction:column; width:128px; background:#fff; border:none; border-radius:14px;
+  overflow:hidden; box-shadow:0 4px 14px rgba(0,0,0,.28); padding:0; cursor:pointer; text-align:left;}
+.map-pin-thumb img{width:100%; height:86px; object-fit:cover; display:block;}
+.map-pin-thumb-empty{width:100%; height:86px; background:var(--cream-deep);}
+.map-pin-thumb-name{font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--ink);
+  padding:6px 8px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
 .map-expand-btn{position:absolute; top:12px; left:12px; z-index:1000; width:34px; height:34px; border-radius:50%;
   background:var(--cream); border:1.5px solid var(--line); box-shadow:0 3px 8px rgba(0,0,0,.18);
   display:flex; align-items:center; justify-content:center; color:var(--ink);}
@@ -2526,7 +2562,7 @@ var MAX_DISTANCE_KM = 1200;
    comme filters.distance, une distance choisie doit survivre à un
    rechargement de page. `null` par défaut (aucun repère posé, origine =
    position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[]}, sort:"reco", loading:true,
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null, likesLayout:"grid",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
@@ -2857,6 +2893,113 @@ function sortListings(list){
   return list;
 }
 
+/* ---------------- disponibilité par dates (filtre Explorer) ----------------
+   Retour utilisateur : "un critère date qui permette aux gens de
+   présélectionner leurs dates (ça doit actualiser automatiquement la date
+   de leur futur message aussi) [...] fais passer en priorité les logements
+   qui sont disponibles, puis ensuite les logements qui n'ont rien renseigné
+   et enfin ceux qui sont occupés n'apparaissent pas dans le fil mais
+   apparaissent en gris sur la carte".
+   Réutilise telle quelle la même source de vérité que le calendrier réel de
+   la fiche détail (listings/{id}/publicAvail/{unitId}, voir plus haut
+   isDateOccupied()/realCalendarGridHtml() et functions/index.js) — projection
+   PUBLIQUE, lisible sans connexion, une par chambre. "Disponible" dès qu'AU
+   MOINS une chambre de l'annonce est libre sur tout le séjour ; "occupée"
+   seulement si TOUTES ses chambres (avec données) sont prises ; "non
+   renseigné" si aucune de ses chambres n'a encore de publicAvail publié —
+   jamais confondu avec "occupé", conformément à l'ordre de priorité demandé. */
+var availabilityCache = {};      // listingId -> "available" | "occupied" | "unknown" (pour les dates en cours)
+var availabilityCacheKey = null; // dateIn+"|"+dateOut déjà calculées, pour ne pas relire Firestore à chaque rendu
+var availabilitySearching = false;
+function hasDateFilter(f){ return !!(f.dateIn && f.dateOut); }
+// Même convention que isDateOccupied() (comparaison de chaînes ISO,
+// checkOut exclu) : [dateIn, dateOut) chevauche [checkIn, checkOut) ssi
+// dateIn < checkOut ET checkIn < dateOut.
+function staysOverlapOccupied(ranges, dateIn, dateOut){
+  return (ranges||[]).some(function(r){ return dateIn < r.checkOut && r.checkIn < dateOut; });
+}
+// listingIndexCache (source normale de matchingIndexListings()) ne porte
+// que l.unitIds (juste les identifiants, voir syncPublicListingIndex()
+// dans functions/index.js — l'index public reste volontairement léger,
+// jamais les chambres complètes) ; LISTINGS (détail déjà chargé, repli de
+// secours) porte lui l.units (objets complets). Les deux cas couverts,
+// plutôt que de supposer l'un ou l'autre.
+function listingUnitIds(l){
+  if(l.unitIds) return l.unitIds;
+  if(l.units) return l.units.map(function(u){ return u.id; });
+  return [];
+}
+function fetchListingAvailability(l, dateIn, dateOut, cb){
+  var unitIds = listingUnitIds(l);
+  // Pas de chambres, pas d'id de document réel, ou Firebase pas chargé
+  // (mode démo/hors-ligne) : impossible de savoir, "non renseigné" par
+  // dégradation propre plutôt que de bloquer l'annonce ou planter.
+  if(!unitIds.length || !l.docId || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length){
+    cb("unknown"); return;
+  }
+  var pending = unitIds.length, anyData = false, anyFree = false;
+  unitIds.forEach(function(unitId){
+    firebase.firestore().collection("listings").doc(l.docId).collection("publicAvail").doc(unitId).get().then(function(doc){
+      if(doc.exists){
+        anyData = true;
+        if(!staysOverlapOccupied(doc.data().ranges||[], dateIn, dateOut)) anyFree = true;
+      }
+    }).catch(function(){ /* chambre illisible : comptée comme "pas de données", jamais comme occupée à tort */ })
+      .then(function(){
+        pending--;
+        if(pending===0) cb(!anyData ? "unknown" : (anyFree ? "available" : "occupied"));
+      });
+  });
+}
+/* Calcule (si besoin) la disponibilité de toutes les annonces correspondant
+   aux AUTRES filtres actifs (lieu/distance/prix/prestations, jamais les
+   dates elles-mêmes) pour la paire de dates donnée, puis appelle cb(). Un
+   simple cache par dateIn+dateOut évite de relire Firestore à chaque
+   rendu — mais reste borné à l'ensemble d'annonces qui correspondait aux
+   AUTRES filtres au moment de la recherche : changer lieu/prix/prestations
+   ensuite, sans rouvrir le volet Dates, peut laisser une annonce
+   nouvellement incluse en "non renseigné" (rang neutre, jamais masquée à
+   tort) jusqu'à la prochaine recherche de dates — limite connue, acceptée
+   plutôt que de recalculer à chaque changement de filtre. token : une
+   recherche de dates relancée avant la fin de la précédente (édition
+   rapide du volet) ignore silencieusement les réponses de l'ancienne. */
+var availabilityFetchToken = 0;
+function ensureAvailabilityFor(dateIn, dateOut, cb){
+  if(!dateIn || !dateOut){ availabilityCache = {}; availabilityCacheKey = null; availabilitySearching = false; cb(); return; }
+  var key = dateIn+"|"+dateOut;
+  if(key===availabilityCacheKey){ cb(); return; }
+  availabilityCache = {}; availabilityCacheKey = key;
+  var token = ++availabilityFetchToken;
+  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
+  var list = source.filter(function(l){ return matchesAllFilters(l, state.filters); });
+  if(!list.length){ availabilitySearching = false; cb(); return; }
+  availabilitySearching = true;
+  var pending = list.length;
+  list.forEach(function(l){
+    fetchListingAvailability(l, dateIn, dateOut, function(status){
+      if(token!==availabilityFetchToken) return; // recherche de dates devenue périmée, réponse ignorée
+      availabilityCache[l.id] = status;
+      pending--;
+      if(pending===0){ availabilitySearching = false; cb(); }
+    });
+  });
+}
+function availabilityRank(l){
+  var s = availabilityCache[l.id];
+  if(s==="available") return 0;
+  if(s==="occupied") return 2;
+  return 1; // "unknown", ou pas encore calculé
+}
+// Tri secondaire stable par disponibilité, PAR-DESSUS le tri normal déjà
+// appliqué (reco/distance/prix/...) : préserve l'ordre relatif à
+// disponibilité égale plutôt que de dépendre de la stabilité native de
+// Array.sort() selon le moteur JS.
+function sortByAvailability(list){
+  return list.map(function(l,i){ return {l:l, i:i}; })
+    .sort(function(a,b){ var d = availabilityRank(a.l)-availabilityRank(b.l); return d!==0 ? d : a.i-b.i; })
+    .map(function(x){ return x.l; });
+}
+
 /* Liste COMPLÈTE et ordonnée des annonces correspondant aux filtres actifs,
    calculée sur listingIndexCache — donc toujours entière même quand
    LISTINGS, lui, ne contient encore que les annonces déjà chargées en
@@ -2869,8 +3012,14 @@ function sortListings(list){
    propre filtre séparé ici : c'est juste une autre origine possible pour
    currentOrigin(), déjà pris en compte par matchesAllFilters() via
    filters.distance/listingDistanceKm() — voir le commentaire de
-   filters.zoneOrigin plus haut. */
-function matchingIndexListings(){
+   filters.zoneOrigin plus haut.
+   opts.keepOccupied : utilisé par mapPinsFromIndex() UNIQUEMENT — les
+   annonces occupées sur les dates choisies restent sur la carte (en gris,
+   voir refreshExploreMapMarkers()) alors qu'elles disparaissent du fil
+   (ce même appel sans l'option, utilisé par renderFeed()/renderResultLine()) :
+   exactement la divergence demandée par l'utilisateur entre fil et carte. */
+function matchingIndexListings(opts){
+  opts = opts || {};
   var f = state.filters;
   // Filet de secours (voir fetchListingIndex()) : un index vide alors que
   // LISTINGS, lui, a du contenu (rescue fetchPublishedListings() déjà
@@ -2880,12 +3029,18 @@ function matchingIndexListings(){
   // à tort.
   var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
   var list = source.filter(function(l){ return matchesAllFilters(l, f); });
-  return sortListings(list);
+  list = sortListings(list);
+  if(hasDateFilter(f)){
+    if(!opts.keepOccupied) list = list.filter(function(l){ return availabilityCache[l.id]!=="occupied"; });
+    list = sortByAvailability(list);
+  }
+  return list;
 }
 
 /* ---------------- render: filter bar ---------------- */
 var FILTER_ICONS = {
   loc:"<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>",
+  dates:"<rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 10h18M8 3v4M16 3v4'/>",
   distance:"<circle cx='12' cy='12' r='8'/><circle cx='12' cy='12' r='3'/>",
   price:"<path d='M3 12l9-9h6a2 2 0 0 1 2 2v6l-9 9a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8z'/><circle cx='15.5' cy='8.5' r='1.3'/>",
   amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>",
@@ -2902,16 +3057,28 @@ function locChipLabel(f){
   if(f.regionName) return esc(f.regionName);
   return "Lieu";
 }
+/* "Dates · recherche…" pendant ensureAvailabilityFor() (voir plus bas) :
+   la puce reste le seul indice visible qu'une recherche de disponibilité
+   est en cours, potentiellement plusieurs lectures Firestore (une par
+   chambre de chaque annonce affichée) avant que le tri/la liste se
+   mettent à jour. */
+function datesChipLabel(f){
+  if(!f.dateIn || !f.dateOut) return "Dates";
+  if(availabilitySearching) return "Dates · recherche…";
+  return "Dates · "+fmtDate(f.dateIn)+" → "+fmtDate(f.dateOut);
+}
 function renderFilterBar(){
   var f = state.filters;
   var activeAmenCount = f.amen.length;
   var bar = document.getElementById("filter-bar");
   var locActive = !!(f.q || f.regionName || f.deptName);
-  var anyActive = locActive || f.distance!=null || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
+  var datesActive = hasDateFilter(f);
+  var anyActive = locActive || datesActive || f.distance!=null || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
   // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
   bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
+    chipHtml("dates", datesChipLabel(f), datesActive),
     chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km"+(f.zoneOrigin?" (repère)":"") : "Distance", f.distance!=null),
     chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
@@ -2926,8 +3093,9 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[]};
+    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[], dateIn:null, dateOut:null};
     state.sort = "reco";
+    availabilityCache = {}; availabilityCacheKey = null;
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
   });
 }
@@ -2946,6 +3114,7 @@ function chipHtml(k,label,active){
 function clearFilter(k){
   var f = state.filters;
   if(k==="loc"){ f.q = ""; f.regionName = ""; f.deptName = ""; }
+  else if(k==="dates"){ f.dateIn = null; f.dateOut = null; availabilityCache = {}; availabilityCacheKey = null; }
   else if(k==="distance"){ f.distance = null; f.zoneOrigin = null; } // retire aussi le repère de la carte, sinon un cercle sans rayon resterait affiché sans filtre associé
   else if(k==="price") f.price = 300;
   else if(k==="amen") f.amen = [];
@@ -3903,10 +4072,17 @@ function todayISO(off){ var d=new Date(); d.setDate(d.getDate()+off); return d.t
 function quickReqHtml(l, uid, calSource){
   var qid = uid;
   calSource = calSource || l;
+  // Retour utilisateur : le filtre Date d'Explorer "doit actualiser
+  // automatiquement la date de leur futur message aussi" — dès que
+  // l'hôte/voyageur a posé des dates dans le filtre (state.filters.dateIn/
+  // dateOut), elles préremplissent directement Arrivée/Départ ici, à la
+  // place des valeurs par défaut +14/+21 jours.
+  var defIn = state.filters.dateIn || todayISO(14);
+  var defOut = state.filters.dateOut || todayISO(21);
   return calendarHtml(calSource, defaultMonthFor(calSource), qid)+
   '<div class="qr-row">'+
-    '<div class="qr-field"><label>Arrivée</label><input type="date" id="'+qid+'-in" value="'+todayISO(14)+'"></div>'+
-    '<div class="qr-field"><label>Départ</label><input type="date" id="'+qid+'-out" value="'+todayISO(21)+'"></div>'+
+    '<div class="qr-field"><label>Arrivée</label><input type="date" id="'+qid+'-in" value="'+defIn+'"></div>'+
+    '<div class="qr-field"><label>Départ</label><input type="date" id="'+qid+'-out" value="'+defOut+'"></div>'+
   '</div>'+
   '<div class="qr-row">'+
     '<div class="qr-field"><label>Voyageurs</label>'+
@@ -4397,6 +4573,18 @@ function openSheet(kind){
         }).join("")+
       '</div></div>' : '')+
       '<div class="field-block"><label>Recherche libre</label><input class="text-input" id="s-loc" placeholder="Nom, ville, quartier, rue…" value="'+esc(f.q)+'"></div>';
+  } else if(kind==="dates"){
+    // Même gabarit que qr-row (demande de contact, voir quickReqHtml()) —
+    // deux <input type="date">, rien de plus : pas de calendrier dédié ici,
+    // ce volet ne sert qu'à poser deux dates, pas à visualiser des cases
+    // disponibles/occupées comme la fiche détail.
+    inner = '<h3>Dates</h3>'+
+      '<p class="field-hint">Affiche en priorité les hébergements disponibles sur ces dates (ceux sans planning renseigné restent visibles ; les indisponibles disparaissent du fil mais restent sur la carte, en gris). Pré-remplit aussi votre demande de contact.</p>'+
+      '<div class="qr-row">'+
+        '<div class="qr-field"><label>Arrivée</label><input type="date" id="s-date-in" min="'+todayISO(0)+'" value="'+(f.dateIn||"")+'"></div>'+
+        '<div class="qr-field"><label>Départ</label><input type="date" id="s-date-out" min="'+todayISO(1)+'" value="'+(f.dateOut||"")+'"></div>'+
+      '</div>'+
+      '<p class="field-hint" id="dates-err"></p>';
   } else if(kind==="distance"){
     // Distance réelle (haversine, voir listingDistanceKm()/DEFAULT_ORIGIN
     // plus haut) depuis la position du voyageur une fois "Utiliser ma
@@ -4853,6 +5041,22 @@ function openSheet(kind){
         closeSheet();
         renderFavorisView();
       });
+    });
+    return;
+  } else if(kind==="dates"){
+    var $dateIn = document.getElementById("s-date-in"), $dateOut = document.getElementById("s-date-out"), $datesErr = document.getElementById("dates-err");
+    document.getElementById("sheet-apply").addEventListener("click", function(){
+      var din = $dateIn.value, dout = $dateOut.value;
+      $datesErr.textContent = "";
+      if((din && !dout) || (!din && dout)){ $datesErr.textContent = "Renseignez l'arrivée ET le départ (ou aucune des deux)."; return; }
+      if(din && dout && dout<=din){ $datesErr.textContent = "La date de départ doit être après l'arrivée."; return; }
+      f.dateIn = din || null; f.dateOut = dout || null;
+      closeSheet(); persist();
+      // ensureAvailabilityFor() D'ABORD : pose availabilitySearching=true
+      // avant le renderFilterBar() juste en dessous, pour que la puce
+      // affiche "recherche…" dès ce rendu plutôt qu'au suivant.
+      ensureAvailabilityFor(f.dateIn, f.dateOut, function(){ renderTabContent(); renderResultLine(); renderFilterBar(); });
+      renderFilterBar();
     });
     return;
   }
@@ -6169,7 +6373,10 @@ function haversineKm(lat1, lng1, lat2, lng2){
    carte aurait été incomplète tant que le voyageur n'a pas cliqué
    "Charger plus" assez de fois pour tout voir. */
 function mapPinsFromIndex(){
-  return matchingIndexListings().filter(function(l){ return l.lat && l.lng; });
+  // keepOccupied:true — voir le commentaire de matchingIndexListings() :
+  // une annonce occupée sur les dates choisies reste un pin (en gris),
+  // seul le fil en dessous l'exclut.
+  return matchingIndexListings({keepOccupied:true}).filter(function(l){ return l.lat && l.lng; });
 }
 
 /* Même repli que coverHtml() pour la première photo disponible : la
@@ -6217,6 +6424,17 @@ function scrollToFeedCard(id){
   setTimeout(function(){ card.classList.remove("card-pulse"); }, 1200);
 }
 
+/* Contenu de la popup ouverte au clic sur un pin : miniature + nom,
+   listingThumbUrl() (même repli annonce -> 1ère chambre que coverHtml(),
+   voir son commentaire) plutôt qu'une vraie galerie — la popup doit rester
+   petite sur la carte. */
+function mapPinPopupHtml(l){
+  var thumbUrl = listingThumbUrl(l);
+  return '<button type="button" class="map-pin-thumb" aria-label="Voir l\'annonce '+esc(l.name)+'">'+
+    (thumbUrl ? '<img src="'+thumbUrl+'" alt="">' : '<div class="map-pin-thumb-empty"></div>')+
+    '<span class="map-pin-thumb-name">'+esc(l.name)+'</span>'+
+  '</button>';
+}
 /* Ré-affiche juste les punaises + le cercle de zone sans recréer la carte
    ni recadrer la vue — utilisé pendant le glissement du curseur de rayon,
    pour que la carte ne saute pas à chaque tick. */
@@ -6235,14 +6453,38 @@ function refreshExploreMapMarkers(){
       });
     }
   }) : L.layerGroup();
+  var f = state.filters;
   located.forEach(function(l){
+    // Retour utilisateur : "sur la carte [...] lorsque la date est
+    // renseignée : les annonces disponibles ou planning non renseignées
+    // ont une couleur verte propriétaire et celles indisponibles sont bien
+    // en gris" — .liked (favori, rouge) prime s'il est actif, pour ne
+    // jamais faire disparaître ce repère personnel déjà établi ailleurs
+    // sur le site derrière une simple teinte de disponibilité.
+    var dateClass = "";
+    if(!isListingSaved(l) && hasDateFilter(f)){
+      dateClass = availabilityCache[l.id]==="occupied" ? " date-unavailable" : " date-available";
+    }
     var icon = L.divIcon({
       className:"map-pin-icon",
-      html:'<div class="map-pin'+(isListingSaved(l)?' liked':'')+'"><div class="dot"><span>'+l.price+'€</span></div></div>',
+      html:'<div class="map-pin'+(isListingSaved(l)?' liked':'')+dateClass+'"><div class="dot"><span>'+l.price+'€</span></div></div>',
       iconSize:[30,30], iconAnchor:[15,36]
     });
     var marker = L.marker([l.lat, l.lng], {icon:icon});
-    marker.on("click", function(){ scrollToFeedCard(l.id); });
+    // Retour utilisateur : "lorsqu'on clique sur un logement, une miniature
+    // soit affichée au niveau du point et lorsqu'on reclic sur cette
+    // miniature on est amené comme aujourd'hui sur l'annonce" — un clic sur
+    // le pin n'appelle donc plus scrollToFeedCard() directement, il ouvre
+    // d'abord cette popup ; l'ancien comportement (aller à l'annonce) passe
+    // maintenant par le clic sur la miniature elle-même, câblé ci-dessous.
+    // .bindPopup() avec un élément DOM déjà construit (plutôt qu'une chaîne
+    // HTML + un réécouteur sur "popupopen") : plus simple, pas de requery
+    // du DOM à chaque ouverture, pas de risque de double-câblage si la
+    // popup est fermée/rouverte plusieurs fois sur le même marker.
+    var popupEl = document.createElement("div");
+    popupEl.innerHTML = mapPinPopupHtml(l);
+    popupEl.querySelector(".map-pin-thumb").addEventListener("click", function(){ scrollToFeedCard(l.id); });
+    marker.bindPopup(popupEl, {closeButton:false, className:"map-pin-popup", offset:L.point(0,-8)});
     clusterGroup.addLayer(marker);
   });
   mapMarkerLayer = clusterGroup;
@@ -6282,6 +6524,28 @@ function MAP_EXPAND_ICON(expanded){
     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg>';
 }
 
+/* Calcule et pose (ou retire) les décalages top/bottom du plein écran de
+   la carte — voir le commentaire CSS de .map-canvas.expanded pour le
+   pourquoi de ce calcul en JS plutôt qu'en CSS pur. Lu au moment du clic
+   plutôt que mémorisé : la hauteur de .filters varie (chips qui wrappent
+   sur deux lignes, safe-area). */
+function applyMapFullscreenOffsets(canvas, on){
+  document.body.classList.toggle("map-fullscreen", on);
+  if(!on){ canvas.style.top = ""; canvas.style.bottom = ""; canvas.style.height = ""; return; }
+  var filterBar = document.getElementById("filter-bar");
+  var tabbar = document.querySelector("nav.tabbar");
+  var topPx = Math.max(0, filterBar ? filterBar.getBoundingClientRect().bottom : 0);
+  var bottomPx = Math.max(0, tabbar ? (window.innerHeight - tabbar.getBoundingClientRect().top) : 0);
+  canvas.style.top = topPx+"px";
+  canvas.style.bottom = bottomPx+"px";
+  // Hauteur explicite plutôt que compter sur l'auto-stretch CSS
+  // (top+bottom posés, height:auto) : .map-canvas porte un
+  // `transition:height` (utile pour l'ancien mode 4:5) que les
+  // navigateurs ne savent pas animer vers/depuis "auto" — résultat observé
+  // en test : une hauteur figée à 0. Calculée en pixels, l'inline style
+  // l'emporte de toute façon sur la règle CSS .map-canvas{height:240px}.
+  canvas.style.height = Math.max(0, window.innerHeight-topPx-bottomPx)+"px";
+}
 /* Monte/remonte l'instance Leaflet dans #map-canvas et câble les contrôles
    de zone — appelée par renderFeed() juste après avoir posé
    exploreMapBlockHtml() dans le DOM. Détruit et recrée systématiquement
@@ -6294,10 +6558,18 @@ function MAP_EXPAND_ICON(expanded){
    en cours juste pour donner plus de place à la même vue). */
 function wireExploreMap(){
   var f = state.filters;
+  // Réappliquée à chaque (re)montage du bloc carte (renderFeed(), ex.
+  // filtre changé pendant que la carte est en plein écran) : le HTML frais
+  // d'exploreMapBlockHtml() porte déjà la classe "expanded" mais pas les
+  // styles top/bottom posés en JS sur l'ancien élément, détruit avec lui.
+  var mapCanvasEl = document.getElementById("map-canvas");
+  if(mapCanvasEl) applyMapFullscreenOffsets(mapCanvasEl, mapExpanded);
 
   document.getElementById("map-expand-btn").addEventListener("click", function(){
     mapExpanded = !mapExpanded;
-    document.getElementById("map-canvas").classList.toggle("expanded", mapExpanded);
+    var canvas = document.getElementById("map-canvas");
+    canvas.classList.toggle("expanded", mapExpanded);
+    applyMapFullscreenOffsets(canvas, mapExpanded);
     this.setAttribute("aria-label", mapExpanded ? "Réduire la carte" : "Agrandir la carte");
     this.innerHTML = MAP_EXPAND_ICON(mapExpanded);
     // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
@@ -6533,6 +6805,14 @@ function switchTab(tab){
   // réel plutôt que de re-servir des nombres/demandes potentiellement
   // périmés (confirmées/déclinées depuis un autre appareil, par exemple).
   if(state.tab==="likes" && tab!=="likes") contactLogCache = null;
+  // Quitter Explorer alors que la carte est en plein écran (voir
+  // applyMapFullscreenOffsets()) : sans ce nettoyage, body.map-fullscreen
+  // (overflow:hidden) resterait posé sur un autre onglet, en bloquant le
+  // défilement pour de bon.
+  if(state.tab==="explore" && tab!=="explore" && mapExpanded){
+    mapExpanded = false;
+    document.body.classList.remove("map-fullscreen");
+  }
   state.tab = tab;
   /* Fil Explorer uniquement (retour utilisateur, "façon feed Instagram") :
      cartes pleine largeur, coins droits — voir #feed.feed-explore en CSS.

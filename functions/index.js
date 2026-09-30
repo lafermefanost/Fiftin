@@ -75,6 +75,13 @@ exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async
     amen: after.amen || [],
     likeCount: (typeof after.likeCount === "number") ? after.likeCount : 0,
     createdAt: after.createdAt || null,
+    // Juste les identifiants (pas les objets chambre complets — photos,
+    // prix — qui resteraient hors de cet index volontairement léger, voir
+    // le commentaire plus haut) : le filtre Date du fil voyageur
+    // (sejours/index.html, fetchListingAvailability()) en a besoin pour
+    // savoir quels listings/{listingId}/publicAvail/{unitId} interroger
+    // sans avoir à charger l'annonce complète.
+    unitIds: (after.units || []).map(function (u) { return u.id; }),
   });
 });
 
