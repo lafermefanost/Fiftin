@@ -447,12 +447,33 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .host-app-link{display:block; font-size:12.5px; font-weight:600; color:var(--lavender-deep); text-decoration:underline; margin:-6px 0 18px;}
 .btn-photo-add{width:100%; padding:12px; border:1.5px dashed var(--line); border-radius:16px; background:var(--cream-deep);
   font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge-deep);}
-.hf-photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px;}
-.hf-photo-grid:empty{margin-top:0;}
-.hf-photo-thumb{position:relative; aspect-ratio:1/1; border-radius:12px; overflow:hidden;}
-.hf-photo-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
-.hf-photo-remove{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(20,26,20,.65);
-  color:#fff; border:none; font-size:15px; line-height:1; display:flex; align-items:center; justify-content:center;}
+/* Retour utilisateur : "améliore toute la partie photo, elle doit être
+   beaucoup plus ergonomique et permettre d'organiser comme on veut (photo
+   de couverture, ordre des photos…)" — l'ancienne grille 3 colonnes
+   (.hf-photo-grid, juste une image + une croix) devient une liste pleine
+   largeur façon .map-list-item : vignette à gauche, badge "Couverture"
+   sur la 1ère photo (gallery[0] sert déjà de couverture partout ailleurs
+   dans ce fichier, voir listingThumbUrl() — pas de champ séparé à créer,
+   réordonner EST choisir la couverture), boutons Monter/Descendre/
+   Améliorer/Supprimer à droite. Même structure réutilisée pour les
+   photos de la maison (#hf-photo-grid) et celles de chaque location
+   (.hf-unit-photo-grid) — voir photoListRowHtml()/renderHostPhotoGrid()/
+   renderHostUnitPhotoGrid(). */
+.hf-photo-list{display:flex; flex-direction:column; gap:8px; margin-top:10px;}
+.hf-photo-list:empty{margin-top:0;}
+.hf-photo-row{display:flex; align-items:center; gap:10px; background:#fff; border-radius:14px; padding:8px;}
+.hf-photo-row.busy{opacity:.55;}
+.hf-photo-row-thumb{position:relative; width:64px; height:64px; border-radius:10px; overflow:hidden; flex-shrink:0;}
+.hf-photo-row-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.hf-photo-cover-badge{position:absolute; left:0; right:0; bottom:0; background:rgba(53,75,56,.85); color:#fff;
+  font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; text-align:center; padding:2px 0;}
+.hf-photo-row-actions{display:flex; gap:5px; margin-left:auto; flex-shrink:0;}
+.hf-photo-row-actions button{width:28px; height:28px; border-radius:50%; border:none; background:var(--cream-deep);
+  color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.hf-photo-row-actions button svg{width:14px; height:14px;}
+.hf-photo-row-actions button:disabled{opacity:.3;}
+.hf-photo-row-actions .hf-photo-remove{color:var(--danger);}
+.hf-photo-row-actions .hf-photo-enhance.active{background:var(--sauge-mid); color:#fff;}
 .hf-unit-card{background:var(--cream-deep); border-radius:16px; padding:14px; margin-bottom:12px;}
 .hf-unit-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
 .hf-unit-head span{font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-transform:uppercase; letter-spacing:.02em;}
@@ -4357,6 +4378,20 @@ function openSheet(kind){
       '</select>'+
         '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
       '</div>'+
+      // Photos et Capacité/tarif remontées ici, juste après Nom/Type
+      // (retour utilisateur : "mets la partie photo et la partie prix
+      // dans les premiers, c'est la partie que les gens modifieront le
+      // plus souvent") — avant tous les champs modifiés bien plus
+      // rarement une fois l'annonce créée (adresse, description, réseaux…).
+      '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
+        '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
+        '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
+        '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
+      '</div>'+
+      '<div class="field-block"><label id="hf-units-label">Capacité et tarif</label>'+
+        '<div id="hf-units"></div>'+
+        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
+      '</div>'+
       '<div class="field-block"><label>Votre photo (facultatif)</label>'+
         '<div class="profile-avatar editable" id="hf-host-photo-avatar">'+
           (hfEf && hfEf.hostPhotoUrl ? '<img src="'+esc(hfEf.hostPhotoUrl)+'" alt="">' : '')+
@@ -4396,15 +4431,6 @@ function openSheet(kind){
       '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; })+'</div>'+
-      '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
-        '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
-        '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
-        '<div class="hf-photo-grid" id="hf-photo-grid"></div>'+
-      '</div>'+
-      '<div class="field-block"><label id="hf-units-label">Capacité et tarif</label>'+
-        '<div id="hf-units"></div>'+
-        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
-      '</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     // thumbUrl repris ici (galleryThumb, même index que gallery) pour
@@ -4958,18 +4984,73 @@ function renderHfHostPhotoPreview(){
   if(!el) return;
   el.innerHTML = (hfHostPhoto ? '<img src="'+photoEntryUrl(hfHostPhoto)+'" alt="">' : '') + avatarBadgeSvg();
 }
+/* Une ligne de la liste photo (maison ou location, voir plus haut le
+   commentaire CSS de .hf-photo-list) : vignette + badge Couverture sur la
+   1ère, puis Monter/Descendre/Améliorer/Supprimer. "Améliorer" seulement
+   sur une photo tout juste ajoutée (entry.type==="new", un vrai File
+   local) — jamais sur une photo déjà en ligne (entry.type==="existing",
+   une simple URL Firebase Storage) : retoucher un fichier déjà envoyé
+   supposerait de le recharger en pixels dans un <canvas>, ce que les URL
+   de Storage ne garantissent pas de permettre sans configuration CORS
+   dédiée (canvas "tainted" sinon) — jamais vérifié en conditions réelles,
+   donc jamais tenté ici. Ré-ajouter la photo (elle redevient "new") est le
+   contournement si besoin. */
+function photoListRowHtml(entry, i, total){
+  var canEnhance = entry.type==="new";
+  return '<div class="hf-photo-row'+(entry.busy?' busy':'')+'">'+
+    '<div class="hf-photo-row-thumb"><img src="'+photoEntryUrl(entry)+'" alt="">'+
+      (i===0 ? '<span class="hf-photo-cover-badge">Couverture</span>' : '')+
+    '</div>'+
+    '<div class="hf-photo-row-actions">'+
+      '<button type="button" class="hf-photo-move" data-dir="-1" data-i="'+i+'" aria-label="Monter"'+(i===0?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>'+
+      '<button type="button" class="hf-photo-move" data-dir="1" data-i="'+i+'" aria-label="Descendre"'+(i===total-1?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>'+
+      (canEnhance ? '<button type="button" class="hf-photo-enhance'+(entry.enhanced?' active':'')+'" data-i="'+i+'" aria-label="'+(entry.enhanced?"Annuler l’amélioration":"Améliorer automatiquement")+'"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(entry.enhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
+      '<button type="button" class="hf-photo-remove" data-i="'+i+'" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '</div>'+
+  '</div>';
+}
+/* Câblage commun Monter/Descendre/Améliorer/Supprimer, réutilisé pour la
+   liste maison (hfSelectedFiles) et chaque liste de location
+   (unit.photos) : arr et rerender() changent, le reste est identique. */
+function wirePhotoListRows(container, arr, rerender){
+  Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-move"), function(el){
+    el.addEventListener("click", function(){
+      var i = Number(el.getAttribute("data-i")), j = i+Number(el.getAttribute("data-dir"));
+      if(j<0 || j>=arr.length) return;
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+      rerender();
+    });
+  });
+  Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-enhance"), function(el){
+    el.addEventListener("click", function(){
+      var entry = arr[Number(el.getAttribute("data-i"))];
+      if(!entry || entry.type!=="new" || entry.busy) return;
+      if(entry.enhanced){ entry.file = entry.originalFile; entry.enhanced = false; rerender(); return; }
+      if(entry.enhancedFile){ entry.originalFile = entry.file; entry.file = entry.enhancedFile; entry.enhanced = true; rerender(); return; }
+      entry.busy = true; rerender();
+      autoEnhanceFile(entry.file).then(function(enhanced){
+        entry.busy = false;
+        if(!enhanced){ rerender(); return; }
+        entry.originalFile = entry.file;
+        entry.enhancedFile = enhanced;
+        entry.file = enhanced;
+        entry.enhanced = true;
+        rerender();
+      });
+    });
+  });
+  Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-remove"), function(el){
+    el.addEventListener("click", function(){
+      arr.splice(Number(el.getAttribute("data-i")), 1);
+      rerender();
+    });
+  });
+}
 function renderHostPhotoGrid(){
   var grid = document.getElementById("hf-photo-grid");
   if(!grid) return;
-  grid.innerHTML = hfSelectedFiles.map(function(entry, i){
-    return '<div class="hf-photo-thumb"><img src="'+photoEntryUrl(entry)+'" alt=""><button type="button" class="hf-photo-remove" data-i="'+i+'">&times;</button></div>';
-  }).join("");
-  Array.prototype.forEach.call(grid.querySelectorAll(".hf-photo-remove"), function(el){
-    el.addEventListener("click", function(){
-      hfSelectedFiles.splice(Number(el.getAttribute("data-i")), 1);
-      renderHostPhotoGrid();
-    });
-  });
+  grid.innerHTML = hfSelectedFiles.map(function(entry, i){ return photoListRowHtml(entry, i, hfSelectedFiles.length); }).join("");
+  wirePhotoListRows(grid, hfSelectedFiles, renderHostPhotoGrid);
 }
 
 function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
@@ -5041,7 +5122,7 @@ function renderHostUnits(){
       '<div class="field-block"><label>Photos de cette location</label>'+
         '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
-        '<div class="hf-photo-grid hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
+        '<div class="hf-photo-list hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
       '</div>'+
     '</div>';
   }).join("");
@@ -5150,6 +5231,75 @@ function compressImageFile(file){
       }, "image/jpeg", PHOTO_JPEG_QUALITY);
     };
     img.onerror = function(){ URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
+/* "Améliorer" une photo (retour utilisateur : "y a-t-il une possibilité
+   de highlight un peu automatiquement les photos pour les rendre mieux
+   équilibrées (blanc, contrastes, saturation, un peu comme sur
+   iPhone) ?") — réponse honnête d'abord : PAS le même mécanisme que
+   l'amélioration automatique d'iPhone, qui s'appuie sur un modèle de
+   retouche entraîné (exposition locale, détection de scène…) — ici un
+   traitement classique, entièrement local (<canvas>, aucun appel
+   réseau) :
+   1) Auto-niveaux : étire l'histogramme de chaque canal R/V/B pour qu'il
+      couvre toute la plage 0-255 (une photo prise en lumière plate, sans
+      vrai blanc ni vrai noir, ressort avec plus de punch) — un petit
+      pourcentage des pixels les plus sombres/clairs est ignoré (clip) pour
+      qu'un unique pixel extrême (reflet, capteur brûlé) n'écrase pas tout
+      le réglage.
+   2) Saturation et contraste légèrement remontés sur le résultat déjà
+      étiré, pour un rendu plus "vivant" sans virer criard.
+   Reste un vrai mieux pour la photo typiquement plate/terne d'un
+   téléphone en intérieur, mais n'invente rien qu'une vraie retouche plus
+   poussée ne ferait mieux — présenté comme un bouton optionnel par photo,
+   jamais appliqué automatiquement à l'insu de l'hôte. */
+function autoEnhanceFile(file){
+  return new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if(!w || !h){ resolve(null); return; }
+      var canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ resolve(null); return; }
+      ctx.drawImage(img, 0, 0);
+      var imgData;
+      try { imgData = ctx.getImageData(0, 0, w, h); }
+      catch(e){ resolve(null); return; } // fichier local : ne devrait jamais être "tainted", filet de sécurité quand même
+      var d = imgData.data;
+      var histR = new Uint32Array(256), histG = new Uint32Array(256), histB = new Uint32Array(256);
+      for(var i=0;i<d.length;i+=4){ histR[d[i]]++; histG[d[i+1]]++; histB[d[i+2]]++; }
+      var clip = Math.round((d.length/4) * 0.004); // ~0.4 % de chaque côté de l'histogramme, ignoré
+      var lo = [0,0,0], hi = [255,255,255], hists = [histR,histG,histB];
+      for(var c=0;c<3;c++){
+        var acc=0, v;
+        for(v=0;v<256;v++){ acc+=hists[c][v]; if(acc>clip){ lo[c]=v; break; } }
+        acc=0;
+        for(v=255;v>=0;v--){ acc+=hists[c][v]; if(acc>clip){ hi[c]=v; break; } }
+        if(hi[c]<=lo[c]){ lo[c]=0; hi[c]=255; } // image quasi unie (ciel, mur…) : pas d'étirement, plage déjà correcte
+      }
+      var sat = 1.12, contrast = 1.05, mid = 128;
+      var rangeR = hi[0]-lo[0] || 1, rangeG = hi[1]-lo[1] || 1, rangeB = hi[2]-lo[2] || 1;
+      for(var p=0;p<d.length;p+=4){
+        var r = (d[p]-lo[0])*255/rangeR, g = (d[p+1]-lo[1])*255/rangeG, b = (d[p+2]-lo[2])*255/rangeB;
+        var gray = 0.299*r+0.587*g+0.114*b;
+        r = gray+(r-gray)*sat; g = gray+(g-gray)*sat; b = gray+(b-gray)*sat;
+        r = mid+(r-mid)*contrast; g = mid+(g-mid)*contrast; b = mid+(b-mid)*contrast;
+        d[p] = r<0?0:r>255?255:r; d[p+1] = g<0?0:g>255?255:g; d[p+2] = b<0?0:b>255?255:b;
+      }
+      ctx.putImageData(imgData, 0, 0);
+      canvas.toBlob(function(blob){
+        if(!blob){ resolve(null); return; }
+        var name = file.name.replace(/\.[^.\/]+$/, "")+"-ameliore.jpg";
+        resolve(new File([blob], name, {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
     img.src = url;
   });
 }
@@ -5358,15 +5508,8 @@ function renderHostUnitPhotoGrid(unitId){
   var grid = document.querySelector('.hf-unit-photo-grid[data-unit-id="'+unitId+'"]');
   if(!grid) return;
   var unit = findHfUnit(unitId);
-  grid.innerHTML = unit.photos.map(function(entry, i){
-    return '<div class="hf-photo-thumb"><img src="'+photoEntryUrl(entry)+'" alt=""><button type="button" class="hf-photo-remove" data-i="'+i+'">&times;</button></div>';
-  }).join("");
-  Array.prototype.forEach.call(grid.querySelectorAll(".hf-photo-remove"), function(el){
-    el.addEventListener("click", function(){
-      unit.photos.splice(Number(el.getAttribute("data-i")), 1);
-      renderHostUnitPhotoGrid(unitId);
-    });
-  });
+  grid.innerHTML = unit.photos.map(function(entry, i){ return photoListRowHtml(entry, i, unit.photos.length); }).join("");
+  wirePhotoListRows(grid, unit.photos, function(){ renderHostUnitPhotoGrid(unitId); });
 }
 
 /* Envoie le fichier plein format ET sa vignette (makeThumbFile(), voir
