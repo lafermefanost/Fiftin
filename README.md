@@ -1085,6 +1085,14 @@ Retour utilisateur : « as-tu une solution pour que je puisse changer l'annonce 
 
 **Testé** (Playwright) : bouton changer confirmé ouvrir le sélecteur de collections pré-coché sur la collection actuelle ; bouton retirer confirmé retirer l'annonce en un clic sans navigation (le volet reste sur la même page, une ligne en moins) ; les deux boutons confirmés présents et fonctionnels aussi dans le détail d'une collection en vue grille (même fonction de wiring, deux appelants). Suite de régression complète rejouée (un script existant mis à jour au passage : son sélecteur `.map-list-item` cliquable visait l'ancienne structure, désormais `.log-body` — comportement plus correct, pas une régression : cliquer près des boutons d'action n'ouvre plus accidentellement la fiche). Zéro erreur JS.
 
+### Boutons changer/retirer : fond blanc contouré, pour se distinguer de l'en-tête du volet
+
+Retour utilisateur : « peux-tu faire les boutons un peu différents ? Genre fond blanc/transparent pour différencier de la collection. »
+
+Les deux boutons de `collectionListingRowHtml()` (changer de collection, retirer) passent d'un fond gris plein (`var(--cream-deep)`, identique aux icônes Renommer/Supprimer/Replier de l'en-tête du volet) à un fond blanc contouré (`#fff` + bordure `1.5px solid`, couleur neutre pour changer, rouge discret pour retirer — même esprit que `.host-edit-btn`/`.host-delete-btn` déjà ailleurs sur le site) : délibérément plus discrets, pour que l'œil distingue tout de suite une action sur CETTE annonce (fond blanc) d'une action sur LA collection entière (fond gris plein, dans l'en-tête). Scopé à `.coll-listing-list .log-action` — ne touche pas `.log-action.decline` du bouton "refuser une demande" ailleurs sur le site (`contactLogRowHtml()`), qui reste plein comme avant.
+
+**Testé** (Playwright, capture d'écran) : fond/bordure des deux boutons confirmés blancs contourés, contre le fond gris plein toujours en place sur l'en-tête du volet (Renommer). Suite de régression complète rejouée, aucune casse. Zéro erreur JS.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
