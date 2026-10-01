@@ -757,26 +757,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.12), rgba(20,26,20,.06) 55%, transparent);}
 .fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
-.tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;
-  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:none;}
-/* Bulle de switch rapide voyageur/hôte (appui maintenu sur l'onglet Profil,
-   voir wireProfileTabLongPress()) : positionnée en JS (left/bottom suivent
-   l'onglet Profil et la hauteur réelle de nav.tabbar, variable avec
-   env(safe-area-inset-bottom)), seules forme/couleur/transition ici.
-   pointer-events:none — le choix se fait en comparant la position du
-   doigt (pointermove) au rectangle de la bulle, jamais par un clic dessus
-   (le doigt ne quitte pas l'écran avant la décision). */
-.profile-switch-bubble{position:fixed; z-index:55; left:0; bottom:0; transform:translateX(-50%) translateY(6px) scale(.8);
-  opacity:0; pointer-events:none; transition:transform .18s cubic-bezier(.34,1.56,.64,1), opacity .12s, background-color .12s;
-  display:flex; align-items:center; gap:8px; padding:11px 18px; border-radius:999px; box-shadow:0 10px 28px rgba(0,0,0,.25);}
-.profile-switch-bubble svg{width:18px; height:18px; flex:none; color:#fff;}
-.profile-switch-bubble b{font-size:13px; font-weight:700; color:#fff; white-space:nowrap;}
-.profile-switch-bubble.show{opacity:1; transform:translateX(-50%) translateY(0) scale(1);}
-.profile-switch-bubble.armed{transform:translateX(-50%) translateY(0) scale(1.1);}
-.profile-switch-bubble.voyageur{background:var(--sauge);}
-.profile-switch-bubble.hotes{background:var(--lavender-deep);}
-.profile-switch-bubble::after{content:''; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%) rotate(45deg);
-  width:10px; height:10px; background:inherit; border-radius:0 0 2px;}
+.tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
    app/ où .mbnav-btn.on colore tout le bouton, rectangle qui suit la
    largeur flex du bouton) : seul un carré fixe autour du pictogramme
@@ -7412,150 +7393,6 @@ var HOST_TABS_HTML =
     '<span>Profil hôte</span>'+
   '</button>';
 
-/* Bulle de switch rapide voyageur/hôte (retour utilisateur : "un moyen
-   d'appuyer d'une certaine manière sur le menu profil qui permette un
-   switch") : rester appuyé sur l'onglet Profil (dans l'un ou l'autre mode)
-   fait apparaître au-dessus une bulle avec l'icône + le nom de l'AUTRE
-   espace ; glisser le doigt dessus puis relâcher bascule
-   (enterHostMode()/exitHostMode()), relâcher ailleurs annule. Un tap
-   normal (sans rester appuyé) garde le comportement habituel — ce geste
-   est un raccourci en plus, pas un remplacement du switch déjà présent
-   dans Profil (voir #btn-exit-host / #btn-host-space), qui reste le seul
-   chemin découvrable sans connaître le geste.
-   Un appui maintenu confirmé ou annulé ne doit jamais déclencher EN PLUS
-   un clic natif. Essayé puis abandonné : intercepter "le tout prochain
-   clic, n'importe où" (swallowNextClickOnce(), plusieurs versions) —
-   supposé rattraper un clic fantôme qui traverserait la bulle
-   (pointer-events:none) après que enterHostMode()/exitHostMode() ait déjà
-   reconstruit la page. En pratique, sur tactile, preventDefault() sur
-   pointerup (voir onUp()) suffit à lui seul à empêcher ce clic fantôme
-   d'exister — et ce filet, resté armé par précaution, avalait alors le
-   PROCHAIN VRAI TAP de l'utilisateur, où qu'il soit sur la page (retour
-   utilisateur, persistant malgré plusieurs ajustements de délai : "n'importe
-   quel bouton, un seul clic mangé, le deuxième marche" — symptôme qui
-   correspond exactement à ce filet lui-même, pas au bug qu'il était censé
-   couvrir). preventDefault() seul, correctement scopé à ce relâchement
-   précis, ne peut pas avoir cet effet de bord. */
-var PROFILE_LONG_PRESS_MS = 480;
-var profileSwitchBubbleEl = null;
-function profileSwitchBubble(){
-  if(!profileSwitchBubbleEl){
-    profileSwitchBubbleEl = document.createElement("div");
-    profileSwitchBubbleEl.className = "profile-switch-bubble";
-    document.body.appendChild(profileSwitchBubbleEl);
-  }
-  return profileSwitchBubbleEl;
-}
-var suppressClickOnEl = null;
-function wireProfileTabLongPress(tabEl, mode){
-  // mode "hotes" : onglet Profil VOYAGEUR, propose de passer en Espace
-  // hôtes. mode "voyageur" : onglet Profil HÔTE, propose de repasser en
-  // Espace voyageur.
-  var timer = null, armed = false, pointerId = null;
-  var bubble = profileSwitchBubble();
-  function bubbleHtml(){
-    return mode==="hotes"
-      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><b>Espace hôtes</b>'
-      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg><b>Espace voyageur</b>';
-  }
-  function showBubble(){
-    bubble.className = "profile-switch-bubble " + mode;
-    bubble.innerHTML = bubbleHtml();
-    var rect = tabEl.getBoundingClientRect();
-    var tabbarRect = document.getElementById("tabbar").getBoundingClientRect();
-    bubble.style.left = (rect.left + rect.width/2) + "px";
-    bubble.style.bottom = (window.innerHeight - tabbarRect.top + 10) + "px";
-    requestAnimationFrame(function(){ bubble.classList.add("show"); });
-    if(navigator.vibrate){ try{ navigator.vibrate(10); }catch(e){} }
-  }
-  function hideBubble(){ bubble.classList.remove("show", "armed"); }
-  function pointInBubble(x, y){
-    if(!bubble.classList.contains("show")) return false;
-    var r = bubble.getBoundingClientRect();
-    return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
-  }
-  function pointInTab(x, y){
-    var r = tabEl.getBoundingClientRect();
-    return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
-  }
-  function onMove(e){
-    bubble.classList.toggle("armed", pointInBubble(e.clientX, e.clientY));
-  }
-  function onUp(e){
-    document.removeEventListener("pointermove", onMove);
-    document.removeEventListener("pointerup", onUp);
-    document.removeEventListener("pointercancel", onCancelMove);
-    var confirmed = pointInBubble(e.clientX, e.clientY);
-    hideBubble();
-    armed = false;
-    // Relâché sur l'onglet lui-même (appui resté en place, juste un peu
-    // trop long pour être sous le seuil) : rien à annuler, c'est un tap
-    // normal qui a simplement mis plus de 480ms — on LAISSE le clic normal
-    // suivre son cours (navigation habituelle), au lieu de l'avaler
-    // (retour utilisateur : "il y en a toujours un clic qui est mangé" —
-    // un appui un peu lent sur Profil ne faisait plus rien du tout).
-    // Suppression du clic réservée aux deux seuls cas où un geste
-    // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
-    // ailleurs qu'au point de départ.
-    if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    // Grâce à setPointerCapture() posé au pointerdown (voir plus bas), le
-    // clic de compatibilité éventuel — s'il arrive — est GARANTI de cibler
-    // tabEl lui-même, jamais un élément sous la bulle ou un autre onglet :
-    // suffit donc d'ignorer le tout prochain clic précisément sur tabEl,
-    // au lieu d'essayer de l'empêcher d'exister (preventDefault() sur
-    // pointerup, essayé puis retiré : semblait laisser le navigateur dans
-    // un état bloqué où le VRAI tap suivant, ailleurs sur la page, ne
-    // déclenchait plus rien — retour utilisateur, persistant malgré
-    // plusieurs essais : "n'importe quel bouton, un seul clic mangé, le
-    // deuxième marche").
-    suppressClickOnEl = tabEl;
-    // Filet de sécurité : si jamais aucun clic naturel ne vient consommer
-    // cette référence (retour utilisateur : "simule toi-même un clic pour
-    // remplacer ce que je fais manuellement" — exactement ça, en plus
-    // sûr : on désamorce l'attente nous-mêmes plutôt que de dépendre d'un
-    // clic réel incertain), elle se réinitialise toute seule peu après —
-    // jamais besoin d'un second tap pour "débloquer" quoi que ce soit.
-    setTimeout(function(){ if(suppressClickOnEl===tabEl) suppressClickOnEl = null; }, 400);
-    if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
-  }
-  function onCancelMove(){
-    document.removeEventListener("pointermove", onMove);
-    document.removeEventListener("pointerup", onUp);
-    document.removeEventListener("pointercancel", onCancelMove);
-    hideBubble();
-    armed = false;
-  }
-  tabEl.addEventListener("pointerdown", function(e){
-    if(e.pointerType==="mouse" && e.button!==0) return;
-    pointerId = e.pointerId;
-    // setPointerCapture() force TOUS les événements de ce pointeur précis
-    // (pointermove/pointerup, et le clic qui peut en découler) à cibler
-    // tabEl, quel que soit l'endroit où le doigt se trouve visuellement à
-    // la fin du geste — plus besoin de deviner après coup où un clic
-    // fantôme pourrait atterrir (bulle pointer-events:none, autre onglet,
-    // nouveau contenu après enterHostMode()/exitHostMode()…), le
-    // navigateur ne le délivre nulle part ailleurs qu'ici.
-    if(tabEl.setPointerCapture){ try{ tabEl.setPointerCapture(pointerId); }catch(err){} }
-    clearTimeout(timer);
-    timer = setTimeout(function(){
-      armed = true;
-      showBubble();
-      document.addEventListener("pointermove", onMove);
-      document.addEventListener("pointerup", onUp);
-      document.addEventListener("pointercancel", onCancelMove);
-    }, PROFILE_LONG_PRESS_MS);
-  });
-  tabEl.addEventListener("pointerup", function(){ clearTimeout(timer); });
-  tabEl.addEventListener("contextmenu", function(e){ e.preventDefault(); });
-  // Enregistré AVANT le listener "click" de navigation normale posé par
-  // renderTabbar() juste après cet appel (l'ordre d'exécution de deux
-  // listeners sur le MÊME élément suit l'ordre d'ajout, peu importe la
-  // phase) : ce check tourne donc en premier et peut empêcher la
-  // navigation normale de s'exécuter en plus de la bascule déjà faite.
-  tabEl.addEventListener("click", function(e){
-    if(suppressClickOnEl===tabEl){ suppressClickOnEl = null; e.preventDefault(); e.stopPropagation(); }
-  });
-}
 function renderTabbar(){
   var nav = document.getElementById("tabbar");
   nav.classList.toggle("host-mode", !!state.hostMode);
@@ -7564,12 +7401,6 @@ function renderTabbar(){
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       var hostTab = el.getAttribute("data-host-tab");
       el.classList.toggle("active", hostTab===state.hostTab);
-      // wireProfileTabLongPress() AVANT ce listener "click" de navigation
-      // normale, uniquement pour l'onglet Profil : son propre check doit
-      // tourner en premier pour pouvoir, le cas échéant, empêcher cette
-      // navigation de s'exécuter en plus de la bascule déjà faite (deux
-      // listeners sur le même élément s'exécutent dans l'ordre d'ajout).
-      if(hostTab==="profile") wireProfileTabLongPress(el, "voyageur");
       // "app" n'est pas un onglet classique : le clic doit d'abord savoir
       // si le compte a accès à Fiftin app avant de décider où aller (voir
       // openHostGestionApp()) — switchHostTab() directement ouvrirait la
@@ -7583,7 +7414,6 @@ function renderTabbar(){
     nav.innerHTML = TRAVELER_TABS_HTML;
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       el.classList.toggle("active", el.getAttribute("data-tab")===state.tab);
-      if(el.getAttribute("data-tab")==="profile") wireProfileTabLongPress(el, "hotes");
       el.addEventListener("click", function(){
         switchTab(el.getAttribute("data-tab"));
       });
@@ -7621,14 +7451,12 @@ function enterHostMode(){
   }
   /* Même raison que le hero juste au-dessus : #map-back-btn n'est masqué
      que par switchTab() ("mapBackBtn.hidden = tab!=='explore'"), jamais
-     ici. Avant la bulle de switch rapide (appui maintenu sur l'onglet
-     Profil), enterHostMode() n'était atteignable qu'après un passage par
-     switchTab("profile"), qui le masquait déjà comme effet de bord. La
-     bulle, elle, peut appeler enterHostMode() directement depuis
-     n'importe où dans Explorer (y compris scrollé, bouton visible) —
-     sans ce masquage explicite, le bouton "carte pliée" restait collé par-
-     dessus le Profil hôte, visible mais sans fonction (bug réel vu en
-     usage : retour utilisateur, capture d'écran). */
+     ici. "Devenir hôte" peut appeler enterHostMode() directement depuis
+     Explorer (y compris scrollé, bouton visible) sans passer par
+     switchTab("profile") — sans ce masquage explicite, le bouton "carte
+     pliée" restait collé par-dessus le Profil hôte, visible mais sans
+     fonction (bug réel vu en usage : retour utilisateur, capture
+     d'écran). */
   var mapBackBtnHost = document.getElementById("map-back-btn");
   if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
@@ -7673,10 +7501,9 @@ function renderHostTabContent(){
   // feed-explore (dégradés .fade-edge-top/.fade-edge-bottom + cartes pleine
   // largeur du fil Explorer, voir leur CSS) n'a de sens que côté voyageur,
   // posée par switchTab() — jamais retirée en entrant en mode hôte quand
-  // la transition ne passe pas par switchTab() (ex. bulle de switch rapide
-  // appelée directement depuis Explorer, voir wireProfileTabLongPress()).
-  // Sans ce retrait, le dégradé .fade-edge-top restait visible, plaqué en
-  // haut du Profil hôte (bug réel vu en usage).
+  // la transition ne passe pas par switchTab() (ex. "Devenir hôte" depuis
+  // Explorer). Sans ce retrait, le dégradé .fade-edge-top restait visible,
+  // plaqué en haut du Profil hôte (bug réel vu en usage).
   document.getElementById("feed").classList.remove("feed-explore");
   if(state.hostTab==="profile") renderHostProfile();
   else if(state.hostTab==="app") renderHostMarketingPage();
