@@ -758,7 +758,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;
-  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none;}
+  -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; touch-action:none;}
 /* Bulle de switch rapide voyageur/hôte (appui maintenu sur l'onglet Profil,
    voir wireProfileTabLongPress()) : positionnée en JS (left/bottom suivent
    l'onglet Profil et la hauteur réelle de nav.tabbar, variable avec
