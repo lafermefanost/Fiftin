@@ -2069,6 +2069,13 @@ function ensureListingDocsLoaded(docIds, cb){
   LISTINGS.forEach(function(l){ known[listingKey(l)] = true; });
   var missing = docIds.filter(function(id){ return id && !known[id]; });
   if(!missing.length || typeof firebase==="undefined"){ cb(); return; }
+  // "firebase" déjà défini ne garantit pas qu'ensureFirestoreSettings()
+  // ait déjà tourné (course possible entre plusieurs appelants de
+  // loadFirebaseSDK() pendant le tout premier chargement — voir son
+  // commentaire) : cette fonction est appelée très tôt, dès le premier
+  // rendu du fil Explorer, et pouvait être la toute première opération
+  // Firestore du site sans jamais poser ce réglage.
+  ensureFirestoreSettings();
   Promise.all(missing.map(function(id){
     return firebase.firestore().collection("listings").doc(id).get().catch(function(){ return null; });
   })).then(function(docs){
@@ -2248,8 +2255,31 @@ var AUTH_ERROR_MESSAGES = {
 };
 function authErrorMessage(err){ return AUTH_ERROR_MESSAGES[err.code] || ("Erreur : "+(err.message||err.code||"inconnue")); }
 
+var firebaseSDKLoading = false;
+var firebaseSDKCallbacks = [];
+/* Plusieurs endroits du fichier appellent loadFirebaseSDK() indépendamment
+   dès le tout premier chargement (bootFirebaseAuth, fetchListingIndex,
+   fetchHostListings…) — sans file d'attente partagée (ancienne version),
+   chacun injectait SON PROPRE jeu de 4 balises <script>, et l'ordre
+   d'arrivée des callbacks devenait une vraie course. Concrètement, ça
+   pouvait laisser une opération Firestore (ex. ensureListingDocsLoaded(),
+   voir son commentaire) s'exécuter avant qu'ensureFirestoreSettings() ait
+   eu la moindre chance de tourner — Firestore verrouille son mode de
+   connexion dès sa première utilisation, un réglage posé après coup est
+   silencieusement ignoré (constaté en usage réel : promesses rejetées
+   répétées dans firebase-firestore-compat.js/onMessage, retour
+   utilisateur avec bannière de debug). Désormais : un seul chargement
+   partagé, tous les appelants concurrents mettent juste leur callback en
+   file et sont tous notifiés une fois ce chargement unique terminé. */
 function loadFirebaseSDK(cb){
   if(typeof firebase!=="undefined"){ cb(); return; }
+  firebaseSDKCallbacks.push(cb);
+  if(firebaseSDKLoading) return;
+  firebaseSDKLoading = true;
+  function done(){
+    var cbs = firebaseSDKCallbacks; firebaseSDKCallbacks = [];
+    cbs.forEach(function(fn){ fn(); });
+  }
   var s1 = document.createElement("script");
   s1.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js";
   s1.onload = function(){
@@ -2261,7 +2291,7 @@ function loadFirebaseSDK(cb){
       s3.onload = function(){
         var s4 = document.createElement("script");
         s4.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js";
-        s4.onload = cb;
+        s4.onload = done;
         document.head.appendChild(s4);
       };
       document.head.appendChild(s3);
