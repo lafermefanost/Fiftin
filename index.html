@@ -1827,36 +1827,6 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
 <script>
 (function(){
 
-/* ---------------- DEBUG TEMPORAIRE : bannière d'erreur visible ----------------
-   Retour utilisateur : "je pense que le bouton fait planter". Aucune
-   visibilité sur une vraie erreur JS côté téléphone (le mock de test
-   local ne reproduit pas forcément les conditions réelles) — cette
-   bannière affiche en clair, à l'écran, la moindre exception JS ou
-   promesse rejetée non interceptée, pour diagnostiquer précisément plutôt
-   que deviner. À RETIRER une fois la vraie cause identifiée et corrigée. */
-function showDebugErrorBanner(msg){
-  var el = document.getElementById("debug-err-banner");
-  if(!el){
-    el = document.createElement("div");
-    el.id = "debug-err-banner";
-    el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;"+
-      "font:12px/1.4 monospace;padding:10px 14px;max-height:40vh;overflow:auto;white-space:pre-wrap;"+
-      "box-shadow:0 2px 8px rgba(0,0,0,.4);";
-    document.body.appendChild(el);
-  }
-  var line = document.createElement("div");
-  line.style.cssText = "border-top:1px solid rgba(255,255,255,.3);padding-top:6px;margin-top:6px;";
-  line.textContent = new Date().toLocaleTimeString("fr-FR")+" — "+msg;
-  el.insertBefore(line, el.firstChild);
-}
-window.addEventListener("error", function(e){
-  showDebugErrorBanner((e.message||"Erreur")+" @ "+(e.filename||"?")+":"+(e.lineno||"?")+":"+(e.colno||"?")+"\n"+(e.error&&e.error.stack||""));
-});
-window.addEventListener("unhandledrejection", function(e){
-  showDebugErrorBanner("Promesse rejetée : "+(e.reason&&(e.reason.stack||e.reason.message||e.reason)||e.reason));
-});
-/* ---------------- fin debug temporaire ---------------- */
-
 /* ---------------- data ---------------- */
 var GRADIENTS = {
   forest:  "linear-gradient(155deg,#4a6650 0%,#2c3f2c 55%,#1d2820 100%)",
@@ -7452,36 +7422,21 @@ var HOST_TABS_HTML =
    est un raccourci en plus, pas un remplacement du switch déjà présent
    dans Profil (voir #btn-exit-host / #btn-host-space), qui reste le seul
    chemin découvrable sans connaître le geste.
-   swallowNextClickOnce() évite qu'un appui maintenu confirmé ou annulé ne
-   déclenche EN PLUS un clic natif. La bulle a pointer-events:none (son
-   rectangle est vérifié "à la main", pas par hit-testing natif) : le clic
-   que le navigateur synthétise après le relâchement la traverse et
-   atterrit sur l'élément réellement sous ces coordonnées — qui a pu
-   changer entre-temps si enterHostMode()/exitHostMode() vient de
-   reconstruire la page. Intercepter précisément UN onglet (ancienne
-   version, suppressClickOnEl) ne suffisait donc pas : ce clic fantôme
-   pouvait atterrir n'importe où dans le nouveau contenu. Interception
-   globale, une seule fois, en phase de capture — avant que le clic
-   n'atteigne quelque élément que ce soit. */
+   Un appui maintenu confirmé ou annulé ne doit jamais déclencher EN PLUS
+   un clic natif. Essayé puis abandonné : intercepter "le tout prochain
+   clic, n'importe où" (swallowNextClickOnce(), plusieurs versions) —
+   supposé rattraper un clic fantôme qui traverserait la bulle
+   (pointer-events:none) après que enterHostMode()/exitHostMode() ait déjà
+   reconstruit la page. En pratique, sur tactile, preventDefault() sur
+   pointerup (voir onUp()) suffit à lui seul à empêcher ce clic fantôme
+   d'exister — et ce filet, resté armé par précaution, avalait alors le
+   PROCHAIN VRAI TAP de l'utilisateur, où qu'il soit sur la page (retour
+   utilisateur, persistant malgré plusieurs ajustements de délai : "n'importe
+   quel bouton, un seul clic mangé, le deuxième marche" — symptôme qui
+   correspond exactement à ce filet lui-même, pas au bug qu'il était censé
+   couvrir). preventDefault() seul, correctement scopé à ce relâchement
+   précis, ne peut pas avoir cet effet de bord. */
 var PROFILE_LONG_PRESS_MS = 480;
-function swallowNextClickOnce(){
-  function capture(e){
-    document.removeEventListener("click", capture, true);
-    clearTimeout(safety);
-    e.preventDefault();
-    e.stopPropagation();
-    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
-  }
-  document.addEventListener("click", capture, true);
-  // Le clic de compatibilité, s'il arrive malgré preventDefault() sur
-  // pointerup (voir onUp()), le fait dans la foulée immédiate du
-  // relâchement — jamais des centaines de ms plus tard. Un filet trop
-  // long (300ms, ancienne version) avalait à coup sûr le prochain vrai
-  // tap délibéré de l'utilisateur si celui-ci arrivait vite (retour
-  // utilisateur, persistant : "clic toujours mangé") ; 0 (juste la
-  // prochaine tâche) retire l'écouteur aussitôt si rien n'est arrivé.
-  var safety = setTimeout(function(){ document.removeEventListener("click", capture, true); }, 0);
-}
 var profileSwitchBubbleEl = null;
 function profileSwitchBubble(){
   if(!profileSwitchBubbleEl){
@@ -7542,24 +7497,16 @@ function wireProfileTabLongPress(tabEl, mode){
     // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
     // ailleurs qu'au point de départ.
     if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    // Sur tactile, empêcher à la SOURCE le clic de compatibilité que le
-    // navigateur synthétise après un pointerup issu du doigt : preventDefault()
-    // ici suffit (comportement standard des Pointer Events) à ce qu'aucun
-    // "click" ne soit généré du tout pour ce relâchement précis — plus
-    // fiable que d'essayer de l'intercepter après coup (retour utilisateur,
-    // persistant : "clic toujours mangé"). Ne s'applique qu'aux pointeurs
-    // tactiles/stylet ; la souris n'a pas de clic "de compatibilité" à
-    // supprimer de cette façon, d'où swallowNextClickOnce() juste en
-    // dessous en complément (desktop, ou si le navigateur ne respecte pas
-    // ce preventDefault()).
+    // Empêche à la SOURCE le clic de compatibilité que le navigateur
+    // synthétise après un pointerup issu du doigt : preventDefault() ici
+    // suffit (comportement standard des Pointer Events) à ce qu'aucun
+    // "click" ne soit généré du tout pour ce relâchement précis. Un filet
+    // de secours "intercepte le tout prochain clic, n'importe où" a été
+    // essayé puis retiré : inutile ici (ce preventDefault() suffit), et
+    // il avalait le prochain vrai tap de l'utilisateur quand aucun clic
+    // fantôme n'arrivait pour le consommer (voir le grand commentaire de
+    // wireProfileTabLongPress() plus haut).
     if(e.cancelable) e.preventDefault();
-    // Filet de sécurité pour les cas où preventDefault() ci-dessus ne
-    // suffit pas (souris : clic natif, pas de compatibilité à supprimer ;
-    // voir aussi le commentaire sur la bulle pointer-events:none plus haut
-    // dans ce fichier) : intercepte le tout prochain clic, où qu'il
-    // atterrisse, mais SEULEMENT s'il arrive quasi immédiatement — jamais
-    // assez longtemps pour risquer d'avaler un vrai tap délibéré suivant.
-    swallowNextClickOnce();
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
