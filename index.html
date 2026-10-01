@@ -7387,10 +7387,14 @@ function swallowNextClickOnce(){
     if(e.stopImmediatePropagation) e.stopImmediatePropagation();
   }
   document.addEventListener("click", capture, true);
-  // Le clic synthétisé après un pointerup arrive quasi immédiatement
-  // (même tâche ou juste après) : ce filet retire l'écouteur si rien
-  // n'arrive, pour ne jamais avaler un VRAI clic ultérieur sans rapport.
-  var safety = setTimeout(function(){ document.removeEventListener("click", capture, true); }, 300);
+  // Le clic de compatibilité, s'il arrive malgré preventDefault() sur
+  // pointerup (voir onUp()), le fait dans la foulée immédiate du
+  // relâchement — jamais des centaines de ms plus tard. Un filet trop
+  // long (300ms, ancienne version) avalait à coup sûr le prochain vrai
+  // tap délibéré de l'utilisateur si celui-ci arrivait vite (retour
+  // utilisateur, persistant : "clic toujours mangé") ; 0 (juste la
+  // prochaine tâche) retire l'écouteur aussitôt si rien n'est arrivé.
+  var safety = setTimeout(function(){ document.removeEventListener("click", capture, true); }, 0);
 }
 var profileSwitchBubbleEl = null;
 function profileSwitchBubble(){
@@ -7452,19 +7456,23 @@ function wireProfileTabLongPress(tabEl, mode){
     // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
     // ailleurs qu'au point de départ.
     if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    // La bulle a pointer-events:none (son rectangle est vérifié "à la
-    // main" via pointInBubble(), pas par hit-testing natif) : le clic que
-    // le navigateur synthétise après ce relâchement traverse donc la
-    // bulle et atterrit sur l'élément réellement sous ces coordonnées —
-    // qui a déjà changé si enterHostMode()/exitHostMode() vient de
-    // reconstruire la page (appelé juste en dessous, de façon synchrone,
-    // AVANT que ce clic ne se déclenche). Un filtrage par référence
-    // d'onglet (ancienne version) ne protégeait jamais cet élément-là, ce
-    // clic fantôme retombait sur le nouveau contenu et semblait "manger"
-    // le prochain tap (retour utilisateur : "je switch de profil et le
-    // clic suivant n'a pas d'effet"). swallowNextClickOnce() intercepte
-    // ce clic où qu'il atterrisse, une seule fois, en phase de capture —
-    // avant qu'il n'atteigne quelque bouton que ce soit.
+    // Sur tactile, empêcher à la SOURCE le clic de compatibilité que le
+    // navigateur synthétise après un pointerup issu du doigt : preventDefault()
+    // ici suffit (comportement standard des Pointer Events) à ce qu'aucun
+    // "click" ne soit généré du tout pour ce relâchement précis — plus
+    // fiable que d'essayer de l'intercepter après coup (retour utilisateur,
+    // persistant : "clic toujours mangé"). Ne s'applique qu'aux pointeurs
+    // tactiles/stylet ; la souris n'a pas de clic "de compatibilité" à
+    // supprimer de cette façon, d'où swallowNextClickOnce() juste en
+    // dessous en complément (desktop, ou si le navigateur ne respecte pas
+    // ce preventDefault()).
+    if(e.cancelable) e.preventDefault();
+    // Filet de sécurité pour les cas où preventDefault() ci-dessus ne
+    // suffit pas (souris : clic natif, pas de compatibilité à supprimer ;
+    // voir aussi le commentaire sur la bulle pointer-events:none plus haut
+    // dans ce fichier) : intercepte le tout prochain clic, où qu'il
+    // atterrisse, mais SEULEMENT s'il arrive quasi immédiatement — jamais
+    // assez longtemps pour risquer d'avaler un vrai tap délibéré suivant.
     swallowNextClickOnce();
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
