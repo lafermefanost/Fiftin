@@ -2169,14 +2169,24 @@ function fetchPublishedListings(cb){
         hostFirestoreListings = snap.docs.map(normalizeHostListing);
         rebuildListings();
       }
-      if(state.tab==="explore"){ renderFeed(); renderResultLine(); }
-      else if(state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
+      /* !state.hostMode : retour utilisateur, bug réel — ce listener tourne
+         à chaque chargement de page, y compris en pleine session hôte
+         restaurée (state.hostMode, voir le boot plus bas), où state.tab
+         garde sa dernière valeur voyageur (souvent "explore" par défaut,
+         jamais remis à zéro en entrant en mode hôte). Sans cette garde, la
+         réponse Firestore écrasait #feed avec le fil Explorer (carte
+         comprise) par-dessus le contenu hôte qu'on venait d'afficher —
+         repéré en revenant de Fiftin app via #backToSejoursBtn (rechargement
+         complet de la page, donc ce listener repart de zéro pendant que la
+         session hôte se restaure). */
+      if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+      else if(!state.hostMode && state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
       // savedListingsCount() dépend de LISTINGS : au tout premier rendu du
       // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
       // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
       // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
       renderLikeBadge();
-      maybeOpenDeepLink();
+      if(!state.hostMode) maybeOpenDeepLink(); // idem : un lien partagé (?listing=) ne doit jamais ouvrir une fiche par-dessus une session hôte
       settle();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
@@ -2242,8 +2252,11 @@ function fetchListingIndex(){
       // (là où state.loading est encore true, laissé à maybeFinishInitialLoad()
       // ci-dessous pour ne pas dessiner deux fois).
       if(!state.loading){
-        if(state.tab==="explore"){ renderFeed(); renderResultLine(); }
-        else if(state.tab==="likes") renderTabContent();
+        // Même garde qu'au listener de fetchPublishedListings() ci-dessus :
+        // ne jamais écraser #feed avec le fil voyageur pendant une session
+        // hôte restaurée.
+        if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+        else if(!state.hostMode && state.tab==="likes") renderTabContent();
       }
       if(snap.empty){
         // Filet de secours — voir aussi matchingIndexListings() : un
@@ -7291,6 +7304,24 @@ function ensureHostListingsLoaded(cb){
    modifié — aucune écriture vers accounts/{uid} n'existe dans ce fichier. */
 function resolveHostAccount(cb){
   if(hostAccountCache !== undefined){ cb(hostAccountCache); return; }
+  /* Bug réel repéré en usage (retour utilisateur : "App gestion" ne
+     redirigeait pas vers Fiftin app de façon systématique, même connecté
+     sur un compte gestion) : au boot d'une session hôte restaurée,
+     renderHostProfile() appelle cette fonction avant que Firebase Auth
+     ait fini de résoudre (authState.uid encore null à cet instant précis,
+     voir le commentaire de bootFirebaseAuth()) — l'ancienne version
+     mettait alors en cache hostAccountCache=null DÉFINITIVEMENT, avant
+     même de savoir si un compte existait vraiment. Le ré-appel que
+     bootFirebaseAuth() déclenche une fois authState.uid réellement connu
+     tombait ensuite sur ce null figé (hostAccountCache!==undefined
+     court-circuite toute nouvelle lecture Firestore), donc openHostGestionApp()
+     traitait à tort un compte Essentiel/Avancé comme une formule Hôte
+     simple — jusqu'au prochain rechargement où le timing jouait dans
+     l'autre sens, d'où le caractère non systématique. authState.ready
+     (posé par bootFirebaseAuth()) distingue maintenant "pas encore
+     connecté" de "pas encore su" : on ne met en cache qu'une fois cette
+     réponse sûre, jamais une valeur devinée trop tôt. */
+  if(!authState.ready){ cb(null); return; }
   if(!authState.uid || typeof firebase==="undefined"){ hostAccountCache = null; cb(null); return; }
   firebase.firestore().collection("accounts").doc(authState.uid).get().then(function(doc){
     hostAccountCache = doc.exists ? doc.data() : null;
@@ -7864,6 +7895,17 @@ var listingsJsonLoaded = false, listingsJsonFailed = false;
 function maybeFinishInitialLoad(){
   if(!listingsJsonLoaded || !listingIndexSettled || !state.loading) return;
   state.loading = false;
+  /* Bug réel repéré en usage (retour utilisateur, capture à l'appui) :
+     cette fonction tourne au tout premier chargement de page, y compris
+     une session hôte restaurée depuis localStorage (state.hostMode, voir
+     le boot plus haut) — sans cette garde, elle écrasait #feed avec le
+     fil voyageur (carte Explorer comprise) par-dessus le contenu hôte
+     déjà affiché juste avant par renderHostTabContent(). Repéré en
+     revenant de Fiftin app via #backToSejoursBtn (rechargement complet de
+     la page, donc ce chargement initial repart de zéro pendant que la
+     session hôte se restaure en parallèle) — même garde que les deux
+     listeners Firestore plus haut dans ce fichier. */
+  if(state.hostMode) return;
   if(listingsJsonFailed && !LISTINGS.length){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
     return;
