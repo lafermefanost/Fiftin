@@ -7610,8 +7610,15 @@ function renderHostProfile(){
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
     '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
+    /* Aucune carte marquée active au premier rendu : hostAccountCache est
+       systématiquement invalidé par enterHostMode(), donc le vrai plan
+       n'est jamais connu à cet instant. Deviner "simple" ici (ancien code)
+       affichait Formule Hôte le temps que resolveHostAccount() réponde,
+       puis basculait sur la vraie formule (Avancée, etc.) — le flash
+       "Hôte -> Avancée" rapporté par l'utilisateur. Mieux vaut un court
+       instant sans surbrillance qu'une surbrillance fausse. */
     '<div class="plan-card-list" id="host-formulas">'+
-      HOST_FORMULAS.map(function(f){ return planCardHtml(f, f.value==="simple"); }).join("")+
+      HOST_FORMULAS.map(function(f){ return planCardHtml(f, false); }).join("")+
     '</div>'+
     '<p class="sheet-sub">Changement de formule depuis Fiftin app (Réglages → Compte) — paiement pas encore activé.</p>'+
     '</div>'+
