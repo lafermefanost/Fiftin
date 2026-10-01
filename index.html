@@ -7446,11 +7446,12 @@ function profileSwitchBubble(){
   }
   return profileSwitchBubbleEl;
 }
+var suppressClickOnEl = null;
 function wireProfileTabLongPress(tabEl, mode){
   // mode "hotes" : onglet Profil VOYAGEUR, propose de passer en Espace
   // hôtes. mode "voyageur" : onglet Profil HÔTE, propose de repasser en
   // Espace voyageur.
-  var timer = null, armed = false;
+  var timer = null, armed = false, pointerId = null;
   var bubble = profileSwitchBubble();
   function bubbleHtml(){
     return mode==="hotes"
@@ -7497,16 +7498,17 @@ function wireProfileTabLongPress(tabEl, mode){
     // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
     // ailleurs qu'au point de départ.
     if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    // Empêche à la SOURCE le clic de compatibilité que le navigateur
-    // synthétise après un pointerup issu du doigt : preventDefault() ici
-    // suffit (comportement standard des Pointer Events) à ce qu'aucun
-    // "click" ne soit généré du tout pour ce relâchement précis. Un filet
-    // de secours "intercepte le tout prochain clic, n'importe où" a été
-    // essayé puis retiré : inutile ici (ce preventDefault() suffit), et
-    // il avalait le prochain vrai tap de l'utilisateur quand aucun clic
-    // fantôme n'arrivait pour le consommer (voir le grand commentaire de
-    // wireProfileTabLongPress() plus haut).
-    if(e.cancelable) e.preventDefault();
+    // Grâce à setPointerCapture() posé au pointerdown (voir plus bas), le
+    // clic de compatibilité éventuel — s'il arrive — est GARANTI de cibler
+    // tabEl lui-même, jamais un élément sous la bulle ou un autre onglet :
+    // suffit donc d'ignorer le tout prochain clic précisément sur tabEl,
+    // au lieu d'essayer de l'empêcher d'exister (preventDefault() sur
+    // pointerup, essayé puis retiré : semblait laisser le navigateur dans
+    // un état bloqué où le VRAI tap suivant, ailleurs sur la page, ne
+    // déclenchait plus rien — retour utilisateur, persistant malgré
+    // plusieurs essais : "n'importe quel bouton, un seul clic mangé, le
+    // deuxième marche").
+    suppressClickOnEl = tabEl;
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
@@ -7518,6 +7520,15 @@ function wireProfileTabLongPress(tabEl, mode){
   }
   tabEl.addEventListener("pointerdown", function(e){
     if(e.pointerType==="mouse" && e.button!==0) return;
+    pointerId = e.pointerId;
+    // setPointerCapture() force TOUS les événements de ce pointeur précis
+    // (pointermove/pointerup, et le clic qui peut en découler) à cibler
+    // tabEl, quel que soit l'endroit où le doigt se trouve visuellement à
+    // la fin du geste — plus besoin de deviner après coup où un clic
+    // fantôme pourrait atterrir (bulle pointer-events:none, autre onglet,
+    // nouveau contenu après enterHostMode()/exitHostMode()…), le
+    // navigateur ne le délivre nulle part ailleurs qu'ici.
+    if(tabEl.setPointerCapture){ try{ tabEl.setPointerCapture(pointerId); }catch(err){} }
     clearTimeout(timer);
     timer = setTimeout(function(){
       armed = true;
@@ -7529,6 +7540,14 @@ function wireProfileTabLongPress(tabEl, mode){
   });
   tabEl.addEventListener("pointerup", function(){ clearTimeout(timer); });
   tabEl.addEventListener("contextmenu", function(e){ e.preventDefault(); });
+  // Enregistré AVANT le listener "click" de navigation normale posé par
+  // renderTabbar() juste après cet appel (l'ordre d'exécution de deux
+  // listeners sur le MÊME élément suit l'ordre d'ajout, peu importe la
+  // phase) : ce check tourne donc en premier et peut empêcher la
+  // navigation normale de s'exécuter en plus de la bascule déjà faite.
+  tabEl.addEventListener("click", function(e){
+    if(suppressClickOnEl===tabEl){ suppressClickOnEl = null; e.preventDefault(); e.stopPropagation(); }
+  });
 }
 function renderTabbar(){
   var nav = document.getElementById("tabbar");
@@ -7538,6 +7557,12 @@ function renderTabbar(){
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       var hostTab = el.getAttribute("data-host-tab");
       el.classList.toggle("active", hostTab===state.hostTab);
+      // wireProfileTabLongPress() AVANT ce listener "click" de navigation
+      // normale, uniquement pour l'onglet Profil : son propre check doit
+      // tourner en premier pour pouvoir, le cas échéant, empêcher cette
+      // navigation de s'exécuter en plus de la bascule déjà faite (deux
+      // listeners sur le même élément s'exécutent dans l'ordre d'ajout).
+      if(hostTab==="profile") wireProfileTabLongPress(el, "voyageur");
       // "app" n'est pas un onglet classique : le clic doit d'abord savoir
       // si le compte a accès à Fiftin app avant de décider où aller (voir
       // openHostGestionApp()) — switchHostTab() directement ouvrirait la
@@ -7546,16 +7571,15 @@ function renderTabbar(){
       el.addEventListener("click", function(){
         if(hostTab==="app") openHostGestionApp(); else switchHostTab(hostTab);
       });
-      if(hostTab==="profile") wireProfileTabLongPress(el, "voyageur");
     });
   } else {
     nav.innerHTML = TRAVELER_TABS_HTML;
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       el.classList.toggle("active", el.getAttribute("data-tab")===state.tab);
+      if(el.getAttribute("data-tab")==="profile") wireProfileTabLongPress(el, "hotes");
       el.addEventListener("click", function(){
         switchTab(el.getAttribute("data-tab"));
       });
-      if(el.getAttribute("data-tab")==="profile") wireProfileTabLongPress(el, "hotes");
     });
     renderLikeBadge();
   }
