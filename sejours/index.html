@@ -7418,6 +7418,15 @@ function wireProfileTabLongPress(tabEl, mode){
     hideBubble();
     armed = false;
     suppressNextTabClick = true;
+    // Filet de sécurité : si le relâchement a eu lieu sur la bulle (donc
+    // EN DEHORS de l'onglet Profil), aucun "click" ne se déclenche jamais
+    // sur un .tab pour consommer ce flag (retour utilisateur : "je ne
+    // peux temporairement plus appuyer sur un autre menu" — le flag
+    // restait bloqué à true et avalait le prochain tap, sur n'importe
+    // quel onglet). Un clic qui suit vraiment ce relâchement (relâché sur
+    // l'onglet lui-même) arrive de façon synchrone, avant ce timer ; ce
+    // dernier ne fait que désamorcer le flag si aucun clic ne vient.
+    setTimeout(function(){ suppressNextTabClick = false; }, 60);
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
