@@ -1827,6 +1827,36 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
 <script>
 (function(){
 
+/* ---------------- DEBUG TEMPORAIRE : bannière d'erreur visible ----------------
+   Retour utilisateur : "je pense que le bouton fait planter". Aucune
+   visibilité sur une vraie erreur JS côté téléphone (le mock de test
+   local ne reproduit pas forcément les conditions réelles) — cette
+   bannière affiche en clair, à l'écran, la moindre exception JS ou
+   promesse rejetée non interceptée, pour diagnostiquer précisément plutôt
+   que deviner. À RETIRER une fois la vraie cause identifiée et corrigée. */
+function showDebugErrorBanner(msg){
+  var el = document.getElementById("debug-err-banner");
+  if(!el){
+    el = document.createElement("div");
+    el.id = "debug-err-banner";
+    el.style.cssText = "position:fixed;top:0;left:0;right:0;z-index:99999;background:#c0392b;color:#fff;"+
+      "font:12px/1.4 monospace;padding:10px 14px;max-height:40vh;overflow:auto;white-space:pre-wrap;"+
+      "box-shadow:0 2px 8px rgba(0,0,0,.4);";
+    document.body.appendChild(el);
+  }
+  var line = document.createElement("div");
+  line.style.cssText = "border-top:1px solid rgba(255,255,255,.3);padding-top:6px;margin-top:6px;";
+  line.textContent = new Date().toLocaleTimeString("fr-FR")+" — "+msg;
+  el.insertBefore(line, el.firstChild);
+}
+window.addEventListener("error", function(e){
+  showDebugErrorBanner((e.message||"Erreur")+" @ "+(e.filename||"?")+":"+(e.lineno||"?")+":"+(e.colno||"?")+"\n"+(e.error&&e.error.stack||""));
+});
+window.addEventListener("unhandledrejection", function(e){
+  showDebugErrorBanner("Promesse rejetée : "+(e.reason&&(e.reason.stack||e.reason.message||e.reason)||e.reason));
+});
+/* ---------------- fin debug temporaire ---------------- */
+
 /* ---------------- data ---------------- */
 var GRADIENTS = {
   forest:  "linear-gradient(155deg,#4a6650 0%,#2c3f2c 55%,#1d2820 100%)",
