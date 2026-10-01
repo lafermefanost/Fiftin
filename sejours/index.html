@@ -1492,6 +1492,183 @@ body.map-fullscreen{overflow:hidden;}
   color:var(--cream); font-family:'Jost',sans-serif; font-weight:700; font-size:14.5px;}
 #siteGate .gate-btn:active{background:rgba(245,240,229,.14);}
 #siteGate .gate-err{color:#F2B8A8; font-size:12px; margin-top:10px; min-height:16px;}
+
+/* ---------- page commerciale portee (ex index.html racine) ----------
+   Retour utilisateur : "fiftin.fr dirige directement le voyageur sur
+   sejours ; quand un hote sur formule simple atteint App gestion, la
+   premiere page qu'il voit est la page commerciale". Toute classe ici
+   est scopee sous .mkt-page (ancetre) plutot que renommee : .cover et
+   .blob existent deja ailleurs dans ce fichier avec un sens totalement
+   different (carte photo d'annonce / mesh du bandeau marque) -- la
+   portee .mkt-page X{} les isole sans toucher a l'existant. Couleurs :
+   memes variables que le reste du fichier (meme charte), pas de nouveau
+   :root -- --terracotta(-soft)/--lavender-strong de la page d'origine
+   n'existaient que comme alias des memes valeurs hex que --sauge-deep/
+   --lavender-soft/--lavender ici, renommes en consequence ci-dessous. */
+.mkt-page{background:var(--cream); color:var(--ink);}
+.mkt-page section{padding:72px 24px; border-bottom:1px solid var(--line); --section-bg:var(--cream);}
+.mkt-page section.mkt-tight-bottom{padding-bottom:0;}
+.mkt-page .inner{max-width:940px; margin:0 auto;}
+.mkt-page .kicker{font-weight:800; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:18px;}
+.mkt-page h2{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(26px,4vw,38px); line-height:1.12; margin:0 0 20px; letter-spacing:-0.01em;}
+.mkt-page h2 em{font-style:italic; font-weight:500;}
+.mkt-page p.big{font-size:17px; line-height:1.6; max-width:640px; color:rgba(46,43,34,0.8); margin:0 0 16px;}
+.mkt-page p.small{font-size:14.5px; line-height:1.6; color:rgba(46,43,34,0.72); margin:0;}
+
+.mkt-page .cover, .mkt-page .dark, .mkt-page .close{background:var(--sauge-light); z-index:0;}
+.mkt-page .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;container-type:size;}
+.mkt-page .mesh-bg .blob{position:absolute;border-radius:50%;aspect-ratio:1;filter:blur(60px);}
+.mkt-page .mesh-bg .b1{width:63cqmin;background:var(--lavender);
+  top:-18vh;left:-12%;animation:mktMeshDrift1 18s ease-in-out infinite;}
+.mkt-page .mesh-bg .b2{width:57cqmin;
+  background:radial-gradient(circle at 50% 45%,#fff 0%,var(--yellow) 42%,transparent 76%);
+  filter:blur(38px);top:6vh;right:-16%;animation:mktMeshDrift2 21s ease-in-out infinite -6s;}
+.mkt-page .mesh-bg .b3{width:72cqmin;background:var(--sauge-deep);filter:blur(54px) saturate(1.3);
+  top:65vh;left:7%;animation:mktMeshDrift3 19s ease-in-out infinite -11s;}
+.mkt-page .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8vh;left:-25%;
+  background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
+  filter:blur(25px);animation:mktMeshStreak 18s ease-in-out infinite -4s;}
+@keyframes mktMeshDrift1{
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.66;}
+  25%{transform:translate(16%,9%) scale(1.35,.68) rotate(18deg);opacity:.78;}
+  50%{transform:translate(21%,14%) scale(1.1,1.3) rotate(-10deg);opacity:.86;}
+  75%{transform:translate(-9%,17%) scale(.7,.92) rotate(6deg);opacity:.46;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.66;}}
+@keyframes mktMeshDrift2{
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.7;}
+  20%{transform:translate(-12%,9%) scale(1.35,.6) rotate(-20deg);opacity:.58;}
+  40%{transform:translate(-18%,15%) scale(.68,.72) rotate(0deg);opacity:.48;}
+  58%{transform:translate(3%,-4%) scale(.62,1.55) rotate(16deg);opacity:.68;}
+  75%{transform:translate(13%,-12%) scale(1.35,1.3) rotate(0deg);opacity:.94;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.7;}}
+@keyframes mktMeshDrift3{
+  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.84;}
+  28%{transform:translate(13%,-9%) scale(1.4,.75) rotate(12deg);opacity:.88;}
+  50%{transform:translate(16%,-17%) scale(1.05,1.3) rotate(-8deg);opacity:.92;}
+  75%{transform:translate(-11%,11%) scale(.78,.92) rotate(0deg);opacity:.66;}
+  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.84;}}
+@keyframes mktMeshStreak{
+  0%{transform:rotate(-18deg) translateY(0);opacity:1;}
+  50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
+  100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
+.mkt-page .cover::before, .mkt-page .dark::before, .mkt-page .close::before{content:'';position:absolute;inset:0;z-index:-1;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
+
+.mkt-page .cover{color:var(--cream); border-bottom:none; padding:72px 24px 0; --section-bg:var(--sauge-deep); overflow:hidden; contain:paint; position:relative;}
+.mkt-page .logo{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:40px; flex-wrap:wrap;}
+.mkt-page .logo-tile{width:112px; height:112px; border-radius:30px; border:1.5px solid rgba(245,240,229,.38);
+  flex:none; display:flex; align-items:center; justify-content:center;}
+.mkt-page .logo-tile img{width:61%; height:auto; display:block;}
+.mkt-page .logo-tile.sm{width:72px; height:72px; border-radius:18px; margin:0 auto 26px;}
+.mkt-page .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(30px,6.2vw,46px); line-height:1.08; margin:0 0 20px; letter-spacing:-0.02em;}
+.mkt-page .cover h1 em{font-style:italic; font-weight:500; color:var(--lavender-soft);}
+.mkt-page .cover p{font-size:18px; line-height:1.5; font-weight:500; color:rgba(245,240,229,0.94); max-width:580px; margin:0; letter-spacing:-0.005em;}
+
+.mkt-page .hero-flex{display:flex; flex-direction:column; align-items:center;}
+.mkt-page .hero-phone-wrap{width:auto; height:auto; overflow:visible; contain:none; margin:6px -12px -34.5vw; position:relative; flex:none;}
+.mkt-page .hero-phone-wrap .hero-shot{width:100%; max-width:none; height:auto; display:block; position:relative; z-index:1;}
+.mkt-page .hero-shot-offset{position:relative; left:0;}
+
+.mkt-page .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:30px 0 8px;}
+.mkt-page .stat{background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px;}
+.mkt-page .stat .n{font-family:'Jost',sans-serif; font-weight:800; font-size:34px; line-height:1; color:var(--lavender); letter-spacing:-0.03em; margin-bottom:8px;}
+.mkt-page .stat .l{font-size:13.5px; line-height:1.5; color:rgba(46,43,34,0.72);}
+
+.mkt-page .dark{color:var(--cream); --section-bg:var(--sauge-deep); position:relative; overflow:hidden;}
+.mkt-page .dark h2{color:var(--cream);}
+.mkt-page .dark p.big, .mkt-page .dark p.small{color:rgba(245,240,229,0.84);}
+.mkt-page .dark .kicker{color:var(--lavender-soft);}
+
+.mkt-page .mods{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:30px;}
+.mkt-page .mod{background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px;}
+.mkt-page .mod h3{font-family:'Jost',sans-serif; font-size:18px; font-weight:600; margin:0 0 6px;}
+.mkt-page .mod .claim{font-family:'Fraunces',serif; font-style:italic; font-size:14.5px; color:var(--sauge-deep); margin:0 0 12px;}
+.mkt-page .mod p{font-size:13.5px; line-height:1.55; color:rgba(46,43,34,0.7); margin:0;}
+.mkt-page .mod.mod-sauge{
+  background:
+    radial-gradient(circle at 18% 12%, rgba(123,148,232,.28) 0%, transparent 42%),
+    radial-gradient(circle at 88% 92%, rgba(29,40,32,.55) 0%, transparent 50%),
+    linear-gradient(155deg, var(--sauge) 0%, var(--sauge-deep) 100%);
+  border-color:transparent;}
+.mkt-page .mod.mod-sauge h3{color:var(--cream);}
+.mkt-page .mod.mod-sauge p{color:rgba(245,240,229,0.82);}
+.mkt-page .mod.mod-lav{
+  background-image:url("assets/bg-card-lavender.webp");
+  background-size:cover; background-position:center;
+  border-color:transparent;}
+.mkt-page .mod.mod-lav h3{color:var(--cream);}
+.mkt-page .mod.mod-lav p{color:rgba(245,240,229,0.85);}
+
+.mkt-page .mods-visual{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-top:30px;}
+.mkt-page .mod-visual{
+  background:
+    radial-gradient(circle at 18% 10%, rgba(123,148,232,.26) 0%, transparent 40%),
+    radial-gradient(circle at 90% 96%, rgba(29,40,32,.5) 0%, transparent 48%),
+    linear-gradient(155deg, var(--sauge) 0%, var(--sauge-deep) 100%);
+  color:var(--cream); border:none; border-radius:16px; overflow:hidden;
+  height:560px; padding:22px 22px 0; display:flex; flex-direction:column; align-items:center;}
+.mkt-page .mod-visual .mv-text{width:100%;}
+.mkt-page .mod-visual h3{font-family:'Jost',sans-serif; font-size:18px; font-weight:600; margin:0 0 6px; color:var(--cream);}
+.mkt-page .mod-visual .claim{font-family:'Fraunces',serif; font-style:italic; font-size:14.5px; color:var(--lavender-soft); margin:0 0 12px;}
+.mkt-page .mod-visual p{font-size:13.5px; line-height:1.55; color:rgba(245,240,229,0.82); margin:0;}
+.mkt-page .mod-visual .mv-shot{width:100%; flex:1; min-height:0; display:flex; justify-content:center; align-items:flex-end; margin-top:18px;}
+
+.mkt-page .cmp-hd{margin-top:26px; padding:0 0 6px; font-size:11.5px; text-transform:uppercase;
+  letter-spacing:.07em; color:rgba(46,43,34,0.5); font-weight:800;}
+.mkt-page .compare-grid{display:flex; flex-direction:column;}
+.mkt-page .cmp-row{padding:12px 0; border-bottom:1px solid var(--line);}
+.mkt-page .cmp-label{display:block; font-weight:600; font-size:14px; margin-bottom:9px;}
+.mkt-page .cmp-pills{display:flex; gap:10px; flex-wrap:wrap;}
+.mkt-page .cmp-pill{flex:1; min-width:124px; text-align:center; font-size:12.5px; font-weight:700;
+  padding:6px 10px; border-radius:20px;}
+.mkt-page .cmp-pill b{font-weight:800;}
+.mkt-page .cmp-pill.yes{color:var(--cream); background:var(--sauge);}
+.mkt-page .cmp-pill.no{color:rgba(46,43,34,0.45); background:rgba(46,43,34,0.05); font-weight:600;}
+.mkt-page .cmp-pill.no b{font-weight:700;}
+
+.mkt-page .plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin-top:30px;}
+.mkt-page .plan{background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; position:relative;}
+.mkt-page .plan.mkt-plan-current{border-color:var(--sauge); box-shadow:0 0 0 1.5px var(--sauge) inset;}
+.mkt-page .plan .name{font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.mkt-page .plan .mkt-plan-tag{background:var(--sauge); color:var(--cream); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:none; padding:3px 8px; border-radius:20px;}
+.mkt-page .plan .price{font-family:'Jost',sans-serif; font-weight:800; font-size:36px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px;}
+.mkt-page .plan .per{font-size:13.5px; color:rgba(46,43,34,0.6); margin-bottom:16px;}
+.mkt-page .plan ul{margin:0; padding:0; list-style:none;}
+.mkt-page .plan li{font-size:13.5px; line-height:1.5; padding:6px 0 6px 18px; position:relative; color:rgba(46,43,34,0.78);}
+.mkt-page .plan li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:13px; border-radius:2.5px; background:var(--sauge-deep);}
+.mkt-page .plan li:nth-child(5n+1)::before{background:var(--lavender);}
+.mkt-page .plan li:nth-child(5n+2)::before{background:#C97B5C;}
+.mkt-page .plan li:nth-child(5n+3)::before{background:#6B8F71;}
+.mkt-page .plan li:nth-child(5n+4)::before{background:#D88A9A;}
+.mkt-page .plan li:nth-child(5n+5)::before{background:var(--yellow);}
+/* Essentiel/Avancé pas encore activables (Stripe/Mollie a venir, voir
+   openHostGestionApp()) : etiquette claire plutot qu'une carte cliquable
+   qui ne menerait nulle part -- jamais de lien mort. */
+.mkt-page .plan.mkt-plan-locked{opacity:.86;}
+.mkt-page .mkt-plan-soon{margin-top:16px; text-align:center; font-size:12px; font-weight:700; color:rgba(46,43,34,0.55);
+  background:rgba(46,43,34,0.05); border-radius:20px; padding:9px;}
+
+.mkt-page .phone2{width:200px; flex:none; position:relative;}
+.mkt-page .phone2 img{display:block; width:100%; height:auto;}
+.mkt-page .phone-stage{position:relative; overflow:hidden; contain:paint; height:294px;}
+.mkt-page .phone-stage .phone2, .mkt-page .hero-phone-wrap .hero-shot{will-change:transform;}
+.mkt-page .mod-visual .phone2, .mkt-page .phone-stage.mkt-lg .phone2{width:240px;}
+.mkt-page .mod-visual .phone-stage, .mkt-page .phone-stage.mkt-lg{height:353px;}
+
+.mkt-page .shot-row{display:flex; gap:28px; flex-wrap:wrap; justify-content:center; margin-top:34px;}
+
+.mkt-page .quote{font-family:'Jost',sans-serif; font-size:clamp(20px,3.2vw,28px); line-height:1.35; font-weight:400; max-width:720px; margin:0;}
+.mkt-page .quote em{font-style:italic; color:var(--lavender-soft);}
+.mkt-page .quote-lead{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(26px,4.8vw,38px); line-height:1.22; max-width:760px; margin:0; letter-spacing:-0.01em;}
+
+.mkt-page .close{color:var(--cream); text-align:center; border-bottom:none; padding:72px 24px 80px; position:relative; overflow:hidden;}
+.mkt-page .close h2{color:var(--cream); font-size:clamp(30px,6.5vw,46px); margin:0 0 22px; letter-spacing:-0.02em;}
+.mkt-page .close-punch{font-family:'Jost',sans-serif; font-size:clamp(17px,2.6vw,21px); line-height:1.45; color:rgba(245,240,229,0.85); max-width:560px; margin:0 auto;}
+@media (max-width:640px){
+  .mkt-page .mod-visual{height:480px; padding:18px 18px 0;}
+  .mkt-page .phone2{width:170px;} .mkt-page .phone-stage{height:251px;}
+}
 </style>
 
 <div id="siteGate">
@@ -7122,50 +7299,94 @@ function renderHostTabContent(){
   // du calendrier (.cal-card) se détachent très bien du fond crème normal.
   document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile"||state.hostTab==="app");
   if(state.hostTab==="profile") renderHostProfile();
-  else if(state.hostTab==="app") renderHostAppPromo();
+  else if(state.hostTab==="app") renderHostMarketingPage();
   else renderHostListings();
 }
 /* Onglet central "App gestion" (HOST_TABS_HTML) : direction différente
    selon la formule réelle du compte (accounts/{uid}.settings.plan, voir
    resolveHostAccount()) — retour utilisateur, "si essentiel ou avancé,
-   l'app s'ouvre, sinon un lien pour upgrader sa formule". Un compte
-   gestion (essentiel/pro) part directement sur Fiftin app dans un nouvel
-   onglet ; une formule Hôte simple (ou aucun compte gestion) atterrit sur
-   renderHostAppPromo() plutôt que de partir sur un lien mort. */
+   l'app s'ouvre, sinon la page commerciale". Un compte gestion
+   (essentiel/pro) part directement sur Fiftin app ; une formule Hôte
+   simple (ou aucun compte gestion) atterrit sur renderHostMarketingPage().
+   location.href, PAS window.open() (retour utilisateur : "il ouvre un
+   popup et fait comme si on redirigeait vers un autre site, ça ne doit
+   pas être le cas, ça doit sembler être un même site") — navigation
+   classique dans le même onglet, comme passer d'une page à l'autre d'un
+   seul et même site plutôt qu'ouvrir une fenêtre à part. "app/" sans
+   "../" : juste une fois ce fichier déménagé à la racine (voir le
+   chantier associé), ce chemin redevient correct tel quel. */
 function openHostGestionApp(){
   resolveHostAccount(function(account){
     var plan = (account && account.settings && account.settings.plan) || "simple";
     if(plan==="essentiel" || plan==="pro"){
-      window.open("../app/", "_blank", "noopener");
+      location.href = "../app/";
     } else {
       switchHostTab("app");
     }
   });
 }
-/* Page in-app plutôt qu'un simple popup (retour utilisateur : "tu rentres
-   sur une page qui te montre un peu l'outil mais dans des téléphones en
-   situation et après tu as un lien pour upgrader ta formule") — mêmes
-   visuels déjà utilisés sur la page marketing fiftin.fr (assets/shot-
-   planning.webp, assets/shot-clients.webp, section "Ce que Fiftin fait"
-   de index.html racine) : le mockup téléphone est déjà incrusté dans
-   l'image elle-même, pas besoin de reprendre le décor CSS desktop
-   (.phone-stage/.phone2, parallax JS) pensé pour une page large — ici,
-   une seule colonne mobile, simplement affichées les unes sous les
-   autres. Le bouton en pied ramène vers le Profil hôte (planCardHtml()) :
-   pas encore de vrai paiement (voir renderHostProfile()), la formule se
-   change aujourd'hui depuis Fiftin app, donc pas de raccourci plus direct
-   à proposer ici. */
-function renderHostAppPromo(){
-  var feed = document.getElementById("feed");
-  feed.innerHTML = '<div class="host-view gestion-promo">'+
-    '<h2 class="gestion-promo-title">Fiftin app, votre outil de gestion</h2>'+
-    '<p class="sheet-sub" style="margin-top:0;">Réservé aux formules Essentiel et Avancé : planning, fichier client, comptabilité, consommations — tout au même endroit, pensé pour être utilisé du téléphone.</p>'+
-    '<div class="gestion-promo-shot"><img src="../assets/shot-planning.webp" alt="Fiftin app — le planning, en situation"><p class="gestion-promo-caption"><b>Le planning</b><br>Toute votre année, en un coup d\'œil. Une réservation saisie en 15 secondes.</p></div>'+
-    '<div class="gestion-promo-shot"><img src="../assets/shot-clients.webp" alt="Fiftin app — le fichier client, en situation"><p class="gestion-promo-caption"><b>Le fichier client</b><br>Vos habitués reconnus : nom, email, préférences, historique.</p></div>'+
-    '<button type="button" class="btn-apply" id="gestion-promo-upgrade">Changer de formule</button>'+
+/* Page commerciale portée depuis l'ancien index.html racine (retour
+   utilisateur : "fiftin.fr devient directement sejours ; quand un hôte
+   formule simple atteint App gestion, la première page qu'il voit c'est
+   la page commerciale"). Classes identiques à l'original, scopées sous
+   .mkt-page en CSS (voir le bloc juste avant </style>) plutôt que
+   renommées : .cover/.blob existent déjà ici avec un sens totalement
+   différent, l'ancêtre .mkt-page les isole sans toucher au reste.
+   Chemins assets en "../assets/..." : encore vrai tant que ce fichier vit
+   sous /sejours/ ; à corriger en "assets/..." (sans ../) au moment du
+   déménagement vers la racine (voir le chantier associé).
+   Nav du haut (Se connecter/Créer un compte) et CTA de fin ("Essayer 15
+   jours") volontairement absents : on arrive ici déjà connecté, déjà
+   dans le tabbar hôte, et les 3 formules juste en dessous font office de
+   vraie conclusion — pas la peine de dupliquer l'action. Parallax scroll
+   + compteurs animés de la page d'origine non repris : script à nettoyer
+   à chaque re-render (SPA, pas un chargement unique) pour ne pas
+   accumuler des listeners sur des nœuds détachés à chaque aller-retour
+   vers cet onglet — complexité non justifiée pour un effet décoratif,
+   le contenu statique (ex. "15,5 %") reste parfaitement lisible sans.
+   mktPlanCardHtml() réutilise HOST_FORMULAS (même source que
+   planCardHtml() du Profil hôte) : Formule Hôte toujours "votre formule
+   actuelle" ici (cette vue n'est atteinte QUE par un compte sans plan
+   essentiel/pro, voir openHostGestionApp()) ; Essentiel/Avancé affichées
+   "Bientôt disponible", jamais cliquables (Stripe/Mollie pas encore
+   branché). */
+function mktPlanCardHtml(f){
+  var current = f.value==="simple";
+  var locked = f.value!=="simple";
+  return '<div class="plan'+(current?' mkt-plan-current':'')+(locked?' mkt-plan-locked':'')+'">'+
+    '<div class="name">'+esc(f.planName)+(current?'<span class="mkt-plan-tag">Votre formule actuelle</span>':'')+'</div>'+
+    '<div class="price">'+esc(f.planPrice)+'</div>'+
+    '<div class="per">'+esc(f.planPer)+'</div>'+
+    '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
+    (locked ? '<div class="mkt-plan-soon">Bientôt disponible</div>' : '')+
   '</div>';
-  document.getElementById("gestion-promo-upgrade").addEventListener("click", function(){ switchHostTab("profile"); });
 }
+function renderHostMarketingPage(){
+  var feed = document.getElementById("feed");
+  var tarifs = '<section>'+
+    '<div class="inner">'+
+      '<div class="kicker">Tarifs</div>'+
+      '<h2>Tout est <em>in</em>.<br>Aucune commission.</h2>'+
+      '<p class="quote" style="margin:16px 0 26px;">On l\'a construit pour nous.<br><em>Il est maintenant prêt pour vous.</em></p>'+
+      '<div class="plans">'+HOST_FORMULAS.map(mktPlanCardHtml).join("")+'</div>'+
+      '<p class="small" style="margin-top:18px;">Deux mois offerts en facturation annuelle sur les formules de gestion. Vos données restent exportables à tout moment.</p>'+
+    '</div>'+
+  '</section>';
+  feed.innerHTML = '<div class="mkt-page">'+
+    MKT_SECTIONS.join("")+
+    tarifs+
+  '</div>';
+}
+var MKT_SECTIONS = [
+    '<section class="cover">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="hero-flex">\n    <div class="inner">\n      <div class="logo">\n        <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>\n      </div>\n      <h1>Le planning qui ne s\'arrête pas<br><em>aux réservations.</em></h1>\n      <p>Pensé pour les chambres d\'hôtes et gîtes. Retrouvez votre temps, votre autonomie et votre rentabilité.</p>\n    </div>\n    <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="../assets/shot-hero.webp" alt="Fiftin — La grille, en situation"></div></div>\n  </div>\n</section>',
+    '<section>\n  <div class="inner">\n    <div class="kicker">D\'où vient le nom</div>\n    <p class="quote-lead">15, c\'est à peu de chose près ce que les plateformes prélèvent aujourd\'hui sur chaque réservation.</p>\n    <p class="big" style="margin-top:30px;">Fiftin est né dans une maison d\'hôtes familiale de cinq chambres et un gîte, tenue par Marine et César — une juriste et un designer graphique partis en quête d\'indépendance. Comme beaucoup, on a fait confiance aux plateformes avant de regarder ce que leur commission représentait vraiment. 15 est resté le chiffre-repère : le coût de ne pas être pleinement propriétaire de son activité. C\'est pour ça que Fiftin existe — pas seulement pour les réservations, pour toute l\'activité.</p>\n    <div class="stat-row" style="margin-top:28px; max-width:420px;">\n      <div class="stat">\n        <div class="n">15,5&nbsp;%</div>\n        <div class="l">Commission unique hôte Airbnb, 18,6 % TTC, depuis octobre 2026.</div>\n      </div>\n      <div class="stat">\n        <div class="n" style="color:var(--sauge);">0 %</div>\n        <div class="l">Ce que vous payez sur une réservation prise en direct.</div>\n      </div>\n    </div>\n  </div>\n</section>',
+    '<section>\n  <div class="inner">\n    <div class="kicker">Le vrai problème</div>\n    <h2>Les plateformes sont un détail.<br><em>La vision d\'ensemble est la clé.</em></h2>\n    <p class="big">Réservations, ménage, clients, extras, TVA, charges, imprévus : une activité d\'hôte, ce sont des centaines de tâches chaque semaine — un carnet ici, un tableur là, le reste dans la tête.</p>\n    <p class="big">Pas un manque de sérieux : un manque de recul sur une information éclatée partout, qui empêche d\'en garder vraiment le contrôle.</p>\n  </div>\n</section>',
+    '<section>\n  <div class="inner">\n    <div class="kicker">Ce que Fiftin fait</div>\n    <h2>Un seul outil,<br><em>de la réservation au bilan.</em></h2>\n    <div class="mods-visual">\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Le planning &amp; la réservation</h3>\n          <p class="claim">« Toute votre année, instantanément. »</p>\n          <p>Une grille en barres colorées, chaque séjour lisible d\'un coup d\'œil. Une réservation se saisit en 15 secondes, pendant que le voyageur est encore en ligne.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="../assets/shot-planning.webp" alt="Fiftin — La grille"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Le fichier client</h3>\n          <p class="claim">« Vos habitués, toujours reconnus. »</p>\n          <p>Une réservation sur plateforme reste un séjour anonyme. Une réservation en direct devient un client à vous : nom, email, préférences, historique — prêt à être fidélisé sans repasser par personne.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="../assets/shot-clients.webp" alt="Fiftin — Fiche client"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>La comptabilité</h3>\n          <p class="claim">« Une longueur d\'avance sur votre comptable. »</p>\n          <p>CA réalisé, seuil de TVA suivi en direct, marge par chambre. Charges importées du relevé bancaire.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="../assets/shot-comptabilite.webp" alt="Fiftin — Année"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Les consommations</h3>\n          <p class="claim">« Rien ne se perd, rien ne s\'oublie. »</p>\n          <p>Table d\'hôtes, boissons, extras : notés d\'un geste, au moment où ça se passe.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="../assets/shot-consommations.webp" alt="Fiftin — Consommations"></div></div></div>\n      </div>\n    </div>\n  </div>\n</section>',
+    '<section class="dark mkt-tight-bottom">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="inner">\n    <div class="kicker">Votre vraie vie</div>\n    <h2>Votre bureau, c\'est votre vie.<br><em>Fiftin la simplifie.</em></h2>\n    <p class="big">Le téléphone sonne à la buanderie, au marché, en pleine ménage. Fiftin est là, prêt en un geste — pas cantonné à un bureau que vous n\'avez jamais.</p>\n    <p class="big">Le plombier, la piscine, l\'anniversaire qu\'on ne déplace pas : ça pèse sur votre planning autant qu\'une réservation. Tout au même endroit, pour que les conflits sautent aux yeux avant d\'accepter — pas le matin même.</p>\n    <div class="shot-row">\n      <div><div class="phone-stage mkt-lg"><div class="phone2"><img src="../assets/shot-evenements.webp" alt="Fiftin — Vos événements, à côté des séjours"></div></div></div>\n    </div>\n  </div>\n</section>',
+    '<section>\n  <div class="inner">\n    <div class="kicker">Ce qui nous distingue</div>\n    <h2>Les outils généralistes vous apportent<br>des réservations. <em>Fiftin pilote tout ce qu\'il y a autour.</em></h2>\n    <div class="cmp-hd">Fiftin — face aux outils de gestion généralistes</div>\n    <div class="compare-grid">\n      <div class="cmp-row"><span class="cmp-label">Seuils personnalisables, suivis en direct (TVA, nuitées, chiffre d\'affaires)</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Classement par structure fiscale (EI, SASU, SARL)</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Table d\'hôtes, extras et consommations</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Rarement</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Charges et rentabilité par logement</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Synchronisation automatique des plateformes</span><div class="cmp-pills"><span class="cmp-pill no"><b>Fiftin</b> — Non, volontairement</span><span class="cmp-pill yes"><b>Généralistes</b> — Oui</span></div></div>\n    </div>\n    <p class="small" style="margin-top:18px;">Les channel managers savent déjà très bien synchroniser des annonces sur plusieurs plateformes — ce n\'est pas notre métier. Une réservation Booking ou Airbnb se saisit ici en quelques secondes, à la main. En échange : pas de connexion fragile, pas de tarif qui grimpe, pas de dépendance à une API qu\'on ne contrôle pas.</p>\n  </div>\n</section>',
+    '<section>\n  <div class="inner">\n    <div class="kicker">Sécurité et propriété</div>\n    <h2>Vos données sont entre de bonnes mains —<br><em>les vôtres.</em></h2>\n    <p class="big">Vous confiez à Fiftin les coordonnées de vos clients, leurs séjours, vos chiffres. Cette appartenance est écrite dans le contrat — et appliquée par l\'architecture technique.</p>\n    <div class="mods">\n      <div class="mod mod-sauge">\n        <h3>Un espace scellé par établissement</h3>\n        <p>Vos données sont rattachées à votre seul compte, vérifié par le serveur à chaque requête. Hébergées sur Google Cloud (ISO 27001, SOC 2).</p>\n      </div>\n      <div class="mod mod-lav">\n        <h3>Vos identifiants, vos décisions</h3>\n        <p>Vous seul détenez vos identifiants, nous ne pouvons pas les reconstituer. Vous restez responsable du traitement RGPD ; Fiftin intervient comme sous-traitant, cadré par nos conditions d\'utilisation.</p>\n      </div>\n      <div class="mod mod-sauge">\n        <h3>Réversibilité</h3>\n        <p>Un bouton, un fichier : vos données s\'exportent à tout moment, en CSV ou en format complet. Si vous partez, vous partez avec elles.</p>\n      </div>\n    </div>\n    <p class="small" style="margin-top:20px;">Fiftin n\'exploite, ne revend et n\'analyse jamais les données de vos clients. Elles ne servent qu\'à une chose : faire fonctionner votre outil.</p>\n  </div>\n</section>',
+    '<section class="close">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="inner">\n    <div class="logo-tile sm"><img src="../assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>\n    <h2>Ce n\'est pas un outil en plus.<br><em>C\'est toute votre activité, en temps réel, entre vos mains.</em></h2>\n    <p class="close-punch">Vos clients, vos chiffres, votre planning — au même endroit, sous votre seul contrôle.</p>\n  </div>\n</section>'
+];
 /* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
    (data-switch="voyageur" y mène désormais à exitHostMode() plutôt qu'à
    switchTab("explore"), seule différence de câblage), mais des lignes

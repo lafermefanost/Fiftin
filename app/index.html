@@ -1654,10 +1654,15 @@ Gardez la main.</div>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
   </button>
   <!-- Retour utilisateur : venant de Fiftin Séjours (bouton "App gestion",
-       voir HOST_TABS_HTML dans sejours/index.html), il faut un chemin
-       retour symétrique — même picto exactement (carré + flèche sortante)
-       que ce bouton côté Séjours, bulle pleine lavande pour le distinguer
-       des autres icônes du header (voir #backToSejoursBtn, CSS plus haut).
+       voir HOST_TABS_HTML dans index.html racine — ex sejours/index.html,
+       déménagé à la racine du site, voir le chantier associé), il faut un
+       chemin retour symétrique — même picto exactement (carré + flèche
+       sortante) que ce bouton côté Séjours, bulle pleine lavande pour le
+       distinguer des autres icônes du header (voir #backToSejoursBtn, CSS
+       plus haut). '../' et non '../sejours/' : fiftin.fr/ est maintenant
+       directement le site voyageur/hôte, /sejours/ n'est plus la version
+       à jour (laissé tel quel, liens existants vers lui acceptés comme
+       obsolètes plutôt que redirigés).
        Prend la place de l'ancien bouton dédié "Se déconnecter" (retour
        utilisateur) : le propriétaire garde Réglages → Compte pour se
        déconnecter (raccourci préexistant, voir le commentaire de
@@ -1666,7 +1671,7 @@ Gardez la main.</div>
        reconverti en bouton de déconnexion plutôt que simplement masqué —
        voir applyPersonnelUIRestrictions(), même position, jamais les deux
        en même temps. -->
-  <button class="hbtn" id="backToSejoursBtn" onclick="location.href='../sejours/'" title="Retour à Fiftin Séjours">
+  <button class="hbtn" id="backToSejoursBtn" onclick="location.href='../'" title="Retour à Fiftin Séjours">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
   </button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
