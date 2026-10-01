@@ -7407,6 +7407,10 @@ function wireProfileTabLongPress(tabEl, mode){
     var r = bubble.getBoundingClientRect();
     return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
   }
+  function pointInTab(x, y){
+    var r = tabEl.getBoundingClientRect();
+    return x>=r.left && x<=r.right && y>=r.top && y<=r.bottom;
+  }
   function onMove(e){
     bubble.classList.toggle("armed", pointInBubble(e.clientX, e.clientY));
   }
@@ -7417,6 +7421,16 @@ function wireProfileTabLongPress(tabEl, mode){
     var confirmed = pointInBubble(e.clientX, e.clientY);
     hideBubble();
     armed = false;
+    // Relâché sur l'onglet lui-même (appui resté en place, juste un peu
+    // trop long pour être sous le seuil) : rien à annuler, c'est un tap
+    // normal qui a simplement mis plus de 480ms — on LAISSE le clic normal
+    // suivre son cours (navigation habituelle), au lieu de l'avaler
+    // (retour utilisateur : "il y en a toujours un clic qui est mangé" —
+    // un appui un peu lent sur Profil ne faisait plus rien du tout).
+    // Suppression du clic réservée aux deux seuls cas où un geste
+    // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
+    // ailleurs qu'au point de départ.
+    if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
     suppressNextTabClick = true;
     // Filet de sécurité : si le relâchement a eu lieu sur la bulle (donc
     // EN DEHORS de l'onglet Profil), aucun "click" ne se déclenche jamais
