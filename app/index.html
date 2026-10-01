@@ -1622,7 +1622,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub" id="lockSub">Votre activité évolue chaque jour.
 Gardez la main.</div>
-  <div class="lock-box">
+  <div class="lock-box" id="lockBox">
     <input type="email" class="fi" id="authEmail" placeholder="Adresse e-mail" autocomplete="email"
       style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')byId('authPassword').focus()">
     <input type="password" class="fi" id="authPassword" placeholder="Mot de passe" autocomplete="current-password"
@@ -3204,7 +3204,11 @@ const pendingInviteId=new URLSearchParams(location.search).get('invite');
 const wantsSignup=new URLSearchParams(location.search).get('signup')==='1';
 let signupInProgress=false;
 function bootFirebaseApp(){
-  showLockScreen((pendingInviteId||wantsSignup)?'signup':'signin');
+  // "pending" : évite le flash du formulaire "Se connecter" quand une
+  // session valide existe déjà (même compte Firebase que Fiftin Séjours,
+  // voir showLockScreen()) — le vrai mode (signin/signup) n'est choisi
+  // que dans onAuthStateChanged, une fois l'absence de session confirmée.
+  showLockScreen('pending');
   loadFirebaseSDK(()=>{
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     // Doit être fait ICI, avant toute autre opération Firestore — y compris
@@ -10074,9 +10078,26 @@ function submitSiteGate(){
   }
 }
 
-let authMode='signin'; // 'signin' | 'signup'
+let authMode='signin'; // 'signin' | 'signup' | 'pending'
 function showLockScreen(mode){
   authMode=mode||'signin';
+  /* "pending" : affiché dès bootFirebaseApp(), avant qu'onAuthStateChanged
+     ait répondu — on ne sait pas encore si la session (déjà ouverte sur
+     Fiftin Séjours, même origine, même compte Firebase) va être reconnue
+     ici aussi. Montrer le vrai formulaire "Se connecter" à ce stade-là
+     donnait l'impression qu'il fallait se reconnecter, voire que le site
+     plantait, alors que la session EST bien partagée — elle n'a juste pas
+     encore fini de répondre (SDK Firebase chargé en 3 scripts en cascade,
+     voir loadFirebaseSDK()). Seuls le fond et le logo restent visibles
+     (pas d'écran blanc) ; le formulaire n'apparaît que si
+     onAuthStateChanged confirme vraiment l'absence de session. */
+  byId('lockBox').style.display=authMode==='pending'?'none':'block';
+  if(authMode==='pending'){
+    byId('lockSub').textContent='';
+    byId('lockErr').textContent='';
+    byId('lockScreen').classList.add('show');
+    return;
+  }
   byId('lockSub').textContent=authMode==='signup'
     ?'Créez votre compte et suivez l\'évolution de votre activité.'
     :'Votre activité évolue chaque jour.\nGardez la main.';
