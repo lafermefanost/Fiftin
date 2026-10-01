@@ -7365,12 +7365,18 @@ var HOST_TABS_HTML =
    normal (sans rester appuyé) garde le comportement habituel — ce geste
    est un raccourci en plus, pas un remplacement du switch déjà présent
    dans Profil (voir #btn-exit-host / #btn-host-space), qui reste le seul
-   chemin découvrable sans connaître le geste. suppressNextTabClick évite
+   chemin découvrable sans connaître le geste. suppressClickOnEl évite
    qu'un appui maintenu, confirmé ou annulé, ne déclenche EN PLUS le clic
-   normal (changement d'onglet) qui suivrait sinon le relâchement — posé
-   ici, consommé dans les deux listeners "click" juste en dessous. */
+   normal de l'onglet Profil qui suivrait sinon le relâchement. RÉFÉRENCE
+   PRÉCISE à l'élément Profil visé (pas un simple booléen partagé) : si le
+   doigt termine sa course sur un AUTRE onglet (glissement malheureux
+   pendant l'appui, pas jusqu'à la bulle) et que le navigateur y déclenche
+   un clic, ce clic-là doit naviguer normalement — un flag partagé entre
+   tous les onglets l'avalait à tort (retour utilisateur : "le maintien
+   relâché sur l'autre menu... mange un clic"). Consommé dans les deux
+   listeners "click" juste en dessous. */
 var PROFILE_LONG_PRESS_MS = 480;
-var suppressNextTabClick = false;
+var suppressClickOnEl = null;
 var profileSwitchBubbleEl = null;
 function profileSwitchBubble(){
   if(!profileSwitchBubbleEl){
@@ -7431,16 +7437,13 @@ function wireProfileTabLongPress(tabEl, mode){
     // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
     // ailleurs qu'au point de départ.
     if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    suppressNextTabClick = true;
-    // Filet de sécurité : si le relâchement a eu lieu sur la bulle (donc
-    // EN DEHORS de l'onglet Profil), aucun "click" ne se déclenche jamais
-    // sur un .tab pour consommer ce flag (retour utilisateur : "je ne
-    // peux temporairement plus appuyer sur un autre menu" — le flag
-    // restait bloqué à true et avalait le prochain tap, sur n'importe
-    // quel onglet). Un clic qui suit vraiment ce relâchement (relâché sur
-    // l'onglet lui-même) arrive de façon synchrone, avant ce timer ; ce
-    // dernier ne fait que désamorcer le flag si aucun clic ne vient.
-    setTimeout(function(){ suppressNextTabClick = false; }, 60);
+    suppressClickOnEl = tabEl;
+    // Filet de sécurité : si aucun clic ne vise finalement précisément
+    // tabEl (ex. relâché sur la bulle, ou sur un autre onglet dont le
+    // clic n'a pas à être supprimé — voir le commentaire de
+    // suppressClickOnEl plus haut), ce filet désamorce la référence
+    // après coup plutôt que de la laisser bloquer tabEl indéfiniment.
+    setTimeout(function(){ if(suppressClickOnEl===tabEl) suppressClickOnEl = null; }, 60);
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
@@ -7478,7 +7481,7 @@ function renderTabbar(){
       // page promo même pour un compte gestion qui devrait partir tout de
       // suite vers app/.
       el.addEventListener("click", function(){
-        if(suppressNextTabClick){ suppressNextTabClick = false; return; }
+        if(suppressClickOnEl===el){ suppressClickOnEl = null; return; }
         if(hostTab==="app") openHostGestionApp(); else switchHostTab(hostTab);
       });
       if(hostTab==="profile") wireProfileTabLongPress(el, "voyageur");
@@ -7488,7 +7491,7 @@ function renderTabbar(){
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       el.classList.toggle("active", el.getAttribute("data-tab")===state.tab);
       el.addEventListener("click", function(){
-        if(suppressNextTabClick){ suppressNextTabClick = false; return; }
+        if(suppressClickOnEl===el){ suppressClickOnEl = null; return; }
         switchTab(el.getAttribute("data-tab"));
       });
       if(el.getAttribute("data-tab")==="profile") wireProfileTabLongPress(el, "hotes");
