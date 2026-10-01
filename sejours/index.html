@@ -7501,6 +7501,18 @@ function enterHostMode(){
     var heroEl = document.getElementById("hero");
     if(heroEl) heroEl.hidden = true;
   }
+  /* Même raison que le hero juste au-dessus : #map-back-btn n'est masqué
+     que par switchTab() ("mapBackBtn.hidden = tab!=='explore'"), jamais
+     ici. Avant la bulle de switch rapide (appui maintenu sur l'onglet
+     Profil), enterHostMode() n'était atteignable qu'après un passage par
+     switchTab("profile"), qui le masquait déjà comme effet de bord. La
+     bulle, elle, peut appeler enterHostMode() directement depuis
+     n'importe où dans Explorer (y compris scrollé, bouton visible) —
+     sans ce masquage explicite, le bouton "carte pliée" restait collé par-
+     dessus le Profil hôte, visible mais sans fonction (bug réel vu en
+     usage : retour utilisateur, capture d'écran). */
+  var mapBackBtnHost = document.getElementById("map-back-btn");
+  if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
   state.hostTab = "profile";
   state.hostListingId = null;
@@ -7540,6 +7552,14 @@ function renderHostTabContent(){
   // ses propres cartes (.admin-card) et, une fois dépliée, la carte blanche
   // du calendrier (.cal-card) se détachent très bien du fond crème normal.
   document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile"||state.hostTab==="app");
+  // feed-explore (dégradés .fade-edge-top/.fade-edge-bottom + cartes pleine
+  // largeur du fil Explorer, voir leur CSS) n'a de sens que côté voyageur,
+  // posée par switchTab() — jamais retirée en entrant en mode hôte quand
+  // la transition ne passe pas par switchTab() (ex. bulle de switch rapide
+  // appelée directement depuis Explorer, voir wireProfileTabLongPress()).
+  // Sans ce retrait, le dégradé .fade-edge-top restait visible, plaqué en
+  // haut du Profil hôte (bug réel vu en usage).
+  document.getElementById("feed").classList.remove("feed-explore");
   if(state.hostTab==="profile") renderHostProfile();
   else if(state.hostTab==="app") renderHostMarketingPage();
   else renderHostListings();
