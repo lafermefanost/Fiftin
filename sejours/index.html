@@ -7365,18 +7365,33 @@ var HOST_TABS_HTML =
    normal (sans rester appuyé) garde le comportement habituel — ce geste
    est un raccourci en plus, pas un remplacement du switch déjà présent
    dans Profil (voir #btn-exit-host / #btn-host-space), qui reste le seul
-   chemin découvrable sans connaître le geste. suppressClickOnEl évite
-   qu'un appui maintenu, confirmé ou annulé, ne déclenche EN PLUS le clic
-   normal de l'onglet Profil qui suivrait sinon le relâchement. RÉFÉRENCE
-   PRÉCISE à l'élément Profil visé (pas un simple booléen partagé) : si le
-   doigt termine sa course sur un AUTRE onglet (glissement malheureux
-   pendant l'appui, pas jusqu'à la bulle) et que le navigateur y déclenche
-   un clic, ce clic-là doit naviguer normalement — un flag partagé entre
-   tous les onglets l'avalait à tort (retour utilisateur : "le maintien
-   relâché sur l'autre menu... mange un clic"). Consommé dans les deux
-   listeners "click" juste en dessous. */
+   chemin découvrable sans connaître le geste.
+   swallowNextClickOnce() évite qu'un appui maintenu confirmé ou annulé ne
+   déclenche EN PLUS un clic natif. La bulle a pointer-events:none (son
+   rectangle est vérifié "à la main", pas par hit-testing natif) : le clic
+   que le navigateur synthétise après le relâchement la traverse et
+   atterrit sur l'élément réellement sous ces coordonnées — qui a pu
+   changer entre-temps si enterHostMode()/exitHostMode() vient de
+   reconstruire la page. Intercepter précisément UN onglet (ancienne
+   version, suppressClickOnEl) ne suffisait donc pas : ce clic fantôme
+   pouvait atterrir n'importe où dans le nouveau contenu. Interception
+   globale, une seule fois, en phase de capture — avant que le clic
+   n'atteigne quelque élément que ce soit. */
 var PROFILE_LONG_PRESS_MS = 480;
-var suppressClickOnEl = null;
+function swallowNextClickOnce(){
+  function capture(e){
+    document.removeEventListener("click", capture, true);
+    clearTimeout(safety);
+    e.preventDefault();
+    e.stopPropagation();
+    if(e.stopImmediatePropagation) e.stopImmediatePropagation();
+  }
+  document.addEventListener("click", capture, true);
+  // Le clic synthétisé après un pointerup arrive quasi immédiatement
+  // (même tâche ou juste après) : ce filet retire l'écouteur si rien
+  // n'arrive, pour ne jamais avaler un VRAI clic ultérieur sans rapport.
+  var safety = setTimeout(function(){ document.removeEventListener("click", capture, true); }, 300);
+}
 var profileSwitchBubbleEl = null;
 function profileSwitchBubble(){
   if(!profileSwitchBubbleEl){
@@ -7437,13 +7452,20 @@ function wireProfileTabLongPress(tabEl, mode){
     // délibéré a eu lieu : bascule confirmée sur la bulle, ou relâché
     // ailleurs qu'au point de départ.
     if(!confirmed && pointInTab(e.clientX, e.clientY)) return;
-    suppressClickOnEl = tabEl;
-    // Filet de sécurité : si aucun clic ne vise finalement précisément
-    // tabEl (ex. relâché sur la bulle, ou sur un autre onglet dont le
-    // clic n'a pas à être supprimé — voir le commentaire de
-    // suppressClickOnEl plus haut), ce filet désamorce la référence
-    // après coup plutôt que de la laisser bloquer tabEl indéfiniment.
-    setTimeout(function(){ if(suppressClickOnEl===tabEl) suppressClickOnEl = null; }, 60);
+    // La bulle a pointer-events:none (son rectangle est vérifié "à la
+    // main" via pointInBubble(), pas par hit-testing natif) : le clic que
+    // le navigateur synthétise après ce relâchement traverse donc la
+    // bulle et atterrit sur l'élément réellement sous ces coordonnées —
+    // qui a déjà changé si enterHostMode()/exitHostMode() vient de
+    // reconstruire la page (appelé juste en dessous, de façon synchrone,
+    // AVANT que ce clic ne se déclenche). Un filtrage par référence
+    // d'onglet (ancienne version) ne protégeait jamais cet élément-là, ce
+    // clic fantôme retombait sur le nouveau contenu et semblait "manger"
+    // le prochain tap (retour utilisateur : "je switch de profil et le
+    // clic suivant n'a pas d'effet"). swallowNextClickOnce() intercepte
+    // ce clic où qu'il atterrisse, une seule fois, en phase de capture —
+    // avant qu'il n'atteigne quelque bouton que ce soit.
+    swallowNextClickOnce();
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
@@ -7481,7 +7503,6 @@ function renderTabbar(){
       // page promo même pour un compte gestion qui devrait partir tout de
       // suite vers ../app/.
       el.addEventListener("click", function(){
-        if(suppressClickOnEl===el){ suppressClickOnEl = null; return; }
         if(hostTab==="app") openHostGestionApp(); else switchHostTab(hostTab);
       });
       if(hostTab==="profile") wireProfileTabLongPress(el, "voyageur");
@@ -7491,7 +7512,6 @@ function renderTabbar(){
     Array.prototype.forEach.call(nav.querySelectorAll(".tab"), function(el){
       el.classList.toggle("active", el.getAttribute("data-tab")===state.tab);
       el.addEventListener("click", function(){
-        if(suppressClickOnEl===el){ suppressClickOnEl = null; return; }
         switchTab(el.getAttribute("data-tab"));
       });
       if(el.getAttribute("data-tab")==="profile") wireProfileTabLongPress(el, "hotes");
