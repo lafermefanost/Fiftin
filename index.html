@@ -2271,9 +2271,32 @@ function loadFirebaseSDK(cb){
   document.head.appendChild(s1);
 }
 
+// Force le long-polling au lieu de se fier à la détection automatique de
+// Firestore : sur certains réseaux (proxy, VPN, certaines box/Wi-Fi), le
+// canal de connexion permanent (streaming natif) reste bloqué en silence
+// indéfiniment — ni succès, ni erreur — jusqu'à finir en promesse rejetée
+// non interceptée à l'intérieur même du SDK (observé en usage réel :
+// retour utilisateur, bannière de debug, "Promesse rejetée" dans
+// firebase-firestore-compat.js/onMessage). Même bug, même correctif déjà
+// posé dans app/ (voir ensureFirestoreSettings() là-bas) — jamais porté
+// ici. DOIT être appelé avant la toute première opération Firestore,
+// quelle qu'elle soit : Firestore verrouille son mode de connexion dès sa
+// première utilisation, un réglage posé plus tard est silencieusement
+// ignoré. Ce fichier a PLUSIEURS points d'entrée Firestore indépendants
+// (bootFirebaseAuth, fetchHostListings, fetchListingIndex,
+// loadContactLogEntries) qui peuvent chacun être le premier selon ce qui
+// charge en premier — appelé à chacun, idempotent via le flag.
+var firestoreSettingsApplied = false;
+function ensureFirestoreSettings(){
+  if(firestoreSettingsApplied) return;
+  firebase.firestore().settings({experimentalForceLongPolling:true});
+  firestoreSettingsApplied = true;
+}
+
 function bootFirebaseAuth(){
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    ensureFirestoreSettings();
     firebase.auth().onAuthStateChanged(function(user){
       authState.ready = true;
       authState.uid = user ? user.uid : null;
@@ -2407,6 +2430,7 @@ function fetchPublishedListings(cb){
   setTimeout(settle, 6000);
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    ensureFirestoreSettings();
     firebase.firestore().collection("listings").where("status","==","published").get().then(function(snap){
       if(!snap.empty){
         hostFirestoreListings = snap.docs.map(normalizeHostListing);
@@ -2463,6 +2487,7 @@ function fetchListingIndex(){
   setTimeout(settle, 6000);
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    ensureFirestoreSettings();
     firebase.firestore().collection("listingIndex").get().then(function(snap){
       listingIndexCache = snap.docs.map(function(doc){
         var d = doc.data();
@@ -4317,6 +4342,7 @@ function loadContactLogEntries(cb){
   if(!authState.uid){ contactLogCache = []; cb(null, contactLogCache); return; }
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    ensureFirestoreSettings();
     firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries")
       .orderBy("createdAt", "desc").limit(100).get().then(function(snap){
         contactLogCache = snap.docs;
