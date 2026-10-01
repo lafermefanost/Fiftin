@@ -7509,6 +7509,13 @@ function wireProfileTabLongPress(tabEl, mode){
     // plusieurs essais : "n'importe quel bouton, un seul clic mangé, le
     // deuxième marche").
     suppressClickOnEl = tabEl;
+    // Filet de sécurité : si jamais aucun clic naturel ne vient consommer
+    // cette référence (retour utilisateur : "simule toi-même un clic pour
+    // remplacer ce que je fais manuellement" — exactement ça, en plus
+    // sûr : on désamorce l'attente nous-mêmes plutôt que de dépendre d'un
+    // clic réel incertain), elle se réinitialise toute seule peu après —
+    // jamais besoin d'un second tap pour "débloquer" quoi que ce soit.
+    setTimeout(function(){ if(suppressClickOnEl===tabEl) suppressClickOnEl = null; }, 400);
     if(confirmed){ if(mode==="hotes") enterHostMode(); else exitHostMode(); }
   }
   function onCancelMove(){
