@@ -949,6 +949,19 @@ body.map-fullscreen{overflow:hidden;}
 .coll-listing-list .log-action{background:#fff; border:1.5px solid var(--line); border-radius:50%;}
 .coll-listing-list .log-action.decline{color:var(--danger); border-color:rgba(178,84,59,.35);}
 .coll-listing-list .log-action.move{color:var(--ink);}
+/* Effet "balayer pour révéler" (retour utilisateur : "comme sur iPhone où
+   tu scrolles légèrement sur la gauche pour faire apparaître ces menus
+   derrière, comme si les menus étaient cachés par l'encart lui-même") —
+   .log-actions passe en position:absolute, plaqué à droite de la ligne,
+   SOUS .log-body (déplacé au premier plan, fond blanc à lui tout seul :
+   c'est lui qui glisse pour révéler ce qui est caché derrière). Wiring :
+   wireCollSwipeRows(), Pointer Events comme cropOneFile() plus haut —
+   cohérent avec le seul autre geste de glissement du fichier plutôt que
+   d'introduire des touchstart/touchmove bruts. */
+.coll-listing-list .map-list-item{position:relative; overflow:hidden; background:none; padding:0;}
+.coll-listing-list .log-actions{position:absolute; right:0; top:0; bottom:0; align-items:center; padding-right:8px;}
+.coll-listing-list .log-body{position:relative; z-index:1; background:#fff; border-radius:16px; padding:10px 12px; touch-action:pan-y; transition:transform .22s cubic-bezier(.22,.9,.32,1);}
+.coll-listing-list .log-body.dragging{transition:none;}
 
 /* ---------- Mes séjours : Favoris / Demandes / Séjours ----------
    .stat-tile (défini plus bas, historiquement pour profile-stats)
@@ -1085,19 +1098,21 @@ body.map-fullscreen{overflow:hidden;}
 .collection-detail-back svg{width:18px; height:18px;}
 .collection-detail-title{flex:1; font-size:18px; font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .collection-detail-actions{display:flex; gap:6px; flex-shrink:0;}
-.collection-detail-actions button{background:var(--cream-deep); border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--ink);}
+/* Fond transparent, pas gris (retour utilisateur : "un peu trop tapé à
+   l'œil... picto transparents et pas gris") — contredit délibérément le
+   choix précédent (fond vert plein sur la flèche replier/déplier, pour la
+   distinguer de Renommer/Supprimer) : même retour utilisateur, qui demande
+   maintenant explicitement de retirer ce vert aussi (voir plus bas, la
+   règle .coll-toggle-btn dédiée a disparu). Les 3 boutons partagent
+   maintenant exactement le même style discret. */
+.collection-detail-actions button{background:none; border:none; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; color:var(--ink); opacity:.65;}
 .collection-detail-actions button svg{width:16px; height:16px;}
 .coll-listing-list{display:flex; flex-direction:column; gap:8px;}
 .coll-listing-list .map-list-item{cursor:pointer;}
 #coll-detail-delete{color:var(--danger);}
 /* Flèche replier/déplier d'un volet (vue liste des favoris, voir
    collectionVoletHtml()) — même idiome que .cal-mini-chevron : vers le bas
-   au repos (déplié), tournée à -90° une fois repliée. Fond vert/flèche
-   blanche (retour utilisateur : "passe le rond de la flèche en vert,
-   celui de l'encart favoris, flèche blanche") — même vert que le bandeau
-   actif Favoris/Contacts/Séjours (.stat-tile.active, --sauge), pour que ce
-   bouton-là se distingue de Renommer/Supprimer à côté (restés gris). */
-.collection-detail-actions .coll-toggle-btn{background:var(--sauge); color:#fff;}
+   au repos (déplié), tournée à -90° une fois repliée. */
 .coll-toggle-chevron{transition:transform .18s ease;}
 .coll-panel.collapsed .coll-toggle-chevron{transform:rotate(-90deg);}
 .coll-panel.collapsed .coll-panel-body{display:none;}
@@ -3719,7 +3734,7 @@ function renderCollectionsGrid(feed, toggle, cols){
       renderFavorisView();
     });
   });
-  if(isList && cols.length){ wireFeedEvents(); wireCollListingActions(); } // data-open + boutons changer/retirer sur chaque annonce des volets (voir collectionListingRowHtml())
+  if(isList && cols.length){ wireCollSwipeRows(); wireFeedEvents(); wireCollListingActions(); } // data-open + boutons changer/retirer sur chaque annonce des volets (voir collectionListingRowHtml())
   else Array.prototype.forEach.call(feed.querySelectorAll("[data-open-coll]"), function(el){
     el.addEventListener("click", function(){
       state.likesCollectionId = el.getAttribute("data-open-coll");
@@ -3890,6 +3905,113 @@ function collectionListingRowHtml(l, col){
     '</div>'+
   '</div>';
 }
+/* Effet "balayer pour révéler" (retour utilisateur : "créer une sorte
+   d'effet comme sur iPhone où tu scrolles légèrement sur la gauche pour
+   faire apparaître ces menus derrière, comme si les menus étaient cachés
+   par l'encart lui-même") — sur chaque ligne de collectionListingRowHtml(),
+   .log-body (le rectangle blanc visible, vignette+nom) glisse vers la
+   gauche pour révéler .log-actions (Changer de collection / Retirer),
+   resté en position:absolute derrière lui (voir CSS .coll-listing-list
+   plus haut). Pointer Events, même mécanisme que le recadrage photo
+   (cropOneFile(), setPointerCapture) plutôt que des touchstart/touchmove
+   bruts — cohérent avec le seul autre geste de glissement du fichier.
+
+   Un seul volet ouvert à la fois, comme sur iOS : en ouvrir un referme le
+   précédent (collSwipeOpenRow) ; un tap ailleurs sur la page referme aussi
+   celui resté ouvert (écouteur document posé une seule fois pour de bon,
+   collSwipeGlobalWired — jamais ré-empilé à chaque re-rendu de la liste).
+
+   Distinction tap/glissement : en dessous de 6px de mouvement, rien ne
+   bouge (axisLocked reste null) — un vrai tap laisse data-open ouvrir la
+   fiche normalement. Au-delà, le premier axe qui dépasse ce seuil décide :
+   horizontal -> le geste nous appartient (preventDefault empêche le
+   scroll de la page de "voler" le geste en cours de route) ; vertical ->
+   on relâche tout de suite (dragging=false) pour laisser le scroll normal
+   de la page faire son travail, jamais bloqué par erreur.
+
+   closeCollSwipeRow()/wireCollSwipeRows() exportées au niveau module (pas
+   enfermées dans une IIFE locale) : wireCollListingActions() juste en
+   dessous n'y touche pas, mais le bouton "Retirer de cette collection"
+   d'une ligne ouverte doit retomber sur un état propre une fois la ligne
+   redessinée au prochain rendu — géré par la remise à zéro de
+   collSwipeOpenRow en tête de wireCollSwipeRows() (une ligne fermée au
+   rendu précédent ne peut pas rester "ouverte" sur un nœud DOM qui n'existe
+   plus). */
+var collSwipeOpenRow = null;
+var collSwipeGlobalWired = false;
+function closeCollSwipeRow(row){
+  if(!row) return;
+  var body = row.querySelector(".log-body");
+  if(body) body.style.transform = "";
+  if(collSwipeOpenRow===row) collSwipeOpenRow = null;
+}
+function wireCollSwipeRows(){
+  collSwipeOpenRow = null;
+  if(!collSwipeGlobalWired){
+    collSwipeGlobalWired = true;
+    document.addEventListener("pointerdown", function(e){
+      if(collSwipeOpenRow && !collSwipeOpenRow.contains(e.target)) closeCollSwipeRow(collSwipeOpenRow);
+    }, true);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll(".coll-listing-list .map-list-item"), function(row){
+    var body = row.querySelector(".log-body");
+    var actions = row.querySelector(".log-actions");
+    if(!body || !actions) return;
+    var maxDrag = 0, startX = 0, startY = 0, startTransform = 0;
+    var dragging = false, axisLocked = null, moved = false, wasOpen = false, suppressClick = false;
+    body.addEventListener("pointerdown", function(e){
+      if(e.pointerType==="mouse" && e.button!==0) return;
+      maxDrag = actions.offsetWidth;
+      startX = e.clientX; startY = e.clientY;
+      wasOpen = (row===collSwipeOpenRow);
+      startTransform = wasOpen ? -maxDrag : 0;
+      dragging = true; axisLocked = null; moved = false;
+      body.setPointerCapture(e.pointerId);
+    });
+    body.addEventListener("pointermove", function(e){
+      if(!dragging) return;
+      var dx = e.clientX-startX, dy = e.clientY-startY;
+      if(axisLocked===null){
+        if(Math.abs(dx)<6 && Math.abs(dy)<6) return;
+        axisLocked = Math.abs(dx)>Math.abs(dy) ? "x" : "y";
+        if(axisLocked==="y"){ dragging = false; return; }
+      }
+      if(axisLocked!=="x") return;
+      e.preventDefault();
+      moved = true;
+      body.classList.add("dragging");
+      var t = Math.min(0, Math.max(-maxDrag, startTransform+dx));
+      body.style.transform = "translateX("+t+"px)";
+    });
+    var onUp = function(){
+      if(!dragging) return;
+      dragging = false;
+      body.classList.remove("dragging");
+      if(!moved){
+        if(wasOpen){ closeCollSwipeRow(row); suppressClick = true; }
+        return;
+      }
+      suppressClick = true;
+      var m = /-?[\d.]+/.exec(body.style.transform||"");
+      var current = m ? parseFloat(m[0]) : 0;
+      var open = current < -maxDrag*0.4;
+      if(collSwipeOpenRow && collSwipeOpenRow!==row) closeCollSwipeRow(collSwipeOpenRow);
+      body.style.transform = open ? "translateX(-"+maxDrag+"px)" : "";
+      collSwipeOpenRow = open ? row : null;
+    };
+    body.addEventListener("pointerup", onUp);
+    body.addEventListener("pointercancel", onUp);
+    // Enregistré AVANT wireFeedEvents() (voir les deux appelants) : sur un
+    // même élément, les écouteurs d'un même événement se déclenchent dans
+    // leur ordre d'ajout, capture ou pas — celui-ci doit donc être posé en
+    // premier pour pouvoir stopper l'ouverture de la fiche (data-open,
+    // wireFeedEvents()) AVANT qu'elle ne parte, pas après coup.
+    body.addEventListener("click", function(e){
+      if(suppressClick){ e.preventDefault(); e.stopImmediatePropagation(); }
+      suppressClick = false;
+    });
+  });
+}
 /* Câblage des deux boutons de collectionListingRowHtml() — utilisé à la
    fois par la vue liste des favoris (renderCollectionsGrid(), plusieurs
    volets) et par le détail d'une collection en vue grille
@@ -3944,7 +4066,7 @@ function renderCollectionDetail(feed, toggle){
     : '<div class="coll-listing-list">'+listings.map(function(l){ return collectionListingRowHtml(l, col); }).join("")+'</div>';
   feed.innerHTML = toggle + head + body;
   wireLikesToggle();
-  if(listings.length){ wireFeedEvents(); wireCollListingActions(); }
+  if(listings.length){ wireCollSwipeRows(); wireFeedEvents(); wireCollListingActions(); }
   document.getElementById("coll-detail-back").addEventListener("click", function(){
     state.likesCollectionId = null;
     renderFavorisView();
@@ -7166,7 +7288,7 @@ var TRAVELER_TABS_HTML =
   '</button>'+
   '<button class="tab" data-tab="profile">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
-    '<span>Profil</span>'+
+    '<span>Profil voyageur</span>'+
   '</button>';
 
 var HOST_TABS_HTML =
@@ -7202,7 +7324,7 @@ var HOST_TABS_HTML =
      bouton #btn-exit-host) — un seul chemin pour en sortir. */
   '<button class="tab" data-host-tab="profile">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
-    '<span>Profil</span>'+
+    '<span>Profil hôte</span>'+
   '</button>';
 
 function renderTabbar(){
