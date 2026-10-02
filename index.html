@@ -1591,7 +1591,12 @@ body.map-fullscreen{overflow:hidden;}
    sombre encore) se fondrait dans ce fond : reblanchi spécifiquement ici,
    les 4 autres couleurs de puces gardent assez de contraste telles
    quelles. */
-.plan-card.active{background:var(--sauge-mid); border-color:var(--sauge-mid);}
+/* border-color:transparent plutôt qu'assorti au fond (var(--sauge-mid)
+   des deux côtés auparavant) — retour utilisateur : "supprime le contour
+   de l'encart formule [sélectionnée]". border-color transparent (pas
+   border:none) pour garder la même largeur de boîte que les cartes non
+   actives (1.5px de bordure), sans provoquer de saut de mise en page. */
+.plan-card.active{background:var(--sauge-mid); border-color:transparent;}
 .plan-card.active .plan-card-name,
 .plan-card.active .plan-card-price,
 .plan-card.active .plan-card-per,
