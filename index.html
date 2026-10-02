@@ -1252,21 +1252,15 @@ body.map-fullscreen{overflow:hidden;}
    renderHostProfile() reconstruisent le DOM à chaque bascule (pas de
    simple ajout/retrait de classe sur un nœud persistant), donc une
    transition CSS classique ne se déclencherait jamais ; une animation
-   d'entrée, elle, rejoue à chaque nouveau montage. Pas d'ombre portée
-   externe sur .current (retour utilisateur : "un contour sombre tout
-   autour de la forme") : isolé par dichotomie (désactivé un box-shadow
-   à la fois), le contour n'apparaît QUE quand une ombre externe est
-   combinée aux ombres inset — les 4 inset seules, ou l'externe seule,
-   restent chacune propres. Semble un artefact de rendu Chromium propre
-   à box-shadow+overflow:hidden+border-radius sur cette pile ; les 4
-   inset suffisent largement au volume, l'externe n'était pas nécessaire. */
+   d'entrée, elle, rejoue à chaque nouveau montage. */
 .switch-tile{animation:tileFadeIn .35s ease-out;}
 .switch-tile.current{position:relative; overflow:hidden; border-color:transparent;
   background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
       rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%),
     var(--tile-base);
   box-shadow:inset 0 3px 5px rgba(255,255,255,.5), inset 3px 0 5px rgba(255,255,255,.22),
-    inset 0 -11px 20px rgba(0,0,0,.2), inset -9px 0 18px rgba(0,0,0,.12);
+    inset 0 -9px 15px rgba(0,0,0,.32), inset -7px 0 13px rgba(0,0,0,.2),
+    0 8px 18px rgba(0,0,0,.18);
   animation:tileGlassIn .5s cubic-bezier(.22,1,.36,1);}
 .switch-tile.current::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
   background:conic-gradient(from var(--iris-angle,0deg),
