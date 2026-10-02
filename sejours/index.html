@@ -109,17 +109,21 @@ a{color:inherit; text-decoration:none;}
    l'effet de volume... la lumière qui aide à comprendre l'arrondi, ça
    fait flat". Une vignette concentrique ne donne aucun indice de
    direction de lumière donc ne lit pas comme un dôme ; un fort contraste
-   d'un coin à l'autre, si. */
+   d'un coin à l'autre, si. Reflet resserré et quasi blanc (au lieu d'un
+   large halo doux) + rim-light fin et net en inset — retour utilisateur :
+   "un peu doux, on ne sent pas assez le côté brillant du verre" : un
+   verre brillant a un point de lumière PETIT et INTENSE, pas un dégradé
+   étalé. */
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 #hero .brand-logo{border:none;
-  background:radial-gradient(circle at 28% 22%, rgba(255,255,255,.6) 0%, rgba(255,255,255,.22) 28%, rgba(255,255,255,0) 52%),
-    radial-gradient(circle at 74% 80%, rgba(16,22,18,.4) 0%, rgba(16,22,18,.16) 42%, rgba(16,22,18,0) 68%),
-    linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.02) 55%, rgba(255,255,255,.08)),
+  background:radial-gradient(circle at 26% 20%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 9%, rgba(255,255,255,.1) 22%, rgba(255,255,255,0) 38%),
+    radial-gradient(circle at 74% 80%, rgba(16,22,18,.48) 0%, rgba(16,22,18,.18) 40%, rgba(16,22,18,0) 66%),
+    linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.02) 55%, rgba(255,255,255,.05)),
     rgba(29,40,32,.14);
   backdrop-filter:blur(9px) saturate(1.4);
   -webkit-backdrop-filter:blur(9px) saturate(1.4);
-  box-shadow:inset 2px 2px 2px rgba(255,255,255,.8), inset -10px -14px 20px rgba(10,16,12,.3),
-    0 10px 26px rgba(29,40,32,.2), 0 2px 6px rgba(29,40,32,.14);}
+  box-shadow:inset 1px 1.5px 1.5px rgba(255,255,255,.95), inset -12px -16px 22px rgba(8,13,10,.4),
+    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
 #hero .brand-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
