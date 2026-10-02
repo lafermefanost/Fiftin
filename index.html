@@ -1327,16 +1327,17 @@ body.map-fullscreen{overflow:hidden;}
    vert moyen, pas un vert pâle — à côté du --lavender-bg très clair de
    l'autre tuile, le duo paraissait déséquilibré/terne (retour
    utilisateur). --sauge-bg mélange --sauge à ~13% sur blanc, même
-   dérivation que --lavender-bg à partir de --lavender-deep. Contour en
-   rgba (pas var(--sauge)/var(--lavender-deep) plein) — retour
-   utilisateur : "le contour de ces deux encarts beaucoup plus discret/
-   transparent" : même teinte, juste très atténuée, plutôt qu'un trait
-   plein saturé qui tranchait trop sur le fond clair de la tuile. */
-.switch-tile.voyageur:not(.current){background:var(--sauge-bg); border-color:rgba(53,75,56,.35);}
+   dérivation que --lavender-bg à partir de --lavender-deep. Plus de
+   contour du tout (retour utilisateur, repris une fois de "beaucoup plus
+   discret/transparent" à "supprime le contour des cartes espace") —
+   border-color:transparent plutôt que rgba atténué : le fond pâle
+   (--sauge-bg/--lavender-bg) suffit à distinguer la tuile sans trait
+   autour. */
+.switch-tile.voyageur:not(.current){background:var(--sauge-bg); border-color:transparent;}
 .switch-tile.voyageur:not(.current) b{color:var(--sauge-deep);}
 .switch-tile.voyageur:not(.current) span{color:var(--sauge-mid);}
 .switch-tile.voyageur:not(.current) .switch-icon{background:rgba(53,75,56,.14); color:var(--sauge-deep);}
-.switch-tile.hotes:not(.current){background:var(--lavender-bg); border-color:rgba(78,103,188,.35);}
+.switch-tile.hotes:not(.current){background:var(--lavender-bg); border-color:transparent;}
 .switch-tile.hotes:not(.current) b{color:var(--lavender-deep);}
 .switch-tile.hotes:not(.current) span{color:var(--lavender-icon);}
 .switch-tile.hotes:not(.current) .switch-icon{background:rgba(78,103,188,.14); color:var(--lavender-deep);}
@@ -1627,13 +1628,17 @@ body.map-fullscreen{overflow:hidden;}
    famille de classes à part (.plan-card, pas .formula-card) : .formula-card
    reste celle du sélecteur cliquable à l'inscription (formulaCardHtml()),
    jamais touchée ici pour ne pas la faire régresser. */
-.plan-card-list{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
-/* border plus discret que var(--line) (déjà peu opaque, .14, mais
-   encore visible contre le fond blanc de la carte) — retour
-   utilisateur : "le contour de ces deux encarts beaucoup plus discret/
-   transparent", aux côtés du même retour sur les tuiles du switch
-   voyageur/hôtes juste au-dessus. */
-.plan-card{background:#fff; border:1.5px solid rgba(46,43,34,.07); border-radius:20px; padding:22px 20px;}
+/* gap réduit (14px->10px), avec le padding/les typos allégées plus bas
+   (retour utilisateur : "fait les 3 cartes plus petites, elles sont un
+   peu grosses dans l'écran"). */
+.plan-card-list{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
+/* Plus de contour du tout (retour utilisateur : "supprime les contours
+   aussi") — après un premier passage en rgba très atténué, puis
+   transparent côté active seule, le reste de la demande était en fait
+   de le retirer partout, pas de l'alléger encore. border:none plutôt
+   que border-color:transparent : plus aucune carte n'a besoin de
+   garder une largeur de bordure dont la couleur varie selon l'état. */
+.plan-card{background:#fff; border:none; border-radius:16px; padding:16px 16px;}
 /* Formule active en encart vert moyen plein, typo blanche (retour
    utilisateur : "la formule sélectionnée doit être dans un encart vert
    moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
@@ -1641,24 +1646,44 @@ body.map-fullscreen{overflow:hidden;}
    .coll-toggle-btn). Le premier picto de puce (--sauge-deep, un vert plus
    sombre encore) se fondrait dans ce fond : reblanchi spécifiquement ici,
    les 4 autres couleurs de puces gardent assez de contraste telles
-   quelles. */
-/* border-color:transparent plutôt qu'assorti au fond (var(--sauge-mid)
-   des deux côtés auparavant) — retour utilisateur : "supprime le contour
-   de l'encart formule [sélectionnée]". border-color transparent (pas
-   border:none) pour garder la même largeur de boîte que les cartes non
-   actives (1.5px de bordure), sans provoquer de saut de mise en page. */
-.plan-card.active{background:var(--sauge-mid); border-color:transparent;}
+   quelles. Effet "verre liquide" ajouté ensuite (retour utilisateur :
+   "fais le même effet sur la carte sélectionnée") — même recette que
+   .switch-tile.current/.tab.active .tab-icon : dégradé diagonal + box-
+   shadow inset sur 2 côtés (pas d'ombre portée externe, voir le réglage
+   trouvé sur .switch-tile.current) + anneau irisé, --sauge-mid en 2e
+   couche du background sous le dégradé pour garder le vert "propriétaire".
+   position:relative+z-index:1 sur le nom/prix/période/liste : comme pour
+   le logo/les tuiles, ::before (position:absolute, z-index:auto) peint
+   sinon au-dessus du contenu normal du flux. */
+.plan-card.active{position:relative; overflow:hidden; border:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge-mid);
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.4), inset 1.5px 0 3px rgba(255,255,255,.2),
+    inset 0 -6px 11px rgba(0,0,0,.18), inset -5px 0 10px rgba(0,0,0,.11);}
+.plan-card.active::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.2px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.plan-card.active .plan-card-name,
+.plan-card.active .plan-card-price,
+.plan-card.active .plan-card-per,
+.plan-card.active ul{position:relative; z-index:1;}
 .plan-card.active .plan-card-name,
 .plan-card.active .plan-card-price,
 .plan-card.active .plan-card-per,
 .plan-card.active li{color:#fff;}
 .plan-card.active li:nth-child(5n+1)::before{background:#fff;}
-.plan-card-name{font-size:12px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px;}
-.plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:36px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
-.plan-card-per{font-size:13px; color:var(--sauge); margin-bottom:14px;}
+.plan-card-name{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:8px;}
+.plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:28px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
+.plan-card-per{font-size:12px; color:var(--sauge); margin-bottom:10px;}
 .plan-card ul{margin:0; padding:0; list-style:none;}
-.plan-card li{font-size:13.5px; line-height:1.45; padding:6px 0 6px 18px; position:relative; color:#4a4636;}
-.plan-card li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:13px; border-radius:2.5px; background:var(--sauge-deep);}
+.plan-card li{font-size:12.5px; line-height:1.4; padding:5px 0 5px 16px; position:relative; color:#4a4636;}
+.plan-card li::before{content:''; position:absolute; left:0; top:9px; width:4px; height:11px; border-radius:2px; background:var(--sauge-deep);}
 .plan-card li:nth-child(5n+2)::before{background:var(--lavender);}
 .plan-card li:nth-child(5n+3)::before{background:#C97B5C;}
 .plan-card li:nth-child(5n+4)::before{background:#D88A9A;}
@@ -2283,8 +2308,8 @@ var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
    pour cette année, puis 7 €/mois") — pas encore de mécanisme de
    paiement réel, juste l'affichage. */
 var HOST_FORMULAS = [
-  {value:"simple", name:"Formule Hôte", price:"Gratuit", desc:"Listez votre hébergement, calendrier simplifié inclus.",
-    planName:"Formule Hôte", planPrice:"Gratuit", planPer:"cette année, puis 7 €/mois",
+  {value:"simple", name:"Formule Hôte", price:"0 €/mois", desc:"Listez votre hébergement, calendrier simplifié inclus.",
+    planName:"Formule Hôte", planPrice:"0 €", planPer:"cette année, puis 7 €/mois",
     bullets:["Listez votre hébergement, calendrier simplifié inclus."]},
   {value:"essentiel", name:"Formule Gestion simplifiée", price:"24 €/mois", desc:"Planning complet Fiftin app : réservations, fichier client, compta.",
     planName:"Essentiel", planPrice:"24 €", planPer:"par mois",
