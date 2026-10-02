@@ -113,12 +113,18 @@ a{color:inherit; text-decoration:none;}
    large halo doux) + rim-light fin et net en inset — retour utilisateur :
    "un peu doux, on ne sent pas assez le côté brillant du verre" : un
    verre brillant a un point de lumière PETIT et INTENSE, pas un dégradé
-   étalé. */
+   étalé. Repris une 2e fois : "le spot est trop fort et trop diffus...
+   la lumière devrait créer un volume moins diffus, avec des contours
+   plus définis" — rayon encore réduit (24% au lieu de 38%) avec un
+   plateau net (0→7% à opacité quasi constante) puis une chute rapide,
+   plutôt qu'un dégradé continu du centre au bord qui "respire" sur toute
+   la largeur ; intensité au centre légèrement baissée (.82 au lieu
+   de .95) pour ne plus cramer. */
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 #hero .brand-logo{border:none;
-  background:radial-gradient(circle at 26% 20%, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 9%, rgba(255,255,255,.1) 22%, rgba(255,255,255,0) 38%),
-    radial-gradient(circle at 74% 80%, rgba(16,22,18,.48) 0%, rgba(16,22,18,.18) 40%, rgba(16,22,18,0) 66%),
-    linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.02) 55%, rgba(255,255,255,.05)),
+  background:radial-gradient(circle at 25% 20%, rgba(255,255,255,.82) 0%, rgba(255,255,255,.7) 7%, rgba(255,255,255,.15) 15%, rgba(255,255,255,0) 24%),
+    radial-gradient(circle at 74% 80%, rgba(16,22,18,.46) 0%, rgba(16,22,18,.18) 40%, rgba(16,22,18,0) 64%),
+    linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.05)),
     rgba(29,40,32,.14);
   backdrop-filter:blur(9px) saturate(1.4);
   -webkit-backdrop-filter:blur(9px) saturate(1.4);
