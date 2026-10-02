@@ -89,6 +89,43 @@ a{color:inherit; text-decoration:none;}
 .brand-logo{position:relative; z-index:2; border-radius:26px; border:1.5px solid rgba(255,255,255,.38);
   display:flex; align-items:center; justify-content:center; overflow:hidden;}
 .brand-logo img{width:59%; height:auto; display:block;}
+/* Effet "verre liquide" (liquid glass, façon dock iOS / nav d'appli) sur
+   le logo de la page d'intro, retour utilisateur — flou+saturation pour
+   l'effet loupe sur les blobs du mesh qui dérivent derrière, contour
+   irisé en reprenant les 3 teintes du mesh lui-même (--lavender/--yellow/
+   --sauge-light, voir .brand-mesh juste au-dessus) plutôt qu'un arc-en-ciel
+   générique, pour que l'irisation ait l'air de capter la couleur du fond
+   plutôt que d'être plaquée dessus. Scopé à #hero : .brand-logo est
+   partagé avec #siteGate, non concerné par ce retour. Le ring n'utilise
+   QUE la paire mask/-webkit-mask correctement appariée avec son propre
+   mask-composite — mélanger -webkit-mask avec mask-composite non préfixé
+   (sans son propre -webkit-mask-composite) laissait le dégradé remplir
+   tout le pavé au lieu de n'en garder que le contour. Fond assombri d'un
+   voile sauge constant : sans lui, le blob jaune du mesh (centre blanc)
+   passant derrière poussait le fond vers le quasi-blanc par moments,
+   rendant le "15" blanc illisible dessus (blanc sur blanc). Vignette
+   radiale sombre centrée en plus du voile uni — garantit le contraste du
+   "15" quelle que soit la couleur qui dérive derrière à cet instant,
+   plutôt que de dépendre d'un seul réglage de blur/saturate fragile. */
+@property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
+#hero .brand-logo{border:none;
+  background:radial-gradient(circle, rgba(20,28,22,.32) 0%, rgba(20,28,22,.14) 55%, rgba(20,28,22,0) 82%),
+    linear-gradient(135deg, rgba(255,255,255,.26), rgba(255,255,255,.03) 55%, rgba(255,255,255,.12)),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.6), inset 0 -10px 16px rgba(255,255,255,.08),
+    0 10px 26px rgba(29,40,32,.16);}
+#hero .brand-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+@keyframes irisSpin{to{--iris-angle:360deg;}}
 #hero .hero-content{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:16px;}
 #hero .hero-logo{width:96px; height:96px;}
 #hero .hero-brand{font-family:'Jost',sans-serif; font-weight:700; font-size:30px; letter-spacing:-0.01em;
