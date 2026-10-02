@@ -1309,18 +1309,12 @@ body.map-fullscreen{overflow:hidden;}
    utilisateur : "fais aussi comme la vue collection, avec la carte
    transparente mais avec contour pointillé") — même traitement que
    .collection-tile-add en vue grille, juste au-dessus. */
-/* Contour de la même couleur que les pastilles fantômes juste à droite
-   (retour utilisateur : "passe le contour dans le même gris que les
-   pastilles pointillées") — var(--line), pas var(--sauge-light), pour que
-   les deux pointillés de cet encart (contour + pastilles) soient
-   cohérents entre eux. */
 .collection-detail-head.coll-add-row{border:1.5px dashed var(--line); background:none; cursor:pointer; font:inherit; text-align:left; width:100%;}
 /* Typo du titre "comme avant" (retour utilisateur), plus légère que
    .collection-detail-title de base (18px/800, poids d'un vrai nom de
    collection) — 14px/700, avec un "+" devant le texte (voir
    collectionAddRowHtml()) plutôt qu'un poids aussi lourd qu'un vrai titre. */
 .coll-add-row .collection-detail-title{color:var(--sauge); font-size:14px; font-weight:700;}
-.coll-add-ghost-btn{width:34px; height:34px; border-radius:50%; border:1.5px dashed var(--line); background:none; flex-shrink:0;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
 .collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
@@ -2735,6 +2729,20 @@ function bootFirebaseAuth(){
       // resolveHostAccount(), dépendait d'un uid pas encore disponible).
       else if(state.hostMode) renderHostTabContent();
       if(state.tab==="profile") renderProfile();
+      // Retour utilisateur : "les demandes et séjours semblent encore
+      // bugger et n'affichent pas le bon compte" — Mes séjours peut se
+      // rendre une 1ère fois AVANT qu'onAuthStateChanged ait résolu
+      // authState.uid (ouverture directe sur cet onglet, auth encore en
+      // cours). loadLikesCounts() (appelée par wireLikesToggle() à CHAQUE
+      // rendu du bandeau, voir son commentaire) renvoie alors sans rien
+      // charger (authState.uid encore faux à ce moment précis) et rien ne
+      // redéclenchait un rendu de cet onglet une fois l'uid réellement
+      // connu : Demandes/Séjours restaient bloqués sur "…" indéfiniment
+      // (pas juste le temps du chargement). renderTabContent() ici, comme
+      // pour renderProfile() juste au-dessus, relance un vrai rendu une
+      // fois authState.uid/ready à jour — wireLikesToggle()/
+      // loadLikesCounts() repartent alors avec le bon uid.
+      if(!state.hostMode && state.tab==="likes") renderTabContent();
       updateHeroMenu();
       // Retour utilisateur : proposer de se connecter, nulle part sur le
       // site un visiteur non connecté ne se le voyait proposer directement
@@ -4322,11 +4330,6 @@ function collectionAddTileHtml(){
 function collectionAddRowHtml(){
   return '<button type="button" class="collection-detail-head coll-add-row" id="coll-add-tile">'+
     '<span class="collection-detail-title">+ Ajouter une collection</span>'+
-    '<div class="collection-detail-actions">'+
-      '<span class="coll-add-ghost-btn"></span>'+
-      '<span class="coll-add-ghost-btn"></span>'+
-      '<span class="coll-add-ghost-btn"></span>'+
-    '</div>'+
   '</button>';
 }
 /* Vue liste (retour utilisateur : "j'aimerais que la vue liste des séjours
