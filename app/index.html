@@ -1183,11 +1183,30 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 .gsel-info{padding:9px 12px;flex:1;}
 .gsel-name-label{font-weight:700;font-size:15px;color:var(--dark);line-height:1.2;}
 .gsel-hint{font-size:10px;color:var(--gray);margin-top:2px;}
-.pax-picker{display:flex;gap:7px;margin-top:4px;}
-.pax-btn{width:38px;height:38px;border:1.5px solid var(--light);border-radius:50%;
-  background:var(--white);font-family:'Jost',sans-serif;font-size:15px;font-weight:500;
-  color:var(--gray);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
-.pax-btn.on{border-color:var(--green);background:var(--green);color:var(--white);}
+/* Reprend la mise en forme du widget Arrivée/Départ/Voyageurs du site
+   voyageur (fiftin.fr, .qr-field/.stepper) — retour utilisateur : "réutiliser
+   exactement cette mise en forme de la date et du nombre de personne pour
+   remplacer dans séjour du modal de réservation". Couleurs/variables de CE
+   fichier (var(--light) à la place de --line, etc.), pas copiées telles
+   quelles depuis l'autre site — seul le GABARIT (bordure/arrondi/stepper)
+   est repris. Les labels .fl, eux, restent inchangés (gris, comme sur tout
+   le reste du modal) : "sauf titrage... qui doit rester comme sur le
+   modal de réservation". */
+.fi.date-box{border:1.5px solid var(--light);border-radius:12px;}
+.stepper{display:flex;align-items:center;border:1.5px solid var(--light);border-radius:12px;
+  background:var(--white);overflow:hidden;width:fit-content;margin-top:4px;}
+.stepper button{background:none;border:none;width:36px;height:38px;font-size:17px;font-weight:700;
+  color:var(--green);cursor:pointer;font-family:'Jost',sans-serif;}
+.stepper span{min-width:30px;text-align:center;font-weight:700;font-size:14px;color:var(--dark);}
+/* Statut de la réservation (Confirmé/Option/Annulé) : deux points de
+   couleur + Annulé, plus de <select> — retour utilisateur : "utiliser
+   plutôt deux points de couleur... plus de menu déroulant". */
+.status-dot-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;}
+.status-dot-btn{display:flex;align-items:center;gap:6px;background:none;border:none;
+  font-family:'Jost',sans-serif;font-size:13px;color:var(--gray);font-weight:500;cursor:pointer;padding:3px 0;}
+.status-dot-btn.on{color:var(--dark);font-weight:700;}
+.status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.4;}
+.status-dot-btn.on .status-dot{opacity:1;}
 .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
 
 .macts{display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--light);}
@@ -1800,45 +1819,68 @@ Gardez la main.</div>
       </div>
       <div class="fg">
         <label class="fl">Arrivée</label>
-        <input type="date" class="fi" id="bIn" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
+        <input type="date" class="fi date-box" id="bIn" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
       </div>
       <div class="fg">
         <label class="fl">Départ</label>
-        <input type="date" class="fi" id="bOut" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
+        <input type="date" class="fi date-box" id="bOut" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
       </div>
-      <div class="frow">
-        <div class="fg">
-          <label class="fl">Heure d'arrivée</label>
-          <input type="text" class="fi" id="bTime" placeholder="18h, 23h…">
+      <!-- Voyageurs : même mise en forme (stepper −/+) que le widget
+           Arrivée/Départ/Voyageurs du site voyageur (fiftin.fr), retour
+           utilisateur — déplacé ici depuis Services ("il est maintenant
+           présent uniquement dans la partie séjour, c'est plus logique"),
+           remplace l'ancien sélecteur à 5 boutons ronds (voir setPax()). -->
+      <div class="fg">
+        <label class="fl">Voyageurs</label>
+        <div class="stepper">
+          <button type="button" onclick="stepPax(-1)">−</button>
+          <span id="paxCount">1</span>
+          <button type="button" onclick="stepPax(1)">+</button>
         </div>
-        <div class="fg">
-          <label class="fl">Statut</label>
-          <select class="fsel" id="bStatus">
-            <option value="ok">Confirmé</option>
-            <option value="opt">Option</option>
-            <option value="no">Annulé</option>
-          </select>
+        <input type="hidden" id="bPersons" value="1">
+      </div>
+      <div class="fg">
+        <label class="fl">Heure d'arrivée</label>
+        <input type="text" class="fi" id="bTime" placeholder="18h, 23h…">
+      </div>
+      <!-- Statut (de la réservation, pas du paiement) : deux points de
+           couleur + Annulé en 3e, plus de <select> (retour utilisateur :
+           "utiliser plutôt deux points de couleur... plus de menu
+           déroulant"). Annulé conservé (pas demandé à l'identique, mais
+           retirer la seule façon de poser ce statut depuis ce modal aurait
+           été une vraie perte de fonction, pas juste cosmétique) — rouge,
+           même couleur que le point déjà utilisé pour "no" ailleurs
+           (planning, voir dot() dans renderWeek()). -->
+      <div class="fg">
+        <label class="fl">Statut</label>
+        <div class="status-dot-row">
+          <button type="button" class="status-dot-btn" id="bstatus-ok" onclick="setBStatus('ok')"><span class="status-dot" style="background:#4CAF50"></span>Confirmé</button>
+          <button type="button" class="status-dot-btn" id="bstatus-opt" onclick="setBStatus('opt')"><span class="status-dot" style="background:#D98A3D"></span>Option</button>
+          <button type="button" class="status-dot-btn" id="bstatus-no" onclick="setBStatus('no')"><span class="status-dot" style="background:#F44336"></span>Annulé</button>
         </div>
+        <input type="hidden" id="bStatus" value="ok">
       </div>
       <div class="warn" id="conflictWarn" style="display:none">
         ⚠️ Cette chambre est déjà prise sur ces dates
       </div>
       <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:8px;padding:10px 12px;"></div>
+      <!-- Notes : déplacées ici depuis leur propre section (retour
+           utilisateur : "intègre note directement dans séjour juste avant
+           générer le contrat"). -->
+      <div class="fg">
+        <label class="fl">Notes</label>
+        <input type="text" class="fi" id="bNotes" placeholder="lit bébé, accès code, allergie…">
+      </div>
       <div id="bContractSec" style="display:none;margin-top:14px">
         <button type="button" class="btn-p" style="width:100%" onclick="openContractPreview(editBid)">Générer le contrat de location</button>
       </div>
     </div>
 
-    <!-- ── Personnes ── -->
+    <!-- ── Services ── -->
     <div class="msec">
       <div class="msec-title">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
         Services
-      </div>
-      <div class="fg">
-        <label class="fl">Nb personnes</label>
-        <div class="pax-picker" id="paxPicker"></div>
-        <input type="hidden" id="bPersons" value="1">
       </div>
       <div class="fg" id="breakfastListFg" style="display:none">
         <label class="fl">Petit-déjeuner — nuits du séjour <span style="color:var(--gray);font-weight:400">(inclus par défaut)</span></label>
@@ -1847,6 +1889,15 @@ Gardez la main.</div>
       <div class="fg" id="dinnerListFg" style="display:none">
         <label class="fl">Table d'hôtes — soirs du séjour</label>
         <div id="dinnerList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
+      </div>
+      <!-- Consommations : n'est plus une section à part (retour utilisateur),
+           devient une sous-partie de Services au même titre que Petit-déj/
+           Table d'hôtes — même id bExtrasSec, même bascule block/none
+           (voir renderModalExtras()), juste .fg au lieu de .msec. -->
+      <div class="fg" id="bExtrasSec" style="display:none">
+        <label class="fl">Consommations</label>
+        <div id="bExtrasDayTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+        <div id="bExtrasDayBody"></div>
       </div>
     </div>
 
@@ -1898,27 +1949,6 @@ Gardez la main.</div>
         </div>
         <div class="btot-detail" id="bTotDetail" style="display:none"></div>
         <div class="conso-share-row" id="bConsoShare" style="display:none"></div>
-      </div>
-    </div>
-
-    <!-- ── Consommations ── -->
-    <div class="msec" id="bExtrasSec" style="display:none">
-      <div class="msec-title">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        Consommations
-      </div>
-      <div id="bExtrasDayTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
-      <div id="bExtrasDayBody"></div>
-    </div>
-
-    <!-- ── Notes ── -->
-    <div class="msec">
-      <div class="msec-title">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-        Notes
-      </div>
-      <div class="fg">
-        <input type="text" class="fi" id="bNotes" placeholder="lit bébé, accès code, allergie…">
       </div>
     </div>
 
@@ -4566,7 +4596,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('bIn').value=ci;
   byId('bOut').value=dsOut||addDays(ci,1);
   byId('bTime').value='';
-  byId('bStatus').value='ok';
+  setBStatus('ok');
   setPax(1);
   byId('bNotes').value='';
   bkTaxeSejour=false;
@@ -4612,7 +4642,7 @@ function openEditModal(id,clickedDay){
   byId('bIn').value=b.checkIn;
   byId('bOut').value=b.checkOut;
   byId('bTime').value=b.arrivalTime||'';
-  byId('bStatus').value=b.status||'ok';
+  setBStatus(b.status||'ok');
   setPax(b.nbPersons||2);
   byId('bNotes').value=b.notes||'';
   bkTaxeSejour=!!b.taxeSejour;
@@ -4677,11 +4707,31 @@ let gSearchTerm='';
 let gChanging=false;
 
 function setPax(n){
+  if(n<1)n=1; if(n>12)n=12;
   byId('bPersons').value=n;
-  byId('paxPicker').innerHTML=[1,2,3,4,5].map(i=>
-    `<button type="button" class="pax-btn${i===n?' on':''}" onclick="setPax(${i});renderBreakfastList();renderDinnerList()">${i}</button>`
-  ).join('');
+  const span=byId('paxCount');
+  if(span)span.textContent=n;
   updateModalTotal();
+}
+// Boutons −/+ du stepper Voyageurs (voir setPax()) : même geste que les
+// anciens boutons ronds 1-5 (setPax(i);renderBreakfastList();renderDinnerList()),
+// juste par pas de 1 au lieu d'une valeur absolue.
+function stepPax(delta){
+  setPax((parseInt(byId('bPersons').value)||1)+delta);
+  renderBreakfastList();
+  renderDinnerList();
+}
+// Statut de la réservation (Confirmé/Option/Annulé) : remplace l'ancien
+// <select id="bStatus"> par 3 boutons à point de couleur (voir leur CSS,
+// .status-dot-row) — #bStatus reste un champ caché (hidden) pour que tout
+// le reste du code (chkConflict, saveBooking…) continue de lire sa .value
+// sans rien changer ailleurs.
+function setBStatus(v){
+  byId('bStatus').value=v;
+  ['ok','opt','no'].forEach(s=>{
+    const btn=byId('bstatus-'+s);
+    if(btn)btn.classList.toggle('on',s===v);
+  });
 }
 
 function filterGuests(val){
@@ -8115,7 +8165,7 @@ function updateModalTotal(){
   const prixNetVal=prixNetRaw===''?null:(parseFloat(prixNetRaw)||0);
   const rid=byId('bRoom')?.value;
   const tariff=getTariffForDate(ci);
-  const pax=parseInt(document.querySelector('.pax-btn.on')?.textContent)||2;
+  const pax=parseInt(byId('bPersons')?.value)||2;
   const tempBk={...(bk||{}),checkIn:ci,checkOut:co,guestId:selGid,source:bkSource,prixNet:prixNetVal,roomId:rid,nbPersons:pax};
   // Taxe de séjour : comprise dans le total séjour affiché au client (c'est bien
   // le montant total à lui facturer), mais jamais dans le CA compté ailleurs
