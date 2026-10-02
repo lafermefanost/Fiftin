@@ -373,13 +373,34 @@ a{color:inherit; text-decoration:none;}
    carte. Sans flex:1, les deux boutons reprennent leur largeur naturelle
    (au contenu), alignés à gauche par défaut (.cover-cta, display:flex sans
    justify-content ni width). */
-/* Même verre dépoli que les pastilles du haut de la carte et que Voir
-   plus juste en dessous (.save-btn/.share-btn/.pill-badge/.btn.ghost-dark)
-   — retour utilisateur : "essaie le même effet que sur les autres bulles
-   sur Contact et disponibilités". Texte gardé en jaune (plutôt que blanc
-   comme Voir plus) pour que ce bouton reste identifiable comme l'action
-   principale malgré le fond désormais commun aux 2 bulles. */
-.btn.primary{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:var(--yellow); border:1px solid rgba(255,255,255,.25);}
+/* Essai (retour utilisateur : "tu n'as pas fait le même test d'effet
+   classe sur contact et dispos") de la recette "verre liquide" complète
+   (celle du logo/des tuiles/de la formule sélectionnée — dégradé diagonal
+   + box-shadow inset + anneau irisé conique), pas juste le verre dépoli
+   plat de Voir plus/des pastilles (1ère tentative, insuffisante). Base
+   rgba(20,26,20,.4) + backdrop-filter gardés sous le dégradé (identité
+   "verre" déjà commune aux bulles de cette carte) ; pas de lumière rasante
+   ::after ni d'ombre portée séparée, bouton trop fin pour ces 2 détails
+   (même choix que .tab.active .tab-icon, 34px). border:none, remplacé par
+   l'anneau ::before — --iris-angle/@keyframes irisSpin déjà déclarés une
+   fois pour #hero .brand-logo, réutilisés ici. */
+.btn.primary{position:relative; overflow:hidden; border:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%),
+    rgba(20,26,20,.4);
+  backdrop-filter:blur(6px);
+  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.5), inset 1px 0 2px rgba(255,255,255,.22),
+    inset 0 -4px 7px rgba(0,0,0,.28), inset -3px 0 6px rgba(0,0,0,.18);
+  color:var(--yellow);}
+.btn.primary::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
 .btn.ghost-dark{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; border:1px solid rgba(255,255,255,.25);}
 .price-tag b{font-size:15px;}
 
