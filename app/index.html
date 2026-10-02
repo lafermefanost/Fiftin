@@ -998,11 +998,42 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #lockScreen::before,#siteGate::before{content:'';position:absolute;inset:0;z-index:-1;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
-/* Cadre carré aux coins arrondis autour du picto, comme le contour d'une
-   icône d'app sur l'écran d'accueil d'un téléphone — un simple liseret,
-   sans fond, le vert de #lockScreen/#siteGate reste visible à travers. */
-.logo-tile{width:136px;height:136px;border-radius:34px;border:1.5px solid rgba(255,255,255,.38);
-  display:flex;align-items:center;justify-content:center;margin:0 auto 18px;}
+/* Effet "verre liquide" repris À L'IDENTIQUE de #hero .brand-logo côté
+   fiftin.fr/sejours (retour utilisateur : "partout où tu vois le picto
+   fiftin en image de marque comme l'intro du site, applique exactement
+   le même style" — exemple donné : cette page, avant d'afficher le
+   planning). Même recette telle quelle (dégradé diagonal + box-shadow
+   inset 4 côtés + ombre portée externe + anneau irisé + lumière rasante) :
+   .mesh-bg ci-dessus est le même type de fond animé chargé que #hero, qui
+   a jusqu'ici évité le bug de contour sombre vu ailleurs sur fond uni
+   (.switch-tile.current/.plan-card.active côté sejours/index.html).
+   --iris-angle/@keyframes irisSpin n'existaient pas dans ce fichier
+   (propres à fiftin.fr/sejours) : déclarés ici une fois. --green2 (fond
+   de #lockScreen/#siteGate) joue le rôle de --sauge-light dans l'anneau. */
+@property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
+.logo-tile{position:relative; width:136px;height:136px;border-radius:34px; border:none;
+  display:flex;align-items:center;justify-content:center;margin:0 auto 18px; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
+    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
+.logo-tile::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green2) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+@keyframes irisSpin{to{--iris-angle:360deg;}}
+.logo-tile::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 .lock-sub{font-size:19px;font-weight:500;color:rgba(255,255,255,.88);margin-bottom:22px;max-width:280px;line-height:1.4;white-space:pre-line;}
 /* Cartouche vert moyen — même traitement que les cartouches chiffrées de
    l'appli (mstat-rev, mfin-card) : le module de connexion porte l'identité

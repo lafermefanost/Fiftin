@@ -1744,7 +1744,36 @@ body.map-fullscreen{overflow:hidden;}
   padding:calc(24px + env(safe-area-inset-top,0px)) 24px calc(24px + env(safe-area-inset-bottom,0px));
   text-align:center;}
 #siteGate.gate-hidden{display:none;}
-#siteGate .gate-logo{width:92px; height:92px; margin:0 auto 22px;}
+/* Effet "verre liquide" repris À L'IDENTIQUE de #hero .brand-logo (retour
+   utilisateur : "partout où tu vois le picto fiftin en image de marque
+   comme l'intro du site, applique exactement le même style") — même
+   recette telle quelle (dégradé diagonal + box-shadow inset 4 côtés +
+   ombre portée externe + anneau irisé + lumière rasante), fond #siteGate
+   étant le même mesh animé que #hero (voir le commentaire plus haut :
+   "repris à l'identique pour la cohérence de marque"). .gate-logo garde
+   juste sa taille propre (92px) ; --iris-angle/@keyframes irisSpin déjà
+   déclarés une fois plus haut pour #hero .brand-logo, réutilisés ici. */
+#siteGate .gate-logo{width:92px; height:92px; margin:0 auto 22px; border:none; overflow:hidden; position:relative;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
+    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
+#siteGate .gate-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+#siteGate .gate-logo::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 #siteGate .gate-sub{position:relative; z-index:2; font-size:16px; font-weight:500; color:rgba(245,240,229,.85); margin-bottom:24px; max-width:280px; line-height:1.5;}
 #siteGate .gate-box{position:relative; z-index:2; width:100%; max-width:280px;}
 #siteGate .gate-input{width:100%; margin-bottom:10px; padding:12px 16px; border-radius:999px; background:transparent;
@@ -1821,8 +1850,36 @@ body.map-fullscreen{overflow:hidden;}
 
 .mkt-page .cover{color:var(--cream); border-bottom:none; padding:72px 24px 0; --section-bg:var(--sauge-deep); overflow:hidden; contain:paint; position:relative;}
 .mkt-page .logo{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:40px; flex-wrap:wrap;}
-.mkt-page .logo-tile{width:112px; height:112px; border-radius:30px; border:1.5px solid rgba(245,240,229,.38);
-  flex:none; display:flex; align-items:center; justify-content:center;}
+/* Même effet "verre liquide" que #hero .brand-logo (et #siteGate
+   .gate-logo), repris À L'IDENTIQUE — retour utilisateur : "partout où tu
+   vois le picto fiftin en image de marque comme l'intro du site". .cover/
+   .close ont leur propre .mesh-bg (mêmes teintes lavande/jaune/sauge-deep,
+   voir plus haut) donc le même fond "chargé" qui évite le contour sombre
+   vu ailleurs sur fond uni. .sm (section .close) garde juste sa taille
+   réduite. --iris-angle/@keyframes irisSpin déjà déclarés une fois pour
+   #hero .brand-logo, réutilisés ici. */
+.mkt-page .logo-tile{position:relative; width:112px; height:112px; border-radius:30px; border:none;
+  flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
+    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
+.mkt-page .logo-tile::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.mkt-page .logo-tile::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 .mkt-page .logo-tile img{width:61%; height:auto; display:block;}
 .mkt-page .logo-tile.sm{width:72px; height:72px; border-radius:18px; margin:0 auto 26px;}
 .mkt-page .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(30px,6.2vw,46px); line-height:1.08; margin:0 0 20px; letter-spacing:-0.02em;}
