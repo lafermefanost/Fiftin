@@ -13,6 +13,30 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha256-YSWCMtmNZNwqex4CEw1nQhvFub2lmU7vcCKP+XVwwXA=" crossorigin="">
 </head>
 <body>
+<!-- Filtre SVG de distorsion "verre/prisme" pour les boutons de la carte
+     annonce (voir .btn.primary/.btn.ghost-dark/.save-btn/.share-btn/
+     .pill-badge plus bas) — retour utilisateur : "le fond ne soit pas flou
+     mais plutôt distordu comme au passage dans un prisme ou dans une bille
+     en verre". backdrop-filter:blur() ne sait QUE flouter, jamais déformer
+     géométriquement ce qu'il y a derrière — seule une référence
+     backdrop-filter:url(#filtre-svg) permet une vraie distorsion (via
+     feDisplacementMap, qui décale chaque pixel du fond selon une carte de
+     bosses). feTurbulence génère cette carte de bosses (un bruit lissé,
+     pas un vrai dôme de bille, mais donne un ondulement de surface
+     crédible sans avoir à fabriquer une image de carte de bosses à part).
+     Support navigateur très limité : Chromium seulement, Safari/Firefox
+     ignorent silencieusement backdrop-filter:url() — @supports plus bas
+     garde le flou simple (blur+saturate, déjà en place) comme repli
+     partout ailleurs. -->
+<svg style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true">
+  <defs>
+    <filter id="glassDistort" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.035" numOctaves="2" seed="7" result="noise"/>
+      <feGaussianBlur in="noise" stdDeviation="1.5" result="noiseBlur"/>
+      <feDisplacementMap in="SourceGraphic" in2="noiseBlur" scale="16" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@1,400;1,500&display=swap');
 
@@ -456,6 +480,25 @@ a{color:inherit; text-decoration:none;}
 .btn.primary::after, .btn.ghost-dark::after{content:""; position:absolute; left:-8%; top:-35%; width:116%; height:85%;
   background:linear-gradient(180deg, rgba(255,255,255,.8) 0%, rgba(255,255,255,.35) 38%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-3deg); pointer-events:none;}
+/* Distorsion géométrique (voir le filtre #glassDistort juste après <body>)
+   sur les 5 boutons de la carte — retour utilisateur : "le fond ne soit
+   pas flou mais plutôt distordu comme au passage dans un prisme ou dans
+   une bille en verre". Remplace blur(10px)/blur(6px) par le filtre de
+   distorsion (garde saturate) ; @supports protège les navigateurs qui
+   ignorent backdrop-filter:url() (Safari/Firefox, voir commentaire du
+   filtre) — sans lui, un navigateur qui rejette TOUTE la déclaration à
+   cause de url() perdrait aussi saturate() au passage. Validé à l'oeil
+   sur un fond à motifs isolé (la distorsion se voit nettement) avant
+   d'être généralisé ici : sur les photos d'annonces de démo de cet
+   environnement (dégradés plats, sans vraie texture), l'effet reste
+   quasi invisible — ce n'est PAS un défaut du filtre, un dégradé lisse
+   n'a simplement rien de visible à distordre. Sur une vraie photo (avec
+   du détail : lignes, matières, contrastes), l'ondulation sera visible. */
+@supports (backdrop-filter:url(#glassDistort)){
+  .save-btn, .share-btn, .pill-badge, .btn.primary, .btn.ghost-dark{
+    backdrop-filter:url(#glassDistort) saturate(1.5);
+    -webkit-backdrop-filter:url(#glassDistort) saturate(1.5);}
+}
 .btn.primary span, .btn.ghost-dark span{position:relative; z-index:1;}
 .price-tag b{font-size:15px;}
 
