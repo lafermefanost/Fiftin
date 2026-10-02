@@ -335,19 +335,66 @@ a{color:inherit; text-decoration:none;}
 .cover .scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(29,40,32,0) 38%, rgba(20,26,20,.93) 100%); z-index:2; pointer-events:none;}
 .cover .motif{position:absolute; opacity:.16; color:#fff; z-index:1;}
 .cover .motif svg{width:100%; height:100%;}
-.save-btn{position:absolute; top:14px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%;
-  background:rgba(20,26,20,0.35); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
-  display:flex; align-items:center; justify-content:center;}
+/* ---------- boutons "verre liquide" de la carte annonce (Explorer) ----------
+   Retour utilisateur : "tous les boutons présents sur les annonces soient
+   traités comme des boutons de verre, avec un fond transparent, une typo
+   blanche et un effet de distorsion, chromatique, dispersion [...] travaillé
+   avec la transparence et la distorsion du fond en dessous" — remplace le
+   verre dépoli plat (fond rgba(20,26,20,.35-.4) quasi opaque + backdrop-
+   filter seul) sur .save-btn/.share-btn/.pill-badge/.btn.primary/
+   .btn.ghost-dark par la même recette "verre liquide" que le logo/les
+   tuiles/la formule : dégradé diagonal + box-shadow inset + anneau irisé
+   conique (l'effet "dispersion chromatique" en CSS — un halo de teintes
+   façon prisme sur le bord ; une vraie réfraction/déformation géométrique
+   du fond est hors de portée du CSS standard, backdrop-filter ne sait que
+   flouter/saturer, pas déformer). Fond nettement plus transparent
+   (rgba(20,26,20,.22) au lieu de .35-.4) + backdrop-filter renforcé
+   (blur 10px, saturate 1.7 au lieu de blur 6px seul) : la photo derrière
+   reste bien visible, floutée et plus saturée — "la transparence et la
+   distorsion du fond en dessous" demandées, dans la limite de ce que
+   backdrop-filter sait faire. --iris-angle/@keyframes irisSpin déjà
+   déclarés une fois pour #hero .brand-logo, réutilisés partout ici. */
+.save-btn, .share-btn{position:absolute; right:14px; z-index:5; width:38px; height:38px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center; overflow:hidden; border:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.4) 0%, rgba(255,255,255,.1) 30%, rgba(255,255,255,.02) 50%,
+      rgba(16,22,18,.08) 72%, rgba(16,22,18,.2) 100%),
+    rgba(20,26,20,.22);
+  backdrop-filter:blur(10px) saturate(1.7);
+  -webkit-backdrop-filter:blur(10px) saturate(1.7);
+  box-shadow:inset 0 1px 1.5px rgba(255,255,255,.7), inset 0 -2px 4px rgba(16,22,18,.3);}
+.save-btn{top:14px;}
+.share-btn{top:60px;}
+.save-btn::before, .share-btn::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
 .save-btn svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:1.8; transition:all .15s;}
 .save-btn.liked svg{fill:var(--yellow); stroke:var(--yellow);}
-/* Même style que .save-btn (cœur), juste en dessous — 38+8=46px d'offset. */
-.share-btn{position:absolute; top:60px; right:14px; z-index:5; width:38px; height:38px; border-radius:50%;
-  background:rgba(20,26,20,0.35); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.25);
-  display:flex; align-items:center; justify-content:center;}
 .share-btn svg{width:17px; height:17px; stroke:#fff; fill:none; stroke-width:1.8;}
 .top-badges{position:absolute; top:14px; left:14px; z-index:5; display:flex; gap:6px;}
-.pill-badge{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; font-size:11px; font-weight:600;
-  padding:5px 10px; border-radius:12px; border:1px solid rgba(255,255,255,.2);}
+.pill-badge{position:relative; overflow:hidden; border:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.4) 0%, rgba(255,255,255,.1) 30%, rgba(255,255,255,.02) 50%,
+      rgba(16,22,18,.08) 72%, rgba(16,22,18,.2) 100%),
+    rgba(20,26,20,.22);
+  backdrop-filter:blur(10px) saturate(1.7);
+  -webkit-backdrop-filter:blur(10px) saturate(1.7);
+  box-shadow:inset 0 1px 1.5px rgba(255,255,255,.6), inset 0 -2px 3px rgba(16,22,18,.26);
+  color:#fff; font-size:11px; font-weight:600;
+  padding:5px 10px; border-radius:12px;}
+.pill-badge::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
 /* text-shadow (retour utilisateur : d'abord "presque invisible", puis
    "augmente un peu l'ombre" ensuite) — posée ici plutôt que sur chaque
    enfant : hérite naturellement sur .region/h2/.tagline en dessous
@@ -373,31 +420,31 @@ a{color:inherit; text-decoration:none;}
    carte. Sans flex:1, les deux boutons reprennent leur largeur naturelle
    (au contenu), alignés à gauche par défaut (.cover-cta, display:flex sans
    justify-content ni width). */
-/* Verre liquide (dégradé diagonal + box-shadow inset + anneau irisé
-   conique, même recette que le logo/les tuiles/la formule sélectionnée).
-   Reflet secondaire en 5e inset dans le coin bas-droit (rim light, retour
-   utilisateur : "plus de reflet dans la partie sombre pour créer plus de
-   volume") — un vrai verre/une bille accroche aussi un filet de lumière
-   du côté ombré, pas seulement une ombre plate. border:none, remplacé par
-   l'anneau ::before — --iris-angle/@keyframes irisSpin déjà déclarés une
-   fois pour #hero .brand-logo, réutilisés ici.
-   Fond passé de jaune à --sauge-mid (retour utilisateur, après 2 essais
-   sur la COULEUR DU TEXTE seule qui n'étaient pas le bon réglage : "je
-   parlais du cartouche entier, du fond. texte blanc sur fond vert sauge
-   ou vert moyen") — --sauge-mid plutôt que --sauge (plus foncé) : c'est
-   littéralement le "vert moyen" déjà nommé ainsi ailleurs dans ce fichier
-   (.plan-card, .cal-disclose). Dégradé/insets inchangés (highlight blanc
-   + ombre rgba(16,22,18,…), repris de #hero .brand-logo) : fonctionnent
-   aussi bien sur une base verte que sur l'ancien jaune. */
-.btn.primary{position:relative; overflow:hidden; border:none;
+/* Contact et disponibilités/Voir plus désormais traités à l'identique
+   (même recette "verre liquide" transparente, voir le bloc de commentaire
+   plus haut sur .save-btn/.pill-badge) — fond transparent commun au lieu
+   du jaune/vert plein essayé précédemment pour Contact et disponibilités
+   seul, qui tranchait avec le reste des "bulles" de la carte. Lumière
+   rasante ::after ajoutée (retour utilisateur : "il manque juste la
+   lumière sharp qui crée la surface du bouton") — absente jusqu'ici sur
+   ces 2 boutons (jugée inutile vu leur finesse, comme .tab.active
+   .tab-icon), mais nécessaire ici pour la "surface" nette que les insets
+   seuls ne donnent pas. Repositionnée/redimensionnée (top:-30%, height:85%)
+   par rapport à la version carrée du logo : sur un pavé bas et large, elle
+   doit couvrir tout le haut en bande plutôt qu'un petit arc en coin.
+   Texte dans un <span> (voir coverCardHtml()) + position:relative;z-index:1
+   : comme pour le logo/les tuiles, ::before/::after (position:absolute,
+   z-index:auto) peignent sinon au-dessus du texte en flux normal. */
+.btn.primary, .btn.ghost-dark{position:relative; overflow:hidden; border:none; color:#fff;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
-    var(--sauge-mid);
+    rgba(20,26,20,.22);
+  backdrop-filter:blur(10px) saturate(1.7);
+  -webkit-backdrop-filter:blur(10px) saturate(1.7);
   box-shadow:inset 0 1.5px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
     inset 0 -4px 7px rgba(16,22,18,.22), inset -3px 0 6px rgba(16,22,18,.14),
-    inset -1.5px -1.5px 1.5px rgba(255,255,255,.4);
-  color:#fff;}
-.btn.primary::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+    inset -1.5px -1.5px 1.5px rgba(255,255,255,.4);}
+.btn.primary::before, .btn.ghost-dark::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
@@ -406,7 +453,10 @@ a{color:inherit; text-decoration:none;}
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.btn.ghost-dark{background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); color:#fff; border:1px solid rgba(255,255,255,.25);}
+.btn.primary::after, .btn.ghost-dark::after{content:""; position:absolute; left:-8%; top:-35%; width:116%; height:85%;
+  background:linear-gradient(180deg, rgba(255,255,255,.8) 0%, rgba(255,255,255,.35) 38%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1px); transform:rotate(-3deg); pointer-events:none;}
+.btn.primary span, .btn.ghost-dark span{position:relative; z-index:1;}
 .price-tag b{font-size:15px;}
 
 /* ---------- quick request inline panel ---------- */
@@ -3803,8 +3853,8 @@ function coverHtml(l){
       '<h2>'+esc(l.name)+'</h2>'+
       taglineHtml(l)+
       '<div class="cover-cta">'+
-        '<button class="btn primary" data-quickreq="'+l.id+'">Contact et disponibilités</button>'+
-        '<button class="btn ghost-dark" data-open="'+l.id+'">Voir plus</button>'+
+        '<button class="btn primary" data-quickreq="'+l.id+'"><span>Contact et disponibilités</span></button>'+
+        '<button class="btn ghost-dark" data-open="'+l.id+'"><span>Voir plus</span></button>'+
       '</div>'+
     '</div>'+
   '</div>';
