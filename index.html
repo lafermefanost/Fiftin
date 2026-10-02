@@ -1373,6 +1373,15 @@ body.map-fullscreen{overflow:hidden;}
 .profile-list{display:flex; flex-direction:column; gap:2px; border-top:1px solid var(--line);}
 .profile-row{display:flex; align-items:center; justify-content:space-between; padding:15px 2px; border-bottom:1px solid var(--line); font-size:14px; font-weight:600;}
 .profile-row svg{width:16px; height:16px; opacity:.5;}
+/* Compteur "Annonces à valider" (voir loadAdminQueueCount()) — regroupé
+   avec le chevron dans .profile-row-right plutôt que 3 enfants directs
+   de .profile-row : ce dernier est justify-content:space-between, 3
+   enfants répartiraient le badge au MILIEU de la ligne au lieu de le
+   coller au chevron à droite. --danger (même rouge que les badges de
+   notification de la barre d'onglets) : signale qu'il y a quelque chose
+   à traiter, pas une simple info neutre. */
+.profile-row-right{display:flex; align-items:center; gap:8px;}
+.profile-row-badge{background:var(--danger); color:#fff; font-size:11px; font-weight:800; border-radius:10px; padding:2px 7px; min-width:9px; text-align:center;}
 .profile-switch{display:flex; gap:10px; margin-bottom:26px;}
 /* Fond plein pour les deux tuiles, quelle que soit l'active — décision
    prise puis inversée : essayé d'abord sans bordure ("la légende suffit
@@ -7624,7 +7633,7 @@ function renderProfile(){
         '<span>'+hostSub+'</span>'+
       '</button>'+
     '</div>'+
-    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div></div></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
@@ -7648,10 +7657,30 @@ function renderProfile(){
   }
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
+    loadAdminQueueCount();
   }
 }
 
 /* ---------------- validation des annonces (compte admin uniquement) ---------------- */
+/* Compteur sur la ligne "Annonces à valider" du Profil (voyageur ET hôte,
+   voir les 2 appels à loadAdminQueueCount()) — retour utilisateur :
+   "mets un compteur d'annonces en attente pour que visuellement je sache
+   tout de suite si je dois m'en occuper", plutôt que devoir ouvrir la
+   file pour savoir si elle est vide. Même requête que renderAdminQueue()
+   (simple .get(), pas d'agrégation côté serveur) : compte admin peu
+   utilisé, pas la peine d'une 2e façon de lire Firestore pour ce cas.
+   Masqué (hidden) plutôt qu'à "0" quand la file est vide — le but est de
+   signaler qu'il y a quelque chose à faire, pas d'afficher un compteur
+   greffé en permanence. */
+function loadAdminQueueCount(){
+  firebase.firestore().collection("listings").where("status","==","pending").get().then(function(snap){
+    var badge = document.getElementById("admin-queue-badge");
+    var n = snap.docs.length;
+    if(!badge || !n) return;
+    badge.textContent = String(n);
+    badge.hidden = false;
+  }).catch(function(err){ console.error("[admin] échec du comptage des annonces en attente", err); });
+}
 function renderAdminQueue(){
   var feed = document.getElementById("feed");
   feed.innerHTML = '<div class="admin-queue">'+
@@ -8148,7 +8177,7 @@ function renderHostProfile(){
         '<span>Vous y êtes</span>'+
       '</button>'+
     '</div>'+
-    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div></div></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
@@ -8174,6 +8203,7 @@ function renderHostProfile(){
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
+    loadAdminQueueCount();
   }
   wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ if(state.hostTab==="profile") renderHostProfile(); });
   resolveHostAccount(function(account){
