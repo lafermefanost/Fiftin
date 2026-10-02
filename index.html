@@ -1224,14 +1224,58 @@ body.map-fullscreen{overflow:hidden;}
    cette règle, le style disabled par défaut du navigateur l'aurait
    ternie, alors qu'elle doit rester aussi nette que l'autre tuile. */
 .switch-tile:disabled{cursor:default; opacity:1;}
-.switch-tile.voyageur{background:var(--sauge);}
-.switch-tile.hotes{background:var(--lavender-deep);}
+.switch-tile.voyageur{--tile-base:var(--sauge); background:var(--tile-base);}
+.switch-tile.hotes{--tile-base:var(--lavender-deep); background:var(--tile-base);}
 .switch-tile .switch-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-  background:rgba(255,255,255,.2); color:#fff;}
+  background:rgba(255,255,255,.2); color:#fff; position:relative; z-index:1;}
 .switch-tile .switch-icon svg{width:17px; height:17px;}
-.switch-tile .switch-label{display:flex; align-items:center; gap:5px; width:100%;}
+.switch-tile .switch-label{display:flex; align-items:center; gap:5px; width:100%; position:relative; z-index:1;}
 .switch-tile b{font-size:13.5px; font-weight:700; color:#fff;}
-.switch-tile span{font-size:11px; color:rgba(255,255,255,.8); font-weight:600; display:block; margin-top:1px;}
+.switch-tile span{font-size:11px; color:rgba(255,255,255,.8); font-weight:600; display:block; margin-top:1px;
+  position:relative; z-index:1;}
+/* Effet "verre liquide" sur la tuile active du switch Espace voyageur/
+   Espace hôtes — même recette que le logo de la page d'intro (#hero
+   .brand-logo : dégradé diagonal + box-shadow inset sur les 4 côtés +
+   anneau irisé + lumière rasante), retour utilisateur : "celle qui est
+   active doit reprendre ce même effet que tu as fait sur le logo". Le
+   dégradé est posé en 1re couche du background, --tile-base (vert ou
+   bleu selon .voyageur/.hotes, voir ci-dessus) en 2e, pour garder le
+   code couleur de chaque tuile sous le verre plutôt qu'un gris neutre.
+   position:relative+z-index:1 sur l'icône/le texte : comme pour le logo,
+   ::before/::after (position:absolute, z-index:auto) peignent sinon
+   AU-DESSUS du contenu normal du flux (règle CSS : le positionné passe
+   toujours devant le non-positionné, quel que soit l'ordre dans le DOM)
+   — repéré en marge du logo (petit glyphe, risque limité), mais ici le
+   texte est plus grand et plus exposé : à expliciter plutôt que
+   compter sur la chance. animation au montage (tileGlassIn/tileFadeIn) :
+   l'effet de transition demandé entre les deux tuiles — renderProfile()/
+   renderHostProfile() reconstruisent le DOM à chaque bascule (pas de
+   simple ajout/retrait de classe sur un nœud persistant), donc une
+   transition CSS classique ne se déclencherait jamais ; une animation
+   d'entrée, elle, rejoue à chaque nouveau montage. */
+.switch-tile{animation:tileFadeIn .35s ease-out;}
+.switch-tile.current{position:relative; overflow:hidden; border-color:transparent;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%),
+    var(--tile-base);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.5), inset 3px 0 5px rgba(255,255,255,.22),
+    inset 0 -9px 15px rgba(0,0,0,.32), inset -7px 0 13px rgba(0,0,0,.2),
+    0 8px 18px rgba(0,0,0,.18);
+  animation:tileGlassIn .5s cubic-bezier(.22,1,.36,1);}
+.switch-tile.current::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.switch-tile.current::after{content:""; position:absolute; left:-10%; top:-14%; width:120%; height:56%;
+  background:linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.32) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
+@keyframes tileFadeIn{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);}}
+@keyframes tileGlassIn{0%{opacity:0; transform:scale(.96);} 100%{opacity:1; transform:scale(1);}}
 /* Tuile qui n'est PAS l'espace actuel (marqueur .current posé par
    renderProfile()/renderHostProfile() sur l'autre tuile) : fond clair de
    la même famille de couleur + contour assorti, plutôt que le même fond
