@@ -1790,7 +1790,21 @@ body.map-fullscreen{overflow:hidden;}
    que .detail-card/.profile-card ailleurs sur le site) pour détacher la
    carte blanche du fond blanc/crème du Profil — sans elle le contour
    invisible (border:none) la faisait disparaître à plat dans la page. */
-.plan-card{background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
+/* 2 colonnes (chiffres à gauche, liste de points à droite, toutes deux
+   centrées verticalement l'une par rapport à l'autre) plutôt qu'empilées
+   — retour utilisateur : "grossir un peu les chiffres, laisser les
+   chiffres sur la moitié gauche et les points spécifiques sur la moitié
+   droite faits au centre". .plan-card-prices regroupe nom/prix/période
+   (3 div sœurs avant) en un seul bloc flex, nécessaire pour que
+   flexbox le traite comme UNE colonne plutôt que 3 lignes empilées
+   dans la rangée ; la liste de points garde son alignement à gauche en
+   interne (barre de couleur + texte) — seul le bloc entier est centré
+   dans sa moitié, pas chaque ligne individuellement (centrer le texte
+   de puces de longueurs inégales casserait l'alignement des barres de
+   couleur). */
+.plan-card{display:flex; align-items:center; gap:14px; background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.plan-card-prices{flex:1; min-width:0; text-align:center;}
+.plan-card ul{flex:1; min-width:0;}
 /* Formule active en encart vert moyen plein, typo blanche (retour
    utilisateur : "la formule sélectionnée doit être dans un encart vert
    moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
@@ -1838,9 +1852,7 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card.active::after{content:""; position:absolute; left:-10%; top:-14%; width:120%; height:56%;
   background:linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.32) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
-.plan-card.active .plan-card-name,
-.plan-card.active .plan-card-price,
-.plan-card.active .plan-card-per,
+.plan-card.active .plan-card-prices,
 .plan-card.active ul{position:relative; z-index:1;}
 .plan-card.active .plan-card-name,
 .plan-card.active .plan-card-price,
@@ -1848,8 +1860,9 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card.active li{color:#fff;}
 .plan-card.active li:nth-child(5n+1)::before{background:#fff;}
 .plan-card-name{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:8px;}
-.plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:28px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
-.plan-card-per{font-size:12px; color:var(--sauge); margin-bottom:10px;}
+/* "grossir un peu les chiffres" (retour utilisateur) — 28px -> 32px. */
+.plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:32px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
+.plan-card-per{font-size:12px; color:var(--sauge);}
 .plan-card ul{margin:0; padding:0; list-style:none;}
 .plan-card li{font-size:12.5px; line-height:1.4; padding:5px 0 5px 16px; position:relative; color:#4a4636;}
 .plan-card li::before{content:''; position:absolute; left:0; top:9px; width:4px; height:11px; border-radius:2px; background:var(--sauge-deep);}
@@ -5395,9 +5408,11 @@ function formulaCardHtml(value,name,price,desc){
    exactement comme sur fiftin app". */
 function planCardHtml(f, active){
   return '<div class="plan-card'+(active?' active':'')+'">'+
-    '<div class="plan-card-name">'+esc(f.planName)+'</div>'+
-    '<div class="plan-card-price">'+esc(f.planPrice)+'</div>'+
-    '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
+    '<div class="plan-card-prices">'+
+      '<div class="plan-card-name">'+esc(f.planName)+'</div>'+
+      '<div class="plan-card-price">'+esc(f.planPrice)+'</div>'+
+      '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
+    '</div>'+
     '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
   '</div>';
 }
