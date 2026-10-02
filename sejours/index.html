@@ -212,6 +212,19 @@ a{color:inherit; text-decoration:none;}
 .hero-menu-link svg{width:15px; height:15px; flex-shrink:0;}
 .hero-menu-link span{text-decoration:underline; text-underline-offset:3px;}
 
+/* Rebond au clic, posé dynamiquement par JS (voir l'écouteur délégué sur
+   #app, juste avant bootFirebaseAuth()) sur tout bouton de la page —
+   .click-bounce ajoutée/retirée en JS, donc définie ici une fois pour
+   toute la page plutôt que dupliquée par bouton. Amplitude modérée
+   (scale .9, pas .74 comme tabBounce) : tabBounce est réglée pour un
+   petit badge carré de 34px, ce rebond-ci s'applique à des boutons de
+   toutes tailles (puces de filtre, pastilles rondes, pleines largeur…)
+   — une amplitude pensée pour un petit badge déformerait visiblement un
+   large bouton pilule. Même courbe "back" que tabBounce pour rester dans
+   le même langage de mouvement du site. */
+@keyframes clickBounce{0%{transform:scale(.9);} 100%{transform:scale(1);}}
+.click-bounce{animation:clickBounce .28s cubic-bezier(.34,1.7,.64,1);}
+
 /* ---------- filter bar ---------- */
 /* .chrome-collapsed (voir switchTab()) remplace hidden=true/false sur
    .filters et .result-line : hidden bascule en display:none, donc
@@ -8860,6 +8873,44 @@ fetch("listings.json").then(function(r){
   listingsJsonLoaded = true;
   maybeFinishInitialLoad();
 });
+
+/* Rebond au clic sur les menus/boutons du fil (retour utilisateur : "sur
+   le fil d'annonces mettre un effet rebond sur les menus ou boutons sur
+   lesquels je clic") — délégué une seule fois sur #app (le conteneur
+   racine, jamais remplacé) plutôt que re-câblé à chaque rendu : couvre
+   tout bouton de la page, y compris ceux ajoutés par un futur rendu,
+   sans rien à retoucher. #feed SEUL ne suffit pas : les puces de filtre
+   (.chip-tap) vivent dans #filter-bar, un FRÈRE de #feed, pas un
+   descendant (vérifié dans le DOM réel) — #app est le 1er ancêtre commun
+   aux deux. #tabbar exclu : ses icônes actives ont déjà tabBounce,
+   déclenché par l'ajout de .active (pas par ce gestionnaire) — cumuler
+   les deux animerait deux fois le même scale au même clic. button (pas
+   .chip) : tous les éléments cliquables du fil/des filtres sont déjà des
+   <button> en interne (puces de filtre, cartes de collection, boutons de
+   carte-annonce…). classList.remove + reflow forcé (void el.offsetWidth)
+   avant de rajouter la classe : un keyframe ne rejoue que lorsque la
+   classe passe d'absente à présente (même logique que tabBounce/
+   .tab.active) — sans ce forçage, 2 clics rapprochés sur le même bouton
+   ne rejoueraient le rebond qu'une fois. Retirée au animationend plutôt
+   que laissée en place : évite d'accumuler des classes inertes sur des
+   boutons qui restent dans le DOM longtemps (filtres, onglets de
+   collection). Phase de CAPTURE (3e argument true), pas la bulle par
+   défaut : beaucoup de boutons du fil (cœur .save-btn, partage
+   .share-btn, actions de carte-annonce…) appellent e.stopPropagation()
+   dans leur propre gestionnaire pour empêcher un clic dessus de
+   déclencher aussi l'ouverture de la carte en dessous — ça coupe net la
+   bulle avant qu'elle n'atteigne un écouteur délégué classique sur #app.
+   En capture, ce gestionnaire s'exécute en DESCENDANT vers la cible,
+   avant le gestionnaire propre du bouton (et son stopPropagation) : il a
+   déjà tourné, insensible à ce qui se passe ensuite. */
+document.getElementById("app").addEventListener("click", function(e){
+  var btn = e.target.closest("button");
+  if(!btn || btn.closest("#tabbar")) return;
+  btn.classList.remove("click-bounce");
+  void btn.offsetWidth;
+  btn.classList.add("click-bounce");
+  btn.addEventListener("animationend", function(){ btn.classList.remove("click-bounce"); }, {once:true});
+}, true);
 
 bootFirebaseAuth();
 fetchListingIndex();
