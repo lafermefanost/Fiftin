@@ -121,24 +121,26 @@ a{color:inherit; text-decoration:none;}
    la largeur ; intensité au centre légèrement baissée (.82 au lieu
    de .95) pour ne plus cramer. Repris une 3e fois : "ça ressemble
    toujours à un spot. Ça n'est toujours pas une surface plus lumineuse."
-   — un point lumineux (même petit et net) lit comme un flash ponctuel,
-   pas comme une zone de la coque orientée vers la lumière. Sépare
-   maintenant les deux rôles que le rendu 3D distingue toujours :
-   1) une large zone ovale douce (la "surface éclairée", ~2/3 du pavé,
-   pas juste un coin) qui monte et descend en luminosité progressivement
-   — c'est elle qui doit faire lire le volume ; 2) un tout petit point
-   quasi ponctuel (le reflet spéculaire, l'éclat du verre lui-même),
-   posé dessus, nettement plus petit qu'avant. */
+   Repris une 4e fois : "toujours un point, diffus, ça ne s'adapte pas
+   assez à la forme rectangulaire arrondie" — tout cercle/ellipse centré
+   sur un point, aussi large soit-il, reste perçu comme un blob flottant
+   plutôt que comme la coque elle-même qui s'éclaircit. Abandonne les
+   radial-gradient : un seul linear-gradient diagonal (qui épouse
+   naturellement le rectangle, sans centre) porte le volume, et des
+   box-shadow inset décalées sur chacun des 4 côtés (pas en diagonal
+   depuis un coin) viennent border haut/gauche en clair et bas/droite en
+   sombre — un inset suit intrinsèquement le border-radius du pavé à ses
+   angles, donc "colle" vraiment à sa forme arrondie au lieu d'un dégradé
+   qui l'ignore. */
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 #hero .brand-logo{border:none;
-  background:radial-gradient(circle at 24% 18%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.9) 3%, rgba(255,255,255,0) 10%),
-    radial-gradient(ellipse 95% 75% at 26% 20%, rgba(255,255,255,.38) 0%, rgba(255,255,255,.2) 38%, rgba(255,255,255,.05) 62%, rgba(255,255,255,0) 82%),
-    radial-gradient(circle at 74% 80%, rgba(16,22,18,.46) 0%, rgba(16,22,18,.18) 40%, rgba(16,22,18,0) 64%),
-    linear-gradient(135deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 55%, rgba(255,255,255,.04)),
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
     rgba(29,40,32,.14);
   backdrop-filter:blur(9px) saturate(1.4);
   -webkit-backdrop-filter:blur(9px) saturate(1.4);
-  box-shadow:inset 1px 1.5px 1.5px rgba(255,255,255,.95), inset -12px -16px 22px rgba(8,13,10,.4),
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
     0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
 #hero .brand-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
   background:conic-gradient(from var(--iris-angle,0deg),
