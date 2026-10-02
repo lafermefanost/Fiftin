@@ -119,12 +119,22 @@ a{color:inherit; text-decoration:none;}
    plateau net (0→7% à opacité quasi constante) puis une chute rapide,
    plutôt qu'un dégradé continu du centre au bord qui "respire" sur toute
    la largeur ; intensité au centre légèrement baissée (.82 au lieu
-   de .95) pour ne plus cramer. */
+   de .95) pour ne plus cramer. Repris une 3e fois : "ça ressemble
+   toujours à un spot. Ça n'est toujours pas une surface plus lumineuse."
+   — un point lumineux (même petit et net) lit comme un flash ponctuel,
+   pas comme une zone de la coque orientée vers la lumière. Sépare
+   maintenant les deux rôles que le rendu 3D distingue toujours :
+   1) une large zone ovale douce (la "surface éclairée", ~2/3 du pavé,
+   pas juste un coin) qui monte et descend en luminosité progressivement
+   — c'est elle qui doit faire lire le volume ; 2) un tout petit point
+   quasi ponctuel (le reflet spéculaire, l'éclat du verre lui-même),
+   posé dessus, nettement plus petit qu'avant. */
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 #hero .brand-logo{border:none;
-  background:radial-gradient(circle at 25% 20%, rgba(255,255,255,.82) 0%, rgba(255,255,255,.7) 7%, rgba(255,255,255,.15) 15%, rgba(255,255,255,0) 24%),
+  background:radial-gradient(circle at 24% 18%, rgba(255,255,255,.9) 0%, rgba(255,255,255,.9) 3%, rgba(255,255,255,0) 10%),
+    radial-gradient(ellipse 95% 75% at 26% 20%, rgba(255,255,255,.38) 0%, rgba(255,255,255,.2) 38%, rgba(255,255,255,.05) 62%, rgba(255,255,255,0) 82%),
     radial-gradient(circle at 74% 80%, rgba(16,22,18,.46) 0%, rgba(16,22,18,.18) 40%, rgba(16,22,18,0) 64%),
-    linear-gradient(135deg, rgba(255,255,255,.14), rgba(255,255,255,.02) 55%, rgba(255,255,255,.05)),
+    linear-gradient(135deg, rgba(255,255,255,.1), rgba(255,255,255,.02) 55%, rgba(255,255,255,.04)),
     rgba(29,40,32,.14);
   backdrop-filter:blur(9px) saturate(1.4);
   -webkit-backdrop-filter:blur(9px) saturate(1.4);
