@@ -493,11 +493,17 @@ a{color:inherit; text-decoration:none;}
    environnement (dégradés plats, sans vraie texture), l'effet reste
    quasi invisible — ce n'est PAS un défaut du filtre, un dégradé lisse
    n'a simplement rien de visible à distordre. Sur une vraie photo (avec
-   du détail : lignes, matières, contrastes), l'ondulation sera visible. */
+   du détail : lignes, matières, contrastes), l'ondulation sera visible.
+   Léger flou réintroduit en plus de la distorsion (pas à la place) —
+   retour utilisateur, sur Chrome iOS (donc en fait le flou de repli,
+   WebKit sous le capot comme tout navigateur iOS — voir plus haut) :
+   "repasse juste sur un léger flou pour que les boutons se détachent un
+   peu mieux". Distorsion seule (sans flou du tout) peut rester trop
+   "nette", le bouton se fond davantage dans une photo très détaillée. */
 @supports (backdrop-filter:url(#glassDistort)){
   .save-btn, .share-btn, .pill-badge, .btn.primary, .btn.ghost-dark{
-    backdrop-filter:url(#glassDistort) saturate(1.5);
-    -webkit-backdrop-filter:url(#glassDistort) saturate(1.5);}
+    backdrop-filter:url(#glassDistort) blur(3px) saturate(1.5);
+    -webkit-backdrop-filter:url(#glassDistort) blur(3px) saturate(1.5);}
 }
 .btn.primary span, .btn.ghost-dark span{position:relative; z-index:1;}
 .price-tag b{font-size:15px;}
