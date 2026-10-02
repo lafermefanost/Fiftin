@@ -103,19 +103,23 @@ a{color:inherit; text-decoration:none;}
    tout le pavé au lieu de n'en garder que le contour. Fond assombri d'un
    voile sauge constant : sans lui, le blob jaune du mesh (centre blanc)
    passant derrière poussait le fond vers le quasi-blanc par moments,
-   rendant le "15" blanc illisible dessus (blanc sur blanc). Vignette
-   radiale sombre centrée en plus du voile uni — garantit le contraste du
-   "15" quelle que soit la couleur qui dérive derrière à cet instant,
-   plutôt que de dépendre d'un seul réglage de blur/saturate fragile. */
+   rendant le "15" blanc illisible dessus (blanc sur blanc). Éclairage
+   directionnel (catch-light haut-gauche + ombre basse-droite, au lieu
+   d'une vignette centrée symétrique) — retour utilisateur : "il manque
+   l'effet de volume... la lumière qui aide à comprendre l'arrondi, ça
+   fait flat". Une vignette concentrique ne donne aucun indice de
+   direction de lumière donc ne lit pas comme un dôme ; un fort contraste
+   d'un coin à l'autre, si. */
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 #hero .brand-logo{border:none;
-  background:radial-gradient(circle, rgba(20,28,22,.32) 0%, rgba(20,28,22,.14) 55%, rgba(20,28,22,0) 82%),
-    linear-gradient(135deg, rgba(255,255,255,.26), rgba(255,255,255,.03) 55%, rgba(255,255,255,.12)),
+  background:radial-gradient(circle at 28% 22%, rgba(255,255,255,.6) 0%, rgba(255,255,255,.22) 28%, rgba(255,255,255,0) 52%),
+    radial-gradient(circle at 74% 80%, rgba(16,22,18,.4) 0%, rgba(16,22,18,.16) 42%, rgba(16,22,18,0) 68%),
+    linear-gradient(135deg, rgba(255,255,255,.2), rgba(255,255,255,.02) 55%, rgba(255,255,255,.08)),
     rgba(29,40,32,.14);
   backdrop-filter:blur(9px) saturate(1.4);
   -webkit-backdrop-filter:blur(9px) saturate(1.4);
-  box-shadow:inset 0 1px 1px rgba(255,255,255,.6), inset 0 -10px 16px rgba(255,255,255,.08),
-    0 10px 26px rgba(29,40,32,.16);}
+  box-shadow:inset 2px 2px 2px rgba(255,255,255,.8), inset -10px -14px 20px rgba(10,16,12,.3),
+    0 10px 26px rgba(29,40,32,.2), 0 2px 6px rgba(29,40,32,.14);}
 #hero .brand-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
