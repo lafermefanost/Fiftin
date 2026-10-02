@@ -1664,7 +1664,11 @@ body.map-fullscreen{overflow:hidden;}
    de le retirer partout, pas de l'alléger encore. border:none plutôt
    que border-color:transparent : plus aucune carte n'a besoin de
    garder une largeur de bordure dont la couleur varie selon l'état. */
-.plan-card{background:#fff; border:none; border-radius:16px; padding:16px 16px;}
+/* Cartes non sélectionnées : ombre légère (0 2px 8px .12, même réglage
+   que .detail-card/.profile-card ailleurs sur le site) pour détacher la
+   carte blanche du fond blanc/crème du Profil — sans elle le contour
+   invisible (border:none) la faisait disparaître à plat dans la page. */
+.plan-card{background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
 /* Formule active en encart vert moyen plein, typo blanche (retour
    utilisateur : "la formule sélectionnée doit être dans un encart vert
    moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
@@ -1672,21 +1676,30 @@ body.map-fullscreen{overflow:hidden;}
    .coll-toggle-btn). Le premier picto de puce (--sauge-deep, un vert plus
    sombre encore) se fondrait dans ce fond : reblanchi spécifiquement ici,
    les 4 autres couleurs de puces gardent assez de contraste telles
-   quelles. Effet "verre liquide" ajouté ensuite (retour utilisateur :
-   "fais le même effet sur la carte sélectionnée") — même recette que
-   .switch-tile.current/.tab.active .tab-icon : dégradé diagonal + box-
-   shadow inset sur 2 côtés (pas d'ombre portée externe, voir le réglage
-   trouvé sur .switch-tile.current) + anneau irisé, --sauge-mid en 2e
-   couche du background sous le dégradé pour garder le vert "propriétaire".
-   position:relative+z-index:1 sur le nom/prix/période/liste : comme pour
-   le logo/les tuiles, ::before (position:absolute, z-index:auto) peint
-   sinon au-dessus du contenu normal du flux. */
+   quelles. Effet "verre liquide" repris une fois (retour utilisateur :
+   "exactement le même effet que sur l'encart sélectionné") pour matcher
+   EXACTEMENT la recette de .switch-tile.current/#hero .brand-logo, plutôt
+   que la version allégée d'origine : backdrop-filter (manquait), mêmes
+   intensités de dégradé/inset, lumière rasante ::after (manquait), et
+   ombre portée via filter:drop-shadow (une seule fonction — voir le
+   réglage trouvé sur .switch-tile.current, deux drop-shadow() empilés
+   créent un bug de coins carrés) plutôt qu'un 5e box-shadow (combiné aux
+   4 inset + overflow:hidden, ça recrée le contour sombre déjà repéré).
+   --sauge-mid reste en 2e couche du background sous le dégradé pour
+   garder le vert "propriétaire". position:relative+z-index:1 sur le nom/
+   prix/période/liste : comme pour le logo/les tuiles, ::before/::after
+   (position:absolute, z-index:auto) peignent sinon au-dessus du contenu
+   normal du flux. */
 .plan-card.active{position:relative; overflow:hidden; border:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
-      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge-mid);
-  box-shadow:inset 0 2px 3px rgba(255,255,255,.4), inset 1.5px 0 3px rgba(255,255,255,.2),
-    inset 0 -6px 11px rgba(0,0,0,.18), inset -5px 0 10px rgba(0,0,0,.11);}
-.plan-card.active::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.2px;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.26) 100%),
+    var(--sauge-mid);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(0,0,0,.38), inset -7px 0 13px rgba(0,0,0,.24);
+  filter:drop-shadow(0 9px 16px rgba(0,0,0,.25));}
+.plan-card.active::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
@@ -1695,6 +1708,9 @@ body.map-fullscreen{overflow:hidden;}
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
   opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.plan-card.active::after{content:""; position:absolute; left:-10%; top:-14%; width:120%; height:56%;
+  background:linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.32) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 .plan-card.active .plan-card-name,
 .plan-card.active .plan-card-price,
 .plan-card.active .plan-card-per,
