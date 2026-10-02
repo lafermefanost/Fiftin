@@ -1192,22 +1192,34 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    est repris. Les labels .fl, eux, restent inchangés (gris, comme sur tout
    le reste du modal) : "sauf titrage... qui doit rester comme sur le
    modal de réservation". */
-.fi.date-box{border:1.5px solid var(--light);border-radius:12px;}
+.fi.date-box,.fsel.date-box{border:1.5px solid var(--light);border-radius:12px;}
 .stepper{display:flex;align-items:center;border:1.5px solid var(--light);border-radius:12px;
   background:var(--white);overflow:hidden;width:fit-content;margin-top:4px;}
 .stepper button{background:none;border:none;width:36px;height:38px;font-size:17px;font-weight:700;
   color:var(--green);cursor:pointer;font-family:'Jost',sans-serif;}
 .stepper span{min-width:30px;text-align:center;font-weight:700;font-size:14px;color:var(--dark);}
-/* Statut de la réservation (Confirmé/Option/Annulé) : deux points de
-   couleur + Annulé, plus de <select> — retour utilisateur : "utiliser
-   plutôt deux points de couleur... plus de menu déroulant". */
-.status-dot-row{display:flex;gap:16px;flex-wrap:wrap;margin-top:4px;}
-.status-dot-btn{display:flex;align-items:center;gap:6px;background:none;border:none;
-  font-family:'Jost',sans-serif;font-size:13px;color:var(--gray);font-weight:500;cursor:pointer;padding:3px 0;}
-.status-dot-btn.on{color:var(--dark);font-weight:700;}
+/* Statut de la réservation (Confirmé/Option) : deux points de couleur,
+   plus de <select> — retour utilisateur : "utiliser plutôt deux points
+   de couleur... plus de menu déroulant". Le bouton actif prend un
+   contour (var(--sdc), posé en inline-style par bouton) de la couleur
+   de son point pour rester lisible une fois les deux au même poids de
+   texte (retour utilisateur : "encart contour"). */
+.status-dot-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px;}
+.status-dot-btn{display:flex;align-items:center;gap:6px;background:none;
+  border:1.5px solid transparent;border-radius:20px;padding:5px 12px;
+  font-family:'Jost',sans-serif;font-size:13px;color:var(--gray);font-weight:500;cursor:pointer;}
+.status-dot-btn.on{color:var(--dark);font-weight:700;border-color:var(--sdc);}
 .status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.4;}
 .status-dot-btn.on .status-dot{opacity:1;}
 .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
+/* Homogénéise les encarts du modal de réservation : les 3 styles
+   présents (pilule, rectangle peu arrondi, rectangle très arrondi)
+   deviennent 2 — tout ce qui était "peu arrondi" (.fi/.fsel à 6px de
+   base, la carte client sélectionné, le pavé de reprise de chambre
+   libre) passe au même arrondi que les dates/le stepper (12px). Scopé
+   à #modalBooking pour ne pas changer les autres modales (Client,
+   Événement…) qui n'étaient pas concernées par ce retour. */
+#modalBooking .fi,#modalBooking .fsel,#modalBooking .gsel-card{border-radius:12px;}
 
 .macts{display:flex;gap:8px;margin-top:18px;padding-top:14px;border-top:1px solid var(--light);}
 .btn-p{flex:1;padding:11px;background:var(--green);color:var(--white);border:none;
@@ -1830,36 +1842,74 @@ Gardez la main.</div>
            utilisateur — déplacé ici depuis Services ("il est maintenant
            présent uniquement dans la partie séjour, c'est plus logique"),
            remplace l'ancien sélecteur à 5 boutons ronds (voir setPax()). -->
-      <div class="fg">
-        <label class="fl">Voyageurs</label>
-        <div class="stepper">
-          <button type="button" onclick="stepPax(-1)">−</button>
-          <span id="paxCount">1</span>
-          <button type="button" onclick="stepPax(1)">+</button>
+      <!-- Voyageurs + Heure d'arrivée côte à côte (retour utilisateur) ;
+           Heure d'arrivée en <select> plutôt qu'en texte libre — un
+           <select> s'ouvre nativement comme une roulette sur mobile (iOS),
+           bien plus simple à remplir qu'un clavier texte. Les anciennes
+           valeurs libres qui ne correspondent à aucun créneau sont
+           réinjectées comme option supplémentaire par openEditModal, pour
+           ne rien perdre des résas déjà enregistrées avant ce changement. -->
+      <div class="frow">
+        <div class="fg">
+          <label class="fl">Voyageurs</label>
+          <div class="stepper">
+            <button type="button" onclick="stepPax(-1)">−</button>
+            <span id="paxCount">1</span>
+            <button type="button" onclick="stepPax(1)">+</button>
+          </div>
+          <input type="hidden" id="bPersons" value="1">
         </div>
-        <input type="hidden" id="bPersons" value="1">
-      </div>
-      <div class="fg">
-        <label class="fl">Heure d'arrivée</label>
-        <input type="text" class="fi" id="bTime" placeholder="18h, 23h…">
+        <div class="fg">
+          <label class="fl">Heure d'arrivée</label>
+          <select class="fsel date-box" id="bTime">
+            <option value="">Non précisée</option>
+            <option value="12h">12h</option>
+            <option value="12h30">12h30</option>
+            <option value="13h">13h</option>
+            <option value="13h30">13h30</option>
+            <option value="14h">14h</option>
+            <option value="14h30">14h30</option>
+            <option value="15h">15h</option>
+            <option value="15h30">15h30</option>
+            <option value="16h">16h</option>
+            <option value="16h30">16h30</option>
+            <option value="17h">17h</option>
+            <option value="17h30">17h30</option>
+            <option value="18h">18h</option>
+            <option value="18h30">18h30</option>
+            <option value="19h">19h</option>
+            <option value="19h30">19h30</option>
+            <option value="20h">20h</option>
+            <option value="20h30">20h30</option>
+            <option value="21h">21h</option>
+            <option value="21h30">21h30</option>
+            <option value="22h">22h</option>
+            <option value="22h30">22h30</option>
+            <option value="23h">23h</option>
+            <option value="23h30">23h30</option>
+          </select>
+        </div>
       </div>
       <!-- Statut (de la réservation, pas du paiement) : deux points de
            couleur, plus de <select> (retour utilisateur : "utiliser
            plutôt deux points de couleur... plus de menu déroulant").
            Pas de 3e point "Annulé" : annuler une résa se fait en la
-           supprimant (bouton Supprimer), pas via ce statut. -->
+           supprimant (bouton Supprimer), pas via ce statut. Le bouton
+           actif prend un contour de la couleur de son point (retour
+           utilisateur : "rendre plus lisible celui qui est sélectionné :
+           peut-être dans un encart contour"). -->
       <div class="fg">
         <label class="fl">Statut</label>
         <div class="status-dot-row">
-          <button type="button" class="status-dot-btn" id="bstatus-ok" onclick="setBStatus('ok')"><span class="status-dot" style="background:#4CAF50"></span>Confirmé</button>
-          <button type="button" class="status-dot-btn" id="bstatus-opt" onclick="setBStatus('opt')"><span class="status-dot" style="background:#D98A3D"></span>Option</button>
+          <button type="button" class="status-dot-btn" id="bstatus-ok" style="--sdc:#4CAF50" onclick="setBStatus('ok')"><span class="status-dot" style="background:#4CAF50"></span>Confirmé</button>
+          <button type="button" class="status-dot-btn" id="bstatus-opt" style="--sdc:#D98A3D" onclick="setBStatus('opt')"><span class="status-dot" style="background:#D98A3D"></span>Option</button>
         </div>
         <input type="hidden" id="bStatus" value="ok">
       </div>
       <div class="warn" id="conflictWarn" style="display:none">
         ⚠️ Cette chambre est déjà prise sur ces dates
       </div>
-      <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:8px;padding:10px 12px;"></div>
+      <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:12px;padding:10px 12px;"></div>
       <!-- Notes : déplacées ici depuis leur propre section (retour
            utilisateur : "intègre note directement dans séjour juste avant
            générer le contrat"). -->
@@ -1882,15 +1932,17 @@ Gardez la main.</div>
         <label class="fl">Petit-déjeuner — nuits du séjour <span style="color:var(--gray);font-weight:400">(inclus par défaut)</span></label>
         <div id="breakfastList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
       </div>
-      <div class="fg" id="dinnerListFg" style="display:none">
+      <div class="fg" id="dinnerListFg" style="display:none;margin-top:10px">
         <label class="fl">Table d'hôtes — soirs du séjour</label>
         <div id="dinnerList" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px"></div>
       </div>
       <!-- Consommations : n'est plus une section à part (retour utilisateur),
            devient une sous-partie de Services au même titre que Petit-déj/
            Table d'hôtes — même id bExtrasSec, même bascule block/none
-           (voir renderModalExtras()), juste .fg au lieu de .msec. -->
-      <div class="fg" id="bExtrasSec" style="display:none">
+           (voir renderModalExtras()), juste .fg au lieu de .msec. Marge
+           supplémentaire sur ces 2 sous-parties (retour utilisateur :
+           "un peu plus d'espace... pour laisser respirer"). -->
+      <div class="fg" id="bExtrasSec" style="display:none;margin-top:10px">
         <label class="fl">Consommations</label>
         <div id="bExtrasDayTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
         <div id="bExtrasDayBody"></div>
@@ -4591,7 +4643,7 @@ function openAddModal(roomId,ds,dsOut){
   const ci=ds||todayISO();
   byId('bIn').value=ci;
   byId('bOut').value=dsOut||addDays(ci,1);
-  byId('bTime').value='';
+  setBTime('');
   setBStatus('ok');
   setPax(1);
   byId('bNotes').value='';
@@ -4637,7 +4689,7 @@ function openEditModal(id,clickedDay){
   byId('bRoom').value=b.roomId;
   byId('bIn').value=b.checkIn;
   byId('bOut').value=b.checkOut;
-  byId('bTime').value=b.arrivalTime||'';
+  setBTime(b.arrivalTime||'');
   setBStatus(b.status||'ok');
   setPax(b.nbPersons||2);
   byId('bNotes').value=b.notes||'';
@@ -4730,6 +4782,21 @@ function setBStatus(v){
     const btn=byId('bstatus-'+s);
     if(btn)btn.classList.toggle('on',s===v);
   });
+}
+
+// Heure d'arrivée (<select>, voir #bTime) : si la valeur enregistrée ne
+// correspond à aucun créneau proposé (résa créée avant ce changement,
+// avec un texte libre type "18h, 23h"), on la réinjecte comme option
+// supplémentaire plutôt que de la faire silencieusement disparaître.
+function setBTime(v){
+  const sel=byId('bTime');
+  sel.value=v;
+  if(sel.value!==v){
+    const opt=document.createElement('option');
+    opt.value=v;opt.textContent=v;
+    sel.insertBefore(opt,sel.firstChild.nextSibling);
+    sel.value=v;
+  }
 }
 
 function filterGuests(val){
