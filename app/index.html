@@ -1342,11 +1342,44 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   flex-direction:column;align-items:center;justify-content:center;gap:2px;
   font-family:'Jost',sans-serif;font-size:9px;color:var(--gray);cursor:pointer;
   letter-spacing:.03em;text-transform:uppercase;}
-/* Nav sélectionnée : fond vert moyen plein (comme les bandeaux principaux,
-   voir tokens --green) plutôt que lavande — la lavande est désormais
-   réservée à l'assistant et aux onglets liés aux événements. */
-.mbnav-btn.on{color:#fff;background:var(--green);border-radius:10px;}
-.mbnav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
+/* Nav sélectionnée : vert moyen (--green) — la lavande est désormais
+   réservée à l'assistant et aux onglets liés aux événements.
+   Encart carré façon icône d'appli mobile autour du seul pictogramme
+   (retour utilisateur : "arrange les pictos pour que les rectangles
+   soient plutôt des carrés bords arrondis, comme une app"), plutôt que
+   le rectangle plein bord à bord d'avant (background/border-radius sur
+   .mbnav-btn.on, qui suivait la largeur flex du bouton = rectangle, pas
+   carré) — même principe que .tab-icon côté fiftin.fr/sejours
+   (voir son commentaire : "contrairement à app/ où .mbnav-btn.on colore
+   tout le bouton"), le libellé reste hors de l'encart, coloré seul. */
+.mbnav-btn.on{color:var(--green);}
+.mbnav-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+/* Effet "verre liquide" (même recette que .tab-icon côté fiftin.fr/
+   sejours — dégradé diagonal + box-shadow inset 2 côtés + anneau irisé
+   conique, voir sa propre justification là-bas) appliqué ici sur
+   l'encart carré désormais détaché du bouton. --green2 (déjà utilisé
+   comme fond de #lockScreen/#siteGate plus haut dans ce fichier) joue le
+   rôle de --sauge-light dans la 3e teinte de l'anneau — même convention
+   que sur .logo-tile juste au-dessus. --iris-angle/@keyframes irisSpin
+   déjà déclarés une fois pour .logo-tile, réutilisés ici ; tabBounce
+   (rebond au clic) n'existait pas encore dans ce fichier, déclaré ici. */
+@keyframes tabBounce{from{transform:scale(.74);} to{transform:scale(1);}}
+.mbnav-btn.on .mbnav-icon{position:relative; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--green);
+  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 1px 0 2px rgba(255,255,255,.25),
+    inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);
+  animation:tabBounce .38s cubic-bezier(.34,1.7,.64,1);}
+.mbnav-btn.on .mbnav-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green2) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.mbnav-btn.on .mbnav-icon svg{stroke:#fff; position:relative; z-index:1;}
 
 @media(max-width:599px){
   .mbnav{display:flex;}
