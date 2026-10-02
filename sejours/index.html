@@ -926,20 +926,27 @@ nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 
    sheets/modales (.sheet-backdrop, 150) sur les autres écrans (espace
    hôte notamment), où nav.tabbar doit rester en dessous comme avant. */
 body.detail-open nav.tabbar{z-index:220;}
-/* Bouton "revenir à la carte" (retour utilisateur : "il y aurait un p'tit
-   bouton permanent pour y revenir") — la carte est désormais en tête du
-   fil Explorer (voir .explore-map-block), potentiellement loin au-dessus
-   une fois qu'on a défilé dans les annonces ; ce bouton fixe, toujours
-   affiché tant qu'on est sur Explorer (masqué sinon, voir switchTab()),
-   ramène directement à elle. z-index sous nav.tabbar (50) : les deux ne se
-   chevauchent jamais à l'écran (positionné juste au-dessus de la barre),
-   pas besoin de rivaliser avec elle.
+/* Bouton "carte" fixe (retour utilisateur : "il y aurait un p'tit bouton
+   permanent pour y revenir") — la carte est désormais en tête du fil
+   Explorer (voir .explore-map-block), potentiellement loin au-dessus une
+   fois qu'on a défilé dans les annonces ; ce bouton fixe, toujours
+   affiché tant qu'on est sur Explorer (masqué sinon, voir switchTab()).
    78px de marge basse, retour utilisateur ensuite : trop juste sur un
    appareil avec indicateur d'accueil (nav.tabbar ~112px de haut une fois
    son propre safe-area-inset-bottom ajouté), le bouton touchait
    pratiquement la barre au lieu de rester nettement au-dessus — remonté
-   à 104px, avec une vraie marge visible cette fois. */
-.map-back-btn{position:fixed; right:14px; bottom:calc(104px + env(safe-area-inset-bottom, 0px)); z-index:40;
+   à 104px, avec une vraie marge visible cette fois.
+   Remplace désormais aussi #map-expand-btn, supprimé (retour utilisateur :
+   "le bouton carte remplace complètement le bouton agrandir en haut à
+   gauche de la carte. Il ouvre au clic et referme au click. Et il reste
+   au même endroit sur le fil d'annonces, il ne remonte pas tout en haut")
+   — un seul bouton bascule l'ouverture/fermeture de la carte en plein
+   écran, voir son câblage JS. z-index remonté à 45 (au lieu de 40, sous
+   nav.tabbar à 50 toujours) : .map-canvas.expanded est elle aussi à 40 —
+   à égalité, ce bouton (plus ancien dans le DOM que la carte, insérée
+   dynamiquement par renderFeed()) se serait retrouvé caché DESSOUS la
+   carte en plein écran, impossible à recliquer pour refermer. */
+.map-back-btn{position:fixed; right:14px; bottom:calc(104px + env(safe-area-inset-bottom, 0px)); z-index:45;
   width:44px; height:44px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;}
 .map-back-btn[hidden]{display:none;}
@@ -1125,10 +1132,6 @@ body.map-fullscreen{overflow:hidden;}
 .map-pin-thumb-empty{width:100%; height:86px; background:var(--cream-deep);}
 .map-pin-thumb-name{font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700; color:var(--ink);
   padding:6px 8px; line-height:1.25; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-.map-expand-btn{position:absolute; top:12px; left:12px; z-index:1000; width:34px; height:34px; border-radius:50%;
-  background:var(--cream); border:1.5px solid var(--line); box-shadow:0 3px 8px rgba(0,0,0,.18);
-  display:flex; align-items:center; justify-content:center; color:var(--ink);}
-.map-expand-btn svg{width:16px; height:16px;}
 .map-zone-btn{position:absolute; top:12px; right:12px; z-index:1000; background:var(--cream); border:1.5px solid var(--line);
   border-radius:16px; padding:9px 14px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--ink);
   box-shadow:0 3px 8px rgba(0,0,0,.18);}
@@ -2221,7 +2224,7 @@ try{ if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('s
   <div class="fade-edge fade-edge-top" aria-hidden="true"></div>
   <div class="fade-edge fade-edge-bottom" aria-hidden="true"></div>
 
-  <button type="button" class="map-back-btn" id="map-back-btn" hidden aria-label="Revenir à la carte">
+  <button type="button" class="map-back-btn" id="map-back-btn" hidden aria-label="Afficher la carte">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>
   </button>
 
@@ -7429,7 +7432,6 @@ function exploreMapBlockHtml(){
   '</div>' : '';
   return '<div class="explore-map-block">'+
     '<div class="map-canvas'+(mapExpanded?' expanded':'')+'" id="map-canvas">'+
-      '<button type="button" class="map-expand-btn" id="map-expand-btn" aria-label="'+(mapExpanded?"Réduire la carte":"Agrandir la carte")+'">'+MAP_EXPAND_ICON(mapExpanded)+'</button>'+
       '<button type="button" class="map-zone-btn'+(mapZoneArmed?' armed':'')+'" id="map-zone-btn">'+
         (mapZoneArmed ? "Touchez la carte pour choisir un lieu…" : (hasZone ? "Déplacer le repère" : "Choisir un lieu sur la carte"))+
       '</button>'+
@@ -7437,15 +7439,19 @@ function exploreMapBlockHtml(){
     '</div>'+
   '</div>';
 }
-/* Deux flèches diagonales, sens inversé selon l'état — même geste visuel
-   qu'un "plein écran"/"réduire" classique, sans les faux-airs de vidéo qui
-   viendraient d'une icône plein écran toute faite. Fonction plutôt que
-   deux constantes : réutilisée à l'identique par wireExploreMap() pour
-   rafraîchir juste l'icône au clic, sans reconstruire tout le bloc carte. */
-function MAP_EXPAND_ICON(expanded){
+/* Icône de #map-back-btn selon l'état — picto carte (même tracé que le
+   SVG statique d'origine du bouton, voir le <body>) fermé, croix simple
+   ouvert. Remplace l'ancien MAP_EXPAND_ICON()/#map-expand-btn, supprimé
+   (retour utilisateur : "le bouton carte remplace complètement le bouton
+   agrandir… il ouvre au clic et referme au click") — un seul bouton,
+   une seule icône à bascule, plutôt que deux boutons séparés avec chacun
+   la leur. Fonction plutôt que deux constantes : réutilisée à l'identique
+   par setMapExpanded() pour rafraîchir juste l'icône au clic, sans
+   reconstruire tout le bloc carte. */
+function MAP_BACK_ICON(expanded){
   return expanded
-    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>'
-    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H3v6M21 9V3h-6M3 15v6h6M15 21h6v-6"/></svg>';
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3z"/><path d="M9 4v13M15 7v13"/></svg>';
 }
 
 /* Calcule et pose (ou retire) les décalages top/bottom du plein écran de
@@ -7470,21 +7476,18 @@ function applyMapFullscreenOffsets(canvas, on){
   // l'emporte de toute façon sur la règle CSS .map-canvas{height:240px}.
   canvas.style.height = Math.max(0, window.innerHeight-topPx-bottomPx)+"px";
 }
-/* Bascule le plein écran de la carte — factorisé pour être appelé à la
-   fois par #map-expand-btn (bascule manuelle) et par #map-back-btn (retour
-   utilisateur : "quand je clique sur le picto carte, j'aimerais que ça
-   m'amène directement la carte en full screen"), avec le même calcul
-   d'offsets et la même icône dans les deux cas. */
+/* Bascule le plein écran de la carte — appelée par le clic sur
+   #map-back-btn (seul déclencheur désormais, voir son câblage JS). */
 function setMapExpanded(expanded){
   mapExpanded = expanded;
   var canvas = document.getElementById("map-canvas");
   if(!canvas) return;
   canvas.classList.toggle("expanded", expanded);
   applyMapFullscreenOffsets(canvas, expanded);
-  var btn = document.getElementById("map-expand-btn");
+  var btn = document.getElementById("map-back-btn");
   if(btn){
-    btn.setAttribute("aria-label", expanded ? "Réduire la carte" : "Agrandir la carte");
-    btn.innerHTML = MAP_EXPAND_ICON(expanded);
+    btn.setAttribute("aria-label", expanded ? "Fermer la carte" : "Afficher la carte");
+    btn.innerHTML = MAP_BACK_ICON(expanded);
   }
   // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
   // (voir .map-canvas), Leaflet doit attendre qu'elle soit terminée pour
@@ -7500,9 +7503,10 @@ function setMapExpanded(expanded){
    Carte : perte du zoom/pan à chaque renderFeed() complet — filtre changé,
    tri, etc. — mais PAS sur un simple cœur cliqué sur Explorer, voir
    wireFeedEvents()/data-like, qui évite précisément cet appel, NI sur
-   agrandir/réduire la carte, voir #map-expand-btn plus bas, qui évite
-   spécifiquement un renderFeed() pour ne jamais faire sauter le zoom/pan
-   en cours juste pour donner plus de place à la même vue). */
+   agrandir/réduire la carte, voir #map-back-btn plus bas (câblé une seule
+   fois, hors de cette fonction), qui évite spécifiquement un renderFeed()
+   pour ne jamais faire sauter le zoom/pan en cours juste pour donner plus
+   de place à la même vue). */
 function wireExploreMap(){
   var f = state.filters;
   // Réappliquée à chaque (re)montage du bloc carte (renderFeed(), ex.
@@ -7511,21 +7515,6 @@ function wireExploreMap(){
   // styles top/bottom posés en JS sur l'ancien élément, détruit avec lui.
   var mapCanvasEl = document.getElementById("map-canvas");
   if(mapCanvasEl) applyMapFullscreenOffsets(mapCanvasEl, mapExpanded);
-
-  document.getElementById("map-expand-btn").addEventListener("click", function(){
-    // Retour utilisateur : "lorsqu'on n'est pas descendu en position
-    // définitive pour les menus du haut et du bas (en venant de la page
-    // commerciale), l'ouverture en grand de la carte crée un bug" —
-    // .filters (position:sticky) n'est "collé" en haut qu'une fois défilé
-    // au moins jusqu'à sa position naturelle ; tant que le hero plein écran
-    // du tout premier chargement n'a pas été dépassé, applyMapFullscreenOffsets()
-    // mesurait .filters bien plus bas que sa position réelle une fois
-    // collée, et calculait un top/bottom faux. scrollIntoView SANS
-    // "smooth" : la lecture de position juste après doit refléter le
-    // nouveau scroll immédiatement, pas un état intermédiaire d'animation.
-    if(!mapExpanded) document.getElementById("map-canvas").scrollIntoView({block:"start"});
-    setMapExpanded(!mapExpanded);
-  });
 
   document.getElementById("map-zone-btn").addEventListener("click", function(){
     mapZoneArmed = !f.zoneOrigin || !mapZoneArmed;
@@ -7570,8 +7559,9 @@ function wireExploreMap(){
   // zoomControl:false puis L.control.zoom() posé en bas à gauche à la main
   // (retour utilisateur : "il y'a le + et - de la carte qui passe dessus")
   // — Leaflet pose son +/- par défaut en haut à gauche, exactement sous
-  // #map-expand-btn (même coin, voir sa CSS) : les deux se chevauchaient.
-  // Aucun autre contrôle en bas, coin libre.
+  // l'ex-#map-expand-btn (coin aujourd'hui libre, voir #map-back-btn qui
+  // l'a remplacé) : les deux se chevauchaient. Aucun autre contrôle en
+  // bas, coin libre.
   mapInstance = L.map("map-canvas", {attributionControl:true, zoomControl:false});
   L.control.zoom({position:"bottomleft"}).addTo(mapInstance);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -8751,22 +8741,21 @@ function submitDeleteBooking(){
 document.getElementById("hero-scroll-btn").addEventListener("click", function(){
   document.querySelector(".filters").scrollIntoView({behavior:"smooth", block:"start"});
 });
-/* Bouton fixe "revenir à la carte" (voir .map-back-btn en CSS) — élément
-   statique du squelette HTML, câblé une seule fois ici plutôt que recâblé
-   à chaque renderFeed() ; .map-canvas est toujours présent quand ce bouton
-   est visible (uniquement affiché sur Explorer, voir switchTab()), sauf
+/* Bouton fixe "carte" (voir .map-back-btn en CSS) — élément statique du
+   squelette HTML, câblé une seule fois ici plutôt que recâblé à chaque
+   renderFeed() ; .map-canvas est toujours présent quand ce bouton est
+   visible (uniquement affiché sur Explorer, voir switchTab()), sauf
    pendant le tout premier "Chargement…" avant que renderFeed() n'ait posé
-   la carte — querySelector renvoie alors null, d'où la garde. Retour
-   utilisateur : "dans le fil, quand je clique sur le picto carte,
-   j'aimerais que ça m'amène directement la carte en full screen" — scroll
-   SANS "smooth" (comme #map-expand-btn, voir son commentaire) pour que
-   setMapExpanded(), juste après, mesure .filters déjà "collé" plutôt
-   qu'un état intermédiaire d'animation. */
+   la carte — querySelector renvoie alors null, d'où la garde. Remplace
+   désormais aussi l'ancien #map-expand-btn (retour utilisateur : "le
+   bouton carte remplace complètement le bouton agrandir… il ouvre au
+   clic et referme au click. Et il reste au même endroit sur le fil
+   d'annonces, il ne remonte pas tout en haut") : simple bascule, sans
+   scrollIntoView — .map-canvas.expanded est en position:fixed, son
+   plein écran ne dépend donc pas du scroll courant. */
 document.getElementById("map-back-btn").addEventListener("click", function(){
-  var mc = document.querySelector(".map-canvas");
-  if(!mc) return;
-  mc.scrollIntoView({block:"start"});
-  setMapExpanded(true);
+  if(!document.querySelector(".map-canvas")) return;
+  setMapExpanded(!mapExpanded);
 });
 
 
