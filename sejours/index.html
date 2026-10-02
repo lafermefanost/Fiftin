@@ -1285,12 +1285,16 @@ body.map-fullscreen{overflow:hidden;}
    vert moyen, pas un vert pâle — à côté du --lavender-bg très clair de
    l'autre tuile, le duo paraissait déséquilibré/terne (retour
    utilisateur). --sauge-bg mélange --sauge à ~13% sur blanc, même
-   dérivation que --lavender-bg à partir de --lavender-deep. */
-.switch-tile.voyageur:not(.current){background:var(--sauge-bg); border-color:var(--sauge);}
+   dérivation que --lavender-bg à partir de --lavender-deep. Contour en
+   rgba (pas var(--sauge)/var(--lavender-deep) plein) — retour
+   utilisateur : "le contour de ces deux encarts beaucoup plus discret/
+   transparent" : même teinte, juste très atténuée, plutôt qu'un trait
+   plein saturé qui tranchait trop sur le fond clair de la tuile. */
+.switch-tile.voyageur:not(.current){background:var(--sauge-bg); border-color:rgba(53,75,56,.35);}
 .switch-tile.voyageur:not(.current) b{color:var(--sauge-deep);}
 .switch-tile.voyageur:not(.current) span{color:var(--sauge-mid);}
 .switch-tile.voyageur:not(.current) .switch-icon{background:rgba(53,75,56,.14); color:var(--sauge-deep);}
-.switch-tile.hotes:not(.current){background:var(--lavender-bg); border-color:var(--lavender-deep);}
+.switch-tile.hotes:not(.current){background:var(--lavender-bg); border-color:rgba(78,103,188,.35);}
 .switch-tile.hotes:not(.current) b{color:var(--lavender-deep);}
 .switch-tile.hotes:not(.current) span{color:var(--lavender-icon);}
 .switch-tile.hotes:not(.current) .switch-icon{background:rgba(78,103,188,.14); color:var(--lavender-deep);}
@@ -1582,7 +1586,12 @@ body.map-fullscreen{overflow:hidden;}
    reste celle du sélecteur cliquable à l'inscription (formulaCardHtml()),
    jamais touchée ici pour ne pas la faire régresser. */
 .plan-card-list{display:flex; flex-direction:column; gap:14px; margin-bottom:16px;}
-.plan-card{background:#fff; border:1.5px solid var(--line); border-radius:20px; padding:22px 20px;}
+/* border plus discret que var(--line) (déjà peu opaque, .14, mais
+   encore visible contre le fond blanc de la carte) — retour
+   utilisateur : "le contour de ces deux encarts beaucoup plus discret/
+   transparent", aux côtés du même retour sur les tuiles du switch
+   voyageur/hôtes juste au-dessus. */
+.plan-card{background:#fff; border:1.5px solid rgba(46,43,34,.07); border-radius:20px; padding:22px 20px;}
 /* Formule active en encart vert moyen plein, typo blanche (retour
    utilisateur : "la formule sélectionnée doit être dans un encart vert
    moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
