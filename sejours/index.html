@@ -415,7 +415,12 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    filtre et fiche, sans dupliquer la règle CSS à deux endroits. */
 .amenity-chip{border:1.5px solid var(--line); border-radius:16px; padding:10px 12px; font-size:12.5px; font-weight:600;
   color:var(--lavender-deep); display:flex; align-items:center; gap:8px;}
-.amenity-chip.active{background:var(--lavender-deep); color:#fff; border-color:var(--lavender-deep);}
+/* Retour utilisateur : "un peu violents en plein" — l'aplat lavande plein
+   (ancienne version) remplacé par un simple contour plus marqué ; la
+   couleur du texte restait déjà lavande à l'état inactif (voir plus haut),
+   border-width (au lieu de border-color seule) différencie donc l'état
+   coché du non coché, pas juste un remplissage en plus. */
+.amenity-chip.active{background:none; color:var(--lavender-deep); border-color:var(--lavender-deep); border-width:2px;}
 .amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
 .region-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
 .region-chip{border:1.5px solid var(--line); border-radius:16px; padding:9px 14px; font-size:12.5px; font-weight:600;
