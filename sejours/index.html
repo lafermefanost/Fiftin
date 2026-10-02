@@ -8086,11 +8086,10 @@ function wireAccountAvatar(avatarId, inputId, afterUpdate){
       return uploadPhotoFiles(files, authState.uid, "hote", "Envoi de votre photo…");
     }).then(function(res){
       uploadedUrl = res.urls[0];
-      if(!uploadedUrl) return null;
+      if(!uploadedUrl) throw new Error("L'envoi n'a renvoyé aucune image.");
       return firebase.firestore().collection("hostProfiles").doc(authState.uid)
         .set({photoUrl:uploadedUrl, updated:new Date().toISOString()}, {merge:true});
     }).then(function(){
-      if(!uploadedUrl) return;
       ensureHostListingsLoaded(function(list){
         if(!list.length) return;
         var batch = firebase.firestore().batch();
@@ -8098,8 +8097,22 @@ function wireAccountAvatar(avatarId, inputId, afterUpdate){
         batch.commit().then(function(){ hostListingsCache = []; });
       });
       afterUpdate();
-    }).catch(function(){
+    }).catch(function(err){
+      // Retour utilisateur : "je peux ajouter mais rien ne semble
+      // s'enregistrer. Ça bug et je n'ai rien au final qui reste dans le
+      // rond" — cet échec restait 100% silencieux (juste l'opacité qui
+      // revenait à la normale, sans un seul indice de ce qui avait raté :
+      // upload Storage échoué, écriture Firestore refusée par les règles
+      // de sécurité, etc.). alert() + console.error (même traitement que
+      // les autres échecs d'upload de l'app, voir plus haut) au lieu de
+      // rien : au minimum visible/diagnosticable au prochain échec, plutôt
+      // qu'un rond qui redevient vide sans explication. !uploadedUrl
+      // (upload "réussi" sans URL exploitable) traité comme une vraie
+      // erreur (throw) au lieu de retourner silencieusement : ancien code,
+      // ce cas-là ne réinitialisait même pas l'opacité.
+      console.error("[profil] échec de l'envoi de la photo", err);
       avatarEl.style.opacity = "";
+      alert("Erreur lors de l'envoi de la photo : "+((err && (err.message||err.code)) || "réessayez."));
     });
   });
 }
