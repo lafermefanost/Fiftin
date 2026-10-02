@@ -386,9 +386,18 @@ a{color:inherit; text-decoration:none;}
    lumière rasante ::after ni d'ombre portée séparée, bouton trop fin pour
    ces 2 détails (même choix que .tab.active .tab-icon, 34px). border:none,
    remplacé par l'anneau ::before — --iris-angle/@keyframes irisSpin déjà
-   déclarés une fois pour #hero .brand-logo, réutilisés ici. */
+   déclarés une fois pour #hero .brand-logo, réutilisés ici.
+   Point milieu du dégradé (48%) retouché — retour utilisateur : "on ne
+   sent pas beaucoup le côté glass qui rend la couleur un peu plus
+   intense dans les tons moyens". Ce point était quasi transparent
+   (rgba(255,255,255,.04)), laissant voir le jaune plat sans "corps" de
+   verre. Remplacé par un ambre saturé (rgba(201,152,10,.35)) : au lieu
+   d'un simple passage neutre entre le reflet clair et l'ombre, les tons
+   moyens prennent une teinte plus dense/saturée que le jaune environnant
+   — l'effet loupe/concentration de couleur d'un vrai verre épais, plutôt
+   qu'une vitre neutre. */
 .btn.primary{position:relative; overflow:hidden; border:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(201,152,10,.35) 48%,
       rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
     var(--yellow);
   box-shadow:inset 0 1.5px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
