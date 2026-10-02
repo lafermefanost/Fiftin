@@ -847,8 +847,20 @@ body.detail-open nav.tabbar{z-index:220;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
 .tab.active{color:var(--sauge-deep);}
-.tab.active .tab-icon{background:var(--sauge);}
-.tab.active .tab-icon svg{fill:var(--cream); stroke:var(--cream);}
+/* Effet "verre liquide" adapté au petit format (34px) — retour
+   utilisateur : "adapter un peu cet effet sur les menus du footer".
+   Reprend juste le cœur de la recette (dégradé diagonal + box-shadow
+   inset sur 2 côtés, sans ombre portée externe — voir le réglage trouvé
+   sur .switch-tile.current) ; pas d'anneau irisé ni de lumière rasante
+   ici, surface trop petite pour les faire lire proprement à côté du
+   pictogramme. Le vert/bleu propriétaire (var(--sauge)/--lavender-deep)
+   reste la 2e couche du background, sous le dégradé. */
+.tab.active .tab-icon{position:relative; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge);
+  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 1px 0 2px rgba(255,255,255,.25),
+    inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);}
+.tab.active .tab-icon svg{fill:var(--cream); stroke:var(--cream); position:relative; z-index:1;}
 /* Espace hôtes (nav.tabbar.host-mode, voir renderTabbar()) : même
    mécanique de sélection carrée que côté voyageur, mais en lavande
    --lavender-deep — la couleur de l'encart "Espace hôtes" du Profil
@@ -857,7 +869,9 @@ body.detail-open nav.tabbar{z-index:220;}
    qu'on est dans l'espace hôte, pas dans l'espace voyageur. */
 .tabbar.host-mode .tab{color:var(--lavender-icon);}
 .tabbar.host-mode .tab.active{color:var(--lavender-deep);}
-.tabbar.host-mode .tab.active .tab-icon{background:var(--lavender-deep);}
+.tabbar.host-mode .tab.active .tab-icon{
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--lavender-deep);}
 .tab .badge{position:absolute; top:2px; right:22%; background:var(--danger); color:#fff; font-size:9px; font-weight:800;
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
