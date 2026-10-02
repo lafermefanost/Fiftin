@@ -859,11 +859,23 @@ body.detail-open nav.tabbar{z-index:220;}
    plus fin (1px au lieu de 1.3-1.4px) proportionné à 34px. Le vert/bleu
    propriétaire (var(--sauge)/--lavender-deep) reste la 2e couche du
    background, sous le dégradé. */
+/* Rebond au clic (retour utilisateur : "lorsqu'on clique sur un menu il
+   faudrait peut-être une espèce de rebond") — switchTab() ne reconstruit
+   pas la barre, elle bascule juste .active sur les boutons persistants
+   (classList.toggle), donc une simple transition ne se redéclencherait
+   jamais d'un même état à l'identique ; une animation keyframe, elle,
+   rejoue à chaque fois que .active passe de absent à présent sur cet
+   élément. Courbe "back" (dépasse 100% avant de se stabiliser) plutôt
+   qu'un keyframe à rebond explicite : un seul passage scale(.78)->1 avec
+   cette easing suffit à lire comme un vrai rebond, sans ajouter une
+   seconde contre-oscillation qui ferait "trop". */
+@keyframes tabBounce{from{transform:scale(.78);} to{transform:scale(1);}}
 .tab.active .tab-icon{position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
       rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge);
   box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 1px 0 2px rgba(255,255,255,.25),
-    inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);}
+    inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);
+  animation:tabBounce .38s cubic-bezier(.34,1.56,.64,1);}
 .tab.active .tab-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
