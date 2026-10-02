@@ -152,6 +152,21 @@ a{color:inherit; text-decoration:none;}
   -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
 @keyframes irisSpin{to{--iris-angle:360deg;}}
+/* Essai : lumière qui "rase" la surface — retour utilisateur : "il manque
+   la lumière qui rase la surface et crée une sorte de forme hybride, en
+   partie nette en partie floue... un plan qui aide à comprendre l'arrondi
+   de la capsule". Ellipse aplatie positionnée à CHEVAL sur le bord haut
+   du pavé : la moitié qui dépasse est coupée net par le overflow:hidden
+   du parent (donc épouse exactement la courbe du border-radius à cet
+   endroit = le côté "net"), l'autre moitié s'estompe en dégradé + léger
+   flou vers l'intérieur (le côté "flou") — d'où la forme hybride demandée,
+   au lieu d'un dégradé ou d'un blur uniforme sur toute sa surface.
+   Gardé séparé (retour utilisateur : "si ça marche pas on revient à ça") :
+   à retirer seul pour revenir à la base précédente si l'essai ne convainc
+   pas, sans toucher au reste (fond, box-shadow, anneau irisé). */
+#hero .brand-logo::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 #hero .hero-content{position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:16px;}
 #hero .hero-logo{width:96px; height:96px;}
 #hero .hero-brand{font-family:'Jost',sans-serif; font-weight:700; font-size:30px; letter-spacing:-0.01em;
