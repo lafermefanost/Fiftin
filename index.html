@@ -1638,18 +1638,53 @@ body.map-fullscreen{overflow:hidden;}
 .profile-identity-btn{width:auto; padding:10px 22px; margin-top:4px; background:#fff;}
 .profile-identity--voyageur .profile-identity-btn{color:var(--sauge-deep);}
 .profile-identity--hotes .profile-identity-btn{color:var(--lavender-deep);}
-/* Bascule voyageur/hôtes intégrée en tête de carte (retour utilisateur) —
-   le bouton "current" reste un simple repère (fond translucide clair), le
-   bouton "other" est une vraie action : fond blanc, texte dans la couleur
-   de L'AUTRE espace (contraste net + indique où il mène). */
+/* Bascule voyageur/hôtes intégrée en tête de carte (retour utilisateur).
+   .profile-identity-switch-voyageur/-hotes posent --tile-base (même
+   variable que .switch-tile plus bas) pour que le bouton actif puisse
+   reprendre EXACTEMENT la recette "verre liquide" du logo d'intro/de la
+   tuile active d'origine (voir le grand commentaire de .switch-tile.current
+   un peu plus bas — dégradé diagonal + backdrop-filter + 4 inset + anneau
+   irisé + lumière rasante + drop-shadow, jamais un 5e box-shadow). Ici le
+   fond de la carte (.profile-identity) porte déjà --tile-base en plein :
+   le relief vient du verre lui-même (ombre/lumière), pas d'un contraste de
+   teinte avec l'arrière-plan — même logique que le logo posé sur le mesh
+   sombre de la page d'intro, pas besoin d'un fond neutre derrière pour que
+   l'effet se lise. */
 .profile-identity-switch{display:flex; gap:8px; margin-bottom:18px;}
 .profile-identity-switch button{flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-  padding:10px 6px; border-radius:12px; border:none; font-family:'Jost',sans-serif; font-size:12px; font-weight:700;}
-.profile-identity-switch button svg{width:16px; height:16px; flex-shrink:0;}
-.profile-identity-switch button.current{background:rgba(255,255,255,.18); color:#fff; cursor:default;}
-.profile-identity-switch button:not(.current){background:#fff; cursor:pointer;}
-.profile-identity--voyageur .profile-identity-switch button:not(.current){color:var(--lavender-deep);}
-.profile-identity--hotes .profile-identity-switch button:not(.current){color:var(--sauge);}
+  padding:10px 6px; border-radius:12px; border:none; font-family:'Jost',sans-serif; font-size:12px; font-weight:700;
+  color:#fff; animation:tileFadeIn .35s ease-out;}
+.profile-identity-switch button svg{width:16px; height:16px; flex-shrink:0; position:relative; z-index:1;}
+.profile-identity-switch button span{position:relative; z-index:1;}
+.profile-identity-switch-voyageur{--tile-base:var(--sauge);}
+.profile-identity-switch-hotes{--tile-base:var(--lavender-deep);}
+/* Discret (retour utilisateur) : un simple voile translucide, pas de bloc
+   plein ni de couleur contrastée — le bouton actif (verre liquide) doit
+   rester seul à attirer l'œil. */
+.profile-identity-switch button:not(.current){background:rgba(255,255,255,.1); color:rgba(255,255,255,.75); cursor:pointer;}
+.profile-identity-switch button:not(.current):active{background:rgba(255,255,255,.18);}
+.profile-identity-switch button.current{position:relative; overflow:hidden; cursor:default;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.26) 100%),
+    var(--tile-base);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(0,0,0,.38), inset -7px 0 13px rgba(0,0,0,.24);
+  filter:drop-shadow(0 9px 16px rgba(0,0,0,.25));
+  animation:tileGlassIn .5s cubic-bezier(.22,1,.36,1);}
+.profile-identity-switch button.current::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.profile-identity-switch button.current::after{content:""; position:absolute; left:-10%; top:-14%; width:120%; height:56%;
+  background:linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.32) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 
 /* ---------- validation des annonces (admin) ---------- */
 .admin-queue{padding:24px 0 110px;}
@@ -8961,10 +8996,10 @@ var PROFILE_SWITCH_ICON_HOTES = "<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V1
    SENS change selon la page, jamais le marquage HTML. */
 function profileIdentitySwitchHtml(isHost){
   return '<div class="profile-identity-switch">'+
-    '<button type="button" class="'+(!isHost?'current':'')+'"'+(!isHost?' disabled':' id="profile-switch-other"')+'>'+
+    '<button type="button" class="profile-identity-switch-voyageur'+(!isHost?' current':'')+'"'+(!isHost?' disabled':' id="profile-switch-other"')+'>'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_VOYAGEUR+'</svg><span>Espace voyageur</span>'+
     '</button>'+
-    '<button type="button" class="'+(isHost?'current':'')+'"'+(isHost?' disabled':' id="profile-switch-other"')+'>'+
+    '<button type="button" class="profile-identity-switch-hotes'+(isHost?' current':'')+'"'+(isHost?' disabled':' id="profile-switch-other"')+'>'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_HOTES+'</svg><span>Espace hôtes</span>'+
     '</button>'+
   '</div>';
