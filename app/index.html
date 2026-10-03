@@ -93,8 +93,54 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   background-image:url("../assets/bg-app-header.webp");
   background-size:cover;background-position:center;
   color:var(--cream);
-  display:flex;align-items:center;padding:env(safe-area-inset-top) 14px 0;gap:10px;flex-shrink:0;z-index:100;}
-.app-icon{flex-shrink:0;opacity:.92;}
+  display:flex;align-items:center;padding:env(safe-area-inset-top) 14px 0;gap:8px;flex-shrink:0;z-index:100;}
+/* gap resserré de 10 à 8px : les 12px gagnés par .app-icon-tile (46px au
+   lieu des 34px du picto nu d'avant) grignotaient sur l'espace du nom
+   d'établissement (voir .logo juste plus bas, "Planning" par défaut déjà
+   tout juste au ras de la troncature) — repris ici plutôt qu'en
+   rapetissant l'encart, pour ne pas revenir sur "le logo soit plus gros". */
+/* Encart "verre liquide" autour du picto Fiftin du header (retour
+   utilisateur : "traiter le logo en haut à gauche de l'app comme le logo
+   partout sur le site, dans un encart bords arrondis avec l'effet verre
+   et tout") — même recette que .logo-tile plus bas dans ce fichier
+   (dégradé diagonal + backdrop-filter + box-shadow inset 4 côtés + ombre
+   portée externe + anneau irisé + lumière rasante), réduite à l'échelle
+   du header (46px au lieu de 136px, header haut de 52px seulement —
+   --iris-angle/@keyframes irisSpin déjà déclarés pour .logo-tile,
+   réutilisés tels quels malgré l'ordre inverse dans la feuille de style,
+   une feuille CSS n'exige pas que @property/@keyframes précèdent leur
+   usage). Blurs/décalages d'ombre réduits au tiers, même principe que la
+   version compacte de .tab-icon/.mbnav-pill, mais CES deux-là n'ont pas
+   l'ombre portée externe ni la lumière rasante : ce picto, lui, doit
+   rester identique en tout point à .logo-tile, juste plus petit. */
+.app-icon-tile{position:relative; flex-shrink:0; overflow:hidden;
+  width:46px; height:46px; border-radius:15px;
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
+    inset 0 -3px 5px rgba(8,13,10,.38), inset -2px 0 4px rgba(8,13,10,.24),
+    0 3px 9px rgba(29,40,32,.22), 0 1px 2px rgba(29,40,32,.16);}
+.app-icon-tile::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green2) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.app-icon-tile::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
+/* Agrandi par rapport à l'original (34×27, posé nu dans le header sans
+   encart) — retour utilisateur : "j'aimerais juste que le logo soit plus
+   gros dans l'encart sinon on ne le verra pas si c'est exactement la
+   même version qu'ailleurs". Ratio conservé (40/32 ≈ 34/27 ≈ 1.26). */
+.app-icon{flex-shrink:0; position:relative; z-index:1; width:40px; height:32px;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Nom de l'établissement du client — seul texte du logo dans l'appli (voir
@@ -1760,7 +1806,7 @@ Gardez la main.</div>
 
 <!-- ─── HEADER ─────────────────────────────────────────────── -->
 <header>
-  <img class="app-icon" src="../assets/logo-fiftin-mark.png" width="34" height="27" alt="Fiftin">
+  <div class="app-icon-tile"><img class="app-icon" src="../assets/logo-fiftin-mark.png" width="34" height="27" alt="Fiftin"></div>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
   <button class="hbtn" id="settingsBtn" onclick="openSettings()" title="Paramètres">
