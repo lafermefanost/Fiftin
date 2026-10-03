@@ -1393,6 +1393,18 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+/* Lumière rasante (retour utilisateur : "le même effet de lumière par
+   dessus, comme sur l'encart Logo ?") — absente jusqu'ici sur ce
+   cartouche (hérité de .tab-icon côté fiftin.fr/sejours, qui s'en passe
+   aussi, voir son commentaire), présente en revanche sur .logo-tile
+   plus haut dans ce fichier : même recette, juste redimensionnée pour
+   le format bien plus petit et bien plus large que haut du cartouche
+   (ellipse moins haute en proportion : 34% au lieu de 42%, l'effet
+   "rayon qui lèche le haut" se lisait trop comme une bande pleine sur
+   une forme aussi plate). */
+.mbnav-btn.on .mbnav-pill::after{content:""; position:absolute; left:-10%; top:-10%; width:120%; height:34%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
 .mbnav-btn.on .mbnav-pill svg{stroke:#fff; position:relative; z-index:1;}
 .mbnav-btn.on .mbnav-label{color:#fff; position:relative; z-index:1;}
 
