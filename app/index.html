@@ -1344,33 +1344,42 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   letter-spacing:.03em;text-transform:uppercase;}
 /* Nav sélectionnée : vert moyen (--green) — la lavande est désormais
    réservée à l'assistant et aux onglets liés aux événements.
-   Encart carré façon icône d'appli mobile autour du seul pictogramme
-   (retour utilisateur : "arrange les pictos pour que les rectangles
-   soient plutôt des carrés bords arrondis, comme une app"), plutôt que
-   le rectangle plein bord à bord d'avant (background/border-radius sur
-   .mbnav-btn.on, qui suivait la largeur flex du bouton = rectangle, pas
-   carré) — même principe que .tab-icon côté fiftin.fr/sejours
-   (voir son commentaire : "contrairement à app/ où .mbnav-btn.on colore
-   tout le bouton"), le libellé reste hors de l'encart, coloré seul. */
-.mbnav-btn.on{color:var(--green);}
-.mbnav-icon{width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+   Encart carré façon icône d'appli mobile autour du pictogramme ET du
+   libellé (retour utilisateur, en 2 temps : d'abord "arrange les pictos
+   pour que les rectangles soient plutôt des carrés bords arrondis, comme
+   une app", puis "je veux que l'encart carré bords arrondis englobe le
+   picto + le texte" — le premier essai posait l'encart sur .mbnav-icon
+   seul, libellé hors du cartouche ; .mbnav-pill, nouveau conteneur
+   icône+libellé, porte maintenant l'encart à la place). Plus le
+   rectangle plein bord à bord d'avant (background/border-radius sur
+   .mbnav-btn.on, qui suivait la largeur flex du bouton), ni le carré
+   autour de la seule icône comme .tab-icon côté fiftin.fr/sejours
+   (resté ainsi là-bas, pas de retour utilisateur demandant la même
+   extension sur ce menu-là). */
+.mbnav-icon{width:22px;height:22px;display:flex;align-items:center;justify-content:center;}
 /* Effet "verre liquide" (même recette que .tab-icon côté fiftin.fr/
    sejours — dégradé diagonal + box-shadow inset 2 côtés + anneau irisé
    conique, voir sa propre justification là-bas) appliqué ici sur
-   l'encart carré désormais détaché du bouton. --green2 (déjà utilisé
+   .mbnav-pill, le cartouche icône+libellé. --green2 (déjà utilisé
    comme fond de #lockScreen/#siteGate plus haut dans ce fichier) joue le
    rôle de --sauge-light dans la 3e teinte de l'anneau — même convention
    que sur .logo-tile juste au-dessus. --iris-angle/@keyframes irisSpin
    déjà déclarés une fois pour .logo-tile, réutilisés ici ; tabBounce
-   (rebond au clic) n'existait pas encore dans ce fichier, déclaré ici. */
+   (rebond au clic) n'existait pas encore dans ce fichier, déclaré ici.
+   Padding horizontal (10px) > vertical (4px/3px) : le libellé le plus
+   long (Location) fixe la largeur du cartouche, sinon un padding
+   symétrique aurait laissé un excès de vide de chaque côté des libellés
+   courts (Mois, Année). */
+.mbnav-pill{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+  padding:4px 10px 3px; border-radius:14px; transition:background .15s;}
 @keyframes tabBounce{from{transform:scale(.74);} to{transform:scale(1);}}
-.mbnav-btn.on .mbnav-icon{position:relative; overflow:hidden;
+.mbnav-btn.on .mbnav-pill{position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
       rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--green);
   box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 1px 0 2px rgba(255,255,255,.25),
     inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);
   animation:tabBounce .38s cubic-bezier(.34,1.7,.64,1);}
-.mbnav-btn.on .mbnav-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+.mbnav-btn.on .mbnav-pill::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green2) 320deg, rgba(255,255,255,0) 360deg);
@@ -1379,7 +1388,8 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.mbnav-btn.on .mbnav-icon svg{stroke:#fff; position:relative; z-index:1;}
+.mbnav-btn.on .mbnav-pill svg{stroke:#fff; position:relative; z-index:1;}
+.mbnav-btn.on .mbnav-label{color:#fff; position:relative; z-index:1;}
 
 @media(max-width:599px){
   .mbnav{display:flex;}
@@ -1828,19 +1838,19 @@ Gardez la main.</div>
 <!-- ─── MOBILE NAV ─────────────────────────────────────────────── -->
 <nav class="mbnav">
   <button class="mbnav-btn on" id="mn-grid" onclick="setView('grid')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>Grille
+    <span class="mbnav-pill"><span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span><span class="mbnav-label">Grille</span></span>
   </button>
   <button class="mbnav-btn" id="mn-today" onclick="setView('today')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span>Location
+    <span class="mbnav-pill"><span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></span><span class="mbnav-label">Location</span></span>
   </button>
   <button class="mbnav-btn" id="mn-week" onclick="setView('week')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r=".5" fill="currentColor"/><circle cx="3" cy="12" r=".5" fill="currentColor"/><circle cx="3" cy="18" r=".5" fill="currentColor"/></svg></span>Semaine
+    <span class="mbnav-pill"><span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3" cy="6" r=".5" fill="currentColor"/><circle cx="3" cy="12" r=".5" fill="currentColor"/><circle cx="3" cy="18" r=".5" fill="currentColor"/></svg></span><span class="mbnav-label">Semaine</span></span>
   </button>
   <button class="mbnav-btn" id="mn-month" onclick="setView('month')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span>Mois
+    <span class="mbnav-pill"><span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="mbnav-label">Mois</span></span>
   </button>
   <button class="mbnav-btn" id="mn-year" onclick="setView('year')">
-    <span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="4"/><line x1="12" y1="20" x2="12" y2="12"/><line x1="6" y1="20" x2="6" y2="9"/><line x1="3" y1="20" x2="21" y2="20"/></svg></span>Année
+    <span class="mbnav-pill"><span class="mbnav-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="4"/><line x1="12" y1="20" x2="12" y2="12"/><line x1="6" y1="20" x2="6" y2="9"/><line x1="3" y1="20" x2="21" y2="20"/></svg></span><span class="mbnav-label">Année</span></span>
   </button>
 </nav>
 
