@@ -1621,16 +1621,35 @@ body.map-fullscreen{overflow:hidden;}
    ont besoin d'un contraste propre à chaque fond, d'où la redéfinition de
    --sauge/--lavender-deep comme couleur de label UNIQUEMENT à l'intérieur
    de ce bloc plutôt qu'une 3e classe par variante et par élément. */
-.profile-identity{border-radius:18px; padding:18px 16px 14px; margin-bottom:14px;}
-.profile-identity--voyageur{background:var(--sauge-bg);}
-.profile-identity--hotes{background:var(--lavender-bg);}
-.profile-identity-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;}
-.profile-identity--voyageur .profile-identity-title{color:var(--sauge-deep);}
-.profile-identity--hotes .profile-identity-title{color:var(--lavender-deep);}
-.profile-identity--voyageur .field-block>label{color:var(--sauge-deep);}
-.profile-identity--hotes .field-block>label{color:var(--lavender-deep);}
-.profile-identity-static{font-size:14px; font-weight:600; color:var(--ink); margin:0;}
-.profile-identity-btn{width:auto; padding:10px 22px; margin-top:4px;}
+/* Couleur bien plus dense (retour utilisateur) : les mêmes teintes
+   "pleines" que .switch-tile.voyageur/.hotes en état current/actif
+   (--sauge/--lavender-deep), pas les variantes pâles --sauge-bg/
+   --lavender-bg utilisées ailleurs pour des fonds de carte discrets — ici
+   la carte EST la couleur de l'espace, pas une nuance dessus. Texte clair
+   partout à l'intérieur (plus de texte foncé sur fond pâle). */
+.profile-identity{border-radius:18px; padding:16px 16px 14px; margin-bottom:14px;}
+.profile-identity--voyageur{background:var(--sauge);}
+.profile-identity--hotes{background:var(--lavender-deep);}
+.profile-identity-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; color:rgba(255,255,255,.75);}
+.profile-identity .field-block>label{color:#fff;}
+.profile-identity .field-hint{color:rgba(255,255,255,.72);}
+.profile-identity-static{font-size:14px; font-weight:600; color:#fff; margin:0;}
+.profile-identity-static a{color:#fff; text-decoration:underline;}
+.profile-identity-btn{width:auto; padding:10px 22px; margin-top:4px; background:#fff;}
+.profile-identity--voyageur .profile-identity-btn{color:var(--sauge-deep);}
+.profile-identity--hotes .profile-identity-btn{color:var(--lavender-deep);}
+/* Bascule voyageur/hôtes intégrée en tête de carte (retour utilisateur) —
+   le bouton "current" reste un simple repère (fond translucide clair), le
+   bouton "other" est une vraie action : fond blanc, texte dans la couleur
+   de L'AUTRE espace (contraste net + indique où il mène). */
+.profile-identity-switch{display:flex; gap:8px; margin-bottom:18px;}
+.profile-identity-switch button{flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
+  padding:10px 6px; border-radius:12px; border:none; font-family:'Jost',sans-serif; font-size:12px; font-weight:700;}
+.profile-identity-switch button svg{width:16px; height:16px; flex-shrink:0;}
+.profile-identity-switch button.current{background:rgba(255,255,255,.18); color:#fff; cursor:default;}
+.profile-identity-switch button:not(.current){background:#fff; cursor:pointer;}
+.profile-identity--voyageur .profile-identity-switch button:not(.current){color:var(--lavender-deep);}
+.profile-identity--hotes .profile-identity-switch button:not(.current){color:var(--sauge);}
 
 /* ---------- validation des annonces (admin) ---------- */
 .admin-queue{padding:24px 0 110px;}
@@ -8399,23 +8418,10 @@ function renderProfile(){
     // volet, mais dans un contexte "devenir hôte" trompeur pour un simple
     // voyageur) — un vrai lien ici, au niveau du compte.
     : '<a href="#" id="btn-signin-profile" style="text-decoration:underline;">Se connecter</a>';
-  var hostSub = connected ? "Déposer une annonce" : "Se connecter pour déposer une annonce";
 
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar" id="traveler-profile-avatar">'+initial+'</div>'+(connected ? '<input type="file" id="traveler-profile-photo-input" accept="image/*" style="display:none">' : '')+'<div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
-    (connected ? profileIdentityCardHtml("voyageur") : "")+
-    '<div class="profile-switch">'+
-      '<button type="button" class="switch-tile voyageur current" data-switch="voyageur">'+
-        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
-        '<div class="switch-label"><b>Espace voyageur</b></div>'+
-        '<span>Vous y êtes</span>'+
-      '</button>'+
-      '<button type="button" class="switch-tile hotes" id="btn-host-space">'+
-        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>'+
-        '<div class="switch-label"><b>Espace hôtes</b></div>'+
-        '<span>'+hostSub+'</span>'+
-      '</button>'+
-    '</div>'+
+    profileIdentityCardHtml("voyageur", connected)+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -8425,8 +8431,8 @@ function renderProfile(){
       '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div></div>';
-  document.querySelector('[data-switch="voyageur"]').addEventListener("click", function(){ switchTab("explore"); });
-  document.getElementById("btn-host-space").addEventListener("click", function(){
+  var switchOtherBtn = document.getElementById("profile-switch-other");
+  if(switchOtherBtn) switchOtherBtn.addEventListener("click", function(){
     if(connected) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
   });
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
@@ -8439,6 +8445,7 @@ function renderProfile(){
     wireProfileIdentityCard();
   } else {
     document.getElementById("btn-signin-profile").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
+    document.getElementById("profile-identity-signin").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
   }
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
@@ -8655,8 +8662,8 @@ var HOST_TABS_HTML =
      "Notifications"/"Moyens de contact préférés", retirées des deux
      côtés (n'ont jamais eu de contenu réel derrière). Plus de 3e onglet
      "Espace voyageur" séparé (retour utilisateur) : redondant avec la
-     tuile "Espace voyageur" du profil hôte lui-même (renderHostProfile(),
-     bouton #btn-exit-host) — un seul chemin pour en sortir. */
+     tuile "Espace voyageur" intégrée à la carte Profil (renderHostProfile(),
+     profileIdentityCardHtml()) — un seul chemin pour en sortir. */
   '<button class="tab" data-host-tab="profile">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
     '<span>Profil hôte</span>'+
@@ -8864,8 +8871,9 @@ var MKT_SECTIONS = [
     '<section class="close">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="inner">\n    <div class="logo-tile sm"><img src="assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>\n    <h2>Ce n\'est pas un outil en plus.<br><em>C\'est toute votre activité, en temps réel, entre vos mains.</em></h2>\n    <p class="close-punch">Vos clients, vos chiffres, votre planning — au même endroit, sous votre seul contrôle.</p>\n  </div>\n</section>'
 ];
 /* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
-   (data-switch="voyageur" y mène désormais à exitHostMode() plutôt qu'à
-   switchTab("explore"), seule différence de câblage), mais des lignes
+   (le bouton #profile-switch-other y mène vers exitHostMode() plutôt que
+   vers enterHostMode()/l'auth, seule différence de câblage — voir
+   profileIdentitySwitchHtml()), mais des lignes
    différentes en dessous : les formules hôte (HOST_FORMULAS) plutôt que
    les réglages voyageur, qui n'ont pas de sens ici. Formules affichées en
    LECTURE SEULE (planCardHtml()) : la vraie formule vient de
@@ -8942,8 +8950,42 @@ function resolveHostProfileName(cb){
    pas de duplication entre les deux écrans — elle ne sert vraiment qu'une
    fois hôte, mais autant la montrer depuis les deux plutôt que de la
    cacher côté voyageur puis la faire réapparaître côté hôte. */
-function profileIdentityCardHtml(variant){
+var PROFILE_SWITCH_ICON_VOYAGEUR = "<rect x='3' y='7' width='18' height='13' rx='2'/><path d='M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2'/>";
+var PROFILE_SWITCH_ICON_HOTES = "<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/>";
+/* Bascule voyageur/hôte intégrée à la carte elle-même (retour utilisateur),
+   plus de .profile-switch séparé en dessous. Un seul des deux boutons est
+   actionnable à la fois (l'autre, "current", est juste un repère visuel) —
+   id partagé "profile-switch-other" quel que soit le sens du switch :
+   chaque appelant (renderProfile()/renderHostProfile()) sait déjà quelle
+   action lui donner (switchTab("explore")+auth, ou exitHostMode), seul le
+   SENS change selon la page, jamais le marquage HTML. */
+function profileIdentitySwitchHtml(isHost){
+  return '<div class="profile-identity-switch">'+
+    '<button type="button" class="'+(!isHost?'current':'')+'"'+(!isHost?' disabled':' id="profile-switch-other"')+'>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_VOYAGEUR+'</svg><span>Espace voyageur</span>'+
+    '</button>'+
+    '<button type="button" class="'+(isHost?'current':'')+'"'+(isHost?' disabled':' id="profile-switch-other"')+'>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_HOTES+'</svg><span>Espace hôtes</span>'+
+    '</button>'+
+  '</div>';
+}
+/* Présentation réservée à l'espace hôte (retour utilisateur : bizarre de la
+   montrer à un voyageur qui n'a jamais déposé d'annonce) — contrairement
+   au nom et à l'email, communs aux deux. connected=false (voyageur non
+   connecté uniquement — l'espace hôte n'est jamais atteignable sans
+   connexion) : la bascule reste intégrée à la carte, mais sans champs à
+   éditer, juste un lien de connexion. */
+function profileIdentityCardHtml(variant, connected){
+  var isHost = variant==="hotes";
+  if(connected===false){
+    return '<div class="profile-identity profile-identity--'+variant+'">'+
+      profileIdentitySwitchHtml(isHost)+
+      '<div class="profile-identity-title">Votre profil</div>'+
+      '<p class="profile-identity-static">Non connecté — <a href="#" id="profile-identity-signin">se connecter</a></p>'+
+    '</div>';
+  }
   return '<div class="profile-identity profile-identity--'+variant+'">'+
+    profileIdentitySwitchHtml(isHost)+
     '<div class="profile-identity-title">Votre profil</div>'+
     '<div class="field-block"><label>Email</label><p class="profile-identity-static">'+esc(authState.email||"")+'</p></div>'+
     '<div class="field-block"><label>Votre nom</label>'+
@@ -8952,11 +8994,13 @@ function profileIdentityCardHtml(variant){
     '</div>'+
     '<button type="button" class="btn-apply profile-identity-btn" id="profile-name-save">Enregistrer</button>'+
     '<p class="field-hint" id="profile-name-msg"></p>'+
-    '<div class="field-block" style="margin-top:18px;"><label>Votre présentation</label>'+
-      '<textarea class="text-input" id="profile-bio-input" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea>'+
-    '</div>'+
-    '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save">Enregistrer</button>'+
-    '<p class="field-hint" id="profile-bio-msg"></p>'+
+    (isHost ?
+      '<div class="field-block" style="margin-top:18px;"><label>Votre présentation</label>'+
+        '<textarea class="text-input" id="profile-bio-input" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea>'+
+      '</div>'+
+      '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save">Enregistrer</button>'+
+      '<p class="field-hint" id="profile-bio-msg"></p>'
+    : "")+
   '</div>';
 }
 /* Câblage partagé du bloc ci-dessus — appelé depuis renderProfile() ET
@@ -8969,12 +9013,15 @@ function profileIdentityCardHtml(variant){
    équivalente pour le nom — jamais de surcharge par annonce demandée). */
 function wireProfileIdentityCard(){
   var nameInput = document.getElementById("profile-name-input");
-  var bioInput = document.getElementById("profile-bio-input");
-  if(!nameInput || !bioInput) return; // bloc absent (non connecté côté voyageur)
+  var bioInput = document.getElementById("profile-bio-input"); // absent côté voyageur (présentation réservée à l'espace hôte)
+  if(!nameInput) return; // bloc absent (non connecté côté voyageur)
   resolveHostProfileName(function(name){
     hfProfileName = name;
     if(nameInput && document.activeElement!==nameInput) nameInput.value = name;
   });
+  // resolveHostProfileBio() reste appelé même sans textarea visible (côté
+  // voyageur) : alimente hfProfileBio, lu par le formulaire de dépôt si cet
+  // hôte dépose une annonce juste après être passé par l'espace voyageur.
   resolveHostProfileBio(function(bio){
     hfProfileBio = bio;
     if(bioInput && document.activeElement!==bioInput) bioInput.value = bio;
@@ -9006,7 +9053,8 @@ function wireProfileIdentityCard(){
         msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
       });
   });
-  document.getElementById("profile-bio-save").addEventListener("click", function(){
+  var bioSaveBtn = document.getElementById("profile-bio-save");
+  if(bioSaveBtn) bioSaveBtn.addEventListener("click", function(){
     var btn = this;
     var msg = document.getElementById("profile-bio-msg");
     var bio = bioInput.value.trim();
@@ -9111,18 +9159,6 @@ function renderHostProfile(){
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar" id="host-profile-avatar">'+initial+'</div><input type="file" id="host-profile-photo-input" accept="image/*" style="display:none"><div><b style="font-size:17px;">'+esc(authState.email||"")+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;"><a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a></div></div></div>'+
     profileIdentityCardHtml("hotes")+
-    '<div class="profile-switch">'+
-      '<button type="button" class="switch-tile voyageur" id="btn-exit-host">'+
-        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
-        '<div class="switch-label"><b>Espace voyageur</b></div>'+
-        '<span>Retourner explorer</span>'+
-      '</button>'+
-      '<button type="button" class="switch-tile hotes current" disabled>'+
-        '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg></div>'+
-        '<div class="switch-label"><b>Espace hôtes</b></div>'+
-        '<span>Vous y êtes</span>'+
-      '</button>'+
-    '</div>'+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -9145,7 +9181,8 @@ function renderHostProfile(){
       '<div class="profile-row">Conditions générales d\'utilisation<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       '<div class="profile-row">Politique de confidentialité<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div></div>';
-  document.getElementById("btn-exit-host").addEventListener("click", exitHostMode);
+  var switchOtherBtn = document.getElementById("profile-switch-other");
+  if(switchOtherBtn) switchOtherBtn.addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
   if(isAdmin()){
