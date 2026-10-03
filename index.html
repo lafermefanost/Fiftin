@@ -660,6 +660,21 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
 .radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:16px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
+/* Filtre Voyageurs (LOT 2.3) : grille de pills 1-15+ plutôt qu'une colonne
+   (.sort-row) — trop d'options pour tenir empilées à l'écran. */
+.capacity-row{display:flex; flex-wrap:wrap; gap:8px;}
+.capacity-row .radio-row{padding:9px 16px; justify-content:center;}
+/* Bloc "Pour votre groupe, en réservant plusieurs hébergements" (LOT 2.3),
+   sous le fil Explorer — même carte que .detail-card, contenu propre. */
+.group-capacity-group{margin-bottom:14px;}
+.group-capacity-group:last-child{margin-bottom:0;}
+.group-capacity-total{font-size:12.5px; color:var(--gray-mid); margin:0 0 8px;}
+.group-capacity-members{display:flex; flex-direction:column; gap:8px;}
+.group-capacity-member{display:flex; justify-content:space-between; align-items:center; width:100%;
+  text-align:left; background:var(--cream-deep); border:none; border-radius:12px; padding:10px 14px;
+  font-family:'Jost',sans-serif; cursor:pointer;}
+.group-capacity-member-name{font-size:13px; font-weight:600; color:var(--ink);}
+.group-capacity-member-cap{font-size:11.5px; color:var(--sauge-deep); white-space:nowrap; margin-left:10px;}
 /* Volet "Ajouter à une collection" (kind==="collPicker") : mêmes lignes que
    .radio-row, mais à choix MULTIPLE — un rond à cocher plutôt qu'un simple
    changement de fond, pour ne jamais laisser croire qu'une seule case peut
@@ -3511,6 +3526,8 @@ var AMEN_ICONS = {
    jusqu'à ce sommet repasse `f.distance` à `null` (voir kind==="distance"
    plus bas), pas à une valeur numérique qui resterait, elle, un plafond. */
 var MAX_DISTANCE_KM = 1200;
+/* Filtre Voyageurs (LOT 2.3) : 1 à 15+, voir kind==="capacity" plus bas. */
+var CAPACITY_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
 /* Filtre Prix — même principe que MAX_DISTANCE_KM juste au-dessus :
    `filters.price` vaut `null` par défaut/au sommet du curseur (AUCUN
    filtre de prix, pas un plafond numérique élevé) ; voir matchesAllFilters()
@@ -3559,7 +3576,7 @@ function priceFilterValueToPos(val){
    comme filters.distance, une distance choisie doit survivre à un
    rechargement de page. `null` par défaut (aucun repère posé, origine =
    position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, capacity:null, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null, likesLayout:"grid",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
@@ -3878,12 +3895,65 @@ function listingPriceLabel(l){
    matchingIndexListings() ci-dessous — un seul endroit qui décide "cette
    annonce correspond aux filtres actifs", pour ne jamais risquer que la
    carte, le compteur et la pagination se désaccordent entre eux. */
+/* LOT 2.3 : capacité MAX utile d'une annonce — même principe que
+   listingIndexPrice()/listingIndexMaxPersons() côté functions/index.js
+   (min pour le prix affiché, max pour la capacité : une annonce passe le
+   filtre si AU MOINS une de ses locations suffit seule). Fonctionne sur
+   une entrée légère de l'index (champ `maxPersons` déjà synchronisé) comme
+   sur une annonce complète (`units[]`), même tolérance que les autres
+   helpers de ce fichier qui lisent indifféremment les deux formes. */
+function listingMaxCapacity(l){
+  if(l.units && l.units.length) return Math.max.apply(null, l.units.map(function(u){ return u.maxPersons||0; }));
+  return l.maxPersons || 0;
+}
 function matchesAllFilters(l, f){
   if(!matchesLocation(l, f)) return false;
   if(f.distance!=null && listingDistanceKm(l) > f.distance) return false;
   if(f.price!=null && l.price > f.price) return false;
+  if(f.capacity!=null && listingMaxCapacity(l) < f.capacity) return false;
   if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
   return true;
+}
+/* Clé de regroupement "même hôte, même adresse" (LOT 2.3) : ownerUid +
+   coordonnées arrondies à 3 décimales (~110m), plus fiable qu'une
+   comparaison de chaîne d'adresse (le même hôte peut la saisir
+   différemment d'une annonce à l'autre) — ce sont les deux seuls champs
+   assez stables synchronisés dans l'index public pour ça (voir
+   functions/index.js, syncPublicListingIndex). Annonce sans l'un des
+   deux (ownerUid vide ou pas encore géocodée) -> jamais regroupée. */
+function groupKeyFor(l){
+  if(!l.ownerUid || l.lat==null || l.lng==null) return null;
+  return l.ownerUid+"|"+l.lat.toFixed(3)+"|"+l.lng.toFixed(3);
+}
+/* "Pour votre groupe, en réservant plusieurs hébergements" (LOT 2.3) :
+   parmi les annonces qui correspondent à TOUS les filtres SAUF la
+   capacité seule (aucune ne l'atteint individuellement), regroupées par
+   hôte+adresse, celles dont la somme des capacités suffit. Ne mélange
+   jamais avec les résultats principaux (matchingIndexListings()) — un
+   groupe à part, affiché en dessous (voir renderFeedBody()). Ne
+   recoupe pas le filtre Dates (disponibilité par chambre) : simplifié
+   volontairement, l'intersection des deux critères sur un regroupement
+   multi-annonces serait une tâche distincte. */
+function groupedCapacityMatches(f){
+  if(f.capacity==null) return [];
+  var withoutCapacity = {}; for(var k in f) withoutCapacity[k] = f[k];
+  withoutCapacity.capacity = null;
+  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
+  var shortfall = source.filter(function(l){
+    return matchesAllFilters(l, withoutCapacity) && listingMaxCapacity(l) < f.capacity && groupKeyFor(l);
+  });
+  var byKey = {};
+  shortfall.forEach(function(l){
+    var k = groupKeyFor(l);
+    (byKey[k] = byKey[k] || []).push(l);
+  });
+  var groups = [];
+  Object.keys(byKey).forEach(function(k){
+    var members = byKey[k];
+    var total = members.reduce(function(s,l){ return s+listingMaxCapacity(l); }, 0);
+    if(members.length>1 && total>=f.capacity) groups.push({members:members, total:total});
+  });
+  return groups;
 }
 
 function sortListings(list){
@@ -4045,6 +4115,7 @@ var FILTER_ICONS = {
   dates:"<rect x='3' y='5' width='18' height='16' rx='2'/><path d='M3 10h18M8 3v4M16 3v4'/>",
   distance:"<circle cx='12' cy='12' r='8'/><circle cx='12' cy='12' r='3'/>",
   price:"<path d='M3 12l9-9h6a2 2 0 0 1 2 2v6l-9 9a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8z'/><circle cx='15.5' cy='8.5' r='1.3'/>",
+  capacity:"<circle cx='9' cy='7' r='3'/><circle cx='17' cy='8' r='2.5'/><path d='M2 21c0-3.5 2.7-6 7-6s7 2.5 7 6M15 15.5c2.8.3 5 2.3 5 5.5'/>",
   amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>",
   sort:"<path d='M4 6h16M4 12h10M4 18h6'/>"
 };
@@ -4075,7 +4146,7 @@ function renderFilterBar(){
   var bar = document.getElementById("filter-bar");
   var locActive = !!(f.q || f.regionName || f.deptName);
   var datesActive = hasDateFilter(f);
-  var anyActive = locActive || datesActive || f.distance!=null || f.price!=null || activeAmenCount>0 || state.sort!=="reco";
+  var anyActive = locActive || datesActive || f.distance!=null || f.price!=null || f.capacity!=null || activeAmenCount>0 || state.sort!=="reco";
   // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
   bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
@@ -4083,6 +4154,7 @@ function renderFilterBar(){
     chipHtml("dates", datesChipLabel(f), datesActive),
     chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km"+(f.zoneOrigin?" (repère)":"") : "Distance", f.distance!=null),
     chipHtml("price", f.price!=null ? "Prix · jusqu'à "+f.price+"€" : "Prix", f.price!=null),
+    chipHtml("capacity", f.capacity!=null ? "Voyageurs · "+f.capacity+(f.capacity>=15?"+":"") : "Voyageurs", f.capacity!=null),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
     chipHtml("sort", "Trier", state.sort!=="reco")
   ].join("");
@@ -4095,7 +4167,7 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, amen:[], dateIn:null, dateOut:null};
+    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, capacity:null, amen:[], dateIn:null, dateOut:null};
     state.sort = "reco";
     availabilityCache = {}; availabilityCacheKey = null;
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
@@ -4119,6 +4191,7 @@ function clearFilter(k){
   else if(k==="dates"){ f.dateIn = null; f.dateOut = null; availabilityCache = {}; availabilityCacheKey = null; }
   else if(k==="distance"){ f.distance = null; f.zoneOrigin = null; } // retire aussi le repère de la carte, sinon un cercle sans rayon resterait affiché sans filtre associé
   else if(k==="price") f.price = null;
+  else if(k==="capacity") f.capacity = null;
   else if(k==="amen") f.amen = [];
   else if(k==="sort") state.sort = "reco";
   persist(); renderFilterBar(); renderTabContent(); renderResultLine();
@@ -4214,8 +4287,17 @@ function renderFeedBody(){
     wireExploreMap();
     return;
   }
+  // LOT 2.3 : les annonces d'un éventuel regroupement "même hôte, même
+  // adresse" n'apparaissent jamais dans pageEntries (exclues par
+  // matchesAllFilters, capacité individuelle insuffisante) — leurs fiches
+  // complètes ne sont donc pas déjà en cours de chargement, il faut les
+  // demander en plus pour pouvoir afficher nom/capacité dans le bloc.
+  var groups = groupedCapacityMatches(state.filters);
+  var groupDocIds = [];
+  groups.forEach(function(g){ g.members.forEach(function(m){ if(groupDocIds.indexOf(m.docId)===-1) groupDocIds.push(m.docId); }); });
   var docIds = pageEntries.map(function(ix){ return ix.docId; });
-  ensureListingDocsLoaded(docIds, function(){
+  var allDocIds = docIds.concat(groupDocIds.filter(function(id){ return docIds.indexOf(id)===-1; }));
+  ensureListingDocsLoaded(allDocIds, function(){
     if(gen!==feedRenderGen) return; // un rendu plus récent a déjà pris le dessus
     var list = docIds.map(function(id){ return LISTINGS.filter(function(l){ return listingKey(l)===id; })[0]; }).filter(Boolean);
     var hasMore = fullList.length > pageEntries.length;
@@ -4223,7 +4305,8 @@ function renderFeedBody(){
       return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
         '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
       '</article>';
-    }).join("") + (hasMore ? '<button type="button" class="load-more-btn" id="feed-load-more">Charger plus d’hébergements</button>' : '');
+    }).join("") + (hasMore ? '<button type="button" class="load-more-btn" id="feed-load-more">Charger plus d’hébergements</button>' : '') +
+      groupedCapacityBlockHtml(groups);
     wireExploreMap();
     wireFeedEvents();
     if(hasMore){
@@ -4234,6 +4317,35 @@ function renderFeedBody(){
       });
     }
   });
+}
+/* LOT 2.3 : rendu du bloc de regroupement, sous le fil principal — jamais
+   mélangé aux cartes (voir le grand commentaire de groupedCapacityMatches()).
+   Suppose que les annonces membres sont déjà chargées dans LISTINGS (voir
+   allDocIds dans renderFeedBody()) ; une annonce pas encore résolue est
+   simplement omise plutôt que de casser l'affichage du groupe. */
+function groupedCapacityBlockHtml(groups){
+  if(!groups.length) return "";
+  return '<div class="detail-card group-capacity-card">'+
+    '<div class="section-title">Pour votre groupe, en réservant plusieurs hébergements</div>'+
+    groups.map(function(g){
+      // Capacité/nom lus sur l'entrée d'index (m) elle-même, pas sur la
+      // fiche complète : déjà la valeur exacte qui a servi au regroupement
+      // (voir groupedCapacityMatches()), aucune raison de la recalculer
+      // depuis `units[]` une seconde fois. La fiche complète (LISTINGS,
+      // chargée via allDocIds plus haut) ne sert qu'à ce que le clic
+      // (data-open, openDetail()) trouve l'annonce déjà prête.
+      var memberTiles = g.members.map(function(m){
+        return '<button type="button" class="group-capacity-member" data-open="'+m.id+'">'+
+          '<span class="group-capacity-member-name">'+esc(m.name)+'</span>'+
+          '<span class="group-capacity-member-cap">'+listingMaxCapacity(m)+' voyageurs max</span>'+
+        '</button>';
+      }).join("");
+      return '<div class="group-capacity-group">'+
+        '<p class="group-capacity-total">Capacité cumulée : jusqu\'à '+g.total+' voyageurs</p>'+
+        '<div class="group-capacity-members">'+memberTiles+'</div>'+
+      '</div>';
+    }).join("")+
+  '</div>';
 }
 
 function wireFeedEvents(){
@@ -5751,6 +5863,19 @@ function openSheet(kind){
     var priceSliderVal = priceFilterValueToPos(f.price);
     inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+(f.price!=null ? f.price+" € / nuit" : "1 000 € +")+'</span></div>'+
       '<input type="range" id="s-price" min="0" max="1000" step="1" value="'+priceSliderVal+'"></div>';
+  } else if(kind==="capacity"){
+    // LOT 2.3 : 1 à 15+ (choix discret, pas de curseur continu — plage trop
+    // petite pour le justifier, contrairement à Distance/Prix). 15 porte le
+    // libellé "15+" mais reste une VALEUR comme une autre pour le filtre
+    // (capacité >= 15), même sentinelle `null` = pas de filtre que les
+    // autres (voir matchesAllFilters()).
+    inner = '<h3>Voyageurs</h3>'+
+      '<p class="field-hint">Annonces pouvant accueillir au moins ce nombre de personnes — dans un seul hébergement, ou plusieurs du même hôte à la même adresse (affichés à part, en dessous des résultats).</p>'+
+      '<div class="field-block capacity-row">'+
+      CAPACITY_OPTIONS.map(function(n){
+        return '<button type="button" class="radio-row'+(f.capacity===n?' active':'')+'" data-capacity="'+n+'">'+(n>=15?"15+":n)+'</button>';
+      }).join("")+
+      '</div>';
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
   } else if(kind==="sort"){
@@ -6339,6 +6464,13 @@ function openSheet(kind){
     $p.addEventListener("input", function(){
       f.price = priceFilterPosToValue(Number($p.value));
       root.querySelector(".range-value span:last-child").textContent = f.price!=null ? f.price+" € / nuit" : "1 000 € +";
+    });
+  } else if(kind==="capacity"){
+    Array.prototype.forEach.call(root.querySelectorAll("[data-capacity]"), function(el){
+      el.addEventListener("click", function(){
+        f.capacity = Number(el.getAttribute("data-capacity"));
+        Array.prototype.forEach.call(root.querySelectorAll("[data-capacity]"), function(sib){ sib.classList.toggle("active", sib===el); });
+      });
     });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){

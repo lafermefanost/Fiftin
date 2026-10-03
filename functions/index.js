@@ -48,15 +48,31 @@ const db = getFirestore();
  * simplement aucune image à montrer, listingIndex étant sa seule source
  * pour la quasi-totalité des annonces affichées sur Explorer.
  *
- * Republié à chaque écriture sur listings/{listingId} (création,
+ * Républié à chaque écriture sur listings/{listingId} (création,
  * modification, suppression, validation/refus par un admin) — supprimé
  * de l'index dès que status n'est plus "published" (annonce en attente,
- * refusée, ou effacée), jamais montré tant qu'un admin ne l'a pas validée. */
+ * refusée, ou effacée), jamais montré tant qu'un admin ne l'a pas validée.
+ *
+ * maxPersons/ownerUid (LOT 2.3, sejours/index.html) : ajoutés pour le
+ * filtre Voyageurs — capacité par annonce (matchesAllFilters()) et
+ * regroupement "même hôte, même adresse" quand aucune annonce seule
+ * n'atteint la capacité demandée (groupedCapacityMatches()), qui a aussi
+ * besoin de lat/lng, déjà présents ci-dessous. */
 function listingIndexPrice(listing) {
   if (listing.units && listing.units.length) {
     return Math.min.apply(null, listing.units.map(function (u) { return u.price; }));
   }
   return listing.price;
+}
+// LOT 2.3 (filtre Voyageurs, sejours/index.html) : capacité MAX parmi les
+// locations de l'annonce — une annonce passe le filtre si AU MOINS une de
+// ses locations suffit seule, même principe que listingIndexPrice()
+// ci-dessus (min pour le prix affiché, max pour la capacité utile).
+function listingIndexMaxPersons(listing) {
+  if (listing.units && listing.units.length) {
+    return Math.max.apply(null, listing.units.map(function (u) { return u.maxPersons || 0; }));
+  }
+  return listing.maxPersons || 0;
 }
 // Même repli que listingThumbUrl() côté client (sejours/index.html) :
 // galerie de l'établissement, sinon la 1ère chambre qui en a une.
@@ -85,6 +101,8 @@ exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async
   await indexRef.set({
     name: after.name || "",
     price: listingIndexPrice(after),
+    maxPersons: listingIndexMaxPersons(after),
+    ownerUid: after.ownerUid || "",
     accomType: after.accomType || "",
     lat: (typeof after.lat === "number") ? after.lat : null,
     lng: (typeof after.lng === "number") ? after.lng : null,
