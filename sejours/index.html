@@ -1615,6 +1615,22 @@ body.map-fullscreen{overflow:hidden;}
    simplement replacée avec le padding latéral de la carte et un peu d'air
    au-dessus pour respirer par rapport au bord haut arrondi. */
 .profile-card-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--gray-mid); padding:16px 0 6px;}
+/* Bloc "Votre profil" en tête de page (retour utilisateur) — même paire de
+   teintes que .switch-tile (sauge pour l'espace voyageur, lavande pour
+   l'espace hôte), pas de nouvelles couleurs inventées. Les labels de champ
+   ont besoin d'un contraste propre à chaque fond, d'où la redéfinition de
+   --sauge/--lavender-deep comme couleur de label UNIQUEMENT à l'intérieur
+   de ce bloc plutôt qu'une 3e classe par variante et par élément. */
+.profile-identity{border-radius:18px; padding:18px 16px 14px; margin-bottom:14px;}
+.profile-identity--voyageur{background:var(--sauge-bg);}
+.profile-identity--hotes{background:var(--lavender-bg);}
+.profile-identity-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;}
+.profile-identity--voyageur .profile-identity-title{color:var(--sauge-deep);}
+.profile-identity--hotes .profile-identity-title{color:var(--lavender-deep);}
+.profile-identity--voyageur .field-block>label{color:var(--sauge-deep);}
+.profile-identity--hotes .field-block>label{color:var(--lavender-deep);}
+.profile-identity-static{font-size:14px; font-weight:600; color:var(--ink); margin:0;}
+.profile-identity-btn{width:auto; padding:10px 22px; margin-top:4px;}
 
 /* ---------- validation des annonces (admin) ---------- */
 .admin-queue{padding:24px 0 110px;}
@@ -2747,6 +2763,15 @@ var hfHostPhoto = null; // photo de l'hôte (facultative) : null, {type:"existin
    (première fois) ou une simple présentation spécifique optionnelle
    surchargeant celle, déjà connue, du profil. */
 var hfProfileBio;
+/* Nom de contact du profil, résolu par resolveHostProfileName() — mon profil
+   (César, retour utilisateur) : "mon nom, renseigné une fois pour éviter de
+   le remettre à chaque annonce". Contrairement à hfProfileBio, aucune case
+   "présentation/nom spécifique à cette annonce" demandée : toujours la
+   valeur du profil, sans exception, lue directement par submitHostForm().
+   Le formulaire de dépôt n'a plus aucun champ "Votre nom" — déplacé dans le
+   bloc Profil (voir profileIdentityCardHtml()), rempli une fois pour
+   toutes. */
+var hfProfileName;
 var hfAvailableRooms = []; // accounts/{uid}.settings.rooms de l'hôte (compte gestion), lecture seule — pour proposer un lien dès la création d'une chambre
 /* Retour utilisateur : "laisse une description [présentation] par annonce,
    au pire ajoute un champ de récupération d'une description déjà remplie
@@ -6013,11 +6038,12 @@ function openSheet(kind){
         '<input type="file" id="hf-host-photo-input" accept="image/*" style="display:none">'+
         '<p class="field-hint">Affichée à côté de votre nom, section "Votre hôte" — cliquez la photo pour la changer.</p>'+
       '</div>'+
-      // Libellé remplacé (retour utilisateur : "remplacer le champ Nom de
-      // l'hôte par : Votre prénom, votre nom, ou comment vous souhaitez
-      // être appelé") — reste un champ libre, obligatoire (déjà le cas,
-      // voir submitHostForm()), affiché tel quel sur les annonces.
-      '<div class="field-block"><label>Votre prénom, votre nom, ou comment vous souhaitez être appelé *</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim, ou « La famille Dupont »" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
+      // Champ "Votre nom" retiré d'ici (retour utilisateur) : déplacé au
+      // niveau du PROFIL (voir profileIdentityCardHtml()), au même titre
+      // que la présentation juste en dessous — une seule saisie, jamais
+      // ressaisie annonce par annonce. hfProfileName (résolu par
+      // updateHfHostBioUI() -> resolveHostProfileName(), voir plus bas)
+      // alimente directement submitHostForm(), aucun input ici.
       /* Présentation : au niveau du PROFIL hôte désormais (retour
          utilisateur : "stocker la présentation au niveau du profil hôte,
          pas de chaque annonce : une seule saisie, réutilisée automatiquement
@@ -6332,6 +6358,7 @@ function openSheet(kind){
     // propre à chaque annonce, inchangée par ce chantier).
     hfDescCandidates = [];
     updateHfHostBioUI(); // lance la résolution async (resolveHostProfileBio) du bloc Présentation
+    resolveHostProfileName(function(name){ hfProfileName = name; }); // alimente submitHostForm(), aucun champ dans ce formulaire
     ensureHostListingsLoaded(function(list){
       var editId = hostFormEditListing && hostFormEditListing.id;
       hfDescCandidates = hfReuseCandidates(list, editId, "desc");
@@ -7732,7 +7759,12 @@ function wireHfAddressAutocomplete(){
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var accomType = document.getElementById("hf-type").value;
-  var hostName = document.getElementById("hf-hostname").value.trim();
+  // Nom de contact : plus de champ dans ce formulaire (retour utilisateur),
+  // toujours celui du profil — voir hfProfileName (résolu par
+  // resolveHostProfileName(), lancé à l'ouverture du volet juste à côté
+  // d'updateHfHostBioUI()). Vérifié explicitement plus bas (pas via
+  // requiredFields, qui suppose un vrai champ #id à scroller dessus).
+  var hostName = hfProfileName || "";
   // Présentation : voir le grand commentaire d'updateHfHostBioUI() — soit
   // ce formulaire EST la présentation de profil (hfProfileBio vide,
   // première fois), soit elle réutilise celle du profil tel quel, soit
@@ -7771,7 +7803,6 @@ function submitHostForm(){
   var requiredFields = [
     ["hf-name", name, "Donnez un nom à votre logement."],
     ["hf-type", accomType, "Choisissez un type d'hébergement."],
-    ["hf-hostname", hostName, "Indiquez votre prénom, nom, ou comment vous souhaitez être appelé."],
     ["hf-address", address, "Renseignez l'adresse complète du logement."],
     ["hf-claim", claim, "Renseignez une accroche courte."],
     ["hf-desc", desc, "Renseignez la description du logement."],
@@ -7785,6 +7816,10 @@ function submitHostForm(){
       return;
     }
   }
+  // Nom de contact (profil) : pas de champ à scroller ici, le message
+  // renvoie directement vers la section Profil plutôt que vers un id
+  // inexistant dans ce volet.
+  if(!hostName){ errEl.textContent = "Renseignez votre nom dans la section Profil (en tête de votre espace hôte) avant de déposer une annonce."; return; }
   if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; scrollToField("hf-hostbio"); return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
   // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
@@ -8368,6 +8403,7 @@ function renderProfile(){
 
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar" id="traveler-profile-avatar">'+initial+'</div>'+(connected ? '<input type="file" id="traveler-profile-photo-input" accept="image/*" style="display:none">' : '')+'<div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
+    (connected ? profileIdentityCardHtml("voyageur") : "")+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur current" data-switch="voyageur">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
@@ -8400,6 +8436,7 @@ function renderProfile(){
     // wireAccountAvatar()) — retour utilisateur : "utilise la même photo
     // pour le mode voyageur", inutile de la reproposer séparément ici.
     wireAccountAvatar("traveler-profile-avatar", "traveler-profile-photo-input", function(){ if(state.tab==="profile") renderProfile(); });
+    wireProfileIdentityCard();
   } else {
     document.getElementById("btn-signin-profile").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
   }
@@ -8872,6 +8909,132 @@ function resolveHostProfileBio(cb){
     });
   }).catch(function(){ cb(""); });
 }
+/* Même mécanique que resolveHostProfileBio() juste au-dessus (cache +
+   migration paresseuse depuis la première annonce existante qui porte
+   encore un hostName), pour le nom de contact. cb(name) — "" si rien
+   n'existe nulle part. */
+var hostProfileNameCache;
+function resolveHostProfileName(cb){
+  if(hostProfileNameCache!==undefined){ cb(hostProfileNameCache); return; }
+  if(!authState.uid || typeof firebase==="undefined"){ cb(""); return; }
+  firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+    var name = (doc.exists && doc.data().name) || "";
+    if(name){ hostProfileNameCache = name; cb(name); return; }
+    ensureHostListingsLoaded(function(list){
+      var found = list.filter(function(l){ return l.hostName && l.hostName.trim(); })[0];
+      if(!found){ hostProfileNameCache = ""; cb(""); return; }
+      var migratedName = found.hostName.trim();
+      firebase.firestore().collection("hostProfiles").doc(authState.uid)
+        .set({name:migratedName, updated:new Date().toISOString()}, {merge:true})
+        .catch(function(){})
+        .then(function(){ hostProfileNameCache = migratedName; cb(migratedName); });
+    });
+  }).catch(function(){ cb(""); });
+}
+/* Bloc "Votre profil" en tête de page (retour utilisateur) : email du
+   compte + nom de contact + présentation, sur fond coloré selon l'espace
+   (voyageur: sauge, hôte: lavande — mêmes teintes que .switch-tile, voir
+   leur CSS). Un seul HTML/wiring partagé entre renderProfile() (voyageur)
+   et renderHostProfile() (hôte) plutôt que deux copies : nom et
+   présentation vivent au niveau du COMPTE (hostProfiles/{uid}), pas de
+   l'espace affiché, donc rien ne justifie deux implémentations. La
+   présentation reste éditable/visible même côté voyageur : un seul profil,
+   pas de duplication entre les deux écrans — elle ne sert vraiment qu'une
+   fois hôte, mais autant la montrer depuis les deux plutôt que de la
+   cacher côté voyageur puis la faire réapparaître côté hôte. */
+function profileIdentityCardHtml(variant){
+  return '<div class="profile-identity profile-identity--'+variant+'">'+
+    '<div class="profile-identity-title">Votre profil</div>'+
+    '<div class="field-block"><label>Email</label><p class="profile-identity-static">'+esc(authState.email||"")+'</p></div>'+
+    '<div class="field-block"><label>Votre nom</label>'+
+      '<p class="field-hint" style="margin:0 0 8px;">Celui avec lequel vous souhaitez être contacté — repris automatiquement sur toutes vos annonces, plus besoin de le ressaisir à chaque dépôt.</p>'+
+      '<input class="text-input" id="profile-name-input" placeholder="Ex. Karim, ou « La famille Dupont »">'+
+    '</div>'+
+    '<button type="button" class="btn-apply profile-identity-btn" id="profile-name-save">Enregistrer</button>'+
+    '<p class="field-hint" id="profile-name-msg"></p>'+
+    '<div class="field-block" style="margin-top:18px;"><label>Votre présentation</label>'+
+      '<textarea class="text-input" id="profile-bio-input" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea>'+
+    '</div>'+
+    '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save">Enregistrer</button>'+
+    '<p class="field-hint" id="profile-bio-msg"></p>'+
+  '</div>';
+}
+/* Câblage partagé du bloc ci-dessus — appelé depuis renderProfile() ET
+   renderHostProfile() juste après avoir posé le HTML. Patch asynchrone des
+   deux champs (resolveHostProfileName/Bio) une fois la réponse Firestore
+   connue, jamais en écrasant une saisie en cours (document.activeElement,
+   même garde que partout ailleurs dans ce fichier). Les deux boutons
+   Enregistrer recopient aussi la nouvelle valeur sur TOUTES les annonces du
+   compte (sauf hostBioCustom pour la présentation, aucune exception
+   équivalente pour le nom — jamais de surcharge par annonce demandée). */
+function wireProfileIdentityCard(){
+  var nameInput = document.getElementById("profile-name-input");
+  var bioInput = document.getElementById("profile-bio-input");
+  if(!nameInput || !bioInput) return; // bloc absent (non connecté côté voyageur)
+  resolveHostProfileName(function(name){
+    hfProfileName = name;
+    if(nameInput && document.activeElement!==nameInput) nameInput.value = name;
+  });
+  resolveHostProfileBio(function(bio){
+    hfProfileBio = bio;
+    if(bioInput && document.activeElement!==bioInput) bioInput.value = bio;
+  });
+  document.getElementById("profile-name-save").addEventListener("click", function(){
+    var btn = this;
+    var msg = document.getElementById("profile-name-msg");
+    var name = nameInput.value.trim();
+    msg.textContent = "";
+    if(!name){ msg.textContent = "Le nom ne peut pas être vide."; return; }
+    if(!authState.uid || typeof firebase==="undefined"){ msg.textContent = "Connexion requise — réessayez dans un instant."; return; }
+    btn.disabled = true;
+    firebase.firestore().collection("hostProfiles").doc(authState.uid)
+      .set({name:name, updated:new Date().toISOString()}, {merge:true})
+      .then(function(){
+        hostProfileNameCache = name; hfProfileName = name;
+        ensureHostListingsLoaded(function(list){
+          if(list.length){
+            var batch = firebase.firestore().batch();
+            list.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostName:name}); });
+            batch.commit().then(function(){ hostListingsCache = []; });
+          }
+        });
+        btn.disabled = false;
+        msg.textContent = "Nom enregistré.";
+      }).catch(function(err){
+        console.error("[profil] échec de l'enregistrement du nom", err);
+        btn.disabled = false;
+        msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
+      });
+  });
+  document.getElementById("profile-bio-save").addEventListener("click", function(){
+    var btn = this;
+    var msg = document.getElementById("profile-bio-msg");
+    var bio = bioInput.value.trim();
+    msg.textContent = "";
+    if(!bio){ msg.textContent = "La présentation ne peut pas être vide."; return; }
+    if(!authState.uid || typeof firebase==="undefined"){ msg.textContent = "Connexion requise — réessayez dans un instant."; return; }
+    btn.disabled = true;
+    firebase.firestore().collection("hostProfiles").doc(authState.uid)
+      .set({bio:bio, updated:new Date().toISOString()}, {merge:true})
+      .then(function(){
+        hostProfileBioCache = bio; hfProfileBio = bio;
+        ensureHostListingsLoaded(function(list){
+          var toUpdate = list.filter(function(l){ return !l.hostBioCustom; });
+          if(toUpdate.length){
+            var batch = firebase.firestore().batch();
+            toUpdate.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostBio:bio}); });
+            batch.commit().then(function(){ hostListingsCache = []; });
+          }
+        });
+        btn.disabled = false;
+        msg.textContent = "Présentation enregistrée.";
+      }).catch(function(err){
+        console.error("[profil] échec de l'enregistrement de la présentation", err);
+        btn.disabled = false;
+        msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
+      });
+  });
+}
 /* Photo de profil : associée au COMPTE (uid), pas à chaque annonce (retour
    utilisateur : "je préfère que tu l'associe au compte hôte" — trouvait
    bizarre qu'elle dépende des annonces). Enregistrée dans hostProfiles/{uid}
@@ -8947,6 +9110,7 @@ function renderHostProfile(){
   var initial = authState.email ? authState.email.charAt(0).toUpperCase() : "?";
   feed.innerHTML = '<div class="profile-view">'+
     '<div class="profile-head"><div class="profile-avatar" id="host-profile-avatar">'+initial+'</div><input type="file" id="host-profile-photo-input" accept="image/*" style="display:none"><div><b style="font-size:17px;">'+esc(authState.email||"")+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;"><a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a></div></div></div>'+
+    profileIdentityCardHtml("hotes")+
     '<div class="profile-switch">'+
       '<button type="button" class="switch-tile voyageur" id="btn-exit-host">'+
         '<div class="switch-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M3 12h18"/></svg></div>'+
@@ -8963,17 +9127,6 @@ function renderHostProfile(){
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
-    /* Présentation de profil (point 3.2) — texte initial laissé vide ici :
-       resolveHostProfileBio() (async, Firestore + migration paresseuse
-       éventuelle, voir son grand commentaire) patche la valeur juste après
-       ce premier rendu, même défi que la photo de profil juste au-dessus
-       (wireAccountAvatar()), qui procède pareil. */
-    '<div class="profile-card"><div class="profile-card-title">Votre présentation</div>'+
-      '<p class="field-hint" style="margin-top:0;">Affichée sur toutes vos annonces, encart « À propos de votre hôte » — sauf sur celles où vous avez coché une présentation spécifique.</p>'+
-      '<div class="field-block" style="margin-bottom:10px;"><textarea class="text-input" id="host-profile-bio" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea></div>'+
-      '<button type="button" class="btn-apply" id="host-profile-bio-save" style="width:auto; padding:10px 22px;">Enregistrer</button>'+
-      '<p class="field-hint" id="host-profile-bio-msg"></p>'+
-    '</div>'+
     '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
     /* Aucune carte marquée active au premier rendu : hostAccountCache est
        systématiquement invalidé par enterHostMode(), donc le vrai plan
@@ -9000,49 +9153,7 @@ function renderHostProfile(){
     loadAdminQueueCount();
   }
   wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ if(state.hostTab==="profile") renderHostProfile(); });
-  resolveHostProfileBio(function(bio){
-    if(state.hostTab!=="profile") return;
-    var ta = document.getElementById("host-profile-bio");
-    // document.activeElement!==ta : ne jamais écraser ce que l'hôte est
-    // déjà en train de taper si la réponse Firestore arrive après coup
-    // (même garde que renderFeed() vis-à-vis des champs de filtre ouverts).
-    if(ta && document.activeElement!==ta) ta.value = bio;
-  });
-  document.getElementById("host-profile-bio-save").addEventListener("click", function(){
-    var btn = this;
-    var ta = document.getElementById("host-profile-bio");
-    var msg = document.getElementById("host-profile-bio-msg");
-    var bio = ta.value.trim();
-    msg.textContent = "";
-    if(!bio){ msg.textContent = "La présentation ne peut pas être vide."; return; }
-    if(!authState.uid || typeof firebase==="undefined"){ msg.textContent = "Connexion requise — réessayez dans un instant."; return; }
-    btn.disabled = true;
-    firebase.firestore().collection("hostProfiles").doc(authState.uid)
-      .set({bio:bio, updated:new Date().toISOString()}, {merge:true})
-      .then(function(){
-        hostProfileBioCache = bio; hfProfileBio = bio;
-        // Recopie sur chaque annonce du compte — même mécanisme que la
-        // photo (wireAccountAvatar() plus haut), sauf les annonces qui
-        // portent leur propre présentation spécifique (hostBioCustom,
-        // voir "Utiliser une présentation spécifique pour cette annonce"
-        // dans le formulaire d'annonce) : celles-là ne doivent JAMAIS être
-        // écrasées par un changement fait ici.
-        ensureHostListingsLoaded(function(list){
-          var toUpdate = list.filter(function(l){ return !l.hostBioCustom; });
-          if(toUpdate.length){
-            var batch = firebase.firestore().batch();
-            toUpdate.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostBio:bio}); });
-            batch.commit().then(function(){ hostListingsCache = []; });
-          }
-        });
-        btn.disabled = false;
-        msg.textContent = "Présentation enregistrée.";
-      }).catch(function(err){
-        console.error("[profil] échec de l'enregistrement de la présentation", err);
-        btn.disabled = false;
-        msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
-      });
-  });
+  wireProfileIdentityCard();
   resolveHostAccount(function(account){
     if(state.hostTab!=="profile") return; // a changé d'onglet pendant la lecture
     var plan = (account && account.settings && account.settings.plan) || "simple";
