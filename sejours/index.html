@@ -769,8 +769,23 @@ textarea.text-input{resize:vertical; min-height:80px;}
 
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
-.detail-gallery{position:relative; aspect-ratio:4/5; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
-.detail-gallery .slide{min-width:100%; height:100%; scroll-snap-align:start; position:relative; overflow:hidden;}
+/* Retour utilisateur, bug réel : "les flèches [bulles retour/like/
+   partage] défilent avec la première image au lieu de rester en place".
+   Cause : ces boutons étaient posés en position:absolute à même
+   #detail-gallery, qui est AUSSI l'élément qui défile (overflow-x:auto)
+   — sur certains navigateurs (WebKit notamment), un enfant en absolute
+   posé directement dans son propre ancêtre défilant peut suivre le
+   scroll au lieu d'en rester détaché. Corrigé en séparant les deux
+   rôles, même principe que .cover/.cover-carousel sur les cartes du fil
+   (qui n'ont jamais eu ce bug, boutons déjà hors du conteneur qui
+   défile) : #detail-gallery reste statique (overflow:hidden, ne défile
+   plus lui-même) et n'héberge plus que les boutons/points, fixes par
+   nature ; .detail-gallery-scroll, nouveau conteneur interne en
+   position:absolute (plein cadre), reprend seul le défilement et les
+   slides. */
+.detail-gallery{position:relative; aspect-ratio:4/5; overflow:hidden;}
+.detail-gallery-scroll{position:absolute; inset:0; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
+.detail-gallery-scroll .slide{min-width:100%; height:100%; scroll-snap-align:start; position:relative; overflow:hidden;}
 .detail-back{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:14px; z-index:10; width:38px; height:38px;
   border-radius:50%; background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
 .detail-back svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2;}
@@ -5354,7 +5369,8 @@ function openDetail(id){
   var qrUid = "qrd"+l.id+(activeUnit ? "-"+activeUnit.id : "");
 
   root.innerHTML = '<div class="detail" id="detail-panel">'+
-    '<div class="detail-gallery" id="detail-gallery">'+slides+
+    '<div class="detail-gallery" id="detail-gallery">'+
+      '<div class="detail-gallery-scroll" id="detail-gallery-scroll">'+slides+'</div>'+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
       '<button class="save-btn detail-save'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
       '<button class="share-btn detail-share" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
@@ -5409,7 +5425,7 @@ function openDetail(id){
       });
     });
   }
-  var gal = document.getElementById("detail-gallery");
+  var gal = document.getElementById("detail-gallery-scroll");
   gal.addEventListener("scroll", function(){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
