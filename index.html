@@ -926,7 +926,40 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .host-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .host-info{display:flex; flex-direction:column; gap:5px; flex:1; min-width:0;}
 .host-info b{display:block; font-size:14.5px;}
-.host-info p{margin:0; font-size:13px; line-height:1.4; color:#4a4636;}
+/* "À propos de votre hôte" : encart séparé, APRÈS la carte "Votre hôte"
+   (retour utilisateur : "après le bloc Votre hôte, afficher l'encart À
+   propos de votre hôte avec la présentation, tronquée, bouton Voir
+   plus") — la présentation ne s'affiche donc plus directement sous le
+   nom dans .host-info (ancien .host-info p, retiré, plus aucun appelant).
+   Troncature à 3 lignes (même recette que .collection-tile-title,
+   -webkit-line-clamp) : "Voir plus" ouvre un volet dédié (kind==="hostBio")
+   avec le texte complet ET, en dessous, les autres annonces du même hôte
+   (point 3.4) — jamais un simple dépli sur place, l'énoncé du retour
+   utilisateur ("dans la vue Voir plus") décrit bien une vue à part. */
+.host-bio-text{margin:0; font-size:13px; line-height:1.45; color:#4a4636;
+  display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;}
+.host-bio-more{display:block; margin-top:8px; background:none; border:none; padding:0;
+  font-family:inherit; font-size:12.5px; font-weight:700; color:var(--sauge); cursor:pointer;}
+.host-bio-full{margin:0; font-size:14px; line-height:1.55; color:#4a4636; white-space:pre-line;}
+/* Case à cocher du formulaire d'annonce (retour utilisateur : "case
+   Utiliser une présentation spécifique pour cette annonce") — premier
+   <input type="checkbox"> de tout ce fichier, pas de style existant à
+   reprendre : natif, juste accent-color pour rester dans la palette. */
+.hf-checkbox-row{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; margin:10px 0; cursor:pointer;}
+.hf-checkbox-row input{width:16px; height:16px; accent-color:var(--sauge); flex-shrink:0;}
+/* Autres annonces du même hôte (point 3.4, dans la vue "Voir plus" de la
+   présentation) — vignettes carrées cliquables, même esprit que
+   .collection-tile mais plus simples (pas de suppression/édition) :
+   une seule image + nom, ouvre directement la fiche de cette autre
+   annonce (closeSheet() + openDetail()). */
+.host-other-listings{margin-top:20px;}
+.host-other-listings-title{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sauge); margin-bottom:10px;}
+.host-other-tile-row{display:grid; grid-template-columns:repeat(2,1fr); gap:10px;}
+.host-other-tile{position:relative; aspect-ratio:1/1; border-radius:14px; overflow:hidden; border:none; padding:0; cursor:pointer; background:var(--cream-deep); text-align:left;}
+.host-other-tile img{width:100%; height:100%; object-fit:cover; display:block;}
+.host-other-tile-name{position:absolute; left:0; right:0; bottom:0; padding:8px 9px;
+  font-family:inherit; font-size:11.5px; font-weight:700; color:#fff; line-height:1.3;
+  background:linear-gradient(180deg, rgba(20,26,20,0) 0%, rgba(20,26,20,.82) 100%);}
 
 /* ---------- bottom nav ----------
    Pas d'apparition animée : la barre est installée à sa place fixe dès
@@ -2615,22 +2648,30 @@ var HOST_FORMULAS = [
 var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
 var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[], linkedRoomId}]
 var hfHostPhoto = null; // photo de l'hôte (facultative) : null, {type:"existing", url} ou {type:"new", file} — même mécanique que hfSelectedFiles, mais un seul fichier
+/* Présentation de PROFIL résolue par resolveHostProfileBio() (voir plus
+   bas, près de wireAccountAvatar()) : `undefined` tant que pas encore
+   connue, `""` si l'hôte n'en a vraiment aucune (première annonce/premier
+   profil), sinon le texte. Lue par updateHfHostBioUI()/submitHostForm()
+   pour décider si le textarea #hf-hostbio EST la présentation de profil
+   (première fois) ou une simple présentation spécifique optionnelle
+   surchargeant celle, déjà connue, du profil. */
+var hfProfileBio;
 var hfAvailableRooms = []; // accounts/{uid}.settings.rooms de l'hôte (compte gestion), lecture seule — pour proposer un lien dès la création d'une chambre
 /* Retour utilisateur : "laisse une description [présentation] par annonce,
    au pire ajoute un champ de récupération d'une description déjà remplie
    sur une autre annonce", puis "idem pour les description de l'annonce
-   (...) souvent les gens font la même structure" — un même mécanisme de
-   reprise pour deux champs (hf-hostbio/hf-desc), généralisé ici plutôt que
-   dupliqué deux fois. Candidats {id, name, text} : les AUTRES annonces du
-   même hôte (listings/{id}.ownerUid===authState.uid, via
-   ensureHostListingsLoaded(), déjà utilisée par Mes annonces — pas une
-   nouvelle lecture Firestore) qui ont déjà ce champ non vide, annonce en
-   cours d'édition exclue. Rempli en asynchrone à l'ouverture du
-   formulaire (voir wireSheet(), kind==="hostform"), même pattern que
-   hfAvailableRooms juste au-dessus — hfBioCandidates/hfDescCandidates
-   restent deux variables (pas un objet partagé) : chaque select ne doit
-   garder que SES propres candidats au moment du clic. */
-var hfBioCandidates = [];
+   (...) souvent les gens font la même structure" — mécanisme de reprise
+   pour "desc" (description du logement, propre à chaque annonce).
+   hfReuseCandidates() servait aussi à "hostBio" avant le passage de la
+   présentation au niveau du profil (point 3.2, voir resolveHostProfileBio()
+   plus bas) — une seule présentation partagée par défaut a rendu cette
+   reprise annonce-par-annonce redondante pour ce champ-là, retirée.
+   Candidats {id, name, text} : les AUTRES annonces du même hôte
+   (listings/{id}.ownerUid===authState.uid, via ensureHostListingsLoaded(),
+   déjà utilisée par Mes annonces — pas une nouvelle lecture Firestore) qui
+   ont déjà ce champ non vide, annonce en cours d'édition exclue. Rempli en
+   asynchrone à l'ouverture du formulaire (voir wireSheet(), kind==="hostform"),
+   même pattern que hfAvailableRooms juste au-dessus. */
 var hfDescCandidates = [];
 function hfReuseCandidates(list, editId, field){
   return list.filter(function(l){ return l[field] && l[field].trim() && l.id!==editId; })
@@ -2662,6 +2703,62 @@ function wireHfReuseSelect(selectId, candidates, targetFieldId){
     var c = candidates.filter(function(x){ return x.id===pickedId; })[0];
     if(c) document.getElementById(targetFieldId).value = c.text;
     this.value = "";
+  });
+}
+/* Patche #hf-hostbio-block une fois resolveHostProfileBio() résolue (voir
+   son grand commentaire, près de wireAccountAvatar()) — appelée une
+   première fois à l'ouverture du formulaire (wireSheet(), kind==="hostform")
+   et ré-appelée par le changement de la case à cocher, jamais par une
+   frappe clavier (la valeur du textarea, elle, n'est lue qu'au submit).
+   Deux états bien distincts, pas une simple variante visuelle l'un de
+   l'autre :
+   — hfProfileBio vide (aucune présentation de profil nulle part, ni
+     migrée) : CE formulaire EST la première présentation de profil, pas
+     de case à cocher (rien à surcharger), textarea obligatoire.
+   — hfProfileBio non vide : la présentation du profil s'affiche en
+     rappel, textarea masqué par défaut (la case, décochée, suffit à la
+     réutiliser telle quelle) — cochée, elle révèle le textarea comme
+     présentation SPÉCIFIQUE à cette seule annonce (retour utilisateur :
+     "case Utiliser une présentation spécifique pour cette annonce"),
+     pré-rempli avec la présentation de profil comme point de départ
+     commode si vide, jamais écrasée si l'hôte avait déjà tapé quelque
+     chose dedans avant de cocher. */
+function updateHfHostBioUI(){
+  var block = document.getElementById("hf-hostbio-block");
+  if(!block) return; // volet déjà refermé/changé
+  resolveHostProfileBio(function(bio){
+    hfProfileBio = bio;
+    var block2 = document.getElementById("hf-hostbio-block"); // revérifié : la réponse peut arriver après coup
+    if(!block2) return;
+    var preview = document.getElementById("hf-hostbio-profile-preview");
+    var overrideRow = document.getElementById("hf-hostbio-override-row");
+    var overrideCb = document.getElementById("hf-hostbio-override");
+    var textarea = document.getElementById("hf-hostbio");
+    var hint = document.getElementById("hf-hostbio-hint");
+    if(bio){
+      preview.hidden = false;
+      preview.textContent = "Présentation actuelle de votre profil : « "+bio+" »";
+      overrideRow.hidden = false;
+      // Édition d'une annonce qui a déjà sa propre présentation spécifique
+      // (hostBioCustom, voir submitHostForm()) : case pré-cochée, pas une
+      // ancienne présentation partagée qu'il faudrait redécouvrir.
+      var editingCustom = !!(hostFormEditListing && hostFormEditListing.hostBioCustom);
+      overrideCb.checked = editingCustom;
+      textarea.hidden = !editingCustom;
+      textarea.required = editingCustom;
+      hint.textContent = "Réutilise automatiquement la présentation de votre profil (modifiable depuis Profil hôte), sauf si vous cochez une présentation spécifique ci-dessus.";
+      overrideCb.onchange = function(){
+        textarea.hidden = !overrideCb.checked;
+        textarea.required = overrideCb.checked;
+        if(overrideCb.checked && !textarea.value.trim()) textarea.value = bio;
+      };
+    } else {
+      preview.hidden = true;
+      overrideRow.hidden = true;
+      textarea.hidden = false;
+      textarea.required = true;
+      hint.textContent = "Première présentation : elle sera réutilisée automatiquement sur toutes vos futures annonces (modifiable ensuite depuis votre Profil hôte).";
+    }
   });
 }
 /* null = dépôt d'une nouvelle annonce ; sinon l'annonce (doc complet, avec
@@ -3446,6 +3543,11 @@ var hostRoomLinkContext = null;
    re-rendre. */
 var collectionPickerContext = null;
 var collectionRenameContext = null; // collection ciblée par kind==="collRename"
+/* Contexte de kind==="hostBio" (point 3.3/3.4, "Voir plus" de la
+   présentation) — {bio, hostName, ownerUid, excludeDocId}, posé par
+   openDetail() juste avant openSheet("hostBio"). excludeDocId : l'annonce
+   actuellement affichée, jamais listée parmi "ses autres hébergements". */
+var hostBioSheetContext = null;
 /* Collections du voyageur connecté (Mes séjours -> Favoris) — synchronisées
    par compte (collections/{uid}/items/{collectionId}), contrairement à
    l'ancien state.liked qui restait local à l'appareil (localStorage) : un
@@ -5422,7 +5524,17 @@ function openDetail(id){
         metaRowHtml+
         bodyExtraHtml+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-        '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b>'+(l.host.bio ? '<p>'+esc(l.host.bio)+'</p>' : '')+'</div></div></div>'+
+        '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div></div>'+
+        // "À propos de votre hôte" : encart séparé, juste après "Votre hôte"
+        // (point 3.3, retour utilisateur — voir le grand commentaire CSS de
+        // .host-bio-text) — absent si cet hôte n'a aucune présentation
+        // (jamais un encart vide). "Voir plus" ouvre kind==="hostBio", pas
+        // un simple dépli : la présentation complète ET, en dessous, les
+        // autres annonces du même hôte (point 3.4) y tiennent ensemble.
+        (l.host.bio ? '<div class="detail-card"><div class="section-title" style="margin-top:0">À propos de votre hôte</div>'+
+          '<p class="host-bio-text">'+esc(l.host.bio)+'</p>'+
+          '<button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>'+
+        '</div>' : '')+
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
@@ -5436,6 +5548,11 @@ function openDetail(id){
     openCollectionPicker(l, function(){ renderLikeBadge(); openDetail(id); });
   });
   root.querySelector("[data-share]").addEventListener("click", function(){ shareListing(l); });
+  var hostBioMoreBtn = document.getElementById("host-bio-more");
+  if(hostBioMoreBtn) hostBioMoreBtn.addEventListener("click", function(){
+    hostBioSheetContext = {bio:l.host.bio, hostName:l.host.name, ownerUid:l.ownerUid, excludeDocId:l.docId};
+    openSheet("hostBio");
+  });
   if(hasTabs){
     // Changer d'onglet ou choisir une chambre depuis la vue d'ensemble tient en 1 clic — la position
     // de scroll est reprise telle quelle pour un changement d'onglet (pas besoin de rescroller à
@@ -5641,10 +5758,32 @@ function openSheet(kind){
         '<input type="file" id="hf-host-photo-input" accept="image/*" style="display:none">'+
         '<p class="field-hint">Affichée à côté de votre nom, section "Votre hôte" — cliquez la photo pour la changer.</p>'+
       '</div>'+
-      '<div class="field-block"><label>Votre nom (affiché aux voyageurs)</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
-      '<div class="field-block"><label>Présentation (facultatif)</label><textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
-        '<p class="field-hint">Affichée sous votre nom dans la fiche de l\'annonce, section "Votre hôte".</p>'+
-        '<div id="hf-bio-reuse-wrap"></div>'+
+      // Libellé remplacé (retour utilisateur : "remplacer le champ Nom de
+      // l'hôte par : Votre prénom, votre nom, ou comment vous souhaitez
+      // être appelé") — reste un champ libre, obligatoire (déjà le cas,
+      // voir submitHostForm()), affiché tel quel sur les annonces.
+      '<div class="field-block"><label>Votre prénom, votre nom, ou comment vous souhaitez être appelé</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim, ou « La famille Dupont »" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
+      /* Présentation : au niveau du PROFIL hôte désormais (retour
+         utilisateur : "stocker la présentation au niveau du profil hôte,
+         pas de chaque annonce : une seule saisie, réutilisée automatiquement
+         sur toutes ses annonces"), pas un champ libre à chaque annonce comme
+         avant. Rendu statique ici en attendant la résolution asynchrone de
+         resolveHostProfileBio() (même défi que hfHostPhoto/l'avatar juste
+         au-dessus : il faut une lecture Firestore avant de savoir si une
+         présentation de profil existe déjà) — updateHfHostBioUI(), câblée
+         plus bas, patche ce bloc une fois la réponse connue : textarea
+         masqué + case "présentation spécifique" si un profil existe déjà,
+         sinon ce textarea EST la présentation de profil (première fois,
+         obligatoire — "champ obligatoire lors de la création de la première
+         annonce (ou du profil)"). */
+      '<div class="field-block" id="hf-hostbio-block">'+
+        '<label>Présentation</label>'+
+        '<p class="field-hint" id="hf-hostbio-profile-preview" hidden></p>'+
+        '<label class="hf-checkbox-row" id="hf-hostbio-override-row" hidden>'+
+          '<input type="checkbox" id="hf-hostbio-override"> Utiliser une présentation spécifique pour cette annonce'+
+        '</label>'+
+        '<textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
+        '<p class="field-hint" id="hf-hostbio-hint">Affichée dans la fiche de l\'annonce, encart « À propos de votre hôte ».</p>'+
       '</div>'+
       '<div class="field-block" style="position:relative;"><label>Adresse complète du logement</label>'+
         '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
@@ -5766,6 +5905,16 @@ function openSheet(kind){
     inner = '<h3>Nouvelle collection</h3>'+
       '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-create-name" placeholder="Ex. Vacances d\'été" autofocus></div>'+
       '<div class="auth-err" id="coll-create-err"></div>';
+  } else if(kind==="hostBio"){
+    // "Voir plus" de la présentation (points 3.3/3.4) — texte complet,
+    // sans troncature, PUIS les autres annonces publiées du même hôte
+    // juste en dessous (host-other-listings), chargées en asynchrone
+    // juste plus bas (fetchOtherListingsByHost()) : absentes du HTML
+    // initial, ce bloc reste cablé "vide" tant qu'elles n'ont pas répondu
+    // — jamais de doublon avec le titre "Autres hébergements" posé par JS.
+    inner = '<h3>À propos de '+esc(hostBioSheetContext.hostName)+'</h3>'+
+      '<p class="host-bio-full">'+esc(hostBioSheetContext.bio)+'</p>'+
+      '<div id="host-other-listings-wrap"></div>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
@@ -5776,6 +5925,7 @@ function openSheet(kind){
     : kind==="collRename" ? "Enregistrer"
     : kind==="collCreate" ? "Créer"
     : kind==="roomlink" ? "Fermer"
+    : kind==="hostBio" ? "Fermer"
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -5885,17 +6035,17 @@ function openSheet(kind){
       if(pruned.changed) hfUnits = pruned.units;
       if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
     });
-    hfBioCandidates = [];
+    // hf-bio-reuse ("reprendre la présentation d'une autre annonce") retiré
+    // avec le passage de la présentation au niveau du profil (point 3.2) :
+    // une seule présentation partagée par défaut, plus besoin de la
+    // recopier annonce par annonce — hfReuseCandidates()/hfDescCandidates
+    // restent utilisés tels quels pour "desc" (description du logement,
+    // propre à chaque annonce, inchangée par ce chantier).
     hfDescCandidates = [];
+    updateHfHostBioUI(); // lance la résolution async (resolveHostProfileBio) du bloc Présentation
     ensureHostListingsLoaded(function(list){
       var editId = hostFormEditListing && hostFormEditListing.id;
-      hfBioCandidates = hfReuseCandidates(list, editId, "hostBio");
       hfDescCandidates = hfReuseCandidates(list, editId, "desc");
-      var bioWrap = document.getElementById("hf-bio-reuse-wrap");
-      if(bioWrap && hfBioCandidates.length){
-        bioWrap.innerHTML = hfReuseSelectHtml("hf-bio-reuse", hfBioCandidates, "Reprendre la présentation d'une autre annonce…");
-        wireHfReuseSelect("hf-bio-reuse", hfBioCandidates, "hf-hostbio");
-      }
       var descWrap = document.getElementById("hf-desc-reuse-wrap");
       if(descWrap && hfDescCandidates.length){
         descWrap.innerHTML = hfReuseSelectHtml("hf-desc-reuse", hfDescCandidates, "Reprendre la description d'une autre annonce…");
@@ -6007,6 +6157,33 @@ function openSheet(kind){
         if(err){ errEl.textContent = "Erreur : "+(err.message||err.code); btn.disabled = false; return; }
         closeSheet();
         renderFavorisView();
+      });
+    });
+    return;
+  } else if(kind==="hostBio"){
+    document.getElementById("sheet-apply").addEventListener("click", closeSheet);
+    fetchOtherListingsByHost(hostBioSheetContext.ownerUid, hostBioSheetContext.excludeDocId, function(others){
+      var wrap = document.getElementById("host-other-listings-wrap");
+      if(!wrap) return; // volet refermé avant la réponse
+      if(!others.length) return; // retour utilisateur : "masquer le bloc s'il n'en a aucune autre"
+      wrap.innerHTML = '<div class="host-other-listings">'+
+        '<div class="host-other-listings-title">Autres hébergements de '+esc(hostBioSheetContext.hostName)+'</div>'+
+        '<div class="host-other-tile-row">'+
+          others.map(function(o){
+            var thumb = listingThumbUrl(o);
+            return '<button type="button" class="host-other-tile" data-other-id="'+o.id+'">'+
+              (thumb ? '<img src="'+esc(thumb)+'" alt="">' : '')+
+              '<span class="host-other-tile-name">'+esc(o.name)+'</span>'+
+            '</button>';
+          }).join("")+
+        '</div>'+
+      '</div>';
+      Array.prototype.forEach.call(wrap.querySelectorAll("[data-other-id]"), function(btn){
+        btn.addEventListener("click", function(){
+          var otherId = Number(btn.getAttribute("data-other-id"));
+          closeSheet();
+          openDetail(otherId);
+        });
       });
     });
     return;
@@ -7166,7 +7343,17 @@ function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var accomType = document.getElementById("hf-type").value;
   var hostName = document.getElementById("hf-hostname").value.trim();
-  var hostBio = document.getElementById("hf-hostbio").value.trim();
+  // Présentation : voir le grand commentaire d'updateHfHostBioUI() — soit
+  // ce formulaire EST la présentation de profil (hfProfileBio vide,
+  // première fois), soit elle réutilise celle du profil tel quel, soit
+  // elle la surcharge (case cochée). firstTimeProfileBio déclenche plus
+  // bas l'écriture dans hostProfiles/{uid} (création implicite du profil),
+  // jamais faite pour les deux autres cas (déjà la valeur connue du
+  // profil, ou une présentation volontairement propre à cette annonce).
+  var firstTimeProfileBio = !hfProfileBio;
+  var hostBioOverrideCb = document.getElementById("hf-hostbio-override");
+  var hostBioCustom = !firstTimeProfileBio && !!(hostBioOverrideCb && hostBioOverrideCb.checked);
+  var hostBio = (firstTimeProfileBio || hostBioCustom) ? document.getElementById("hf-hostbio").value.trim() : hfProfileBio;
   var regionName = document.getElementById("hf-region-name").value;
   var deptName = document.getElementById("hf-dept-name").value;
   var city = document.getElementById("hf-city").value.trim();
@@ -7183,6 +7370,7 @@ function submitHostForm(){
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
   if(!name || !accomType || !hostName || !address || !claim || !desc || !phone || !email){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
   // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
   // voir renderHostUnits() — donc jamais exigé pour une seule location
@@ -7231,25 +7419,41 @@ function submitHostForm(){
       return uploadUnit(0, []).then(function(units){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
-          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostPhotoUrl:hostPhoto.urls[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
+          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng,
           websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
           gallery:house.urls, galleryThumb:house.thumbs,
           units:units
         };
+        var listingWrite;
         if(editing){
           /* Ni status, ni ownerUid, ni createdAt dans ce payload : la règle
              Firestore exige que status ne bouge pas sur un update du
              propriétaire (voir README), et .update() ne touche que les
              champs listés — les autres restent tels quels. */
-          return firebase.firestore().collection("listings").doc(editId).update(payload);
+          listingWrite = firebase.firestore().collection("listings").doc(editId).update(payload);
+        } else {
+          payload.ownerUid = authState.uid;
+          payload.ownerEmail = authState.email;
+          payload.status = "pending";
+          payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+          listingWrite = firebase.firestore().collection("listings").add(payload);
         }
-        payload.ownerUid = authState.uid;
-        payload.ownerEmail = authState.email;
-        payload.status = "pending";
-        payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-        return firebase.firestore().collection("listings").add(payload);
+        // Première présentation de l'hôte (hfProfileBio vide à l'ouverture
+        // du formulaire) : crée hostProfiles/{uid} dans la foulée, en
+        // parallèle de l'écriture de l'annonce — voir le commentaire de
+        // firstTimeProfileBio plus haut. Caches mis à jour tout de suite
+        // (hostProfileBioCache/hfProfileBio) : rouvrir le formulaire ou le
+        // Profil hôte juste après doit déjà voir cette présentation comme
+        // celle du profil, sans attendre une relecture Firestore.
+        if(firstTimeProfileBio){
+          var profileWrite = firebase.firestore().collection("hostProfiles").doc(authState.uid)
+            .set({bio:hostBio, updated:new Date().toISOString()}, {merge:true})
+            .then(function(){ hostProfileBioCache = hostBio; hfProfileBio = hostBio; });
+          return Promise.all([listingWrite, profileWrite]);
+        }
+        return listingWrite;
       });
       });
     });
@@ -7371,6 +7575,41 @@ function listingThumbUrl(l){
     }
   }
   return null;
+}
+/* Autres annonces PUBLIÉES du même hôte (point 3.4, "Voir plus" de la
+   présentation) — un seul .where() (ownerUid), statut "published" et
+   annonce en cours exclue filtrés côté client ensuite : même convention
+   que tout le reste de ce fichier (ensureHostListingsLoaded(),
+   fetchPublishedListings()…), aucun .where().where() chaîné nulle part
+   ailleurs — un deuxième .where() exigerait un index composite à créer
+   à la main dans la console Firebase (même genre de déploiement manuel
+   que listingIndex/Cloud Functions, voir le README), pour un filtrage
+   que quelques lignes de JS suffisent à faire ici. Même garde anti-
+   doublon que ensureListingDocsLoaded() (listingKey(), jamais repousser
+   dans LISTINGS une annonce déjà connue, ex. déjà croisée ailleurs dans
+   le fil) : les documents complets reçus ici alimentent directement
+   LISTINGS au passage (rebuildListings()), pour qu'un clic sur une
+   vignette ouvre sa fiche (openDetail()) sans nouvelle lecture Firestore.
+   cb(others) — tableau vide si aucune, ou si ownerUid manque/Firestore
+   indisponible (jamais une erreur affichée : un bloc vide se masque
+   simplement, voir son appelant). */
+function fetchOtherListingsByHost(ownerUid, excludeDocId, cb){
+  if(!ownerUid || typeof firebase==="undefined"){ cb([]); return; }
+  var known = {};
+  LISTINGS.forEach(function(l){ known[listingKey(l)] = true; });
+  firebase.firestore().collection("listings").where("ownerUid","==",ownerUid).get().then(function(snap){
+    var others = [];
+    snap.docs.forEach(function(doc){
+      if(doc.id===excludeDocId) return;
+      var data = doc.data();
+      if(data.status!=="published") return;
+      var normalized = normalizeHostListing(doc);
+      others.push(normalized);
+      if(!known[listingKey(normalized)]) hostFirestoreListings.push(normalized);
+    });
+    rebuildListings();
+    cb(others);
+  }).catch(function(){ cb([]); });
 }
 /* Fait défiler le fil jusqu'à la carte (.card) de cette annonce et la fait
    brièvement clignoter (retour utilisateur, fusion de la carte dans
@@ -8162,6 +8401,40 @@ var MKT_SECTIONS = [
    n'écrivant jamais sur un accounts/{uid} existant (voir le commentaire
    de resolveHostAccount()), changer de formule reste à faire depuis
    Fiftin app (Réglages → Compte), pas d'ici. */
+/* Présentation de profil (point 3.2, retour utilisateur : "stocker la
+   présentation au niveau du profil hôte, pas de chaque annonce : une
+   seule saisie, réutilisée automatiquement sur toutes ses annonces") —
+   même collection hostProfiles/{uid} que la photo juste en dessous, champ
+   `bio` à côté de `photoUrl`. hostProfileBioCache : undefined tant que
+   jamais résolu cette session, sinon la valeur connue (éventuellement "").
+   Migration paresseuse intégrée (retour utilisateur : "pour les hôtes
+   existants qui ont déjà un texte sur une annonce, le reprendre comme
+   présentation de profil") : si hostProfiles/{uid} n'a encore aucune
+   présentation, on regarde les annonces déjà déposées par cet hôte
+   (ensureHostListingsLoaded(), déjà en cache pour Mes annonces — pas une
+   lecture en plus) et on reprend la première présentation non vide
+   trouvée, qu'on écrit réellement dans hostProfiles/{uid} (pas juste une
+   valeur par défaut recalculée à chaque appel — une vraie migration, une
+   seule fois). cb(bio) — "" si rien n'existe nulle part (vrai tout
+   premier dépôt). */
+var hostProfileBioCache;
+function resolveHostProfileBio(cb){
+  if(hostProfileBioCache!==undefined){ cb(hostProfileBioCache); return; }
+  if(!authState.uid || typeof firebase==="undefined"){ cb(""); return; }
+  firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+    var bio = (doc.exists && doc.data().bio) || "";
+    if(bio){ hostProfileBioCache = bio; cb(bio); return; }
+    ensureHostListingsLoaded(function(list){
+      var found = list.filter(function(l){ return l.hostBio && l.hostBio.trim(); })[0];
+      if(!found){ hostProfileBioCache = ""; cb(""); return; }
+      var migratedBio = found.hostBio.trim();
+      firebase.firestore().collection("hostProfiles").doc(authState.uid)
+        .set({bio:migratedBio, updated:new Date().toISOString()}, {merge:true})
+        .catch(function(){}) // dégradé : utilisable cette session même si l'écriture de migration échoue, retentée au prochain appel (hostProfileBioCache pas mis en cache avant d'avoir essayé)
+        .then(function(){ hostProfileBioCache = migratedBio; cb(migratedBio); });
+    });
+  }).catch(function(){ cb(""); });
+}
 /* Photo de profil : associée au COMPTE (uid), pas à chaque annonce (retour
    utilisateur : "je préfère que tu l'associe au compte hôte" — trouvait
    bizarre qu'elle dépende des annonces). Enregistrée dans hostProfiles/{uid}
@@ -8253,6 +8526,17 @@ function renderHostProfile(){
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
+    /* Présentation de profil (point 3.2) — texte initial laissé vide ici :
+       resolveHostProfileBio() (async, Firestore + migration paresseuse
+       éventuelle, voir son grand commentaire) patche la valeur juste après
+       ce premier rendu, même défi que la photo de profil juste au-dessus
+       (wireAccountAvatar()), qui procède pareil. */
+    '<div class="profile-card"><div class="profile-card-title">Votre présentation</div>'+
+      '<p class="field-hint" style="margin-top:0;">Affichée sur toutes vos annonces, encart « À propos de votre hôte » — sauf sur celles où vous avez coché une présentation spécifique.</p>'+
+      '<div class="field-block" style="margin-bottom:10px;"><textarea class="text-input" id="host-profile-bio" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea></div>'+
+      '<button type="button" class="btn-apply" id="host-profile-bio-save" style="width:auto; padding:10px 22px;">Enregistrer</button>'+
+      '<p class="field-hint" id="host-profile-bio-msg"></p>'+
+    '</div>'+
     '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
     /* Aucune carte marquée active au premier rendu : hostAccountCache est
        systématiquement invalidé par enterHostMode(), donc le vrai plan
@@ -8278,6 +8562,49 @@ function renderHostProfile(){
     loadAdminQueueCount();
   }
   wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ if(state.hostTab==="profile") renderHostProfile(); });
+  resolveHostProfileBio(function(bio){
+    if(state.hostTab!=="profile") return;
+    var ta = document.getElementById("host-profile-bio");
+    // document.activeElement!==ta : ne jamais écraser ce que l'hôte est
+    // déjà en train de taper si la réponse Firestore arrive après coup
+    // (même garde que renderFeed() vis-à-vis des champs de filtre ouverts).
+    if(ta && document.activeElement!==ta) ta.value = bio;
+  });
+  document.getElementById("host-profile-bio-save").addEventListener("click", function(){
+    var btn = this;
+    var ta = document.getElementById("host-profile-bio");
+    var msg = document.getElementById("host-profile-bio-msg");
+    var bio = ta.value.trim();
+    msg.textContent = "";
+    if(!bio){ msg.textContent = "La présentation ne peut pas être vide."; return; }
+    if(!authState.uid || typeof firebase==="undefined"){ msg.textContent = "Connexion requise — réessayez dans un instant."; return; }
+    btn.disabled = true;
+    firebase.firestore().collection("hostProfiles").doc(authState.uid)
+      .set({bio:bio, updated:new Date().toISOString()}, {merge:true})
+      .then(function(){
+        hostProfileBioCache = bio; hfProfileBio = bio;
+        // Recopie sur chaque annonce du compte — même mécanisme que la
+        // photo (wireAccountAvatar() plus haut), sauf les annonces qui
+        // portent leur propre présentation spécifique (hostBioCustom,
+        // voir "Utiliser une présentation spécifique pour cette annonce"
+        // dans le formulaire d'annonce) : celles-là ne doivent JAMAIS être
+        // écrasées par un changement fait ici.
+        ensureHostListingsLoaded(function(list){
+          var toUpdate = list.filter(function(l){ return !l.hostBioCustom; });
+          if(toUpdate.length){
+            var batch = firebase.firestore().batch();
+            toUpdate.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostBio:bio}); });
+            batch.commit().then(function(){ hostListingsCache = []; });
+          }
+        });
+        btn.disabled = false;
+        msg.textContent = "Présentation enregistrée.";
+      }).catch(function(err){
+        console.error("[profil] échec de l'enregistrement de la présentation", err);
+        btn.disabled = false;
+        msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
+      });
+  });
   resolveHostAccount(function(account){
     if(state.hostTab!=="profile") return; // a changé d'onglet pendant la lecture
     var plan = (account && account.settings && account.settings.plan) || "simple";
