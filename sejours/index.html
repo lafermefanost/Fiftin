@@ -3181,15 +3181,42 @@ function fetchListingIndex(){
    l'écrasante majorité des annonces ; gardé quand même, la case est
    essentiellement sans coût (single:true, un choix parmi d'autres) et
    sert peut-être un cas réel visé par l'hôte. "Baby-foot" et "Jeux de
-   plage à disposition" ajoutés à Loisirs & bien-être, tels quels. */
+   plage à disposition" ajoutés à Loisirs & bien-être, tels quels.
+   LOT 4.1/4.3/4.4 : required:true marque les catégories obligatoires
+   (au moins une case active, cf. validation dans submitHostForm()) —
+   amenityGroupsHtml() s'en sert pour afficher un « * » sur le titre côté
+   formulaire de dépôt uniquement (jamais côté volet filtre public, qui
+   n'a pas la notion de champ obligatoire). "Équipement"->"Équipements"
+   et "Extérieur & ambiance"->"Esprit & ambiance" : renommages de TITRE
+   seuls, aucune valeur de amen[] ne change, donc aucune rupture sur les
+   annonces existantes (contrairement aux renommages d'items documentés
+   plus haut). "Confort" : nouvelle catégorie en 3 groupes (Literie,
+   Salle de bain en single:true/obligatoire, Autres) — "Climatisation"
+   volontairement PAS reprise dans Autres : déjà dans Équipements, un
+   doublon de saisie sans valeur ajoutée (retour utilisateur). "Intimité
+   & tranquillité" supprimée, remplacée par "Atouts" : "Aucun vis-à-vis"
+   et "Au calme" reportés à l'identique (même chaîne), "Intimiste" n'a
+   pas d'équivalent et est abandonné (retour utilisateur) — une annonce
+   existante qui l'avait coché garde la chaîne orpheline dans son amen[]
+   stocké (même limite que ci-dessus : aucune migration Firestore
+   possible depuis ce fichier), mais elle ne correspond plus à aucun
+   groupe donc ne s'affiche plus nulle part, sans effet visible ni
+   erreur. "Animaux acceptés"/"Parking privé"/"Jardin"/"Arrivée
+   autonome" demandés dans "Atouts" mais volontairement PAS dupliqués :
+   déjà couverts par Accueil/Équipements/Esprit & ambiance/Installation
+   autonome — double saisie du même fait sans bénéfice (retour
+   utilisateur après relecture). */
 var AMEN_GROUPS = [
-  {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true},
-  {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true},
+  {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true, required:true},
+  {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true, required:true},
+  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Chauffage","Wifi","Parking privé","Accès PMR"], required:true},
+  {title:"Accueil", items:["Accueil en personne","Installation autonome","Animaux acceptés"], required:true},
+  {title:"Confort — Literie", items:["Lit 180","Lit 160","Lit 140","Lit 90","Lits jumeaux","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
+  {title:"Confort — Salle de bain", items:["Salle de bain privative attenante","Salle de bain privative non attenante","Salle de bain partagée"], single:true, required:true},
+  {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
   {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition"]},
-  {title:"Extérieur & ambiance", items:["Jardin","Terrasse","Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Grand écran TV"]},
-  {title:"Équipement", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Chauffage","Wifi","Parking privé","Accès PMR"]},
-  {title:"Intimité & tranquillité", items:["Intimiste","Aucun vis-à-vis","Au calme"]},
-  {title:"Accueil", items:["Accueil en personne","Installation autonome","Animaux acceptés"]}
+  {title:"Esprit & ambiance", items:["Jardin","Terrasse","Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Grand écran TV"]},
+  {title:"Atouts", items:["Au calme","Aucun vis-à-vis","Enfants bienvenus","Vue dégagée","Accessible sans voiture","Adapté au télétravail","Privatisation / événements possibles"]}
 ];
 /* Grille de prestations par groupe — utilisée à la fois par le volet
    filtre (kind==="amen") et par le formulaire de dépôt/édition d'annonce,
@@ -3198,9 +3225,9 @@ var AMEN_GROUPS = [
    data-group porte l'index du groupe (voir AMEN_GROUPS) : les handlers de
    clic s'en servent pour retrouver les autres cases du MÊME groupe et les
    désactiver quand ce groupe est single:true. */
-function amenityGroupsHtml(isActive){
+function amenityGroupsHtml(isActive, markRequired){
   return AMEN_GROUPS.map(function(g,gi){
-    return '<div class="amen-group"><div class="amen-group-title">'+esc(g.title)+'</div><div class="amenity-grid">'+
+    return '<div class="amen-group" data-group="'+gi+'"><div class="amen-group-title">'+esc(g.title)+(markRequired && g.required?' *':'')+'</div><div class="amenity-grid">'+
       g.items.map(function(a){
         return '<button type="button" class="amenity-chip'+(isActive(a)?' active':'')+'" data-a="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
       }).join("")+
@@ -3404,7 +3431,7 @@ var AMEN_ICONS = {
   "Enceintes connectées":"<rect x='7' y='3' width='10' height='18' rx='2'/><circle cx='12' cy='8' r='2'/><circle cx='12' cy='15' r='3'/>",
   "Home cinéma":"<rect x='3' y='5' width='18' height='13' rx='2'/><path d='M10 9l6 3-6 3z'/>",
   "Grand écran TV":"<rect x='3' y='5' width='18' height='11' rx='2'/><path d='M9 20h6M12 16v4'/>",
-  // Équipement
+  // Équipements
   "Cuisine équipée":"<path d='M6 3v8a3 3 0 006 0V3M9 11v10M17 3v18M15 3h4'/>",
   "Micro-ondes":"<rect x='3' y='6' width='18' height='12' rx='2'/><circle cx='9' cy='12' r='4'/><path d='M16 10h2M16 14h2'/>",
   "Four":"<rect x='4' y='4' width='16' height='16' rx='2'/><rect x='7' y='10' width='10' height='7' rx='1'/><path d='M7 7h.01M11 7h.01M15 7h.01'/>",
@@ -3417,17 +3444,43 @@ var AMEN_ICONS = {
   "Parking privé":"<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M9 8h3.5a2.5 2.5 0 010 5H9V8zm0 5v4'/>",
   "Wifi":"<path d='M5 12a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0M11.5 19a1.5 1.5 0 011 0'/>",
   "Accès PMR":"<circle cx='12' cy='5' r='2'/><path d='M6 20l4-9 2 3h5M10 11l1-4 5 1'/>",
-  // Intimité & tranquillité
-  "Intimiste":"<path d='M12 3c1 1.5 1 2.5 0 4-1-1.5-1-2.5 0-4z'/><rect x='10' y='7' width='4' height='12' rx='1'/>",
-  "Aucun vis-à-vis":"<path d='M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z'/><circle cx='12' cy='12' r='3'/><path d='M3 3l18 18'/>",
-  "Au calme":"<path d='M4 9v6h4l5 4V5L8 9z'/><path d='M17 8l4 8M21 8l-4 8'/>",
   // Accueil
   "Accueil en personne":"<path d='M4 21V3h10v18'/><circle cx='17' cy='9' r='2'/><path d='M17 13v8'/>",
   "Installation autonome":"<rect x='5' y='10' width='14' height='9' rx='2'/><circle cx='12' cy='14' r='2'/><path d='M9 10V7a3 3 0 016 0v3'/>",
   /* Même tracé qu'ailleurs dans le fichier (cœur du bouton favori/onglet
      Mes séjours) pour Animaux acceptés — cohérence visuelle plutôt qu'une
      icône réinventée, comme les trois de Séjours plus haut. */
-  "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>"
+  "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>",
+  // Confort — Literie (LOT 4.3) : un même gabarit "cadre + oreiller(s)" décliné,
+  // la taille du lit se lit dans le libellé, pas dans le tracé (comme Lit 180/160/140/90).
+  "Lit 180":"<rect x='2' y='11' width='20' height='8' rx='2'/><rect x='4' y='8' width='6' height='3' rx='1'/><rect x='13' y='8' width='6' height='3' rx='1'/>",
+  "Lit 160":"<rect x='3' y='11' width='18' height='8' rx='2'/><rect x='5' y='8' width='5' height='3' rx='1'/><rect x='13' y='8' width='5' height='3' rx='1'/>",
+  "Lit 140":"<rect x='4' y='11' width='16' height='8' rx='2'/><rect x='6' y='8' width='5' height='3' rx='1'/><rect x='12' y='8' width='5' height='3' rx='1'/>",
+  "Lit 90":"<rect x='6' y='11' width='12' height='8' rx='2'/><rect x='8' y='8' width='7' height='3' rx='1'/>",
+  "Lits jumeaux":"<rect x='2' y='11' width='8' height='8' rx='2'/><rect x='14' y='11' width='8' height='8' rx='2'/><rect x='3' y='8' width='5' height='3' rx='1'/><rect x='15' y='8' width='5' height='3' rx='1'/>",
+  "Canapé-lit":"<rect x='3' y='10' width='18' height='8' rx='2'/><path d='M3 14V8a2 2 0 012-2h2M19 14V8a2 2 0 00-2-2h-2'/>",
+  "Lit superposé":"<rect x='4' y='4' width='16' height='6' rx='1.5'/><rect x='4' y='13' width='16' height='6' rx='1.5'/><path d='M4 10v3M20 10v3'/>",
+  "Lit bébé disponible":"<rect x='5' y='9' width='14' height='9' rx='1.5'/><path d='M8 9V6M12 9V6M16 9V6'/>",
+  // Confort — Salle de bain (single:true, LOT 4.3)
+  "Salle de bain privative attenante":"<rect x='3' y='12' width='14' height='7' rx='2'/><path d='M3 12V9a3 3 0 013-3'/><path d='M17 15h4v4h-4z'/>",
+  "Salle de bain privative non attenante":"<rect x='4' y='11' width='16' height='8' rx='2'/><path d='M4 11V8a3 3 0 013-3'/><path d='M2 19h1M21 19h1'/>",
+  "Salle de bain partagée":"<rect x='5' y='13' width='14' height='7' rx='2'/><path d='M5 13V10a3 3 0 013-3'/><circle cx='4' cy='6' r='1.6'/><circle cx='9' cy='5' r='1.6'/>",
+  // Confort — Autres (LOT 4.3) — "Climatisation" volontairement absente, déjà dans Équipements.
+  "WC privatifs":"<path d='M6 4h8v6H6z'/><path d='M5 10h10v3a5 5 0 01-5 5 5 5 0 01-5-5z'/>",
+  "Douche à l'italienne":"<path d='M6 3h7a3 3 0 013 3'/><path d='M9 9v2M13 9v2M17 9v2'/><path d='M3 20h18'/>",
+  "Baignoire":"<path d='M3 12h18v3a4 4 0 01-4 4H7a4 4 0 01-4-4z'/><path d='M5 12V8a2 2 0 012-2'/><path d='M2 19h2M20 19h2'/>",
+  "Linge de lit fourni":"<rect x='4' y='14' width='16' height='4' rx='1'/><rect x='5' y='10' width='14' height='4' rx='1'/><rect x='6' y='6' width='12' height='4' rx='1'/>",
+  "Serviettes fournies":"<rect x='5' y='4' width='14' height='16' rx='2'/><path d='M5 10h14M5 15h14'/>",
+  "Chambre de plain-pied":"<path d='M4 12l8-7 8 7'/><path d='M6 12v7a1 1 0 001 1h10a1 1 0 001-1v-7'/><path d='M3 19h18'/>",
+  // Atouts (LOT 4.4, remplace Intimité & tranquillité) — "Aucun vis-à-vis"/"Au
+  // calme" gardent leur tracé d'origine (reportés à l'identique, même chaîne).
+  "Aucun vis-à-vis":"<path d='M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z'/><circle cx='12' cy='12' r='3'/><path d='M3 3l18 18'/>",
+  "Au calme":"<path d='M4 9v6h4l5 4V5L8 9z'/><path d='M17 8l4 8M21 8l-4 8'/>",
+  "Enfants bienvenus":"<circle cx='10' cy='6' r='3'/><path d='M10 9v8M7 13h6'/><circle cx='17' cy='18' r='2'/>",
+  "Vue dégagée":"<circle cx='12' cy='8' r='3'/><path d='M3 18c3-4 15-4 18 0'/><path d='M2 21h20'/>",
+  "Accessible sans voiture":"<rect x='5' y='4' width='14' height='12' rx='3'/><circle cx='8.5' cy='13' r='1.3'/><circle cx='15.5' cy='13' r='1.3'/><path d='M7 20l-2 2M17 20l2 2'/>",
+  "Adapté au télétravail":"<rect x='4' y='5' width='16' height='10' rx='1.5'/><path d='M2 19h20'/><path d='M9 9h6M9 12h4'/>",
+  "Privatisation / événements possibles":"<circle cx='8' cy='7' r='4'/><circle cx='16' cy='7' r='4'/><path d='M8 11l-2 9M16 11l2 9'/>"
 };
 
 /* ---------------- state ---------------- */
@@ -5729,8 +5782,9 @@ function openSheet(kind){
     var hfEf = hostFormEditListing;
     inner = '<h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
       '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
-      '<div class="field-block"><label>Nom du logement</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
-      '<div class="field-block"><label>Type d\'hébergement</label><select class="text-input" id="hf-type">'+
+      '<p class="field-hint">Les champs marqués <b>*</b> sont obligatoires.</p>'+
+      '<div class="field-block"><label>Nom du logement *</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
+      '<div class="field-block"><label>Type d\'hébergement *</label><select class="text-input" id="hf-type">'+
         '<option value="">— Choisir —</option>'+
         Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
       '</select>'+
@@ -5746,7 +5800,7 @@ function openSheet(kind){
         '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
         '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
       '</div>'+
-      '<div class="field-block"><label id="hf-units-label">Capacité et tarif</label>'+
+      '<div class="field-block"><label id="hf-units-label">Capacité et tarif *</label>'+
         '<div id="hf-units"></div>'+
         '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
       '</div>'+
@@ -5762,7 +5816,7 @@ function openSheet(kind){
       // l'hôte par : Votre prénom, votre nom, ou comment vous souhaitez
       // être appelé") — reste un champ libre, obligatoire (déjà le cas,
       // voir submitHostForm()), affiché tel quel sur les annonces.
-      '<div class="field-block"><label>Votre prénom, votre nom, ou comment vous souhaitez être appelé</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim, ou « La famille Dupont »" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
+      '<div class="field-block"><label>Votre prénom, votre nom, ou comment vous souhaitez être appelé *</label><input class="text-input" id="hf-hostname" placeholder="Ex. Karim, ou « La famille Dupont »" value="'+(hfEf?esc(hfEf.hostName||""):"")+'"></div>'+
       /* Présentation : au niveau du PROFIL hôte désormais (retour
          utilisateur : "stocker la présentation au niveau du profil hôte,
          pas de chaque annonce : une seule saisie, réutilisée automatiquement
@@ -5777,7 +5831,7 @@ function openSheet(kind){
          obligatoire — "champ obligatoire lors de la création de la première
          annonce (ou du profil)"). */
       '<div class="field-block" id="hf-hostbio-block">'+
-        '<label>Présentation</label>'+
+        '<label>Présentation *</label>'+
         '<p class="field-hint" id="hf-hostbio-profile-preview" hidden></p>'+
         '<label class="hf-checkbox-row" id="hf-hostbio-override-row" hidden>'+
           '<input type="checkbox" id="hf-hostbio-override"> Utiliser une présentation spécifique pour cette annonce'+
@@ -5785,7 +5839,7 @@ function openSheet(kind){
         '<textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
         '<p class="field-hint" id="hf-hostbio-hint">Affichée dans la fiche de l\'annonce, encart « À propos de votre hôte ».</p>'+
       '</div>'+
-      '<div class="field-block" style="position:relative;"><label>Adresse complète du logement</label>'+
+      '<div class="field-block" style="position:relative;"><label>Adresse complète du logement *</label>'+
         '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
         '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
         '<p class="field-hint">Choisissez une adresse dans la liste proposée : région, département et ville se remplissent tout seuls juste en dessous (modifiables si besoin). Sert aussi à calculer la distance réelle affichée aux voyageurs — jamais montrée telle quelle sur l\'annonce.</p>'+
@@ -5798,19 +5852,19 @@ function openSheet(kind){
         deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
       '</select></div>'+
       '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
-      '<div class="field-block"><label>Accroche courte</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
-      '<div class="field-block"><label>Description</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
+      '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
+      '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
         '<div id="hf-desc-reuse-wrap"></div>'+
       '</div>'+
-      '<div class="field-block"><label>Téléphone de contact</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
-      '<div class="field-block"><label>E-mail de contact</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
+      '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
+      '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
         '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
       '</div>'+
       '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
       '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; })+'</div>'+
+      '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
       '<a class="host-app-link" href="../app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     // thumbUrl repris ici (galleryThumb, même index que gallery) pour
@@ -6721,7 +6775,7 @@ function renderHostUnits(){
       '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Chambre Bleue"></div>' : '')+
       '<div class="field-block-row">'+
         '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
-        '<div class="field-block"><label>Capacité</label><input class="text-input hf-unit-capacity" type="number" min="1" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
+        '<div class="field-block"><label>Capacité *</label><input class="text-input hf-unit-capacity" type="number" min="1" max="30" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
       '</div>'+
       (hfAvailableRooms.length ? '<div class="host-link-row"><label>Relier à une chambre de votre Fiftin app (optionnel)</label><select class="hf-unit-room" data-unit-id="'+u.id+'">'+
         '<option value="">— Aucun lien —</option>'+
@@ -7369,8 +7423,33 @@ function submitHostForm(){
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
-  if(!name || !accomType || !hostName || !address || !claim || !desc || !phone || !email){ errEl.textContent = "Merci de remplir tous les champs."; return; }
-  if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; return; }
+  // LOT 4.1 : un message par champ manquant (plutôt qu'un "remplissez tout"
+  // générique) + scrollIntoView vers le bloc concerné, qui tient lieu de
+  // "lien vers la section" dans ce volet mono-page (pas de vraies ancres
+  // possibles ici, tout vit dans le même sheet scrollable).
+  var scrollToField = function(id){
+    var el = document.getElementById(id);
+    var block = el && el.closest(".field-block");
+    if(block) block.scrollIntoView({behavior:"smooth", block:"center"});
+  };
+  var requiredFields = [
+    ["hf-name", name, "Donnez un nom à votre logement."],
+    ["hf-type", accomType, "Choisissez un type d'hébergement."],
+    ["hf-hostname", hostName, "Indiquez votre prénom, nom, ou comment vous souhaitez être appelé."],
+    ["hf-address", address, "Renseignez l'adresse complète du logement."],
+    ["hf-claim", claim, "Renseignez une accroche courte."],
+    ["hf-desc", desc, "Renseignez la description du logement."],
+    ["hf-phone", phone, "Renseignez un téléphone de contact."],
+    ["hf-email", email, "Renseignez un e-mail de contact."]
+  ];
+  for(var fi=0; fi<requiredFields.length; fi++){
+    if(!requiredFields[fi][1]){
+      errEl.textContent = requiredFields[fi][2];
+      scrollToField(requiredFields[fi][0]);
+      return;
+    }
+  }
+  if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; scrollToField("hf-hostbio"); return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
   // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
   // voir renderHostUnits() — donc jamais exigé pour une seule location
@@ -7382,6 +7461,27 @@ function submitHostForm(){
     var u = hfUnits[i];
     if((multiUnits && !u.name.trim()) || !u.price || Number(u.price)<=0 || !u.maxPersons || Number(u.maxPersons)<=0){
       errEl.textContent = multiUnits ? "Chaque location a besoin d'un nom, d'un prix et d'une capacité." : "Renseignez un prix et une capacité.";
+      return;
+    }
+    // LOT 4.2 : capacité plafonnée à 30 (champ déjà existant, pas nouveau —
+    // voir .hf-unit-capacity) ; c'est ce même champ maxPersons qui alimente
+    // le futur filtre Voyageurs (LOT 2.3).
+    if(Number(u.maxPersons)>30){
+      errEl.textContent = "La capacité maximum est de 30 voyageurs.";
+      return;
+    }
+  }
+  // LOT 4.1 : catégories de prestations obligatoires (voir AMEN_GROUPS,
+  // required:true) — au moins une case active par catégorie requise, lue
+  // directement sur les chips du DOM (même source que `amen` ci-dessus).
+  for(var gi=0; gi<AMEN_GROUPS.length; gi++){
+    var grp = AMEN_GROUPS[gi];
+    if(!grp.required) continue;
+    var activeInGroup = document.querySelectorAll('#sheet-root .amenity-chip[data-group="'+gi+'"].active').length;
+    if(activeInGroup<1){
+      errEl.textContent = "Catégorie « "+grp.title+" » : cochez au moins une option.";
+      var groupEl = document.querySelector('#sheet-root .amen-group[data-group="'+gi+'"]');
+      if(groupEl) groupEl.scrollIntoView({behavior:"smooth", block:"center"});
       return;
     }
   }
