@@ -48,6 +48,16 @@
   --line:rgba(46,43,34,0.14);
   --danger:#B2543B;
   --gray-mid:#9A9789;
+  /* Grain des photos d'annonce (fil + repli sans photo de la fiche détail,
+     voir .cover .grain et le "slide" de secours dans openDetail() plus
+     bas) — réglage centralisé pour n'ajuster qu'ici (retour utilisateur :
+     "le rendre très légèrement plus fin, variable de réglage centralisée").
+     baseFrequency de la feTurbulence SVG : plus élevé = motif plus fin/
+     serré, à intensité (opacity) inchangée. 0.85 à l'origine -> 0.95.
+     Distinct de .brand-grain (hero/mesh de marque, plus haut) : grain
+     identique dans sa recette mais contexte/opacité différents, jamais
+     mentionné par ce retour utilisateur, volontairement pas touché. */
+  --grain-bg:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
 html,body{height:100%;}
@@ -368,7 +378,7 @@ a{color:inherit; text-decoration:none;}
 .cover .cover-dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .cover .cover-dots span.on{background:#fff; width:16px; border-radius:3px;}
 .cover .grain{position:absolute; inset:0; opacity:.5; mix-blend-mode:overlay; z-index:2; pointer-events:none;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
+  background-image:var(--grain-bg);}
 .cover .scrim{position:absolute; inset:0; background:linear-gradient(180deg, rgba(29,40,32,0) 38%, rgba(20,26,20,.93) 100%); z-index:2; pointer-events:none;}
 .cover .motif{position:absolute; opacity:.16; color:#fff; z-index:1;}
 .cover .motif svg{width:100%; height:100%;}
@@ -5290,7 +5300,7 @@ function openDetail(id){
       continue;
     }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
-      '<div class="grain" style="position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:url(&quot;data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\'><filter id=\'n\'><feTurbulence type=\'fractalNoise\' baseFrequency=\'0.85\' numOctaves=\'2\'/></filter><rect width=\'100%25\' height=\'100%25\' filter=\'url(%23n)\'/></svg>&quot;)"></div></div>';
+      '<div class="grain" style="position:absolute;inset:0;opacity:.5;mix-blend-mode:overlay;background-image:var(--grain-bg)"></div></div>';
   }
   var dots = "";
   for(var j=0;j<total;j++) dots += '<span class="'+(j===0?"on":"")+'"></span>';
