@@ -105,16 +105,18 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
    et tout") — même recette que .logo-tile plus bas dans ce fichier
    (dégradé diagonal + backdrop-filter + box-shadow inset 4 côtés + ombre
    portée externe + anneau irisé + lumière rasante), réduite à l'échelle
-   du header (46px au lieu de 136px, header haut de 52px seulement —
+   du header (40px au lieu de 136px, header haut de 52px seulement —
    --iris-angle/@keyframes irisSpin déjà déclarés pour .logo-tile,
    réutilisés tels quels malgré l'ordre inverse dans la feuille de style,
    une feuille CSS n'exige pas que @property/@keyframes précèdent leur
    usage). Blurs/décalages d'ombre réduits au tiers, même principe que la
    version compacte de .tab-icon/.mbnav-pill, mais CES deux-là n'ont pas
    l'ombre portée externe ni la lumière rasante : ce picto, lui, doit
-   rester identique en tout point à .logo-tile, juste plus petit. */
+   rester identique en tout point à .logo-tile, juste plus petit.
+   46px à l'essai initialement, repris à 40px (retour utilisateur :
+   "fais quand même le fiftin un peu plus petit et l'encart aussi"). */
 .app-icon-tile{position:relative; flex-shrink:0; overflow:hidden;
-  width:46px; height:46px; border-radius:15px;
+  width:40px; height:40px; border-radius:13px;
   display:flex; align-items:center; justify-content:center;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
@@ -139,8 +141,10 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 /* Agrandi par rapport à l'original (34×27, posé nu dans le header sans
    encart) — retour utilisateur : "j'aimerais juste que le logo soit plus
    gros dans l'encart sinon on ne le verra pas si c'est exactement la
-   même version qu'ailleurs". Ratio conservé (40/32 ≈ 34/27 ≈ 1.26). */
-.app-icon{flex-shrink:0; position:relative; z-index:1; width:40px; height:32px;}
+   même version qu'ailleurs" — puis repris un cran plus petit (35×28,
+   contre 40×32 à l'essai) avec l'encart, même retour utilisateur que
+   sur .app-icon-tile ci-dessus. Ratio conservé (35/28 ≈ 34/27 ≈ 1.26). */
+.app-icon{flex-shrink:0; position:relative; z-index:1; width:35px; height:28px;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Nom de l'établissement du client — seul texte du logo dans l'appli (voir
