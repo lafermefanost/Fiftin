@@ -3359,6 +3359,38 @@ var AMEN_ICONS = {
    jusqu'à ce sommet repasse `f.distance` à `null` (voir kind==="distance"
    plus bas), pas à une valeur numérique qui resterait, elle, un plafond. */
 var MAX_DISTANCE_KM = 1200;
+/* Filtre Prix — même principe que MAX_DISTANCE_KM juste au-dessus :
+   `filters.price` vaut `null` par défaut/au sommet du curseur (AUCUN
+   filtre de prix, pas un plafond numérique élevé) ; voir matchesAllFilters()
+   plus bas, qui ne compare que si `f.price!=null`.
+   PRICE_FILTER_MAX (1000€, son sommet) affiché "1 000 € +" (retour
+   utilisateur : "jauge de 0 à 1000€, la borne haute 1000€+ signifie
+   sans limite"). Échelle non linéaire sur le curseur (retour
+   utilisateur : "pas plus fins entre 0 et 300€, plus larges au-delà —
+   avec une échelle linéaire 0-1000€ sur mobile, la zone 50-200€ où se
+   trouve la majorité des annonces devient impossible à régler
+   finement") : le curseur HTML manipule une simple position 0-1000
+   (bonne résolution tactile), convertie en prix réel par
+   priceFilterPosToValue()/l'inverse priceFilterValueToPos() — PRICE_
+   FILTER_SPLIT_POS (70% du curseur) consacré à 0-PRICE_FILTER_SPLIT
+   (300€, pas de 5€), le dernier tiers du curseur à 300-1000€ (pas de
+   25€). Tout le reste du code (comparaisons, libellé de la puce,
+   réinitialisation) ne manipule jamais la position, seulement le prix
+   réel — ces deux fonctions ne servent qu'au curseur lui-même. */
+var PRICE_FILTER_SPLIT = 300;
+var PRICE_FILTER_MAX = 1000;
+var PRICE_FILTER_SPLIT_POS = 700;
+function priceFilterPosToValue(pos){
+  if(pos>=1000) return null;
+  if(pos<=PRICE_FILTER_SPLIT_POS) return Math.round(pos*PRICE_FILTER_SPLIT/PRICE_FILTER_SPLIT_POS/5)*5;
+  var val = PRICE_FILTER_SPLIT + (pos-PRICE_FILTER_SPLIT_POS)*(PRICE_FILTER_MAX-PRICE_FILTER_SPLIT)/(1000-PRICE_FILTER_SPLIT_POS);
+  return Math.round(val/25)*25;
+}
+function priceFilterValueToPos(val){
+  if(val==null || val>=PRICE_FILTER_MAX) return 1000;
+  if(val<=PRICE_FILTER_SPLIT) return val*PRICE_FILTER_SPLIT_POS/PRICE_FILTER_SPLIT;
+  return PRICE_FILTER_SPLIT_POS + (val-PRICE_FILTER_SPLIT)*(1000-PRICE_FILTER_SPLIT_POS)/(PRICE_FILTER_MAX-PRICE_FILTER_SPLIT);
+}
 /* filters.zoneOrigin : repère {lat,lng} posé à la main sur la carte
    embarquée d'Explorer (voir exploreMapBlockHtml()/wireExploreMap() plus
    bas, "Choisir un lieu sur la carte") — remplace l'ancienne zone de
@@ -3375,7 +3407,7 @@ var MAX_DISTANCE_KM = 1200;
    comme filters.distance, une distance choisie doit survivre à un
    rechargement de page. `null` par défaut (aucun repère posé, origine =
    position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
-var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
+var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
   hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
   detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null, likesLayout:"grid",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
@@ -3692,7 +3724,7 @@ function listingPriceLabel(l){
 function matchesAllFilters(l, f){
   if(!matchesLocation(l, f)) return false;
   if(f.distance!=null && listingDistanceKm(l) > f.distance) return false;
-  if(l.price > f.price) return false;
+  if(f.price!=null && l.price > f.price) return false;
   if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
   return true;
 }
@@ -3886,14 +3918,14 @@ function renderFilterBar(){
   var bar = document.getElementById("filter-bar");
   var locActive = !!(f.q || f.regionName || f.deptName);
   var datesActive = hasDateFilter(f);
-  var anyActive = locActive || datesActive || f.distance!=null || f.price<300 || activeAmenCount>0 || state.sort!=="reco";
+  var anyActive = locActive || datesActive || f.distance!=null || f.price!=null || activeAmenCount>0 || state.sort!=="reco";
   // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
   bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
     chipHtml("dates", datesChipLabel(f), datesActive),
     chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km"+(f.zoneOrigin?" (repère)":"") : "Distance", f.distance!=null),
-    chipHtml("price", "Prix · jusqu'à "+f.price+"€", f.price<300),
+    chipHtml("price", f.price!=null ? "Prix · jusqu'à "+f.price+"€" : "Prix", f.price!=null),
     chipHtml("amen", "Prestations"+(activeAmenCount? " <span class=n>"+activeAmenCount+"</span>":""), activeAmenCount>0),
     chipHtml("sort", "Trier", state.sort!=="reco")
   ].join("");
@@ -3906,7 +3938,7 @@ function renderFilterBar(){
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
-    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:300, amen:[], dateIn:null, dateOut:null};
+    state.filters = {q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, amen:[], dateIn:null, dateOut:null};
     state.sort = "reco";
     availabilityCache = {}; availabilityCacheKey = null;
     persist(); renderFilterBar(); renderTabContent(); renderResultLine();
@@ -3929,7 +3961,7 @@ function clearFilter(k){
   if(k==="loc"){ f.q = ""; f.regionName = ""; f.deptName = ""; }
   else if(k==="dates"){ f.dateIn = null; f.dateOut = null; availabilityCache = {}; availabilityCacheKey = null; }
   else if(k==="distance"){ f.distance = null; f.zoneOrigin = null; } // retire aussi le repère de la carte, sinon un cercle sans rayon resterait affiché sans filtre associé
-  else if(k==="price") f.price = 300;
+  else if(k==="price") f.price = null;
   else if(k==="amen") f.amen = [];
   else if(k==="sort") state.sort = "reco";
   persist(); renderFilterBar(); renderTabContent(); renderResultLine();
@@ -5477,8 +5509,13 @@ function openSheet(kind){
   var f = state.filters;
   var inner = "";
   if(kind==="loc"){
+    // Recherche libre en premier (retour utilisateur : "la recherche libre
+    // doit être le premier élément du panneau Lieu, actuellement en fin de
+    // liste — les suggestions prédéfinies passent en dessous") — géo/région/
+    // département, inchangés par ailleurs, suivent dans leur ordre d'origine.
     inner = '<h3>Lieu</h3>'+
-      // Mis en avant, tout en haut : la géolocalisation change la référence
+      '<div class="field-block"><label>Recherche libre</label><input class="text-input" id="s-loc" placeholder="Nom, ville, quartier, rue…" value="'+esc(f.q)+'"></div>'+
+      // Mis en avant juste après : la géolocalisation change la référence
       // de TOUTE distance affichée sur le fil (badges, tri, filtre — voir
       // listingDistanceKm()/currentOrigin()), pas seulement ce volet.
       '<div class="field-block"><button type="button" class="btn-photo-add" id="btn-use-geo">'+
@@ -5498,8 +5535,7 @@ function openSheet(kind){
         deptsForRegion(f.regionName).map(function(d){
           return '<button type="button" class="region-chip'+(f.deptName===d?' active':'')+'" data-dept="'+esc(d)+'">'+esc(d)+'</button>';
         }).join("")+
-      '</div></div>' : '')+
-      '<div class="field-block"><label>Recherche libre</label><input class="text-input" id="s-loc" placeholder="Nom, ville, quartier, rue…" value="'+esc(f.q)+'"></div>';
+      '</div></div>' : '');
   } else if(kind==="dates"){
     // Même gabarit que qr-row (demande de contact, voir quickReqHtml()) —
     // deux <input type="date">, rien de plus : pas de calendrier dédié ici,
@@ -5537,8 +5573,12 @@ function openSheet(kind){
       '<div class="field-block"><div class="range-value"><span>Distance maximale</span><span>'+(f.distance!=null ? f.distance+" km" : "Illimitée")+'</span></div>'+
       '<input type="range" id="s-distance" min="1" max="'+MAX_DISTANCE_KM+'" value="'+distSliderVal+'"></div>';
   } else if(kind==="price"){
-    inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+f.price+' € / nuit</span></div>'+
-      '<input type="range" id="s-price" min="20" max="300" step="5" value="'+f.price+'"></div>';
+    // Curseur en position 0-1000 (résolution tactile), convertie en prix réel
+    // par priceFilterPosToValue()/priceFilterValueToPos() — voir leur grand
+    // commentaire plus haut (échelle non linéaire, 0 vaut null = illimité).
+    var priceSliderVal = priceFilterValueToPos(f.price);
+    inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+(f.price!=null ? f.price+" € / nuit" : "1 000 € +")+'</span></div>'+
+      '<input type="range" id="s-price" min="0" max="1000" step="1" value="'+priceSliderVal+'"></div>';
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
   } else if(kind==="sort"){
@@ -6063,7 +6103,10 @@ function openSheet(kind){
     });
   } else if(kind==="price"){
     var $p = document.getElementById("s-price");
-    $p.addEventListener("input", function(){ f.price = Number($p.value); root.querySelector(".range-value span:last-child").textContent = f.price+" € / nuit"; });
+    $p.addEventListener("input", function(){
+      f.price = priceFilterPosToValue(Number($p.value));
+      root.querySelector(".range-value span:last-child").textContent = f.price!=null ? f.price+" € / nuit" : "1 000 € +";
+    });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
       el.addEventListener("click", function(){
