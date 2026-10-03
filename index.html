@@ -964,6 +964,16 @@ textarea.text-input{resize:vertical; min-height:80px;}
    reprendre : natif, juste accent-color pour rester dans la palette. */
 .hf-checkbox-row{display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; margin:10px 0; cursor:pointer;}
 .hf-checkbox-row input{width:16px; height:16px; accent-color:var(--sauge); flex-shrink:0;}
+/* FAQ (LOT 5.2) : accordéon par section, chevron tourné à 90° une fois ouvert
+   (même tracé que les autres flèches ">" du Profil, juste animé ici). */
+.faq-section{margin-bottom:18px;}
+.faq-section-title{font-size:12.5px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sauge); margin:0 0 8px;}
+.faq-item{border-bottom:1px solid var(--line);}
+.faq-question{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; text-align:left;
+  background:none; border:none; padding:12px 0; font-family:inherit; font-size:13.5px; font-weight:600; color:var(--ink); cursor:pointer;}
+.faq-question svg{flex-shrink:0; width:16px; height:16px; transition:transform .2s;}
+.faq-question.open svg{transform:rotate(90deg);}
+.faq-answer{font-size:13px; line-height:1.5; color:#4a4636; padding:0 0 14px; white-space:pre-line;}
 /* Autres annonces du même hôte (point 3.4, dans la vue "Voir plus" de la
    présentation) — vignettes carrées cliquables, même esprit que
    .collection-tile mais plus simples (pas de suppression/édition) :
@@ -2657,6 +2667,70 @@ var HOST_FORMULAS = [
     planName:"Avancé", planPrice:"47 €", planPer:"par mois",
     bullets:["Tout l'Essentiel","Jusqu'à 8 chambres et gîtes","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par logement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
 ];
+/* LOT 5.2 : contenu FAQ écrit à partir du fonctionnement réel de l'app
+   (lu dans ce fichier même — filtres, formules HOST_FORMULAS ci-dessus,
+   formulaire de dépôt, etc.), PAS d'après une annexe fournie par
+   l'utilisateur (explicitement écartée, "repars de 0"). Les points que le
+   code ne permet pas de vérifier (délais de réponse, politique
+   d'annulation, détails légaux au-delà de ce qui est déjà couvert
+   ailleurs) restent marqués [à compléter] plutôt qu'inventés — à remplacer
+   avant publication, pas des espaces vides anodins. */
+var FAQ_DATA = [
+  {section:"Voyageurs", items:[
+    {q:"Comment réserver un hébergement sur Fiftin ?", a:"Fiftin Séjours est un annuaire de réservation directe : vous contactez l'hôte depuis sa fiche (WhatsApp, SMS ou appel), sans paiement en ligne ni intermédiaire. La réservation et le paiement se font directement avec l'hôte."},
+    {q:"Fiftin prend-il une commission sur ma réservation ?", a:"Non. Fiftin ne prélève aucune commission sur les réservations — les hôtes paient un abonnement pour être référencés, pas un pourcentage sur chaque séjour. Le prix affiché est celui que vous payez à l'hôte."},
+    {q:"Comment affiner ma recherche (lieu, dates, budget, nombre de voyageurs) ?", a:"Utilisez les filtres en haut du fil Explorer : Lieu, Dates, Distance, Prix, Voyageurs et Prestations. Vous pouvez les combiner, et les retirer individuellement depuis leur puce."},
+    {q:"Le filtre Voyageurs ne montre aucun hébergement alors que je sais qu'il y en a un adapté ?", a:"Une annonce apparaît en résultat principal si un seul de ses hébergements atteint seul la capacité demandée. Si plusieurs hébergements du même hôte, à la même adresse, suffisent ensemble, ils s'affichent à part, sous le titre « Pour votre groupe, en réservant plusieurs hébergements »."},
+    {q:"Comment enregistrer les annonces qui m'intéressent ?", a:"Ajoutez-les à vos favoris depuis la fiche de l'annonce, puis retrouvez-les dans Mes séjours, organisées en collections si besoin."},
+    {q:"Que faire si l'hôte ne répond pas ?", a:"[à compléter — délai de réponse habituel, procédure de relance ou d'escalade à préciser]"},
+    {q:"Comment signaler une annonce ou un comportement suspect ?", a:"Via le formulaire de contact, en choisissant l'objet « Signaler un abus »."},
+    {q:"Les prix affichés incluent-ils les frais de ménage et la taxe de séjour ?", a:"[à compléter — selon les hôtes, à clarifier dans la description de chaque annonce ou au niveau de la plateforme]"},
+    {q:"Comment annuler ou modifier ma demande ?", a:"La réservation se faisant directement avec l'hôte, l'annulation ou la modification se gère aussi directement avec lui. [à compléter — politique d'annulation standard si Fiftin en recommande une]"},
+    {q:"Comment mes données personnelles sont-elles utilisées ?", a:"Consultez la Politique de confidentialité, accessible depuis votre Profil."}
+  ]},
+  {section:"Hôtes", items:[
+    {q:"Comment déposer une annonce sur Fiftin Séjours ?", a:"Depuis votre Profil, Espace hôtes, puis « Déposer une annonce » : photos, type d'hébergement, capacité et tarif, prestations, adresse et coordonnées de contact."},
+    {q:"Combien coûte la présence sur Fiftin Séjours ?", a:"Être listé sur l'annuaire (Formule Hôte) est gratuit et inclut un calendrier simplifié. Des formules payantes (Essentiel, 24 €/mois, Avancé, 47 €/mois) donnent accès en plus à l'outil de gestion complet (planning, réservations, fichier client, comptabilité)."},
+    {q:"Fiftin prend-il une commission sur mes réservations ?", a:"Non, aucune commission sur les réservations — seulement, si vous le choisissez, un abonnement pour l'outil de gestion."},
+    {q:"Mon annonce est-elle publiée immédiatement ?", a:"Non, chaque annonce est vérifiée avant de devenir visible sur Fiftin Séjours."},
+    {q:"Puis-je proposer plusieurs chambres ou locations sous une seule annonce ?", a:"Oui — ajoutez autant de locations que nécessaire dans le formulaire, chacune avec son propre prix, sa capacité et ses photos."},
+    {q:"Le numéro d'enregistrement meublé de tourisme est-il obligatoire ?", a:"[à compléter — dépend de votre commune ; voir art. L. 324-1-1 du Code du tourisme et votre mairie]"},
+    {q:"Comment gérer mon calendrier de réservations ?", a:"Avec une formule payante, via votre espace de gestion dédié (lien « Vous gérez déjà des réservations ? » dans le formulaire d'annonce)."},
+    {q:"Comment fonctionne ma présentation d'hôte ?", a:"Vous la renseignez une seule fois dans votre Profil hôte — elle est reprise automatiquement sur toutes vos annonces, sauf si vous cochez une présentation spécifique pour l'une d'elles."},
+    {q:"Comment un voyageur me contacte-t-il ?", a:"Directement depuis votre fiche, via les boutons WhatsApp, SMS, appel ou email que vous avez renseignés."},
+    {q:"Comment modifier ou retirer une annonce ?", a:"Depuis Mes annonces, dans votre espace hôte."}
+  ]}
+];
+function faqNormalize(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,""); }
+function faqListHtml(query){
+  var nq = faqNormalize(query);
+  var html = "";
+  FAQ_DATA.forEach(function(sec, si){
+    var items = sec.items.filter(function(it){
+      return !nq || faqNormalize(it.q).indexOf(nq)!==-1 || faqNormalize(it.a).indexOf(nq)!==-1;
+    });
+    if(!items.length) return;
+    html += '<div class="faq-section"><div class="faq-section-title">'+esc(sec.section)+'</div>'+
+      items.map(function(it){
+        var fid = si+"-"+sec.items.indexOf(it);
+        return '<div class="faq-item"><button type="button" class="faq-question" data-faq="'+fid+'">'+esc(it.q)+
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
+          '<div class="faq-answer" id="faq-a-'+fid+'" hidden>'+esc(it.a)+'</div></div>';
+      }).join("")+
+    '</div>';
+  });
+  return html || '<p class="field-hint">Aucun résultat pour cette recherche.</p>';
+}
+function wireFaqAccordion(root){
+  Array.prototype.forEach.call(root.querySelectorAll(".faq-question"), function(btn){
+    btn.addEventListener("click", function(){
+      var ans = document.getElementById("faq-a-"+btn.getAttribute("data-faq"));
+      var wasOpen = !ans.hidden;
+      ans.hidden = wasOpen;
+      btn.classList.toggle("open", !wasOpen);
+    });
+  });
+}
 /* Chaque entrée de photo est {type:"existing", url} (déjà en ligne, juste
    affichée/retirable) ou {type:"new", file} (à uploader à l'envoi) — les
    deux cohabitent dans le même tableau pour permettre de modifier une
@@ -6123,6 +6197,11 @@ function openSheet(kind){
       '<input type="text" name="_gotcha" id="ct-hp" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" tabindex="-1" autocomplete="off">'+
       '<label class="hf-checkbox-row"><input type="checkbox" id="ct-consent"> J\'accepte que les informations saisies ci-dessus soient utilisées pour traiter ma demande. *</label>'+
       '<div class="auth-err" id="ct-err"></div>';
+  } else if(kind==="faq"){
+    inner = '<h3>FAQ</h3>'+
+      '<div class="field-block"><input class="text-input" id="faq-search" placeholder="Rechercher une question…"></div>'+
+      '<div id="faq-list">'+faqListHtml("")+'</div>'+
+      '<button type="button" class="link-btn" id="faq-contact-link">Vous ne trouvez pas votre réponse ? Contactez-nous →</button>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
@@ -6135,6 +6214,7 @@ function openSheet(kind){
     : kind==="roomlink" ? "Fermer"
     : kind==="hostBio" ? "Fermer"
     : kind==="contact" ? "Envoyer"
+    : kind==="faq" ? "Fermer"
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -6398,6 +6478,17 @@ function openSheet(kind){
     return;
   } else if(kind==="contact"){
     document.getElementById("sheet-apply").addEventListener("click", submitContactForm);
+    return;
+  } else if(kind==="faq"){
+    document.getElementById("sheet-apply").addEventListener("click", closeSheet);
+    var faqSearch = document.getElementById("faq-search");
+    var faqList = document.getElementById("faq-list");
+    faqSearch.addEventListener("input", function(){
+      faqList.innerHTML = faqListHtml(faqSearch.value);
+      wireFaqAccordion(faqList);
+    });
+    wireFaqAccordion(faqList);
+    document.getElementById("faq-contact-link").addEventListener("click", function(){ openSheet("contact"); });
     return;
   } else if(kind==="dates"){
     var $dateIn = document.getElementById("s-date-in"), $dateOut = document.getElementById("s-date-out"), $datesErr = document.getElementById("dates-err");
@@ -8302,7 +8393,7 @@ function renderProfile(){
   document.getElementById("btn-host-space").addEventListener("click", function(){
     if(connected) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
   });
-  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("contact"); });
+  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
     // Même photo de compte qu'en mode hôte (hostProfiles/{uid}, voir
@@ -8903,7 +8994,7 @@ function renderHostProfile(){
     '</div></div></div>';
   document.getElementById("btn-exit-host").addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
-  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("contact"); });
+  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
