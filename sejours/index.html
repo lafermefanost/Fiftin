@@ -622,7 +622,7 @@ a{color:inherit; text-decoration:none;}
 .field-block{margin-bottom:22px;}
 .field-block > label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge); display:block; margin-bottom:10px;}
 .field-hint{font-size:11.5px; color:var(--gray-mid); margin:6px 0 0;}
-/* Suggestions d'adresse (Nominatim), sous le champ adresse du dépôt d'annonce. */
+/* Suggestions d'adresse (API Adresse/Géoplateforme), sous le champ adresse du dépôt d'annonce. */
 .hf-address-suggestions{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
   background:var(--cream); border:1.5px solid var(--line); border-radius:16px; overflow:hidden;
   box-shadow:0 8px 20px rgba(0,0,0,.14); max-height:220px; overflow-y:auto;}
@@ -630,6 +630,8 @@ a{color:inherit; text-decoration:none;}
   padding:10px 14px; font-family:'Jost',sans-serif; font-size:12.5px; color:var(--ink); border-bottom:1px solid var(--line);}
 .hf-address-suggestion:last-child{border-bottom:none;}
 .hf-address-suggestion:hover, .hf-address-suggestion:active{background:var(--cream-deep);}
+/* LOT 4.5 : distingue une suggestion "commune" (type=municipality) d'une adresse complète. */
+.hf-suggestion-tag{font-size:10px; text-transform:uppercase; letter-spacing:.05em; color:var(--sauge-deep); margin-left:4px;}
 .range-value{display:flex; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:6px;}
 input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amen-group{margin-bottom:16px;}
@@ -7277,74 +7279,101 @@ function resolvePhotoEntries(entries, uid, pathPrefix, progressLabel){
 }
 
 /* Géocodage adresse -> lat/lng + détail (région/département/ville) via
-   Nominatim (OpenStreetMap) : API publique et gratuite, pas de clé ni de
-   coût contrairement à un service comme l'API Géocodage Google. Utilisé
-   au dépôt/à la modification d'une annonce (un hôte à la fois, usage
-   occasionnel) et pour les suggestions d'adresse pendant la saisie —
-   jamais côté recherche voyageur, où la distance se recalcule localement
-   depuis les coordonnées déjà stockées (voir listingDistanceKm()) : reste
-   largement dans les limites d'usage raisonnable de l'API publique.
-   addressdetails=1 renvoie state/county/city, exploités par
-   matchRegionDept() pour pré-remplir Région/Département/Ville sans que
-   l'hôte ait à les choisir à la main (voir wireHfAddressAutocomplete()). */
+   LOT 4.5 : API Adresse / Géoplateforme IGN (data.geopf.fr), service
+   officiel français adossé à la Base Adresse Nationale — remplace
+   Nominatim (OpenStreetMap), dont les résultats sur des adresses
+   françaises étaient signalés incohérents par un hôte, ET dont le
+   prédécesseur direct de ce remplaçant (api-adresse.data.gouv.fr) est de
+   toute façon décommissionné depuis fin janvier 2026 : plus un choix,
+   une nécessité. Même moteur (addok) que l'ancienne BAN, format de
+   réponse GeoJSON stable et documenté publiquement depuis des années —
+   voir https://geoservices.ign.fr/documentation/services/services-geoplateforme/geocodage
+   et son Swagger (https://data.geopf.fr/geocodage/openapi). Gratuit, pas
+   de clé. Limite documentée : 50 requêtes/seconde par IP, large pour
+   l'usage réel ici (dépôt d'annonce par un hôte à la fois, ou saisie au
+   clavier). ATTENTION vérification : impossible de faire un appel réseau
+   réel vers data.geopf.fr depuis l'environnement où ce code a été écrit
+   (politique réseau de bac à sable, confirmée via l'état du proxy, pas
+   un problème de l'API elle-même) — implémenté sur la foi de la
+   documentation officielle, jamais testé en conditions réelles ; premier
+   test avec une vraie adresse à faire après déploiement.
+   properties.context (ex. "91, Essonne, Île-de-France" : code dept, nom
+   dept, nom région) remplace state/county de Nominatim pour
+   matchRegionDept() ; properties.citycode est le code INSEE de la
+   commune, maintenant enregistré sur l'annonce (voir payload,
+   submitHostForm()). geometry.coordinates est en [lon, lat] (ordre
+   GeoJSON), pas [lat, lon]. */
 function geocodeAddress(address){
-  var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=fr&q="+encodeURIComponent(address);
+  var url = "https://data.geopf.fr/geocodage/search?q="+encodeURIComponent(address)+"&limit=1";
   return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
     if(!r.ok) throw new Error("geocode-http-"+r.status);
     return r.json();
-  }).then(function(results){
-    if(!results || !results.length) throw new Error("geocode-not-found");
-    return {lat:Number(results[0].lat), lng:Number(results[0].lon), address:results[0].address||{}};
+  }).then(function(data){
+    var f = data && data.features && data.features[0];
+    if(!f) throw new Error("geocode-not-found");
+    var p = f.properties || {};
+    return {lat:f.geometry.coordinates[1], lng:f.geometry.coordinates[0], citycode:p.citycode||"", address:p};
   });
 }
+/* Deux appels en parallèle (retour utilisateur 4.5 : "proposer aussi les
+   communes en plus des adresses complètes") : la recherche par défaut
+   (numéros/rues) et une recherche filtrée type=municipality, fusionnées
+   dans une seule liste de suggestions — les communes en tête, utile à un
+   hôte qui ne veut/ne peut taper que le nom de sa ville. */
 function searchAddressSuggestions(query){
-  var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=5&countrycodes=fr&q="+encodeURIComponent(query);
-  return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
-    if(!r.ok) throw new Error("suggest-http-"+r.status);
-    return r.json();
-  }).then(function(results){ return results || []; }).catch(function(){ return []; });
+  var addressUrl = "https://data.geopf.fr/geocodage/search?q="+encodeURIComponent(query)+"&limit=5";
+  var municipalityUrl = "https://data.geopf.fr/geocodage/search?q="+encodeURIComponent(query)+"&type=municipality&limit=3";
+  var fetchFeatures = function(url){
+    return fetch(url, {headers:{"Accept":"application/json"}}).then(function(r){
+      if(!r.ok) throw new Error("suggest-http-"+r.status);
+      return r.json();
+    }).then(function(data){ return (data && data.features) || []; }).catch(function(){ return []; });
+  };
+  return Promise.all([fetchFeatures(municipalityUrl), fetchFeatures(addressUrl)]).then(function(both){
+    return both[0].concat(both[1]);
+  });
 }
-/* Fait correspondre les state/county renvoyés par Nominatim aux noms
-   officiels de FR_REGIONS/deptsForRegion() — comparaison par inclusion
-   plutôt qu'égalité stricte (Nominatim écrit parfois "Île-de-France" avec
-   une nuance d'accent/tiret différente d'un référentiel à l'autre, ou
-   ajoute des mots). Non trouvé -> chaîne vide, jamais deviné au hasard. */
+/* Fait correspondre le "context" (BAN/Géoplateforme) aux noms officiels de
+   FR_REGIONS/deptsForRegion() — comparaison par inclusion plutôt
+   qu'égalité stricte (garde la même tolérance qu'avec Nominatim : accents
+   ou formulations qui diffèrent légèrement d'un référentiel à l'autre).
+   Non trouvé -> chaîne vide, jamais deviné au hasard. */
 function matchRegionDept(addr){
   addr = addr || {};
-  var stateStr = (addr.state||"").toLowerCase();
-  var countyStr = (addr.county||addr.state_district||"").toLowerCase();
+  var parts = (addr.context||"").split(",").map(function(s){ return s.trim(); });
+  var deptStr = (parts[1]||"").toLowerCase();
+  var regionStr = (parts[2]||"").toLowerCase();
   var region = FR_REGIONS.filter(function(r){
     var n = r.name.toLowerCase();
-    return stateStr && (stateStr.indexOf(n)!==-1 || n.indexOf(stateStr)!==-1);
+    return regionStr && (regionStr.indexOf(n)!==-1 || n.indexOf(regionStr)!==-1);
   })[0] || null;
   var dept = null;
   var tryDept = function(r){
     return r.depts.filter(function(d){
       var n = d.toLowerCase();
-      return countyStr && (countyStr.indexOf(n)!==-1 || n.indexOf(countyStr)!==-1);
+      return deptStr && (deptStr.indexOf(n)!==-1 || n.indexOf(deptStr)!==-1);
     })[0];
   };
   if(region) dept = tryDept(region) || null;
-  if(!dept && countyStr){
+  if(!dept && deptStr){
     FR_REGIONS.some(function(r){
       var d = tryDept(r);
       if(d){ dept = d; region = r; return true; }
       return false;
     });
   }
-  var city = addr.city || addr.town || addr.village || addr.municipality || "";
-  return {regionName: region ? region.name : "", deptName: dept || "", city: city};
+  return {regionName: region ? region.name : "", deptName: dept || "", city: addr.city || ""};
 }
 
-/* Suggestions d'adresse pendant la saisie (Nominatim), avec pré-remplissage
-   automatique de Région/Département/Ville au clic — l'hôte n'a plus besoin
-   de les choisir à la main dans le cas courant (retour utilisateur : "pas
-   pratique de tout remplir"). Ne réécrit jamais un champ déjà rempli par
-   l'hôte lui-même (voir applySuggestion ci-dessous) : un choix manuel
-   n'est jamais écrasé silencieusement par une suggestion d'adresse
-   ultérieure sur un AUTRE champ, seule Région/Département suit toujours
-   la dernière adresse choisie (ils vont ensemble, contrairement à Ville
-   qui peut être volontairement plus précis que ce que Nominatim renvoie). */
+/* Suggestions d'adresse pendant la saisie (Géoplateforme/BAN), avec
+   pré-remplissage automatique de Région/Département/Ville au clic — l'hôte
+   n'a plus besoin de les choisir à la main dans le cas courant (retour
+   utilisateur : "pas pratique de tout remplir"). Ne réécrit jamais un champ
+   déjà rempli par l'hôte lui-même (voir applySuggestion ci-dessous) : un
+   choix manuel n'est jamais écrasé silencieusement par une suggestion
+   d'adresse ultérieure sur un AUTRE champ, seule Région/Département suit
+   toujours la dernière adresse choisie (ils vont ensemble, contrairement à
+   Ville qui peut être volontairement plus précis que ce que l'API renvoie). */
 function wireHfAddressAutocomplete(){
   var input = document.getElementById("hf-address");
   var box = document.getElementById("hf-address-suggestions");
@@ -7355,9 +7384,10 @@ function wireHfAddressAutocomplete(){
   function hide(){ box.hidden = true; box.innerHTML = ""; }
 
   function applySuggestion(result){
-    input.value = result.display_name;
+    var p = result.properties || {};
+    input.value = p.label || "";
     hide();
-    var match = matchRegionDept(result.address);
+    var match = matchRegionDept(p);
     if(match.regionName){
       document.getElementById("hf-region-name").value = match.regionName;
       document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(match.regionName, match.deptName);
@@ -7369,7 +7399,9 @@ function wireHfAddressAutocomplete(){
   function renderSuggestions(results){
     if(!results.length){ hide(); return; }
     box.innerHTML = results.map(function(r, i){
-      return '<button type="button" class="hf-address-suggestion" data-idx="'+i+'">'+esc(r.display_name)+'</button>';
+      var p = r.properties || {};
+      var isMunicipality = p.type === "municipality";
+      return '<button type="button" class="hf-address-suggestion" data-idx="'+i+'">'+esc(p.label||"")+(isMunicipality?' <span class="hf-suggestion-tag">commune</span>':"")+'</button>';
     }).join("");
     box.hidden = false;
     Array.prototype.forEach.call(box.querySelectorAll(".hf-address-suggestion"), function(btn){
@@ -7521,7 +7553,7 @@ function submitHostForm(){
         var payload = {
           name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           regionName:regionName, deptName:deptName, city:city,
-          address:address, lat:coords.lat, lng:coords.lng,
+          address:address, lat:coords.lat, lng:coords.lng, inseeCode:coords.citycode||"",
           websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
           gallery:house.urls, galleryThumb:house.thumbs,
           units:units
