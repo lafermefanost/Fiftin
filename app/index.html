@@ -157,10 +157,20 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 /* Agrandi par rapport à l'original (34×27, posé nu dans le header sans
    encart) — retour utilisateur : "j'aimerais juste que le logo soit plus
    gros dans l'encart sinon on ne le verra pas si c'est exactement la
-   même version qu'ailleurs" — puis repris un cran plus petit (35×28,
-   contre 40×32 à l'essai) avec l'encart, même retour utilisateur que
-   sur .app-icon-tile ci-dessus. Ratio conservé (35/28 ≈ 34/27 ≈ 1.26). */
-.app-icon{flex-shrink:0; position:relative; z-index:1; width:35px; height:28px;}
+   même version qu'ailleurs" — puis repris deux crans plus petit (28×22,
+   40×32 puis 35×28 à l'essai), retour utilisateur : "réduit le 15 dans
+   l'encart de là-haut", pour laisser un peu plus de marge/cartouche
+   visible autour, plus proche du ratio de remplissage de .logo-tile
+   (logo ~61% de la largeur du cartouche, contre ~87% avant ce réglage).
+   Ratio conservé (28/22 ≈ 34/27 ≈ 1.26). Pas de translateX correctif
+   (contrairement à l'inline style="transform:translateX(-4px)" sur
+   .logo-tile, lockScreen/siteGate plus bas) : logo-fiftin-mark.png est en
+   fait symétrique (marges internes quasi identiques des deux côtés,
+   vérifié pixel à pixel sur le fichier source) — le centrage de .app-icon
+   dans .app-icon-tile (flex align-items/justify-content:center ci-dessus)
+   suffit déjà (retour utilisateur : "centre-le bien visuellement dans son
+   cartouche", confirmé après coup sur capture). */
+.app-icon{flex-shrink:0; position:relative; z-index:1; width:28px; height:22px;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Nom de l'établissement du client — seul texte du logo dans l'appli (voir
