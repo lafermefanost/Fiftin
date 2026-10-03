@@ -53,6 +53,12 @@ html,body{height:100%;overflow:hidden;}
      --green2-bg : même principe pâle que --lavender-bg, pour les petites
      pastilles de texte plutôt que les fonds pleins. */
   --green2:#8B9D86; --green2-bg:#E9F1E7;
+  /* Vert moyen, entre --green (foncé) et --green2 (clair) — même teinte
+     que --sauge-mid côté fiftin.fr/sejours (#4E6F53). Seul usage : fond
+     du cartouche actif du menu du bas (retour utilisateur : "menu
+     sélectionné en bas, repasse-le en vert moyen", après un passage par
+     --green2 puis --lavender-deep). */
+  --green-mid:#4E6F53;
   /* Jaune d'accent : réservé au geste qui crée ou télécharge quelque chose
      pour le client (résa, nouvel événement, export PDF/CSV…), jamais aux
      catégories, statuts ou "+ ajouter" génériques des réglages. */
@@ -1432,13 +1438,13 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
    irisSpin déjà déclarés une fois pour .logo-tile, réutilisés ici ;
    tabBounce (rebond au clic) n'existait pas encore dans ce fichier,
    déclaré ici.
-   Fond en --lavender-deep (#4E67BC, retour utilisateur, en 2 temps :
-   d'abord "passe le fond en couleur vert sauge" essayé en --green2, puis
-   "passe en fait en couleur lavandes, couleur du fond du picto de
-   sortir de l'app" — même teinte que #backToSejoursBtn, voir le header,
-   seul autre usage de --lavender-deep dans ce fichier). --green garde
-   son rôle dans l'anneau irisé (3e teinte, hérité de l'essai sauge
-   précédent, toujours distinct du nouveau fond lavande).
+   Fond en --green-mid (#4E6F53, retour utilisateur, en 3 temps :
+   "vert sauge" essayé en --green2, puis "couleur lavandes, couleur du
+   fond du picto de sortir de l'app" en --lavender-deep, puis "repasse-le
+   en vert moyen" — --green-mid, déclaré plus haut, seul usage dans ce
+   fichier). --green2 (clair) reprend le rôle dans l'anneau irisé (3e
+   teinte) : --green, plus proche du nouveau fond --green-mid, s'y
+   distinguait trop peu — --green2 tranche mieux dessus.
    Padding horizontal (10px) > vertical (4px/3px) : le libellé le plus
    long (Location) fixe la largeur du cartouche, sinon un padding
    symétrique aurait laissé un excès de vide de chaque côté des libellés
@@ -1448,14 +1454,14 @@ input[type="date"].fi{-webkit-appearance:none;appearance:none;}
 @keyframes tabBounce{from{transform:scale(.74);} to{transform:scale(1);}}
 .mbnav-btn.on .mbnav-pill{position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
-      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--lavender-deep);
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--green-mid);
   box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 1px 0 2px rgba(255,255,255,.25),
     inset 0 -4px 7px rgba(0,0,0,.22), inset -3px 0 6px rgba(0,0,0,.14);
   animation:tabBounce .38s cubic-bezier(.34,1.7,.64,1);}
 .mbnav-btn.on .mbnav-pill::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
-    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green) 320deg, rgba(255,255,255,0) 360deg);
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--green2) 320deg, rgba(255,255,255,0) 360deg);
   mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite:exclude;
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
