@@ -6096,6 +6096,33 @@ function openSheet(kind){
     inner = '<h3>À propos de '+esc(hostBioSheetContext.hostName)+'</h3>'+
       '<p class="host-bio-full">'+esc(hostBioSheetContext.bio)+'</p>'+
       '<div id="host-other-listings-wrap"></div>';
+  } else if(kind==="contact"){
+    // LOT 5.1 : même service (Formspree) et même mécanique (fetch+FormData,
+    // pas de rechargement de page) que le formulaire de contact de
+    // lafermefanost.com — voir FORMSPREE_CONTACT_URL/submitContactForm().
+    // Champ _gotcha (ci-dessous, visuellement masqué) : convention native
+    // de Formspree, pas une invention — toute soumission où ce champ
+    // arrive rempli est silencieusement rejetée côté Formspree, avant même
+    // d'atteindre la boîte mail (voir leur doc "Preventing Spam"). Doublé
+    // d'une vérif côté client (submitContactForm()) pour ne pas déclencher
+    // l'appel réseau du tout dans ce cas.
+    inner = '<h3>Contact Fiftin</h3>'+
+      '<p class="sheet-sub">Une question, un problème, une suggestion ? Écrivez-nous.</p>'+
+      '<p class="field-hint">Les champs marqués <b>*</b> sont obligatoires.</p>'+
+      '<div class="field-block"><label>Nom *</label><input class="text-input" id="ct-name" placeholder="Votre nom"></div>'+
+      '<div class="field-block"><label>Email *</label><input class="text-input" type="email" id="ct-email" placeholder="vous@exemple.com"></div>'+
+      '<div class="field-block"><label>Objet *</label><select class="text-input" id="ct-subject">'+
+        '<option value="">— Choisir —</option>'+
+        '<option value="Question générale">Question générale</option>'+
+        '<option value="Problème avec une annonce">Problème avec une annonce</option>'+
+        '<option value="Problème avec une réservation">Problème avec une réservation</option>'+
+        '<option value="Signaler un abus">Signaler un abus</option>'+
+        '<option value="Autre">Autre</option>'+
+      '</select></div>'+
+      '<div class="field-block"><label>Message *</label><textarea class="text-input" id="ct-message" rows="5" placeholder="Votre message"></textarea></div>'+
+      '<input type="text" name="_gotcha" id="ct-hp" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" tabindex="-1" autocomplete="off">'+
+      '<label class="hf-checkbox-row"><input type="checkbox" id="ct-consent"> J\'accepte que les informations saisies ci-dessus soient utilisées pour traiter ma demande. *</label>'+
+      '<div class="auth-err" id="ct-err"></div>';
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
@@ -6107,6 +6134,7 @@ function openSheet(kind){
     : kind==="collCreate" ? "Créer"
     : kind==="roomlink" ? "Fermer"
     : kind==="hostBio" ? "Fermer"
+    : kind==="contact" ? "Envoyer"
     : "Voir les résultats";
 
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -6367,6 +6395,9 @@ function openSheet(kind){
         });
       });
     });
+    return;
+  } else if(kind==="contact"){
+    document.getElementById("sheet-apply").addEventListener("click", submitContactForm);
     return;
   } else if(kind==="dates"){
     var $dateIn = document.getElementById("s-date-in"), $dateOut = document.getElementById("s-date-out"), $datesErr = document.getElementById("dates-err");
@@ -7497,6 +7528,56 @@ function matchRegionDept(addr){
   return {regionName: region ? region.name : "", deptName: dept || "", city: addr.city || ""};
 }
 
+/* LOT 5.1 : formulaire "Contact Fiftin" (kind==="contact") — même service
+   que lafermefanost.com (Formspree), ID propre à Fiftin (créé par César,
+   domaine restreint à fiftin.fr côté Formspree, protection anti-abus
+   supplémentaire indépendante du honeypot). _subject personnalise l'objet
+   de l'email reçu ; _gotcha est le champ honeypot (voir son commentaire
+   dans openSheet(), kind==="contact") — revérifié ici aussi, pour ne
+   même pas déclencher l'appel réseau si un bot l'a rempli. */
+var FORMSPREE_CONTACT_URL = "https://formspree.io/f/mdekqvev";
+function submitContactForm(){
+  var name = document.getElementById("ct-name").value.trim();
+  var email = document.getElementById("ct-email").value.trim();
+  var subject = document.getElementById("ct-subject").value;
+  var message = document.getElementById("ct-message").value.trim();
+  var consent = document.getElementById("ct-consent").checked;
+  var honeypot = document.getElementById("ct-hp").value;
+  var errEl = document.getElementById("ct-err");
+  errEl.textContent = "";
+  if(honeypot) return; // bot : aucun message d'erreur, rien qui l'aide à s'adapter
+  if(!name || !email || !subject || !message){ errEl.textContent = "Merci de remplir tous les champs."; return; }
+  if(!consent){ errEl.textContent = "Merci d'accepter l'utilisation de vos données pour pouvoir vous répondre."; return; }
+  var btn = document.getElementById("sheet-apply");
+  var originalLabel = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Envoi…";
+  var fd = new FormData();
+  fd.append("name", name);
+  fd.append("email", email);
+  fd.append("subject", subject);
+  fd.append("message", message);
+  fd.append("_subject", "Fiftin — "+subject);
+  fd.append("_gotcha", "");
+  fetch(FORMSPREE_CONTACT_URL, {method:"POST", headers:{"Accept":"application/json"}, body:fd}).then(function(r){
+    if(!r.ok) throw new Error("http-"+r.status);
+  }).then(function(){
+    var root = document.getElementById("sheet-root");
+    root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+      '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+      '<h3>Message envoyé</h3><p class="sheet-sub">Merci ! Nous vous répondrons rapidement par email.</p>'+
+      '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
+    '</div></div></div>';
+    document.getElementById("sheet-close").addEventListener("click", closeSheet);
+    document.getElementById("sheet-ok").addEventListener("click", closeSheet);
+    document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
+  }).catch(function(){
+    errEl.textContent = "Erreur lors de l'envoi — réessayez, ou écrivez-nous directement par email.";
+    btn.disabled = false;
+    btn.textContent = originalLabel;
+  });
+}
+
 /* Suggestions d'adresse pendant la saisie (Géoplateforme/BAN), avec
    pré-remplissage automatique de Région/Département/Ville au clic — l'hôte
    n'a plus besoin de les choisir à la main dans le cas courant (retour
@@ -8210,7 +8291,7 @@ function renderProfile(){
     '</div>'+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
-      '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
     '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -8221,6 +8302,7 @@ function renderProfile(){
   document.getElementById("btn-host-space").addEventListener("click", function(){
     if(connected) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
   });
+  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("contact"); });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
     // Même photo de compte qu'en mode hôte (hostProfiles/{uid}, voir
@@ -8788,7 +8870,7 @@ function renderHostProfile(){
     '</div>'+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
-      '<div class="profile-row">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
     '</div></div>'+
     /* Présentation de profil (point 3.2) — texte initial laissé vide ici :
        resolveHostProfileBio() (async, Firestore + migration paresseuse
@@ -8821,6 +8903,7 @@ function renderHostProfile(){
     '</div></div></div>';
   document.getElementById("btn-exit-host").addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+  document.getElementById("row-contact").addEventListener("click", function(){ openSheet("contact"); });
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
