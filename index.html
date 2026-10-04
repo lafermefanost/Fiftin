@@ -811,7 +811,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .detail-gallery-scroll{position:absolute; inset:0; overflow-x:auto; display:flex; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
 .detail-gallery-scroll .slide{min-width:100%; height:100%; scroll-snap-align:start; position:relative; overflow:hidden;}
 .detail-back{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:14px; z-index:10; width:38px; height:38px;
-  border-radius:50%; background:rgba(20,26,20,0.4); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
+  border-radius:50%; background:rgba(20,26,20,0.4); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
 .detail-back svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2;}
 .detail-save{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); right:14px; z-index:10;}
 .detail-share{position:absolute; top:calc(14px + env(safe-area-inset-top,0px) + 46px); right:14px; z-index:10;}
@@ -1006,8 +1006,15 @@ textarea.text-input{resize:vertical; min-height:80px;}
    en scrollant dans les annonces. Hiérarchie normale : hero > sheet/modal
    (.sheet-backdrop, z-index 150) > fiche détail (.detail, 200) >
    nav.tabbar (50) > #feed. */
+/* -webkit-backdrop-filter (manquait) + transform:translateZ(0) : sur
+   Safari iOS, un élément position:fixed avec backdrop-filter sans sa
+   propre couche de composition (GPU) scintille/saccade pendant le scroll
+   — bug connu, pas limité à une vue en particulier (retour utilisateur :
+   "le menu bug partout"). translateZ(0) force cette couche séparée,
+   insensible au reflow du contenu qui défile derrière. */
 nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:50;
-  background:rgba(239,238,234,0.94); backdrop-filter:blur(10px); border-top:1px solid var(--line);
+  background:rgba(239,238,234,0.94); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  border-top:1px solid var(--line); transform:translateZ(0); -webkit-transform:translateZ(0);
   display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));}
 /* Exception, seulement pendant que la fiche détail est ouverte
    (body.detail-open, posé par openDetail()/retiré par closeDetail()) :
