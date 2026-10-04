@@ -6011,7 +6011,7 @@ function openSheet(kind){
     var capSliderVal = f.capacity!=null ? f.capacity : 1;
     inner = '<h3>Voyageurs</h3>'+
       '<p class="field-hint">Annonces pouvant accueillir au moins ce nombre de personnes — dans un seul hébergement, ou plusieurs du même hôte à la même adresse (affichés à part, en dessous des résultats).</p>'+
-      '<div class="field-block"><div class="range-value"><span>Au moins</span><span>'+(f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "Peu importe")+'</span></div>'+
+      '<div class="field-block"><div class="range-value"><span>Minimum 1</span><span>'+(f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "15+")+'</span></div>'+
       '<input type="range" id="s-capacity" min="1" max="'+CAPACITY_MAX+'" step="1" value="'+capSliderVal+'"></div>';
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
@@ -6657,7 +6657,7 @@ function openSheet(kind){
     $c.addEventListener("input", function(){
       var v = Number($c.value);
       f.capacity = v<=1 ? null : v;
-      root.querySelector(".range-value span:last-child").textContent = f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "Peu importe";
+      root.querySelector(".range-value span:last-child").textContent = f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "15+";
     });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
