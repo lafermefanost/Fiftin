@@ -1985,12 +1985,17 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card{display:flex; align-items:center; gap:14px; background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .plan-card-prices{flex:1; min-width:0; text-align:center;}
 .plan-card ul{flex:1; min-width:0;}
-/* Effet "verre liquide" sur la formule active retiré (retour utilisateur) :
-   les 3 cartes formule rendent maintenant toutes le même style, sans
-   distinction visuelle pour la formule en cours — planCardHtml() continue
-   de recevoir `active` (ne change rien pour l'instant, gardé au cas où
-   une indication plus sobre serait redemandée plus tard) mais plus aucune
-   règle CSS n'en tient compte. */
+/* Effet "verre liquide" retiré (retour utilisateur précédent) mais la
+   formule active doit "sortir du lot" quand même, en vert principal uni
+   (retour utilisateur) — --sauge (#354B38), le même vert "propriétaire"
+   que .switch-tile.voyageur/la carte Profil voyageur, pas de dégradé ni de
+   backdrop-filter cette fois, juste un fond plein. */
+.plan-card.active{background:var(--sauge); border:none;}
+.plan-card.active .plan-card-name,
+.plan-card.active .plan-card-price,
+.plan-card.active .plan-card-per,
+.plan-card.active li{color:#fff;}
+.plan-card.active li:nth-child(5n+1)::before{background:#fff;}
 .plan-card-name{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:8px;}
 /* "grossir un peu les chiffres" (retour utilisateur) — 28px -> 32px. */
 .plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:32px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
