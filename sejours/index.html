@@ -5225,6 +5225,33 @@ function wireSwipeRows(){
     });
   });
 }
+/* Indice visuel "balayer pour révéler" (retour utilisateur : "à chaque
+   passage sur cette vue séjour, un scroll left et right automatique pour
+   montrer aux gens que c'est en faisant ce geste qu'ils accèdent à
+   d'autres réglages") — appelé une fois par switchTab() à l'entrée réelle
+   sur Mes séjours (voir enteringLikes). Anime la toute première ligne
+   .swipe-row trouvée dans #feed, quelle que soit la vue affichée (volet de
+   collection, annonce, demande) : glisse jusqu'à révéler .log-actions, une
+   pause, puis revient — même mécanique que swipeOpenRow/closeSwipeRow()
+   ci-dessus (pas un geste séparé), pour qu'un vrai tap/glissement pendant
+   la démonstration retombe sur un état cohérent plutôt que de la casser.
+   Silencieux si un volet est déjà ouvert pour de vrai (ne jamais interrompre
+   un geste de l'utilisateur) ou si aucune ligne balayable n'est affichée
+   (ex. Favoris en vue grille, sans aucune collection). */
+function playSwipeHint(){
+  if(swipeOpenRow) return;
+  var body = document.querySelector("#feed .swipe-row .log-body");
+  if(!body) return;
+  var row = body.closest(".swipe-row");
+  var actions = row.querySelector(".log-actions");
+  var maxDrag = actions ? actions.offsetWidth : 0;
+  if(!maxDrag) return;
+  swipeOpenRow = row;
+  body.style.transform = "translateX(-"+maxDrag+"px)";
+  setTimeout(function(){
+    if(swipeOpenRow===row) closeSwipeRow(row);
+  }, 900);
+}
 /* Câblage des deux boutons de collectionListingRowHtml() — utilisé à la
    fois par la vue liste des favoris (renderCollectionsGrid(), plusieurs
    volets) et par le détail d'une collection en vue grille
@@ -8805,6 +8832,14 @@ function renderTabContent(){
 }
 
 function switchTab(tab){
+  // Retour utilisateur : "à chaque passage sur cette vue séjour, un scroll
+  // left et right automatique pour montrer aux gens que c'est en faisant ce
+  // geste qu'ils accèdent à d'autres réglages" — capturé AVANT state.tab=tab
+  // juste en dessous : seule une vraie ENTRÉE sur Mes séjours (depuis un
+  // autre onglet) déclenche l'indice, jamais un re-rendu interne (renommer,
+  // changer de sous-onglet Favoris/Demandes/Séjours) qui repasserait par
+  // refreshLikesChrome()/renderTabContent() sans qu'on ait quitté l'onglet.
+  var enteringLikes = tab==="likes" && state.tab!=="likes";
   // Retour utilisateur : changer d'onglet laissait la page à la position
   // de défilement de l'onglet précédent, ce qui pouvait retomber tout en
   // bas d'un onglet plus court que le précédent (page blanche, contenu
@@ -8876,6 +8911,11 @@ function switchTab(tab){
     document.getElementById("result-line").classList.add("chrome-collapsed");
     renderProfile();
   }
+  // Laisse le temps à la transition d'onglet / au rendu de refreshLikesChrome()
+  // ci-dessus de se poser avant l'indice (voir playSwipeHint() plus bas) —
+  // sans ce délai, l'animation partirait en même temps que le contenu
+  // apparaît, moins lisible.
+  if(enteringLikes) setTimeout(playSwipeHint, 550);
 }
 
 /* ---------------- barre d'onglets : voyageur / hôte ---------------- */
