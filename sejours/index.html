@@ -2240,12 +2240,7 @@ body.map-fullscreen{overflow:hidden;}
 .mkt-page .plan li:nth-child(5n+3)::before{background:#6B8F71;}
 .mkt-page .plan li:nth-child(5n+4)::before{background:#D88A9A;}
 .mkt-page .plan li:nth-child(5n+5)::before{background:var(--yellow);}
-/* Essentiel/Avancé pas encore activables (Stripe/Mollie a venir, voir
-   openHostGestionApp()) : etiquette claire plutot qu'une carte cliquable
-   qui ne menerait nulle part -- jamais de lien mort. */
-.mkt-page .plan.mkt-plan-locked{opacity:.86;}
-.mkt-page .mkt-plan-soon{margin-top:16px; text-align:center; font-size:12px; font-weight:700; color:rgba(46,43,34,0.55);
-  background:rgba(46,43,34,0.05); border-radius:20px; padding:9px;}
+.mkt-page .plan .mkt-plan-cta{width:100%; margin-top:16px; padding:13px; font-size:13px;}
 
 .mkt-page .phone2{width:200px; flex:none; position:relative;}
 .mkt-page .phone2 img{display:block; width:100%; height:auto;}
@@ -3066,7 +3061,15 @@ function loadFirebaseSDK(cb){
       s3.onload = function(){
         var s4 = document.createElement("script");
         s4.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js";
-        s4.onload = done;
+        s4.onload = function(){
+          // firebase-functions-compat : nécessaire pour startCheckoutFromProfile()
+          // (openHostGestionApp() -> formule payante) et mktPlanCardHtml() — appel
+          // direct à createCheckoutSession, même Cloud Function que côté app/.
+          var s5 = document.createElement("script");
+          s5.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js";
+          s5.onload = done;
+          document.head.appendChild(s5);
+        };
         document.head.appendChild(s4);
       };
       document.head.appendChild(s3);
@@ -9014,11 +9017,11 @@ function renderHostTabContent(){
    seul et même site plutôt qu'ouvrir une fenêtre à part. "app/" sans
    "../" : juste une fois ce fichier déménagé à la racine (voir le
    chantier associé), ce chemin redevient correct tel quel. */
-function openHostGestionApp(){
+function openHostGestionApp(openSettings){
   resolveHostAccount(function(account){
     var plan = (account && account.settings && account.settings.plan) || "simple";
     if(plan==="essentiel" || plan==="pro"){
-      location.href = "../app/";
+      location.href = "../app/" + (openSettings ? "?openSettings=1" : "");
     } else {
       switchHostTab("app");
     }
@@ -9046,18 +9049,18 @@ function openHostGestionApp(){
    mktPlanCardHtml() réutilise HOST_FORMULAS (même source que
    planCardHtml() du Profil hôte) : Formule Hôte toujours "votre formule
    actuelle" ici (cette vue n'est atteinte QUE par un compte sans plan
-   essentiel/pro, voir openHostGestionApp()) ; Essentiel/Avancé affichées
-   "Bientôt disponible", jamais cliquables (Stripe/Mollie pas encore
-   branché). */
+   essentiel/pro, voir openHostGestionApp()) ; Essentiel/Avancé cliquables
+   depuis que Stripe est branché (voir startCheckoutFromSejours() et
+   wireHostMarketingPage() plus bas) — déclenchent un vrai paiement. */
 function mktPlanCardHtml(f){
   var current = f.value==="simple";
-  var locked = f.value!=="simple";
-  return '<div class="plan'+(current?' mkt-plan-current':'')+(locked?' mkt-plan-locked':'')+'">'+
+  var payable = f.value!=="simple";
+  return '<div class="plan'+(current?' mkt-plan-current':'')+(payable?' mkt-plan-payable':'')+'"'+(payable?' data-mkt-plan="'+esc(f.value)+'"':'')+'>'+
     '<div class="name">'+esc(f.planName)+(current?'<span class="mkt-plan-tag">Votre formule actuelle</span>':'')+'</div>'+
     '<div class="price">'+esc(f.planPrice)+'</div>'+
     '<div class="per">'+esc(f.planPer)+'</div>'+
     '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
-    (locked ? '<div class="mkt-plan-soon">Bientôt disponible</div>' : '')+
+    (payable ? '<button type="button" class="btn primary mkt-plan-cta" data-mkt-plan-btn="'+esc(f.value)+'"><span>Passer à cette formule</span></button>' : '')+
   '</div>';
 }
 function renderHostMarketingPage(){
@@ -9075,6 +9078,36 @@ function renderHostMarketingPage(){
     MKT_SECTIONS.join("")+
     tarifs+
   '</div>';
+  wireHostMarketingPage();
+}
+// Un seul bouton par carte (data-mkt-plan-btn), posé uniquement sur
+// Essentiel/Avancé par mktPlanCardHtml() — jamais sur "Formule Hôte"
+// actuelle, donc pas besoin de distinguer ici.
+function wireHostMarketingPage(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-mkt-plan-btn]"), function(btn){
+    btn.addEventListener("click", function(){ startCheckoutFromSejours(btn.getAttribute("data-mkt-plan-btn"), btn); });
+  });
+}
+// Déclenche un vrai paiement Stripe (createCheckoutSession, même Cloud
+// Function que côté app/ — voir startCheckout() dans app/index.html) et y
+// redirige. Utilisé depuis la page "App gestion" (mktPlanCardHtml) pour un
+// compte encore en Formule Hôte (simple), seul cas où une formule payante
+// n'est pas accessible depuis app/ lui-même (qui suppose déjà un compte de
+// gestion existant).
+function startCheckoutFromSejours(plan, btn){
+  if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
+  if(btn){ btn.disabled = true; btn.querySelector("span").textContent = "Préparation du paiement…"; }
+  loadFirebaseSDK(function(){
+    firebase.functions().httpsCallable("createCheckoutSession")({
+      plan: plan,
+      successUrl: location.origin + location.pathname,
+      cancelUrl: location.origin + location.pathname
+    }).then(function(res){ location.href = res.data.url; }).catch(function(err){
+      console.error("[billing] createCheckoutSession a échoué", err);
+      alert("Impossible d'ouvrir le paiement : "+(err.message||"erreur inconnue")+".");
+      if(btn){ btn.disabled = false; btn.querySelector("span").textContent = "Passer à cette formule"; }
+    });
+  });
 }
 var MKT_SECTIONS = [
     '<section class="cover">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="hero-flex">\n    <div class="inner">\n      <div class="logo">\n        <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>\n      </div>\n      <h1>Le planning qui ne s\'arrête pas<br><em>aux réservations.</em></h1>\n      <p>Pensé pour les chambres d\'hôtes et gîtes. Retrouvez votre temps, votre autonomie et votre rentabilité.</p>\n    </div>\n    <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="../assets/shot-hero.webp" alt="Fiftin — La grille, en situation"></div></div>\n  </div>\n</section>',
@@ -9390,6 +9423,7 @@ function renderHostProfile(){
     '<div class="plan-card-list" id="host-formulas">'+
       HOST_FORMULAS.map(function(f){ return planCardHtml(f, false); }).join("")+
     '</div>'+
+    '<button type="button" class="btn ghost-dark" id="btn-change-plan" style="width:100%;margin-top:14px;"><span>Changer de formule</span></button>'+
     '</div>'+
     '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row" data-legal="mentions">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -9400,6 +9434,10 @@ function renderHostProfile(){
   if(switchOtherBtn) switchOtherBtn.addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
+  // Mène vers la page "App gestion" (formule simple) ou directement vers
+  // app/ Réglages -> Compte (formule déjà payante, pour changer/résilier) —
+  // même routage que le reste du tabbar hôte, voir openHostGestionApp().
+  document.getElementById("btn-change-plan").addEventListener("click", function(){ openHostGestionApp(true); });
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
