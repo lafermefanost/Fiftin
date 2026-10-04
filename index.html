@@ -5273,6 +5273,16 @@ function renderContactLog(){
       wireLikesToggle();
       return;
     }
+    // Recalculé ici plutôt que de réutiliser le `toggle` capturé plus haut
+    // (avant cette lecture) : contactLogCache vient d'être rempli par
+    // loadContactLogEntries() juste au-dessus, donc le `toggle` d'origine a
+    // encore "…" figé dedans pour Demandes/Séjours — et wireLikesToggle()
+    // ci-dessous ne le corrigerait pas (loadLikesCounts() voit le cache
+    // déjà rempli et ne patche rien). Bug réel, distinct des deux déjà
+    // documentés plus haut : seul le TOUT premier rendu de Demandes/Séjours
+    // d'une session (cache encore vide au moment où l'ancien `toggle` avait
+    // été capturé) restait alors bloqué sur "…" indéfiniment.
+    toggle = likesViewToggleHtml();
     var filtered = docs.filter(function(d){ return (d.data().status==="confirmed")===wantConfirmed; });
     var body;
     if(!filtered.length){
