@@ -294,6 +294,15 @@ exports.syncListingContactStats = onDocumentWritten(
  * après la 1ère année gratuite, voir accounts/{uid}.createdAt), il
  * faudra créer son Price Stripe et l'ajouter à STRIPE_PRICE_IDS. */
 
+/* Durée de l'essai gratuit (retour utilisateur, confirmé dans le README —
+ * "Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement
+ * réel") — uniquement pour un premier passage en formule payante : cette
+ * fonction n'est appelée que pour un compte encore en formule "simple"
+ * (voir son wiring côté client, renderHostProfile()/mktPlanCardHtml() —
+ * un compte déjà abonné passe par createPortalSession à la place, jamais
+ * par ici), donc jamais un second essai pour un changement essentiel<->pro. */
+const TRIAL_PERIOD_DAYS = 15;
+
 /* Appelée depuis le site (bouton "Passer à la formule X") : ouvre une
  * session Stripe Checkout en mode abonnement et renvoie son URL, vers
  * laquelle le client redirige lui-même (window.location = url). Crée le
@@ -338,7 +347,20 @@ exports.createCheckoutSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (re
     line_items: [{price: priceId, quantity: 1}],
     success_url: successUrl,
     cancel_url: cancelUrl,
-    subscription_data: {metadata: {firebaseUid: uid}},
+    // Pas de carte exigée pour démarrer l'essai (retour utilisateur) —
+    // si le client en ajoute une quand même (ou que l'essai se termine),
+    // Stripe l'utilise normalement pour le 1er prélèvement réel.
+    payment_method_collection: "if_required",
+    subscription_data: {
+      metadata: {firebaseUid: uid},
+      trial_period_days: TRIAL_PERIOD_DAYS,
+      // À la fin des 15 jours, sans carte enregistrée : annulation plutôt
+      // que mise en pause (retour utilisateur, "perd ses infos de planning ?"
+      // — non, voir applySubscriptionToAccount(), seul settings.plan change,
+      // jamais les données) — repasse proprement en Formule Hôte gratuite,
+      // reprend tout tel quel dès qu'il se réabonne.
+      trial_settings: {end_behavior: {missing_payment_method: "cancel"}},
+    },
   });
 
   return {url: session.url};
