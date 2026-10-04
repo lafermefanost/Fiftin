@@ -344,10 +344,50 @@ exports.createCheckoutSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (re
   return {url: session.url};
 });
 
+/* Garantit par le code (plutôt que par un réglage à retrouver dans le
+ * tableau de bord Stripe — celui-ci ne proposait pas l'option "changer de
+ * formule" dans la configuration par défaut du Portail Client) que le
+ * Portail Client autorise : la résiliation ET le passage d'Essentiel à
+ * Avancé ou inversement, pour un abonnement déjà actif. Créée une seule
+ * fois (son id est mémorisé dans config/stripePortal), réutilisée à
+ * chaque appel ensuite — jamais recréée pour rien. */
+async function ensurePortalConfiguration(stripe) {
+  const existing = await db.collection("config").doc("stripePortal").get();
+  if (existing.exists && existing.data().configurationId) return existing.data().configurationId;
+
+  const essentielPrice = await stripe.prices.retrieve(STRIPE_PRICE_IDS.essentiel);
+  const proPrice = await stripe.prices.retrieve(STRIPE_PRICE_IDS.pro);
+  const allPrices = [STRIPE_PRICE_IDS.essentiel, STRIPE_PRICE_IDS.pro];
+
+  const config = await stripe.billingPortal.configurations.create({
+    business_profile: {headline: "Fiftin — gérez votre abonnement"},
+    features: {
+      invoice_history: {enabled: true},
+      payment_method_update: {enabled: true},
+      subscription_cancel: {enabled: true, mode: "at_period_end"},
+      subscription_update: {
+        enabled: true,
+        default_allowed_updates: ["price"],
+        proration_behavior: "create_prorations",
+        products: [
+          {product: essentielPrice.product, prices: allPrices},
+          {product: proPrice.product, prices: allPrices},
+        ],
+      },
+    },
+  });
+  await db.collection("config").doc("stripePortal").set({
+    configurationId: config.id,
+    createdAt: new Date().toISOString(),
+  });
+  return config.id;
+}
+
 /* Appelée depuis "Réglages → Compte" (bouton "Gérer mon abonnement") :
- * ouvre le Portail Client Stripe — changement de carte, résiliation,
- * factures, tout géré par Stripe lui-même, rien à construire côté
- * Fiftin (cohérent avec les CGV : "pas un logiciel de facturation"). */
+ * ouvre le Portail Client Stripe — changement de carte, changement de
+ * formule, résiliation, factures, tout géré par Stripe lui-même, rien à
+ * construire côté Fiftin (cohérent avec les CGV : "pas un logiciel de
+ * facturation"). */
 exports.createPortalSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
   const uid = request.auth.uid;
@@ -358,8 +398,13 @@ exports.createPortalSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (requ
   if (!customerId) throw new HttpsError("failed-precondition", "Aucun abonnement Stripe pour ce compte.");
 
   const stripe = stripeClient();
+  const configurationId = await ensurePortalConfiguration(stripe);
   const returnUrl = (request.data && request.data.returnUrl) || "https://fiftin.fr/app/";
-  const portal = await stripe.billingPortal.sessions.create({customer: customerId, return_url: returnUrl});
+  const portal = await stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl,
+    configuration: configurationId,
+  });
   return {url: portal.url};
 });
 
