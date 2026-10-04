@@ -60,7 +60,14 @@
   --grain-bg:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{height:100%;}
+/* background posé ici (pas seulement sur body) : sur iOS Safari, la barre
+   d'outils qui se rétracte pendant le scroll fait varier 100dvh avec un
+   leger retard d'une frame ou deux (#feed.feed-map en dépend, voir plus
+   bas) — sans ce fond, cet écart très bref laissait apparaître le blanc
+   par défaut du navigateur sous la tabbar fixe, perçu comme "le menu du
+   bas qui bug", précisément sur les vues qui utilisent min-height:100dvh
+   (Profil, Mes séjours, App gestion). */
+html,body{height:100%; background:var(--cream);}
 body{
   margin:0; background:var(--cream); color:var(--ink);
   font-family:'Jost',-apple-system,sans-serif; -webkit-font-smoothing:antialiased;
