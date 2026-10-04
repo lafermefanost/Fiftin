@@ -4686,6 +4686,16 @@ function layoutToggleHtml(){
   '</div>';
 }
 function renderCollectionsGrid(feed, toggle, cols){
+  // Recalculé ici plutôt que de faire confiance au `toggle` reçu en
+  // paramètre : il a été capturé par renderFavorisView() AVANT
+  // ensureCollectionsLoaded()/ensureListingDocsLoaded() (deux écarts
+  // asynchrones), donc potentiellement périmé (voir le même correctif,
+  // pour la même raison, dans renderContactLog()) — contactLogCache a pu
+  // être rempli entre-temps par le loadLikesCounts() déclenché par
+  // wireLikesToggle() plus haut dans renderFavorisView(), auquel cas
+  // réutiliser ce `toggle` figerait "…" pour de bon (wireLikesToggle()
+  // ci-dessous ne le corrigerait pas, voyant le cache déjà rempli).
+  toggle = likesViewToggleHtml();
   var isList = state.likesLayout==="list";
   var addTile = isList ? collectionAddRowHtml() : collectionAddTileHtml();
   var body = !cols.length ? addTile
@@ -5029,6 +5039,11 @@ function wireCollListingActions(){
   });
 }
 function renderCollectionDetail(feed, toggle){
+  // Même raison que dans renderCollectionsGrid() : `toggle` reçu en
+  // paramètre a été capturé avant un écart asynchrone (ici
+  // ensureListingDocsLoaded()) par renderFavorisView(), potentiellement
+  // périmé si contactLogCache a fini de se remplir entre-temps.
+  toggle = likesViewToggleHtml();
   var col = collectionsCache.filter(function(c){ return c.id===state.likesCollectionId; })[0];
   var listings = col.listingIds.map(function(key){ return LISTINGS.filter(function(l){ return listingKey(l)===key; })[0]; }).filter(Boolean);
   var head = '<div class="collection-detail-head">'+
