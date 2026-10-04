@@ -3976,10 +3976,17 @@ function pushToFirebase(){
   lastSentPayloadKey=stableStringify(payloadObj);
   lastPayloadKB=Math.round(payload.length/1024);
   console.log(`[sync] envoi… (${lastPayloadKB} Ko)`);
+  // {merge:true} : ce payload ne contient volontairement qu'une partie des
+  // champs du document (bookings/guests/.../settings) — sans merge, ce
+  // .set() remplacerait TOUT le document et effacerait silencieusement tout
+  // champ posé ailleurs (createdAt, createdVia, un futur champ billing...),
+  // à chaque synchro. Repéré en préparant l'intégration Stripe : createdAt
+  // (posé une seule fois à l'inscription, voir bootstrapHostAccount() côté
+  // sejours/index.html) ne doit jamais être réécrit ici.
   db.collection('accounts').doc(currentUid).set({
     ...JSON.parse(payload),
     updated:new Date().toISOString()
-  }).then(()=>{
+  }, {merge:true}).then(()=>{
     lastWriteMs=Date.now()-t0;
     console.log(`[sync] écriture confirmée par le serveur en ${lastWriteMs}ms`);
     setSyncPip('ok','Synchronisé ✓');

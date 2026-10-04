@@ -6921,12 +6921,21 @@ function openConfirmSheet(title, yesLabel, noLabel, onYes){
    commentaires plus haut sur le calendrier simplifié / compte gestion).
    Formule purement déclarative pour l'instant, comme S.settings.plan
    dans app/ (aucun paiement branché) — juste positionnée dès
-   l'inscription pour ne pas avoir à la ressaisir dans app/. */
+   l'inscription pour ne pas avoir à la ressaisir dans app/.
+   createdAt : posé une seule fois ici, jamais réécrit ensuite — contrairement
+   à `updated`, qui change à chaque sauvegarde côté app/ (pushToFirebase()) et
+   ne peut donc pas servir à dater l'inscription. Nécessaire pour calculer,
+   le moment venu, quels comptes "Formule Hôte" (gratuite la 1ère année)
+   doivent basculer vers le tarif payant. Protégé de l'écrasement par
+   pushToFirebase() grâce au {merge:true} ajouté à ce même write côté app/
+   (voir ce fichier) — sans ce merge, la 1ère synchro de l'app effacerait
+   createdAt (et createdVia) en réécrivant tout le document. */
 function bootstrapHostAccount(uid, plan){
   return firebase.firestore().collection("accounts").doc(uid).set({
     settings: {plan: plan},
     bookings: [], guests: [],
     createdVia: "sejours-signup",
+    createdAt: new Date().toISOString(),
     updated: new Date().toISOString()
   });
 }

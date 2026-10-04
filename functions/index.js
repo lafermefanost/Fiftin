@@ -25,11 +25,46 @@
  */
 
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
+const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
+const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
+const {getAuth} = require("firebase-admin/auth");
+const Stripe = require("stripe");
 
 initializeApp();
 const db = getFirestore();
+
+const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
+const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
+function stripeClient() {
+  return new Stripe(STRIPE_SECRET_KEY.value());
+}
+
+/* Formules payantes et leurs Price Stripe (mêmes valeurs internes que
+ * HOST_FORMULAS côté sejours/index.html et S.settings.plan côté app/) —
+ * "simple" (Formule Hôte, gratuite) n'a volontairement aucun Price Stripe,
+ * voir le commentaire au-dessus de createCheckoutSession(). */
+const STRIPE_PRICE_IDS = {
+  essentiel: "price_1UMrAwJYGb3t10ZmLtEumqME",
+  pro: "price_1UMrDUJYGb3t10Zm4bbJlIzE",
+};
+const PLAN_BY_PRICE_ID = {
+  [STRIPE_PRICE_IDS.essentiel]: "essentiel",
+  [STRIPE_PRICE_IDS.pro]: "pro",
+};
+
+/* Comptes exemptés de tout paiement, toujours en formule Avancé (pro) —
+ * compte propriétaire + comptes de test/démo. Même principe que
+ * ADMIN_EMAILS côté sejours/index.html (liste en clair, à tenir à jour ici
+ * si un compte exempté change d'adresse email) : voir enforceFreeProAccounts()
+ * plus bas, qui applique cette liste, et le garde-fou dans
+ * createCheckoutSession() qui refuse de les faire payer par erreur. */
+const FREE_PRO_EMAILS = [
+  "lafermefanost@gmail.com",
+  "cesarmarandin@gmail.com",
+  // TODO césar : adresse email du compte de test "Adel" à ajouter ici.
+];
 
 /* Index public léger des annonces publiées (listingIndex/{listingId}),
  * pensé pour que le fil voyageur (sejours/index.html) reste rapide même
@@ -240,3 +275,192 @@ exports.syncListingContactStats = onDocumentWritten(
     });
   }
 );
+
+/* ---------------- Facturation Stripe (formules Essentiel/Avancé) ----------------
+ *
+ * accounts/{uid}.settings.plan reste la seule source de vérité lue par
+ * sejours/index.html (resolveHostAccount()) et app/ (S.settings.plan) —
+ * rien ne change côté lecture. Ce qui change : ce champ, et le nouveau
+ * accounts/{uid}.billing, ne sont plus écrits par le client (voir
+ * setPlan() côté app/, à retirer/remplacer par un appel à
+ * createCheckoutSession ci-dessous) mais UNIQUEMENT par stripeWebhook(),
+ * avec le SDK Admin — même principe que publicAvail ou listingIndex plus
+ * haut dans ce fichier : seul le serveur, qui a vérifié la signature
+ * Stripe, peut décider qu'un compte passe en formule payante.
+ *
+ * "simple" (Formule Hôte, gratuite) n'a pas de Price Stripe : on ne fait
+ * jamais payer 0 €, ce plan reste juste la valeur par défaut d'un compte
+ * sans abonnement Stripe actif. Quand elle deviendra payante (7 €/mois
+ * après la 1ère année gratuite, voir accounts/{uid}.createdAt), il
+ * faudra créer son Price Stripe et l'ajouter à STRIPE_PRICE_IDS. */
+
+/* Appelée depuis le site (bouton "Passer à la formule X") : ouvre une
+ * session Stripe Checkout en mode abonnement et renvoie son URL, vers
+ * laquelle le client redirige lui-même (window.location = url). Crée le
+ * Customer Stripe au premier appel, le réutilise ensuite. */
+exports.createCheckoutSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+  const email = request.auth.token.email || null;
+
+  if (email && FREE_PRO_EMAILS.indexOf(email.toLowerCase()) !== -1) {
+    // Comptes exemptés (voir FREE_PRO_EMAILS) : jamais de paiement réel,
+    // leur formule "pro" est garantie par enforceFreeProAccounts() plus bas.
+    throw new HttpsError("failed-precondition", "Ce compte est exempté de paiement — formule Avancé déjà active.");
+  }
+
+  const plan = request.data && request.data.plan;
+  const priceId = STRIPE_PRICE_IDS[plan];
+  if (!priceId) throw new HttpsError("invalid-argument", "Formule inconnue : " + plan);
+
+  const stripe = stripeClient();
+  const accountRef = db.collection("accounts").doc(uid);
+  const accountSnap = await accountRef.get();
+  const existing = accountSnap.exists ? accountSnap.data() : null;
+
+  let customerId = existing && existing.billing && existing.billing.stripeCustomerId;
+  if (!customerId) {
+    const customer = await stripe.customers.create({
+      email: email || undefined,
+      metadata: {firebaseUid: uid},
+    });
+    customerId = customer.id;
+    await accountRef.set({billing: {stripeCustomerId: customerId}}, {merge: true});
+  }
+
+  const successUrl = (request.data && request.data.successUrl) || "https://fiftin.fr/app/";
+  const cancelUrl = (request.data && request.data.cancelUrl) || "https://fiftin.fr/app/";
+
+  const session = await stripe.checkout.sessions.create({
+    mode: "subscription",
+    customer: customerId,
+    client_reference_id: uid,
+    line_items: [{price: priceId, quantity: 1}],
+    success_url: successUrl,
+    cancel_url: cancelUrl,
+    subscription_data: {metadata: {firebaseUid: uid}},
+  });
+
+  return {url: session.url};
+});
+
+/* Appelée depuis "Réglages → Compte" (bouton "Gérer mon abonnement") :
+ * ouvre le Portail Client Stripe — changement de carte, résiliation,
+ * factures, tout géré par Stripe lui-même, rien à construire côté
+ * Fiftin (cohérent avec les CGV : "pas un logiciel de facturation"). */
+exports.createPortalSession = onCall({secrets: [STRIPE_SECRET_KEY]}, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+
+  const accountSnap = await db.collection("accounts").doc(uid).get();
+  const billing = accountSnap.exists ? accountSnap.data().billing : null;
+  const customerId = billing && billing.stripeCustomerId;
+  if (!customerId) throw new HttpsError("failed-precondition", "Aucun abonnement Stripe pour ce compte.");
+
+  const stripe = stripeClient();
+  const returnUrl = (request.data && request.data.returnUrl) || "https://fiftin.fr/app/";
+  const portal = await stripe.billingPortal.sessions.create({customer: customerId, return_url: returnUrl});
+  return {url: portal.url};
+});
+
+/* Met accounts/{uid}.billing et .settings.plan à jour à partir d'un
+ * abonnement Stripe réel (jamais l'inverse) — appelée par stripeWebhook()
+ * pour chaque événement concerné. active/trialing => la formule du Price
+ * souscrit ; canceled/unpaid => retour à "simple" (Formule Hôte) ; les
+ * autres statuts (past_due, incomplete...) ne changent pas la formule
+ * elle-même, seul accounts/{uid}.billing.status reflète l'alerte. */
+async function applySubscriptionToAccount(uid, subscription) {
+  const priceId = subscription.items.data[0] && subscription.items.data[0].price.id;
+  const plan = PLAN_BY_PRICE_ID[priceId] || null;
+  const status = subscription.status;
+
+  const update = {
+    billing: {
+      stripeCustomerId: subscription.customer,
+      stripeSubscriptionId: subscription.id,
+      status: status,
+      currentPeriodEnd: subscription.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+    },
+  };
+  if (plan && (status === "active" || status === "trialing")) {
+    update.settings = {plan: plan};
+  } else if (status === "canceled" || status === "unpaid") {
+    update.settings = {plan: "simple"};
+  }
+  await db.collection("accounts").doc(uid).set(update, {merge: true});
+}
+
+/* Point d'entrée des événements Stripe (à configurer dans Stripe Dashboard
+ * → Développeurs → Webhooks, avec l'URL de cette fonction une fois
+ * déployée). Body brut obligatoire (pas de JSON.parse avant) : c'est sur
+ * les octets exacts reçus que la signature Stripe est vérifiée — toute
+ * transformation préalable la casserait. */
+exports.stripeWebhook = onRequest({secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET]}, async (req, res) => {
+  const stripe = stripeClient();
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(req.rawBody, req.headers["stripe-signature"], STRIPE_WEBHOOK_SECRET.value());
+  } catch (err) {
+    console.error("[stripeWebhook] signature invalide :", err.message);
+    res.status(400).send("Signature invalide");
+    return;
+  }
+
+  try {
+    if (event.type === "checkout.session.completed") {
+      const session = event.data.object;
+      const uid = session.client_reference_id;
+      if (uid && session.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(session.subscription);
+        await applySubscriptionToAccount(uid, subscription);
+      }
+    } else if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted") {
+      const subscription = event.data.object;
+      const uid = subscription.metadata && subscription.metadata.firebaseUid;
+      if (uid) await applySubscriptionToAccount(uid, subscription);
+    } else if (event.type === "invoice.payment_failed") {
+      const invoice = event.data.object;
+      if (invoice.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+        const uid = subscription.metadata && subscription.metadata.firebaseUid;
+        if (uid) await applySubscriptionToAccount(uid, subscription);
+      }
+    }
+    res.json({received: true});
+  } catch (err) {
+    console.error("[stripeWebhook] erreur de traitement :", err);
+    res.status(500).send("Erreur serveur");
+  }
+});
+
+/* Comptes exemptés (FREE_PRO_EMAILS ci-dessus) : à chaque écriture sur
+ * leur accounts/{uid} — y compris la toute première après déploiement —
+ * on vérifie que la formule reste "pro", quoi qu'il arrive ailleurs
+ * (resynchro app/, future modification manuelle...). Se relit elle-même
+ * après avoir écrit (onDocumentWritten se redéclenche sur son propre
+ * write) mais s'arrête aussitôt grâce au test "déjà correct" ci-dessous —
+ * sans lui, boucle infinie. Ne coûte rien pour tous les autres comptes
+ * (sort dès que l'email ne correspond pas). */
+exports.enforceFreeProAccounts = onDocumentWritten("accounts/{uid}", async (event) => {
+  const uid = event.params.uid;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  if (!after) return;
+
+  let email;
+  try {
+    email = (await getAuth().getUser(uid)).email;
+  } catch (err) {
+    return; // utilisateur introuvable (supprimé entre-temps) : rien à faire
+  }
+  if (!email || FREE_PRO_EMAILS.indexOf(email.toLowerCase()) === -1) return;
+
+  const alreadyOk = after.settings && after.settings.plan === "pro" && after.billing && after.billing.exempt === true;
+  if (alreadyOk) return;
+
+  await db.collection("accounts").doc(uid).set({
+    settings: {plan: "pro"},
+    billing: {exempt: true},
+  }, {merge: true});
+});
