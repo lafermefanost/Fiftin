@@ -3425,7 +3425,17 @@ function loadFirebaseSDK(cb){
     s2.onload=()=>{
       const s3=document.createElement('script');
       s3.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js';
-      s3.onload=cb;
+      s3.onload=()=>{
+        // firebase-functions-compat : nécessaire pour appeler createCheckoutSession
+        // et createPortalSession (Cloud Functions callable, voir startCheckout()
+        // et openBillingPortal() plus bas) — ajouté en dernier dans la chaîne,
+        // après firestore, pour ne rien changer à l'ordre de chargement existant.
+        const s4=document.createElement('script');
+        s4.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js';
+        s4.onload=cb;
+        s4.onerror=onFail;
+        document.head.appendChild(s4);
+      };
       s3.onerror=onFail;
       document.head.appendChild(s3);
     };
@@ -3731,6 +3741,11 @@ function applyRemoteData(d,meta){
   S.extDiners=d.extDiners||{};
   migrateExtDiners();
   S.transactions=d.transactions||[];
+  // billing n'est jamais écrit depuis ce fichier (voir startCheckout() /
+  // openBillingPortal() plus bas) — seulement lu, pour savoir quel bouton
+  // afficher dans Réglages → Compte. Posé par stripeWebhook() côté
+  // functions/index.js, ou absent tant qu'aucun abonnement n'a jamais été créé.
+  S.billing=d.billing||null;
   if(d.catalog&&d.catalog.length){
     S.catalog=d.catalog;
     // Un autre appareil a pu synchroniser une version du catalogue antérieure à
@@ -7299,11 +7314,7 @@ function renderSettings(){
     <button class="btn-s" style="width:100%;margin-top:14px" onclick="signOutUser()">Se déconnecter</button>
     <div class="set-card-sub" style="margin-top:18px;padding-top:14px">
       <div class="set-card-sub-title">Formule</div>
-      <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Le paiement en ligne n'est pas encore actif — ce réglage sert pour l'instant à essayer les deux formules.</div>
-      <select class="set-fi" onchange="setPlan(this.value)">
-        <option value="essentiel"${st.plan!=='pro'?' selected':''}>Essentiel — 24 €/mois</option>
-        <option value="pro"${st.plan==='pro'?' selected':''}>Avancé — 47 €/mois</option>
-      </select>
+      ${billingBlockHtml(st)}
     </div>`;
   h+=settingsPanel('compte','Compte',accountBody);
 
@@ -8034,12 +8045,63 @@ function addStructure(){
   S.settings.structureThresholds[s.id]=[];
   saveSettings();renderSettings();
 }
-// Réglages → Compte : changer de formule. Purement déclaratif tant que le
-// paiement en ligne n'est pas branché (voir DEFAULT_SETTINGS.plan) — sert à
-// essayer les deux formules en attendant.
-function setPlan(plan){
-  S.settings.plan=plan==='pro'?'pro':'essentiel';
-  saveSettings();renderSettings();
+// Réglages → Compte : bloc Formule — affiche soit le choix d'une formule
+// payante (aucun abonnement actif), soit la formule en cours + le lien vers
+// le Portail Client Stripe (abonnement actif), soit un simple message pour
+// les comptes exemptés (voir FREE_PRO_EMAILS côté functions/index.js).
+// accounts/{uid}.settings.plan et .billing ne sont plus jamais écrits
+// depuis ce fichier (voir startCheckout()/openBillingPortal() ci-dessous) —
+// seul stripeWebhook() les écrit, à partir d'un vrai abonnement Stripe.
+const PLAN_LABELS={simple:'Formule Hôte (gratuite)',essentiel:'Essentiel — 24 €/mois',pro:'Avancé — 47 €/mois'};
+function billingBlockHtml(st){
+  const billing=S.billing||null;
+  if(billing&&billing.exempt){
+    return `<div style="font-size:12px;color:var(--gray);">Formule Avancé — compte exempté de paiement.</div>`;
+  }
+  const activeStatuses=['active','trialing'];
+  if(billing&&activeStatuses.indexOf(billing.status)!==-1){
+    const pastDueWarn=billing.status==='past_due'
+      ? `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;">Un paiement a échoué. Mettez à jour votre moyen de paiement ci-dessous.</div>` : '';
+    return `${pastDueWarn}<div style="font-size:12px;margin-bottom:10px;">Formule actuelle : <b>${PLAN_LABELS[st.plan]||st.plan}</b></div>
+      <button class="btn-s" style="width:100%" onclick="openBillingPortal()">Gérer mon abonnement</button>
+      <div id="billingMsg" style="font-size:12px;margin-top:8px;"></div>`;
+  }
+  const pastDueWarn=billing&&billing.status==='past_due'
+    ? `<div style="font-size:12px;color:#c0392b;margin-bottom:10px;">Un paiement a échoué sur votre abonnement. <a href="#" onclick="openBillingPortal();return false;">Mettre à jour mon moyen de paiement</a></div>` : '';
+  return `${pastDueWarn}<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Formule actuelle : ${PLAN_LABELS[st.plan]||st.plan}. Passez à une formule payante pour débloquer le planning complet.</div>
+    <button class="btn-p" style="width:100%;margin-bottom:8px;" onclick="startCheckout('essentiel')">Passer à Essentiel — 24 €/mois</button>
+    <button class="btn-s" style="width:100%" onclick="startCheckout('pro')">Passer à Avancé — 47 €/mois</button>
+    <div id="billingMsg" style="font-size:12px;margin-top:8px;"></div>`;
+}
+// Ouvre une vraie session de paiement Stripe (Cloud Function
+// createCheckoutSession) et y redirige — le navigateur quitte Fiftin le
+// temps du paiement, revient sur cette même page ensuite (successUrl/
+// cancelUrl). accounts/{uid}.settings.plan n'est posé qu'après, par
+// stripeWebhook(), une fois l'abonnement réellement confirmé par Stripe.
+function startCheckout(plan){
+  const msgEl=byId('billingMsg');
+  if(msgEl)msgEl.textContent='Préparation du paiement…';
+  firebase.functions().httpsCallable('createCheckoutSession')({
+    plan:plan,
+    successUrl:location.origin+location.pathname,
+    cancelUrl:location.origin+location.pathname
+  }).then(res=>{ location.href=res.data.url; }).catch(err=>{
+    console.error('[billing] createCheckoutSession a échoué',err);
+    if(msgEl)msgEl.textContent="Impossible d'ouvrir le paiement : "+(err.message||'erreur inconnue')+'.';
+  });
+}
+// Ouvre le Portail Client Stripe (changement de carte, résiliation,
+// factures) — rien à construire côté Fiftin, cohérent avec les CGV
+// ("pas un logiciel de facturation").
+function openBillingPortal(){
+  const msgEl=byId('billingMsg');
+  if(msgEl)msgEl.textContent='Ouverture de votre espace abonnement…';
+  firebase.functions().httpsCallable('createPortalSession')({
+    returnUrl:location.origin+location.pathname
+  }).then(res=>{ location.href=res.data.url; }).catch(err=>{
+    console.error('[billing] createPortalSession a échoué',err);
+    if(msgEl)msgEl.textContent="Impossible d'ouvrir votre espace abonnement : "+(err.message||'erreur inconnue')+'.';
+  });
 }
 
 // Réglages → Équipe — voir acceptInvite() côté invité, et les règles
