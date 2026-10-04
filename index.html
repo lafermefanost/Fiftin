@@ -660,10 +660,6 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
 .radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:16px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
-/* Filtre Voyageurs (LOT 2.3) : grille de pills 1-15+ plutôt qu'une colonne
-   (.sort-row) — trop d'options pour tenir empilées à l'écran. */
-.capacity-row{display:flex; flex-wrap:wrap; gap:8px;}
-.capacity-row .radio-row{padding:9px 16px; justify-content:center;}
 /* Bloc "Pour votre groupe, en réservant plusieurs hébergements" (LOT 2.3),
    sous le fil Explorer — même carte que .detail-card, contenu propre. */
 .group-capacity-group{margin-bottom:14px;}
@@ -3636,8 +3632,16 @@ var AMEN_ICONS = {
    jusqu'à ce sommet repasse `f.distance` à `null` (voir kind==="distance"
    plus bas), pas à une valeur numérique qui resterait, elle, un plafond. */
 var MAX_DISTANCE_KM = 1200;
-/* Filtre Voyageurs (LOT 2.3) : 1 à 15+, voir kind==="capacity" plus bas. */
-var CAPACITY_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+/* Filtre Voyageurs : jauge 1-15+, même principe que Distance/Prix juste
+   au-dessus (curseur unique, voir kind==="capacity" plus bas) — mais le
+   sens est inversé : ici c'est le BAS du curseur qui est "sans filtre"
+   (1 voyageur ne restreint rien, toute annonce accueille au moins 1
+   personne) et le HAUT qui restreint de plus en plus, jusqu'à CAPACITY_MAX
+   ("15+"), contrairement à Distance/Prix où c'est le haut du curseur qui
+   est sans limite. f.capacity reste `null` tant que le curseur est à son
+   minimum, pour ne jamais stocker un "1" silencieux équivalent (retour
+   utilisateur : "de la même manière que pour le prix, une jauge"). */
+var CAPACITY_MAX = 15;
 /* Filtre Prix — même principe que MAX_DISTANCE_KM juste au-dessus :
    `filters.price` vaut `null` par défaut/au sommet du curseur (AUCUN
    filtre de prix, pas un plafond numérique élevé) ; voir matchesAllFilters()
@@ -5999,18 +6003,16 @@ function openSheet(kind){
     inner = '<h3>Prix</h3><div class="field-block"><div class="range-value"><span>Jusqu\'à</span><span>'+(f.price!=null ? f.price+" € / nuit" : "1 000 € +")+'</span></div>'+
       '<input type="range" id="s-price" min="0" max="1000" step="1" value="'+priceSliderVal+'"></div>';
   } else if(kind==="capacity"){
-    // LOT 2.3 : 1 à 15+ (choix discret, pas de curseur continu — plage trop
-    // petite pour le justifier, contrairement à Distance/Prix). 15 porte le
-    // libellé "15+" mais reste une VALEUR comme une autre pour le filtre
-    // (capacité >= 15), même sentinelle `null` = pas de filtre que les
-    // autres (voir matchesAllFilters()).
+    // Jauge, même principe que Distance/Prix juste au-dessus — mais au
+    // minimum (1) plutôt qu'au maximum que vaut `null` (voir le commentaire
+    // de CAPACITY_MAX). 15 porte le libellé "15+" mais reste une VALEUR
+    // comme une autre pour le filtre (capacité >= 15), voir
+    // matchesAllFilters().
+    var capSliderVal = f.capacity!=null ? f.capacity : 1;
     inner = '<h3>Voyageurs</h3>'+
       '<p class="field-hint">Annonces pouvant accueillir au moins ce nombre de personnes — dans un seul hébergement, ou plusieurs du même hôte à la même adresse (affichés à part, en dessous des résultats).</p>'+
-      '<div class="field-block capacity-row">'+
-      CAPACITY_OPTIONS.map(function(n){
-        return '<button type="button" class="radio-row'+(f.capacity===n?' active':'')+'" data-capacity="'+n+'">'+(n>=15?"15+":n)+'</button>';
-      }).join("")+
-      '</div>';
+      '<div class="field-block"><div class="range-value"><span>Au moins</span><span>'+(f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "Peu importe")+'</span></div>'+
+      '<input type="range" id="s-capacity" min="1" max="'+CAPACITY_MAX+'" step="1" value="'+capSliderVal+'"></div>';
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
   } else if(kind==="sort"){
@@ -6651,11 +6653,11 @@ function openSheet(kind){
       root.querySelector(".range-value span:last-child").textContent = f.price!=null ? f.price+" € / nuit" : "1 000 € +";
     });
   } else if(kind==="capacity"){
-    Array.prototype.forEach.call(root.querySelectorAll("[data-capacity]"), function(el){
-      el.addEventListener("click", function(){
-        f.capacity = Number(el.getAttribute("data-capacity"));
-        Array.prototype.forEach.call(root.querySelectorAll("[data-capacity]"), function(sib){ sib.classList.toggle("active", sib===el); });
-      });
+    var $c = document.getElementById("s-capacity");
+    $c.addEventListener("input", function(){
+      var v = Number($c.value);
+      f.capacity = v<=1 ? null : v;
+      root.querySelector(".range-value span:last-child").textContent = f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "Peu importe";
     });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
