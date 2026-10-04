@@ -63,7 +63,7 @@ const PLAN_BY_PRICE_ID = {
 const FREE_PRO_EMAILS = [
   "lafermefanost@gmail.com",
   "cesarmarandin@gmail.com",
-  // TODO césar : adresse email du compte de test "Adel" à ajouter ici.
+  "adelmarandin@gmail.com",
 ];
 
 /* Index public léger des annonces publiées (listingIndex/{listingId}),
