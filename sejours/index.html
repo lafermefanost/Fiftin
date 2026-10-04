@@ -2009,9 +2009,17 @@ body.map-fullscreen{overflow:hidden;}
    dans sa moitié, pas chaque ligne individuellement (centrer le texte
    de puces de longueurs inégales casserait l'alignement des barres de
    couleur). */
-.plan-card{display:flex; align-items:center; gap:14px; background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
+.plan-card{display:flex; align-items:center; flex-wrap:wrap; gap:14px; background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .plan-card-prices{flex:1; min-width:0; text-align:center;}
 .plan-card ul{flex:1; min-width:0;}
+/* Bouton "Changer pour cette formule" (retour utilisateur : "le chemin vers
+   le changement de formule devrait principalement être dans la vue profile,
+   en cliquant sur les cartes ... la base devrait être sur la vue profile ->
+   espace hôte") — flex-basis:100% force ce 3e enfant sur sa propre ligne,
+   SOUS prix/liste de points (voir flex-wrap ci-dessus), sans toucher à leur
+   disposition 2 colonnes documentée plus haut. Seules les cartes non actives
+   en ont un (voir planCardHtml()) — jamais sur la formule déjà active. */
+.plan-card-cta{flex-basis:100%; width:100%; margin-top:2px; padding:12px; font-size:13px;}
 /* Effet "verre liquide" retiré (retour utilisateur précédent) mais la
    formule active doit "sortir du lot" quand même, en vert principal uni
    (retour utilisateur) — --sauge (#354B38), le même vert "propriétaire"
@@ -6163,16 +6171,21 @@ function formulaCardHtml(value,name,price,desc){
     '<p>'+desc+'</p>'+
   '</button>';
 }
-/* Affichage en LECTURE SEULE de la formule courante dans le profil hôte
-   (renderHostProfile()) — un <div>, jamais un bouton : ce fichier n'écrit
-   jamais dans un accounts/{uid} déjà existant (voir resolveHostAccount()),
-   donc pas question de la rendre cliquable sans un vrai mécanisme de
-   changement de formule à construire côté serveur. Reprend le gabarit
-   exact des cartes tarifs de fiftin.fr (section Tarifs, .plan/.plan .name/
-   .plan .price/.plan .per/.plan li, voir index.html racine) plutôt que
-   .formula-card (réservée au sélecteur à l'inscription, formulaCardHtml())
-   — retour utilisateur : "fais la partie formule dans la vue profile
-   exactement comme sur fiftin app". */
+/* Affichage de la formule courante dans le profil hôte (renderHostProfile()).
+   Reprend le gabarit exact des cartes tarifs de fiftin.fr (section Tarifs,
+   .plan/.plan .name/.plan .price/.plan .per/.plan li, voir index.html
+   racine) plutôt que .formula-card (réservée au sélecteur à l'inscription,
+   formulaCardHtml()) — retour utilisateur : "fais la partie formule dans la
+   vue profile exactement comme sur fiftin app".
+   Bouton "Changer pour cette formule" sur les cartes NON actives (retour
+   utilisateur : "le chemin vers le changement de formule devrait
+   principalement être dans la vue profile, en cliquant sur les cartes ...
+   ça fait très loin comme chemin [en passant par app/ Réglages]. La base
+   devrait être sur la vue profile -> espace hôte") — même bouton/span que
+   mktPlanCardHtml() (même gabarit <span> attendu par startCheckoutFromSejours()/
+   openBillingPortalFromSejours(), voir leur wiring dans renderHostProfile()).
+   Jamais de bouton sur la carte active : rien à "changer" vers sa propre
+   formule actuelle. */
 function planCardHtml(f, active){
   return '<div class="plan-card'+(active?' active':'')+'">'+
     '<div class="plan-card-prices">'+
@@ -6181,6 +6194,7 @@ function planCardHtml(f, active){
       '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
     '</div>'+
     '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
+    (active ? '' : '<button type="button" class="btn primary plan-card-cta" data-plan="'+esc(f.value)+'"><span>Changer pour cette formule</span></button>')+
   '</div>';
 }
 
@@ -9211,6 +9225,27 @@ function startCheckoutFromSejours(plan, btn){
     });
   });
 }
+/* Changer de formule depuis une carte du Profil hôte quand un abonnement
+   Stripe existe déjà (formule essentiel/pro) — createCheckoutSession()
+   créerait un SECOND abonnement au lieu de faire évoluer l'existant : il
+   faut passer par le Portail Client (createPortalSession, même Cloud
+   Function que openBillingPortal() dans app/ Réglages -> Compte), seul
+   endroit qui gère la proration et la résiliation sur un abonnement réel.
+   Même structure que startCheckoutFromSejours() ci-dessus (span de statut,
+   redirection, gestion d'erreur) — voir le wiring dans renderHostProfile(). */
+function openBillingPortalFromSejours(btn){
+  if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
+  if(btn){ btn.disabled = true; btn.querySelector("span").textContent = "Ouverture…"; }
+  loadFirebaseSDK(function(){
+    firebase.functions().httpsCallable("createPortalSession")({
+      returnUrl: location.origin + location.pathname
+    }).then(function(res){ location.href = res.data.url; }).catch(function(err){
+      console.error("[billing] createPortalSession a échoué", err);
+      alert("Impossible d'ouvrir la gestion de l'abonnement : "+(err.message||"erreur inconnue")+".");
+      if(btn){ btn.disabled = false; btn.querySelector("span").textContent = "Changer pour cette formule"; }
+    });
+  });
+}
 var MKT_SECTIONS = [
     '<section class="cover">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="hero-flex">\n    <div class="inner">\n      <div class="logo">\n        <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="102" height="80" alt="Fiftin"></div>\n      </div>\n      <h1>Le planning qui ne s\'arrête pas<br><em>aux réservations.</em></h1>\n      <p>Pensé pour les chambres d\'hôtes et gîtes. Retrouvez votre temps, votre autonomie et votre rentabilité.</p>\n    </div>\n    <div class="hero-phone-wrap"><div class="hero-shot-offset"><img class="hero-shot" src="../assets/shot-hero.webp" alt="Fiftin — La grille, en situation"></div></div>\n  </div>\n</section>',
     '<section>\n  <div class="inner">\n    <div class="kicker">D\'où vient le nom</div>\n    <p class="quote-lead">15, c\'est à peu de chose près ce que les plateformes prélèvent aujourd\'hui sur chaque réservation.</p>\n    <p class="big" style="margin-top:30px;">Fiftin est né dans une maison d\'hôtes familiale de cinq chambres et un gîte, tenue par Marine et César — une juriste et un designer graphique partis en quête d\'indépendance. Comme beaucoup, on a fait confiance aux plateformes avant de regarder ce que leur commission représentait vraiment. 15 est resté le chiffre-repère : le coût de ne pas être pleinement propriétaire de son activité. C\'est pour ça que Fiftin existe — pas seulement pour les réservations, pour toute l\'activité.</p>\n    <div class="stat-row" style="margin-top:28px; max-width:420px;">\n      <div class="stat">\n        <div class="n">15,5&nbsp;%</div>\n        <div class="l">Commission unique hôte Airbnb, 18,6 % TTC, depuis octobre 2026.</div>\n      </div>\n      <div class="stat">\n        <div class="n" style="color:var(--sauge);">0 %</div>\n        <div class="l">Ce que vous payez sur une réservation prise en direct.</div>\n      </div>\n    </div>\n  </div>\n</section>',
@@ -9525,7 +9560,6 @@ function renderHostProfile(){
     '<div class="plan-card-list" id="host-formulas">'+
       HOST_FORMULAS.map(function(f){ return planCardHtml(f, false); }).join("")+
     '</div>'+
-    '<button type="button" class="btn ghost-dark" id="btn-change-plan" style="width:100%;margin-top:14px;"><span>Changer de formule</span></button>'+
     '</div>'+
     '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row" data-legal="mentions">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -9536,10 +9570,6 @@ function renderHostProfile(){
   if(switchOtherBtn) switchOtherBtn.addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
-  // Mène vers la page "App gestion" (formule simple) ou directement vers
-  // app/ Réglages -> Compte (formule déjà payante, pour changer/résilier) —
-  // même routage que le reste du tabbar hôte, voir openHostGestionApp().
-  document.getElementById("btn-change-plan").addEventListener("click", function(){ openHostGestionApp(true); });
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
@@ -9553,6 +9583,18 @@ function renderHostProfile(){
     var container = document.getElementById("host-formulas");
     if(!container) return;
     container.innerHTML = HOST_FORMULAS.map(function(f){ return planCardHtml(f, f.value===plan); }).join("");
+    // Retour utilisateur : "le chemin vers le changement de formule devrait
+    // principalement être dans la vue profile, en cliquant sur les cartes"
+    // — câblé seulement ICI, une fois la vraie formule connue (jamais au
+    // tout premier rendu, voir le commentaire au-dessus de #host-formulas) :
+    // sans ça, un compte déjà payant pourrait partir sur createCheckoutSession
+    // (un SECOND abonnement) faute de savoir qu'il en a déjà un.
+    Array.prototype.forEach.call(container.querySelectorAll("[data-plan]"), function(btn){
+      btn.addEventListener("click", function(){
+        if(plan==="simple") startCheckoutFromSejours(btn.getAttribute("data-plan"), btn);
+        else openBillingPortalFromSejours(btn);
+      });
+    });
   });
 }
 
