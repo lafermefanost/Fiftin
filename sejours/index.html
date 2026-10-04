@@ -1985,60 +1985,12 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card{display:flex; align-items:center; gap:14px; background:#fff; border:none; border-radius:16px; padding:16px 16px; box-shadow:0 2px 8px rgba(0,0,0,.12);}
 .plan-card-prices{flex:1; min-width:0; text-align:center;}
 .plan-card ul{flex:1; min-width:0;}
-/* Formule active en encart vert moyen plein, typo blanche (retour
-   utilisateur : "la formule sélectionnée doit être dans un encart vert
-   moyen, typo blanche") — --sauge-mid, déjà utilisée ailleurs sur le site
-   pour ce même vert "propriétaire" (.cal-disclose, .google-link,
-   .coll-toggle-btn). Le premier picto de puce (--sauge-deep, un vert plus
-   sombre encore) se fondrait dans ce fond : reblanchi spécifiquement ici,
-   les 4 autres couleurs de puces gardent assez de contraste telles
-   quelles. Effet "verre liquide" repris une fois (retour utilisateur :
-   "exactement le même effet que sur l'encart sélectionné") pour matcher
-   EXACTEMENT la recette de .switch-tile.current/#hero .brand-logo, plutôt
-   que la version allégée d'origine : backdrop-filter (manquait), mêmes
-   intensités de dégradé/inset, lumière rasante ::after (manquait), et
-   ombre portée via filter:drop-shadow (une seule fonction — voir le
-   réglage trouvé sur .switch-tile.current, deux drop-shadow() empilés
-   créent un bug de coins carrés) plutôt qu'un 5e box-shadow (combiné aux
-   4 inset + overflow:hidden, ça recrée le contour sombre déjà repéré).
-   --sauge (pas --sauge-mid, repris d'abord par erreur) en 2e couche du
-   background sous le dégradé — retour utilisateur : "utilise le même
-   vert que le profil sélectionné (plus foncé)" — --sauge (#354B38) est
-   le même vert "propriétaire" que .switch-tile.voyageur (voir le
-   commentaire sur .host-status-toggle/.host-edit-btn plus haut, qui
-   signalait déjà cette incohérence entre les 2 éléments, non résolue
-   jusqu'ici), nettement plus foncé que --sauge-mid (#4E6F53).
-   position:relative+z-index:1 sur le nom/prix/période/liste : comme pour
-   le logo/les tuiles, ::before/::after (position:absolute, z-index:auto)
-   peignent sinon au-dessus du contenu normal du flux. */
-.plan-card.active{position:relative; overflow:hidden; border:none;
-  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
-      rgba(0,0,0,.1) 68%, rgba(0,0,0,.26) 100%),
-    var(--sauge);
-  backdrop-filter:blur(9px) saturate(1.4);
-  -webkit-backdrop-filter:blur(9px) saturate(1.4);
-  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
-    inset 0 -9px 15px rgba(0,0,0,.38), inset -7px 0 13px rgba(0,0,0,.24);
-  filter:drop-shadow(0 9px 16px rgba(0,0,0,.25));}
-.plan-card.active::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
-  background:conic-gradient(from var(--iris-angle,0deg),
-    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
-    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
-  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite:exclude;
-  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite:xor;
-  opacity:.85; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.plan-card.active::after{content:""; position:absolute; left:-10%; top:-14%; width:120%; height:56%;
-  background:linear-gradient(180deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,.32) 32%, rgba(255,255,255,0) 100%);
-  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
-.plan-card.active .plan-card-prices,
-.plan-card.active ul{position:relative; z-index:1;}
-.plan-card.active .plan-card-name,
-.plan-card.active .plan-card-price,
-.plan-card.active .plan-card-per,
-.plan-card.active li{color:#fff;}
-.plan-card.active li:nth-child(5n+1)::before{background:#fff;}
+/* Effet "verre liquide" sur la formule active retiré (retour utilisateur) :
+   les 3 cartes formule rendent maintenant toutes le même style, sans
+   distinction visuelle pour la formule en cours — planCardHtml() continue
+   de recevoir `active` (ne change rien pour l'instant, gardé au cas où
+   une indication plus sobre serait redemandée plus tard) mais plus aucune
+   règle CSS n'en tient compte. */
 .plan-card-name{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:8px;}
 /* "grossir un peu les chiffres" (retour utilisateur) — 28px -> 32px. */
 .plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:32px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
@@ -9209,7 +9161,6 @@ function renderHostProfile(){
     '<div class="plan-card-list" id="host-formulas">'+
       HOST_FORMULAS.map(function(f){ return planCardHtml(f, false); }).join("")+
     '</div>'+
-    '<p class="sheet-sub">Changement de formule depuis Fiftin app (Réglages → Compte) — paiement pas encore activé.</p>'+
     '</div>'+
     '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
