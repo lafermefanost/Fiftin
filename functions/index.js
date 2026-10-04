@@ -472,6 +472,25 @@ exports.stripeWebhook = onRequest({secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_S
         const uid = subscription.metadata && subscription.metadata.firebaseUid;
         if (uid) await applySubscriptionToAccount(uid, subscription);
       }
+    } else if (event.type === "invoice.payment_succeeded") {
+      // Retour utilisateur réel (Marine, 1er abonnement) : aucune facture
+      // payée automatiquement (Checkout puis chaque renouvellement mensuel)
+      // n'envoie d'e-mail de reçu au client — confirmé en lisant la timeline
+      // de sa facture dans Stripe, aucune tentative d'envoi n'y figure. Plutôt
+      // que de dépendre d'un réglage Dashboard (jamais retrouvé de façon
+      // fiable après recherche approfondie dans Facturation/Recouvrement de
+      // revenus/Préférences de communication), on déclenche nous-mêmes le
+      // même appel que le bouton "Envoyer le reçu" du Dashboard — fonctionne
+      // aussi bien sur la 1ère facture (issue de Checkout) que sur chaque
+      // renouvellement automatique ensuite, un seul endroit couvre les deux.
+      // sendInvoice() rejette si la facture n'a pas d'e-mail client associé
+      // (ne devrait jamais arriver ici, email toujours fourni à la création
+      // du Customer dans createCheckoutSession) — échec non bloquant pour le
+      // reste du webhook, juste loggé.
+      const invoice = event.data.object;
+      await stripe.invoices.sendInvoice(invoice.id).catch(function (err) {
+        console.error("[stripeWebhook] échec de l'envoi du reçu pour la facture " + invoice.id + " :", err.message);
+      });
     }
     res.json({received: true});
   } catch (err) {
