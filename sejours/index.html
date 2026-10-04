@@ -3642,6 +3642,15 @@ var MAX_DISTANCE_KM = 1200;
    minimum, pour ne jamais stocker un "1" silencieux équivalent (retour
    utilisateur : "de la même manière que pour le prix, une jauge"). */
 var CAPACITY_MAX = 15;
+/* Libellé de la jauge Voyageurs : toujours dérivé de la position RÉELLE du
+   curseur (jamais de `f.capacity`, qui reste `null` au minimum — voir plus
+   haut) — retour utilisateur : un seul chiffre affiché, pas de couple
+   "Minimum 1" / valeur qui se lisait comme une plage plutôt qu'un compteur.
+   Au repos (curseur au minimum), affiche donc "1 voyageur" et non "15+"
+   ni un texte générique. */
+function capacityGaugeLabel(n){
+  return n+(n>=CAPACITY_MAX?"+":"")+(n===1?" voyageur":" voyageurs");
+}
 /* Filtre Prix — même principe que MAX_DISTANCE_KM juste au-dessus :
    `filters.price` vaut `null` par défaut/au sommet du curseur (AUCUN
    filtre de prix, pas un plafond numérique élevé) ; voir matchesAllFilters()
@@ -6007,11 +6016,13 @@ function openSheet(kind){
     // minimum (1) plutôt qu'au maximum que vaut `null` (voir le commentaire
     // de CAPACITY_MAX). 15 porte le libellé "15+" mais reste une VALEUR
     // comme une autre pour le filtre (capacité >= 15), voir
-    // matchesAllFilters().
+    // matchesAllFilters(). Un seul span (pas de libellé "Minimum 1" à
+    // gauche, retour utilisateur) : le chiffre affiché suit directement la
+    // position du curseur, y compris à son minimum ("1 voyageur").
     var capSliderVal = f.capacity!=null ? f.capacity : 1;
     inner = '<h3>Voyageurs</h3>'+
       '<p class="field-hint">Annonces pouvant accueillir au moins ce nombre de personnes — dans un seul hébergement, ou plusieurs du même hôte à la même adresse (affichés à part, en dessous des résultats).</p>'+
-      '<div class="field-block"><div class="range-value"><span>Minimum 1</span><span>'+(f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "15+")+'</span></div>'+
+      '<div class="field-block"><div class="range-value"><span>'+capacityGaugeLabel(capSliderVal)+'</span></div>'+
       '<input type="range" id="s-capacity" min="1" max="'+CAPACITY_MAX+'" step="1" value="'+capSliderVal+'"></div>';
   } else if(kind==="amen"){
     inner = '<h3>Prestations</h3><div class="field-block">'+amenityGroupsHtml(function(a){ return f.amen.indexOf(a)!==-1; })+'</div>';
@@ -6657,7 +6668,7 @@ function openSheet(kind){
     $c.addEventListener("input", function(){
       var v = Number($c.value);
       f.capacity = v<=1 ? null : v;
-      root.querySelector(".range-value span:last-child").textContent = f.capacity!=null ? f.capacity+(f.capacity>=CAPACITY_MAX?"+":"")+" voyageurs" : "15+";
+      root.querySelector(".range-value span:last-child").textContent = capacityGaugeLabel(v);
     });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
