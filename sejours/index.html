@@ -5000,7 +5000,18 @@ function collectionTileHtml(c){
         var thumb = listingThumbUrl(l);
         return thumb ? '<img src="'+thumb+'" alt="" loading="lazy">' : '<div class="collection-tile-empty" style="background:'+GRADIENTS[l.grad]+'"></div>';
       }).join("")+'</div>';
-  var count = c.listingIds.length;
+  // Retour utilisateur : une tuile affichait "2 hébergements" avec une vignette
+  // vide, les 2 annonces ayant été supprimées depuis (listingIds n'est jamais
+  // nettoyé après coup — même situation que savedListingsCount(), qui ignore
+  // déjà ces ids fantômes pour le badge "Favoris"). c.listingIds.length seul
+  // ne distingue pas "annonce encore existante" de "supprimée depuis" ; n (le
+  // nombre de covers réellement résolues ci-dessus) le fait, MAIS seules les
+  // 3 premières annonces d'une collection sont chargées en vue grille (voir
+  // renderFavorisView(), pour la performance) — n n'est donc fiable que pour
+  // une collection d'au plus 3 annonces. Au-delà, impossible de savoir si la
+  // 4e+ existe encore sans tout charger : on garde listingIds.length tel
+  // quel pour ces collections-là, jamais pire qu'avant.
+  var count = c.listingIds.length<=3 ? n : c.listingIds.length;
   return '<div class="collection-tile">'+
     '<button type="button" class="collection-tile-open" data-open-coll="'+esc(c.id)+'">'+
       photosHtml+
