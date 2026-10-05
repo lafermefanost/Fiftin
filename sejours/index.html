@@ -1965,24 +1965,15 @@ body.map-fullscreen{overflow:hidden;}
 .cal-mini-day.occ{background:var(--sauge); color:var(--cream); font-weight:800;}
 .cal-mini-day.today{box-shadow:inset 0 0 0 1.3px var(--lavender-deep);}
 
-/* ---------- choix de formule (inscription hôte) ---------- */
-.formula-picker{display:flex; flex-direction:column; gap:10px; margin-bottom:16px;}
-.formula-card{text-align:left; background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px; font-family:'Jost',sans-serif;}
-.formula-card.active{border-color:var(--sauge-deep); background:var(--sauge-light);}
-.formula-card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;}
-.formula-card-head b{font-size:14px; color:var(--ink);}
-.formula-card-head span{font-size:12.5px; font-weight:700; color:var(--sauge-deep);}
-.formula-card p{font-size:11.5px; color:var(--sauge); font-weight:500; line-height:1.4; margin:0;}
-
 /* ---------- cartes tarifs (vue Profil hôte) ----------
    Repris du gabarit .plan de fiftin.fr (section Tarifs, index.html
    racine) — même structure (kicker/prix/sous-ligne/liste à puces
    colorées), adapté aux jetons de couleur de ce fichier et à une seule
    colonne pleine largeur (la page marketing les pose côte à côte en
-   grille, ici empilées comme le reste du Profil). Volontairement une
-   famille de classes à part (.plan-card, pas .formula-card) : .formula-card
-   reste celle du sélecteur cliquable à l'inscription (formulaCardHtml()),
-   jamais touchée ici pour ne pas la faire régresser. */
+   grille, ici empilées comme le reste du Profil). .formula-card (ancien
+   sélecteur cliquable à l'inscription) a été retiré pour de bon — voir le
+   commentaire sur kind==="auth" dans openSheet() — .plan-card est
+   désormais la seule famille de classes pour une carte de formule. */
 /* gap réduit (14px->10px), avec le padding/les typos allégées plus bas
    (retour utilisateur : "fait les 3 cartes plus petites, elles sont un
    peu grosses dans l'écran"). */
@@ -2695,31 +2686,25 @@ var FIFTIN_FIREBASE_CONFIG = {
 };
 var authState = {ready:false, uid:null, email:null};
 var authMode = "signin";
-/* authContext pilote l'affichage du choix de formule à l'inscription :
-   "host" quand la connexion/inscription part d'un parcours hôte (Devenir
-   hôte, Espace hôtes), "traveler" sinon — un simple voyageur qui crée un
-   compte n'a aucune raison de voir des formules d'hébergeur. */
+/* authContext distingue un parcours hôte (Devenir hôte, Espace hôtes) d'un
+   simple voyageur créant un compte — pilote le routage post-connexion
+   (enterHostMode() vs switchTab("profile"), voir submitAuthSheet()). Ne
+   pilote plus aucun choix de formule à l'inscription : voir le commentaire
+   sur kind==="auth" dans openSheet(), formule toujours choisie après coup
+   via le vrai circuit Stripe (Profil -> cartes -> createCheckoutSession). */
 var authContext = "traveler";
-var chosenHostPlan = "simple"; // "simple" | "essentiel" | "pro"
-/* Les 3 formules hôte, partagées entre le sélecteur à l'inscription
-   (openSheet("auth")) et leur affichage en lecture seule dans le profil
-   hôte (renderHostProfile()) — une seule liste, pas deux copies à tenir
-   synchronisées. "simple" = pas de compte de gestion Fiftin app associé
-   (voir bootstrapHostAccount(), jamais appelé pour cette valeur) ;
-   "essentiel"/"pro" correspondent exactement aux mêmes valeurs que
-   S.settings.plan dans app/ — mêmes noms, mêmes prix, un seul et même
-   concept vu des deux côtés. */
-/* planName/planPrice/planPer/bullets : champs propres à l'affichage en
-   vue Profil (planCardHtml(), voir plus bas — retour utilisateur : "fais
-   la partie formule dans la vue profile exactement comme sur fiftin app"),
-   distincts de name/price/desc qui restent ceux du sélecteur à
-   l'inscription (formulaCardHtml()) — deux présentations différentes de
-   la même donnée, jamais mélangées pour ne pas faire régresser l'une en
-   touchant l'autre. Texte des formules Essentiel/Avancé repris mot pour
-   mot de la page fiftin.fr (section Tarifs, index.html racine) — même
-   copie des deux côtés. "Formule Hôte" ajoutée en tête (retour
-   utilisateur : "ajoute une troisième en premier, formule hôte, gratuit
-   pour cette année, puis 7 €/mois") — pas encore de mécanisme de
+/* Les 3 formules hôte, affichées en lecture seule dans le profil hôte
+   (planCardHtml(), voir plus bas — retour utilisateur : "fais la partie
+   formule dans la vue profile exactement comme sur fiftin app") et sur la
+   page commerciale (mktPlanCardHtml()). name/price/desc : hérités de
+   l'ancien sélecteur à l'inscription (retiré, voir kind==="auth"), plus
+   utilisés nulle part — gardés tels quels dans ces objets plutôt que
+   retirés un par un, aucun risque à les laisser inertes. Texte des
+   formules Essentiel/Avancé repris mot pour mot de la page fiftin.fr
+   (section Tarifs, index.html racine) — même copie des deux côtés.
+   "Formule Hôte" ajoutée en tête (retour utilisateur : "ajoute une
+   troisième en premier, formule hôte, gratuit pour cette année, puis
+   7 €/mois") — pas encore de mécanisme de
    paiement réel, juste l'affichage. */
 var HOST_FORMULAS = [
   {value:"simple", name:"Formule Hôte", price:"0 €/mois", desc:"Listez votre hébergement, calendrier simplifié inclus.",
@@ -6165,18 +6150,11 @@ function closeDetail(){
   state.detailListingId = null; state.detailTab = "overview";
 }
 
-function formulaCardHtml(value,name,price,desc){
-  return '<button type="button" class="formula-card'+(chosenHostPlan===value?' active':'')+'" data-plan="'+value+'">'+
-    '<div class="formula-card-head"><b>'+name+'</b><span>'+price+'</span></div>'+
-    '<p>'+desc+'</p>'+
-  '</button>';
-}
 /* Affichage de la formule courante dans le profil hôte (renderHostProfile()).
    Reprend le gabarit exact des cartes tarifs de fiftin.fr (section Tarifs,
    .plan/.plan .name/.plan .price/.plan .per/.plan li, voir index.html
-   racine) plutôt que .formula-card (réservée au sélecteur à l'inscription,
-   formulaCardHtml()) — retour utilisateur : "fais la partie formule dans la
-   vue profile exactement comme sur fiftin app".
+   racine) — retour utilisateur : "fais la partie formule dans la vue
+   profile exactement comme sur fiftin app".
    Bouton "Changer pour cette formule" sur les cartes NON actives (retour
    utilisateur : "le chemin vers le changement de formule devrait
    principalement être dans la vue profile, en cliquant sur les cartes ...
@@ -6317,16 +6295,21 @@ function openSheet(kind){
       return '<button class="radio-row'+(state.sort===o[0]?' active':'')+'" data-sort="'+o[0]+'">'+o[1]+'</button>';
     }).join("")+'</div>';
   } else if(kind==="auth"){
-    var showFormulaPicker = authMode==="signup" && authContext==="host";
-    if(showFormulaPicker) chosenHostPlan = "simple"; /* repart de zéro à chaque ouverture fraîche */
-    var formulaHtml = !showFormulaPicker ? "" :
-      '<div class="formula-picker">'+
-        HOST_FORMULAS.map(function(f){ return formulaCardHtml(f.value, f.name, f.price, f.desc); }).join("")+
-      '</div>'+
-      '<p class="sheet-sub" style="margin-top:-6px;">Paiement pas encore activé : la formule est enregistrée dès maintenant, la facturation viendra ensuite sans rien à refaire.</p>';
+    // Retour utilisateur réel (test en production, 5 oct.) : le sélecteur
+    // de formule qui vivait ici permettait de choisir Essentiel/Avancé dès
+    // l'inscription — bootstrapHostAccount() écrivait alors settings.plan
+    // directement en Firestore, SANS JAMAIS passer par Stripe (c'était son
+    // intention d'origine, "formule purement déclarative, aucun paiement
+    // branché", de quand Stripe n'existait pas encore ici). Resté en place
+    // après le branchement réel de Stripe (createCheckoutSession) : un
+    // compte pouvait donc s'auto-attribuer une formule payante gratuitement,
+    // pour de bon, sans qu'aucun abonnement Stripe n'existe derrière — faille
+    // trouvée en testant l'essai gratuit. Retiré pour de bon plutôt que
+    // "corrigé" : un seul chemin vers une formule payante désormais, le vrai
+    // (Profil -> cartes -> createCheckoutSession, avec son essai de 15 jours
+    // sans carte) — toute inscription hôte démarre en Formule Hôte gratuite.
     inner = '<h3>'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
       '<p class="sheet-sub">Le même compte que votre espace de gestion Fiftin.</p>'+
-      formulaHtml+
       '<div class="field-block"><label>E-mail</label><input class="text-input" type="email" id="auth-email" autocomplete="email"></div>'+
       '<div class="field-block"><label>Mot de passe</label><input class="text-input" type="password" id="auth-password" autocomplete="'+(authMode==="signup"?"new-password":"current-password")+'"></div>'+
       (authMode==="signup" ? '<div class="field-block"><label>Confirmer le mot de passe</label><input class="text-input" type="password" id="auth-password2" autocomplete="new-password"></div>' : '')+
@@ -6591,14 +6574,6 @@ function openSheet(kind){
     document.getElementById("auth-toggle").addEventListener("click", function(){ authMode = authMode==="signup"?"signin":"signup"; openSheet("auth"); });
     var forgotBtn = document.getElementById("auth-forgot");
     if(forgotBtn) forgotBtn.addEventListener("click", submitForgotPassword);
-    if(authMode==="signup" && authContext==="host"){
-      Array.prototype.forEach.call(root.querySelectorAll(".formula-card"), function(el){
-        el.addEventListener("click", function(){
-          chosenHostPlan = el.getAttribute("data-plan");
-          Array.prototype.forEach.call(root.querySelectorAll(".formula-card"), function(other){ other.classList.toggle("active", other===el); });
-        });
-      });
-    }
     return;
   } else if(kind==="hostform"){
     document.getElementById("sheet-apply").addEventListener("click", submitHostForm);
@@ -7020,33 +6995,6 @@ function openConfirmSheet(title, yesLabel, noLabel, onYes){
 }
 
 /* ---------------- comptes : connexion / inscription / dépôt d'annonce ---------------- */
-/* Écrit accounts/{uid} pour la toute première fois, juste après la
-   création du compte Firebase Auth dans ce même appel (Espace hôtes →
-   créer un compte + choisir une formule de gestion) : uid tout neuf que
-   Firebase Auth vient de générer, document garanti inexistant avant cet
-   instant — un .set() ici ne peut écraser aucune donnée réelle,
-   contrairement à une écriture sur un compte déjà utilisé (voir les
-   commentaires plus haut sur le calendrier simplifié / compte gestion).
-   Formule purement déclarative pour l'instant, comme S.settings.plan
-   dans app/ (aucun paiement branché) — juste positionnée dès
-   l'inscription pour ne pas avoir à la ressaisir dans app/.
-   createdAt : posé une seule fois ici, jamais réécrit ensuite — contrairement
-   à `updated`, qui change à chaque sauvegarde côté app/ (pushToFirebase()) et
-   ne peut donc pas servir à dater l'inscription. Nécessaire pour calculer,
-   le moment venu, quels comptes "Formule Hôte" (gratuite la 1ère année)
-   doivent basculer vers le tarif payant. Protégé de l'écrasement par
-   pushToFirebase() grâce au {merge:true} ajouté à ce même write côté app/
-   (voir ce fichier) — sans ce merge, la 1ère synchro de l'app effacerait
-   createdAt (et createdVia) en réécrivant tout le document. */
-function bootstrapHostAccount(uid, plan){
-  return firebase.firestore().collection("accounts").doc(uid).set({
-    settings: {plan: plan},
-    bookings: [], guests: [],
-    createdVia: "sejours-signup",
-    createdAt: new Date().toISOString(),
-    updated: new Date().toISOString()
-  });
-}
 function submitAuthSheet(){
   var email = document.getElementById("auth-email").value.trim();
   var password = document.getElementById("auth-password").value;
@@ -7073,12 +7021,7 @@ function submitAuthSheet(){
   if(authMode==="signup"){
     var pw2 = document.getElementById("auth-password2").value;
     if(password!==pw2){ errEl.textContent = "Les deux mots de passe ne correspondent pas."; btn.disabled = false; return; }
-    var planToBootstrap = (authContext==="host" && (chosenHostPlan==="essentiel" || chosenHostPlan==="pro")) ? chosenHostPlan : null;
     firebase.auth().createUserWithEmailAndPassword(email, password)
-      .then(function(cred){
-        if(!planToBootstrap) return;
-        return bootstrapHostAccount(cred.user.uid, planToBootstrap);
-      })
       .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   } else {
@@ -9475,7 +9418,7 @@ function wireProfileIdentityCard(){
    — une collection à part, propre à Séjours, PAS accounts/{uid} : ce
    document-là appartient à l'app Fiftin (outil de planning), jamais
    modifié ici après sa création initiale (voir le grand commentaire
-   au-dessus de resolveHostAccount() et bootstrapHostAccount()).
+   au-dessus de resolveHostAccount()).
    hostPhotoUrl reste aussi recopié sur chaque annonce du compte juste en
    dessous — un simple cache d'affichage pour que le host-card de la fiche
    détail (lecture synchrone de listings/{id}, voir normalizeHostListing())
