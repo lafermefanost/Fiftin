@@ -379,7 +379,6 @@ async function ensurePortalConfiguration(stripe) {
 
   const essentielPrice = await stripe.prices.retrieve(STRIPE_PRICE_IDS.essentiel);
   const proPrice = await stripe.prices.retrieve(STRIPE_PRICE_IDS.pro);
-  const allPrices = [STRIPE_PRICE_IDS.essentiel, STRIPE_PRICE_IDS.pro];
 
   const config = await stripe.billingPortal.configurations.create({
     business_profile: {headline: "Fiftin — gérez votre abonnement"},
@@ -387,13 +386,20 @@ async function ensurePortalConfiguration(stripe) {
       invoice_history: {enabled: true},
       payment_method_update: {enabled: true},
       subscription_cancel: {enabled: true, mode: "at_period_end"},
+      // Retour utilisateur réel (test du Portail, 5 oct.) : StripeInvalidRequestError
+      // "each price in the product's list of available prices must correspond
+      // to [ce produit]" — chaque produit ne peut lister QUE son propre prix
+      // dans `prices`, jamais celui d'un autre produit (listait par erreur
+      // les 2 prix pour chacun des 2 produits). Lister ici 2 PRODUITS
+      // distincts (pas 2 prix du même produit) est ce qui fait apparaître le
+      // choix Essentiel/Avancé dans le Portail — chacun avec son seul prix.
       subscription_update: {
         enabled: true,
         default_allowed_updates: ["price"],
         proration_behavior: "create_prorations",
         products: [
-          {product: essentielPrice.product, prices: allPrices},
-          {product: proPrice.product, prices: allPrices},
+          {product: essentielPrice.product, prices: [STRIPE_PRICE_IDS.essentiel]},
+          {product: proPrice.product, prices: [STRIPE_PRICE_IDS.pro]},
         ],
       },
     },
