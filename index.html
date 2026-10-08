@@ -2061,6 +2061,20 @@ body.map-fullscreen{overflow:hidden;}
    :root -- --terracotta(-soft)/--lavender-strong de la page d'origine
    n'existaient que comme alias des memes valeurs hex que --sauge-deep/
    --lavender-soft/--lavender ici, renommes en consequence ci-dessous. */
+/* Retour utilisateur, capture à l'appui : "le hero d'entrée n'est pas
+   full screen sur la page commerciale, il semble y avoir une marge sur
+   toute la page" — confirmé : #feed (voir plus bas) a 18px de padding
+   latéral par défaut, pour les vues en cartes (Explorer collé à 0 via
+   .feed-explore, mais Profil/Espace hôtes — dont "App gestion" fait
+   partie, voir renderHostTabContent() — gardent volontairement ce
+   padding pour LEUR contenu en cartes). .mkt-page est pensée plein
+   écran (vidéos/fonds .cover/.dark/.close en bord à bord, .inner
+   recentre déjà son propre contenu à l'intérieur) : jamais compensé
+   jusqu'ici, ce qui la faisait flotter avec 18px de fond crème visible
+   de chaque côté au lieu d'être vraiment bord à bord. Marge négative
+   == le padding de #feed, pour redonner à .mkt-page toute la largeur
+   de l'écran quel que soit le padding du parent. */
+#feed .mkt-page{margin:0 -18px;}
 .mkt-page{background:var(--cream); color:var(--ink);}
 .mkt-page section{padding:72px 24px; border-bottom:1px solid var(--line); --section-bg:var(--cream);}
 .mkt-page section.mkt-tight-bottom{padding-bottom:0;}
