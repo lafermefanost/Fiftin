@@ -1820,9 +1820,6 @@ Gardez la main.</div>
   <button class="hbtn" id="guestsBtn" onclick="openGuestsModal()" title="Clients">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
   </button>
-  <button class="hbtn" id="exportBtn" title="Export / Import">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-  </button>
   <!-- Retour utilisateur : venant de Fiftin Séjours (bouton "App gestion",
        voir HOST_TABS_HTML dans index.html racine — ex sejours/index.html,
        déménagé à la racine du site, voir le chantier associé), il faut un
@@ -3578,7 +3575,7 @@ function applyPersonnelUIRestrictions(){
   // le clic ne déclenche même plus l'alerte de blocage, plutôt que de réagir
   // au survol pour finalement ne rien permettre.
   document.body.classList.add('ro-ui');
-  ['exportBtn','guestsBtn','addResaBtn'].forEach(id=>{
+  ['guestsBtn','addResaBtn'].forEach(id=>{
     const el=byId(id);
     if(el)el.style.display='none';
   });
@@ -4013,17 +4010,11 @@ function setSyncPip(state,title){
 }
 
 
-// Export / Import
-byId('exportBtn').onclick=()=>{
-  const menu=document.createElement('div');
-  menu.style.cssText='position:fixed;top:52px;right:10px;background:var(--white);border:1px solid var(--light);border-radius:8px;box-shadow:var(--shadow);z-index:999;overflow:hidden;';
-  menu.innerHTML=`
-    <div onclick="doExport();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;hover:background:#EFEEEA">⬇ Exporter JSON</div>
-    <div onclick="byId('importFile').click();this.parentNode.remove()" style="padding:10px 16px;cursor:pointer;font-size:13px;border-top:1px solid var(--light)">⬆ Importer JSON</div>
-  `;
-  document.body.appendChild(menu);
-  setTimeout(()=>document.addEventListener('click',function h(){menu.remove();document.removeEventListener('click',h);}),50);
-};
+// Export / Import : plus de picto dédié dans le header (retour utilisateur,
+// "libérer de la place sur la page principale") — "Exporter JSON"/
+// "Importer JSON" vivent maintenant comme deux boutons directs dans le
+// panneau Réglages → Export / Import (voir exportBody dans renderSettings()),
+// doExport()/doImport() appelés sans détour par ce menu contextuel.
 
 // Export complet : réservations/clients/événements ET réglages/catalogue/
 // comptabilité — tout ce qui vit dans le document Firestore du compte, pas
@@ -7630,8 +7621,11 @@ function renderSettings(){
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportClientsCSV()">📇 Exporter les clients (CSV)</button>
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportBookingsCSV()">🛏️ Exporter les réservations (CSV)</button>
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportEventsCSV()">🎉 Exporter les événements (CSV)</button>
-    <button class="btn-p btn-add" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>`;
-  h+=settingsPanel('export','Export',exportBody);
+    <button class="btn-p btn-add" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>
+    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Sauvegarde/restauration complète (JSON) : réservations, clients, événements, réglages, catalogue et comptabilité en un seul fichier — pour transférer ce planning vers un autre compte ou en garder une copie. Anciennement un picto dédié dans l'en-tête, déplacé ici (retour utilisateur) pour libérer de la place sur la page principale.</div>
+    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="doExport()">⬇ Exporter JSON</button>
+    <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>`;
+  h+=settingsPanel('export','Export / Import',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
   // consulté bien moins souvent que le reste — dernier onglet plutôt que de
