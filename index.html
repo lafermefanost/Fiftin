@@ -2229,8 +2229,20 @@ function fiftinSetBrandVideoSrc(id){
   var v=document.getElementById(id);
   if(v){
     v.src=(window.matchMedia && window.matchMedia("(orientation: portrait)").matches)
-      ? "assets/185A0A76-1171-4E6D-92C7-5EA6C49AE110.MP4"
-      : "assets/B7182075-2385-481F-A820-77AE0ED3E525.MP4";
+      ? "assets/185A0A76-1171-4E6D-92C7-5EA6C49AE110.mp4"
+      : "assets/B7182075-2385-481F-A820-77AE0ED3E525.mp4";
+    /* Retour utilisateur : sur iPhone (Safari), la vidéo ne démarre jamais —
+       seul le fond uni --sauge-light (posé en attendant qu'elle charge,
+       voir #hero CSS) reste affiché en permanence. autoplay+muted+
+       playsinline sont déjà posés en HTML, mais changer .src en JS APRÈS
+       le premier parse ne relance pas toujours la tentative d'autoplay de
+       WebKit — contrairement à Chrome, plus permissif. load()+play()
+       explicites forcent la reprise ; .catch() avale un rejet éventuel
+       (rare ici, muted+playsinline couvrent déjà la politique d'autoplay
+       iOS) sans remonter d'erreur console pour autant. */
+    v.load();
+    var playAttempt = v.play();
+    if(playAttempt && playAttempt.catch) playAttempt.catch(function(){});
   }
 }
 </script>
@@ -2251,6 +2263,18 @@ function fiftinSetBrandVideoSrc(id){
       <button type="button" class="hero-menu-link" id="hero-btn-host">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
         <span>Devenir hôte</span>
+      </button>
+      <!-- Visible seulement connecté (voir updateHeroMenu()) : raccourci direct
+           vers openHostGestionApp() — même nom que l'onglet HOST_TABS_HTML/la
+           fonction elle-même ("App gestion"), pour rester le même repère que
+           partout ailleurs dans le produit plutôt qu'inventer un terme de
+           plus. Avant ce bouton, seul chemin pour un hôte déjà connecté mais
+           sans formule de gestion : Profil → bascule Espace hôtes → onglet
+           App gestion — 3 étapes peu visibles pour ce qui doit justement
+           "se vendre" vite (retour utilisateur). -->
+      <button type="button" class="hero-menu-link" id="hero-btn-app" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>App gestion</span>
       </button>
     </nav>
     <div class="hero-content">
@@ -3119,6 +3143,7 @@ function bootFirebaseAuth(){
 function updateHeroMenu(){
   var loginBtn = document.getElementById("hero-btn-login");
   var hostBtn = document.getElementById("hero-btn-host");
+  var appBtn = document.getElementById("hero-btn-app");
   if(!loginBtn || !hostBtn) return;
   loginBtn.querySelector("span").textContent = authState.uid ? "Mon compte" : "Se connecter";
   loginBtn.onclick = function(){
@@ -3134,6 +3159,17 @@ function updateHeroMenu(){
     // (pas de ../ : ce fichier vit à la racine), pas openSheet("auth").
     else location.href = "hotes";
   };
+  // "App gestion" : raccourci direct depuis le hero pour un hôte déjà
+  // connecté — masqué pour un visiteur anonyme, qui a déjà /hotes via le
+  // bouton "Devenir hôte" juste au-dessus. openHostGestionApp() sait déjà
+  // tout faire : envoie un compte avec formule essentiel/pro droit dans
+  // Fiftin app, et un compte encore en formule simple (ou sans formule)
+  // sur la page commerciale — donc ce même bouton vend ou ouvre l'outil
+  // selon le compte, sans qu'on ait à distinguer les deux cas ici.
+  if(appBtn){
+    appBtn.hidden = !authState.uid;
+    appBtn.onclick = function(){ openHostGestionApp(); };
+  }
 }
 
 function signOutUser(){
