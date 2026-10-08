@@ -2228,18 +2228,26 @@ body.map-fullscreen{overflow:hidden;}
 function fiftinSetBrandVideoSrc(id){
   var v=document.getElementById(id);
   if(v){
-    v.src=(window.matchMedia && window.matchMedia("(orientation: portrait)").matches)
+    var portrait=window.matchMedia && window.matchMedia("(orientation: portrait)").matches;
+    /* Retour utilisateur avec capture à l'appui : sur iPhone/4G, la vidéo
+       met ~1s à démarrer et laisse voir le fond uni --sauge-light pendant
+       ce court instant (posé en CSS pour ce cas, voir #hero). poster =
+       une image extraite de la PREMIÈRE frame de chaque vidéo (même cadre,
+       juste un screenshot), quelques Ko au lieu des ~2,4 Mo de la vidéo —
+       s'affiche quasi instantanément et est visuellement identique à
+       l'image sur laquelle la vidéo démarre : la bascule poster→vidéo
+       devient invisible, au lieu du fond uni sans rapport qu'on avait
+       avant. */
+    v.poster=portrait ? "assets/brand-video-poster-portrait.webp" : "assets/brand-video-poster-landscape.webp";
+    v.src=portrait
       ? "assets/185A0A76-1171-4E6D-92C7-5EA6C49AE110.mp4"
       : "assets/B7182075-2385-481F-A820-77AE0ED3E525.mp4";
-    /* Retour utilisateur : sur iPhone (Safari), la vidéo ne démarre jamais —
-       seul le fond uni --sauge-light (posé en attendant qu'elle charge,
-       voir #hero CSS) reste affiché en permanence. autoplay+muted+
-       playsinline sont déjà posés en HTML, mais changer .src en JS APRÈS
-       le premier parse ne relance pas toujours la tentative d'autoplay de
-       WebKit — contrairement à Chrome, plus permissif. load()+play()
-       explicites forcent la reprise ; .catch() avale un rejet éventuel
-       (rare ici, muted+playsinline couvrent déjà la politique d'autoplay
-       iOS) sans remonter d'erreur console pour autant. */
+    /* load()+play() explicites (au lieu de compter uniquement sur l'attribut
+       autoplay déjà posé en HTML) : WebKit ne relance pas toujours sa
+       tentative d'autoplay après un changement de .src fait en JS après le
+       premier parse, contrairement à Chrome. .catch() avale un rejet
+       éventuel (rare ici, muted+playsinline déjà posés couvrent la
+       politique d'autoplay iOS) sans remonter d'erreur console. */
     v.load();
     var playAttempt = v.play();
     if(playAttempt && playAttempt.catch) playAttempt.catch(function(){});
