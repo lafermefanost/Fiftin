@@ -8812,14 +8812,22 @@ function switchTab(tab){
   // pas rester figée en --cream).
   document.getElementById("result-line").classList.toggle("feed-explore", tab==="explore");
   document.getElementById("result-line").classList.toggle("feed-map", tab==="likes" || tab==="profile");
-  /* Le hero (écran d'accueil plein écran) ne doit apparaître qu'une fois,
-     au chargement initial — pas se répéter à chaque retour sur Explorer.
-     Dès qu'on change d'onglet, il est masqué définitivement. La barre
-     d'onglets, elle, n'a plus besoin d'être pilotée ici : elle est
-     toujours à sa place (voir la hiérarchie de calques en CSS, plus bas). */
-  if(!heroDismissed){
+  /* Retour utilisateur, changement volontaire : cliquer l'onglet Explorer
+     doit TOUJOURS ramener au tout début (vidéo de marque + logo), pas
+     seulement au fil d'annonces — y compris en cliquant Explorer alors
+     qu'on y est déjà. Avant ce correctif, le hero ne s'affichait qu'une
+     fois au premier chargement puis restait masqué pour de bon dès le
+     premier clic sur un onglet (y compris Explorer lui-même) : plus aucun
+     moyen d'y revenir ensuite, seul le fil d'annonces restait atteignable.
+     Les autres onglets (Mes séjours/Profil) gardent l'ancien comportement
+     — le hero n'a pas de sens au-dessus d'un contenu qui n'est pas
+     Explorer, donc masqué dès qu'on les choisit. */
+  var heroEl = document.getElementById("hero");
+  if(tab==="explore"){
+    heroDismissed = false;
+    if(heroEl) heroEl.hidden = false;
+  } else if(!heroDismissed){
     heroDismissed = true;
-    var heroEl = document.getElementById("hero");
     if(heroEl) heroEl.hidden = true;
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tab"), function(el){
