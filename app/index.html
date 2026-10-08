@@ -1158,16 +1158,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--cream);
   transition:background .15s;flex-shrink:0;}
 .mclose:hover{background:rgba(255,255,255,.25);}
-/* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit),
-   en lavande — comme les onglets/menus déjà liés aux événements ci-dessus
-   (.evfilter-btn.on, #evcat-*.on, #evExtrasDayTabs) — plutôt que le vert
-   moyen commun à tous les autres modaux. Texte/croix en vert foncé (pas
-   cream/blanc) : ce fond est clair, contrairement au vert moyen des autres
-   en-têtes. */
-#modalEvents .mhead,#modalEventEdit .mhead{background:var(--lavender);color:var(--green-deep);}
-#modalEvents .mtitle,#modalEventEdit .mtitle{color:var(--green-deep);}
-#modalEvents .mclose,#modalEventEdit .mclose{background:rgba(29,40,32,.12);color:var(--green-deep);}
-#modalEvents .mclose:hover,#modalEventEdit .mclose:hover{background:rgba(29,40,32,.22);}
+/* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit) :
+   retour utilisateur, "j'aimerais que l'encart de header de cette vue
+   redevienne vert comme celui de liste de clients" — l'essai en lavande
+   (pour matcher .evfilter-btn.on/#evcat-*.on) est abandonné, retour au
+   vert moyen .mhead commun à tous les autres modaux (aucune règle à
+   écrire : c'était justement la seule exception). */
 
 .fg{margin-bottom:14px;}
 .fl{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.06em;
@@ -1464,14 +1460,24 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
 .evfilter-btn.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
-/* Volets mois (voir renderEvList), dans le filtre Pro ou Perso — un par
-   mois qui a du contenu, repris tel quel du composant
-   .wday-card/.wday-head/.wday-body de la vue Semaine (même couleur, mêmes
-   coins arrondis, même chevron) pour rester cohérent avec le reste de
-   l'appli plutôt que d'inventer un système de chips à part. Un seul volet
-   ouvert à la fois (voir toggleEvMonth), refermable comme les jours de la
-   vue Semaine — au clic sur le volet déjà ouvert, tout se referme. */
-.ev-months{display:flex;flex-direction:column;gap:12px;}
+/* Un bandeau par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
+   — retour utilisateur : "je n'aime plus la présentation en menus
+   déroulants, ça empêche d'avoir une vision globale, je préférerais que
+   tous les événements soient à la suite". Avant : un volet par mois façon
+   accordéon (.wday-card, un seul ouvert à la fois, repris de la vue
+   Semaine). Maintenant : tous les mois affichés en continu, le bandeau
+   (couleur reprise de .wday-head) reste juste comme repère de navigation
+   — position:sticky plutôt que l'ancien modèle collapsed/ouvert : en
+   scrollant, le bandeau du mois en cours de lecture reste collé en haut
+   de la modale jusqu'à ce que celui du mois suivant le pousse, comme une
+   liste de contacts triée par lettre. margin -18px : même largeur pleine
+   que .mhead, qui sort du padding de .modal de la même façon. Plus de
+   chevron (rien à déplier) : .wday-name/.wday-date réutilisées telles
+   quelles pour le texte, seule la coquille autour change. */
+.ev-month-label{position:sticky; top:0; z-index:5;
+  display:flex; justify-content:space-between; align-items:baseline;
+  background:var(--green); margin:0 -18px; padding:9px 18px;}
+.ev-month-body{padding-bottom:10px;}
 /* Repère "Aujourd'hui" dans la liste du mois en cours, même sans événement
    ce jour-là (voir renderEvList) — un simple filet avec libellé, pas une
    carte de plus à lire. */
@@ -2217,6 +2223,12 @@ Gardez la main.</div>
              fiscales qu'un simple calendrier. -->
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="8.5" y1="17" x2="15.5" y2="12.5"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="16.5" r="1.3"/></svg> Fiscal
       </button>
+      <!-- Retour utilisateur : "en plus de pro perso et fiscal un encart
+           tout pour voir l'ensemble classé à la suite" — Pro+Perso
+           fusionnés et triés ensemble (voir catEvents dans renderEvList),
+           Fiscal reste à part (nature différente : échéances légales
+           calculées, pas des événements saisis par l'hôte). -->
+      <button type="button" class="evfilter-btn" id="evfilter-tous" onclick="setEvFilter('tous')">Tout</button>
     </div>
     <div class="modal-scrollarea"><div id="evList"></div></div>
   </div>
@@ -5405,19 +5417,21 @@ function delGuest(){
 // ═══════════════════════════════════════════════════════════════
 //  EVENTS MODAL
 // ═══════════════════════════════════════════════════════════════
-// Filtre actif de la liste : 'pro', 'perso' ou 'fiscal' (voir evCategoryOf/
-// setEvCategory côté modalEventEdit). Mémorisé au niveau module — reste sur
-// le dernier filtre consulté d'une ouverture à l'autre de la modale, plutôt
-// que de revenir systématiquement sur Pro.
+// Filtre actif de la liste : 'pro', 'perso', 'fiscal' ou 'tous' (voir
+// evCategoryOf/setEvCategory côté modalEventEdit). Mémorisé au niveau
+// module — reste sur le dernier filtre consulté d'une ouverture à l'autre
+// de la modale, plutôt que de revenir systématiquement sur Pro.
 let evFilter='pro';
-// Volet actuellement ouvert dans la liste (voir renderEvList), pour les
-// filtres Pro/Perso uniquement : une clé de mois (année×12+mois, comme dans
-// groups), ou null si tout est replié. Mémorisé au niveau module pour
-// survivre aux re-rendus déclenchés par un ajout/une modification
-// d'événement pendant que la modale reste ouverte — même principe que
-// weekOpenDays pour la vue Semaine, mais une seule valeur à la fois
-// puisqu'un seul volet peut être ouvert ici.
-let evOpenMonth=null;
+// Mois sur lequel la liste doit s'ouvrir (voir renderEvList), pour les
+// filtres Pro/Perso/Tout : une clé de mois (année×12+mois, comme dans
+// groups). Depuis que tous les mois s'affichent à la suite (retour
+// utilisateur, voir .ev-month-label) il n'y a plus rien à "ouvrir" —
+// cette clé sert seulement de cible de défilement au premier rendu, pour
+// atterrir directement sur le bon mois plutôt qu'en haut de toute la
+// liste. Mémorisé au niveau module pour survivre aux re-rendus déclenchés
+// par un ajout/une modification d'événement pendant que la modale reste
+// ouverte.
+let evScrollKey=null;
 // presetKey/presetCategory (optionnels) : ouvre directement sur ce mois et/
 // ou ce filtre plutôt que le mois en cours et le dernier filtre consulté —
 // utilisé par openDayEvent pour retrouver un événement passé/futur sans
@@ -5425,30 +5439,24 @@ let evOpenMonth=null;
 function openEventsModal(presetKey,presetCategory){
   byId('evListSearch').value='';
   if(presetCategory) evFilter=presetCategory;
-  if(presetKey!=null) evOpenMonth=presetKey;
+  if(presetKey!=null) evScrollKey=presetKey;
   else{
     const todayD=new Date(todayISO()+'T00:00:00');
-    evOpenMonth=todayD.getFullYear()*12+todayD.getMonth();
+    evScrollKey=todayD.getFullYear()*12+todayD.getMonth();
   }
   renderEvList();
   openM('modalEvents');
 }
-// Changement de filtre : rouvre systématiquement sur le mois en cours (sans
-// objet pour Fiscal, qui n'a pas de volets) — une nouvelle vue à chaque
-// changement de filtre plutôt que de conserver un mois ouvert qui pourrait
-// n'exister dans aucun des deux filtres.
+// Changement de filtre : revient systématiquement défiler sur le mois en
+// cours (sans objet pour Fiscal, qui n'a pas de mois) — une nouvelle vue à
+// chaque changement de filtre plutôt que de garder une position qui
+// pourrait n'exister dans aucun des deux filtres.
 function setEvFilter(f){
   evFilter=f;
   if(f!=='fiscal'){
     const todayD=new Date(todayISO()+'T00:00:00');
-    evOpenMonth=todayD.getFullYear()*12+todayD.getMonth();
+    evScrollKey=todayD.getFullYear()*12+todayD.getMonth();
   }
-  renderEvList(byId('evListSearch').value);
-}
-// Referme le volet ouvert s'il est déjà ouvert, sinon en ouvre un nouveau
-// (et referme l'ancien) — mêmes semantiques que toggleWeekDay.
-function toggleEvMonth(key){
-  evOpenMonth=(evOpenMonth===key)?null:key;
   renderEvList(byId('evListSearch').value);
 }
 const evBadge=(ds,col)=>{
@@ -5504,11 +5512,13 @@ function renderEvList(term){
   const todayKey=todayD.getFullYear()*12+todayD.getMonth();
   const curYear=todayD.getFullYear();
 
-  ['pro','perso','fiscal'].forEach(f=>byId('evfilter-'+f)?.classList.toggle('on',evFilter===f));
+  ['pro','perso','fiscal','tous'].forEach(f=>byId('evfilter-'+f)?.classList.toggle('on',evFilter===f));
 
   // Filtre Fiscal : toutes les échéances d'un coup (voir buildEventsFiscalHTML),
-  // pas de volets par mois — la recherche y filtre directement les échéances
-  // plutôt que de basculer sur une liste d'événements.
+  // pas de regroupement par mois — la recherche y filtre directement les
+  // échéances plutôt que de basculer sur une liste d'événements. À part des
+  // trois autres filtres : nature différente (échéances légales calculées),
+  // pas fusionné dans "Tout".
   if(evFilter==='fiscal'){
     byId('evList').innerHTML=buildEventsFiscalHTML(term);
     return;
@@ -5516,8 +5526,11 @@ function renderEvList(term){
 
   // Pro/Perso : uniquement les événements de la catégorie choisie (voir
   // evCategoryOf) + les jours fériés, informatifs et donc affichés dans les
-  // deux filtres plutôt que rattachés à l'un ou l'autre.
-  const catEvents=S.events.filter(ev=>evCategoryOf(ev)===evFilter);
+  // trois filtres plutôt que rattachés à l'un ou l'autre. Tout : les deux
+  // catégories fusionnées (evCategoryOf ne renvoie jamais autre chose que
+  // 'pro'/'perso', donc S.events au complet) — retour utilisateur, "un
+  // encart tout pour voir l'ensemble classé à la suite".
+  const catEvents=evFilter==='tous'?S.events:S.events.filter(ev=>evCategoryOf(ev)===evFilter);
 
   // Recherche : liste plate, tout mélangé (événements + fériés) — reste
   // dans le filtre actif plutôt que de mélanger Pro et Perso.
@@ -5535,8 +5548,8 @@ function renderEvList(term){
     return;
   }
 
-  // Pas de recherche : un volet par mois, empilés façon vue Semaine
-  // (.wday-card) — TOUS les mois qui se suivent entre le premier et le
+  // Pas de recherche : tous les mois à la suite (retour utilisateur, voir
+  // .ev-month-label) — TOUS les mois qui se suivent entre le premier et le
   // dernier concerné (mois en cours compris), même sans événement ce
   // mois-là : un filtre qui saute un mois vide (ex: pas de jour férié en
   // septembre) casserait la continuité attendue d'un calendrier. Clé
@@ -5573,21 +5586,24 @@ function renderEvList(term){
     if(!markInserted) h+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
     return h;
   };
-  const monthBarHTML=g=>{
+  // id="evmonth-{key}" sur le bandeau lui-même (pas un wrapper séparé) :
+  // sert de cible à scrollIntoView juste en dessous, pour atterrir
+  // directement sur evScrollKey (mois en cours, ou le mois demandé par
+  // openDayEvent) plutôt qu'en haut de toute la liste.
+  const monthSectionHTML=g=>{
     const isCur=g.key===todayKey;
-    const open=g.key===evOpenMonth;
     const m=((g.key%12)+12)%12, y=Math.floor(g.key/12);
     const label=MON[m]+(y!==curYear?` ${y}`:'');
     const count=g.events.length;
-    return`<div class="wday-card${isCur?' wday-today':''}${open?'':' collapsed'}">
-      <div class="wday-head" onclick="toggleEvMonth(${g.key})">
+    return`<div class="ev-month-label" id="evmonth-${g.key}">
         <div class="wday-name">${isCur?'Ce mois-ci — ':''}${label}</div>
-        <div class="wday-date">${count} événement${count>1?'s':''}<span class="wday-chev">▾</span></div>
+        <div class="wday-date">${count} événement${count>1?'s':''}</div>
       </div>
-      <div class="wday-body">${open?monthBodyHTML(g):''}</div>
-    </div>`;
+      <div class="ev-month-body">${monthBodyHTML(g)}</div>`;
   };
-  byId('evList').innerHTML=`<div class="ev-months">${groups.map(monthBarHTML).join('')}</div>`;
+  byId('evList').innerHTML=groups.map(monthSectionHTML).join('');
+  const scrollTarget=byId('evmonth-'+evScrollKey);
+  if(scrollTarget) scrollTarget.scrollIntoView({block:'start'});
 }
 
 function openEventEdit(id,prefillDate,prefillCategory){
