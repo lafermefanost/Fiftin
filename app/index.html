@@ -1459,24 +1459,36 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   text-align:center;}
 .evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
-.evfilter-btn.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
-/* Un bandeau par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
+/* Vert plutôt que lavande (retour utilisateur : "passe les encarts
+   sélectionnés en vert") — même --green2 que .tsec-hd.has-items/.cleaner-on,
+   déjà la couleur "actif" ailleurs dans l'app. */
+.evfilter-btn.on{background:var(--green2);color:#fff;border-color:var(--green2);}
+/* Un repère par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
    — retour utilisateur : "je n'aime plus la présentation en menus
    déroulants, ça empêche d'avoir une vision globale, je préférerais que
    tous les événements soient à la suite". Avant : un volet par mois façon
    accordéon (.wday-card, un seul ouvert à la fois, repris de la vue
-   Semaine). Maintenant : tous les mois affichés en continu, le bandeau
-   (couleur reprise de .wday-head) reste juste comme repère de navigation
-   — position:sticky plutôt que l'ancien modèle collapsed/ouvert : en
-   scrollant, le bandeau du mois en cours de lecture reste collé en haut
-   de la modale jusqu'à ce que celui du mois suivant le pousse, comme une
-   liste de contacts triée par lettre. margin -18px : même largeur pleine
-   que .mhead, qui sort du padding de .modal de la même façon. Plus de
-   chevron (rien à déplier) : .wday-name/.wday-date réutilisées telles
-   quelles pour le texte, seule la coquille autour change. */
+   Semaine). Maintenant : tous les mois affichés en continu ; le repère
+   reste juste comme indice de navigation — position:sticky plutôt que
+   l'ancien modèle collapsed/ouvert : en scrollant, le repère du mois en
+   cours de lecture reste collé en haut de la modale jusqu'à ce que celui
+   du mois suivant le pousse, comme une liste de contacts triée par
+   lettre. Pas de "margin -18px" edge-to-edge (contrairement à .mhead) :
+   essayé d'abord en bandeau plein comme .mhead, mais ici l'élément vit
+   DANS .modal-scrollarea (overflow-y:auto, sans overflow-x borné) —
+   contrairement à .mhead qui est hors du conteneur qui défile, une
+   largeur négative à cet endroit élargit le scrollWidth du conteneur et
+   rend toute la liste "sliidable" horizontalement, coupant le texte en
+   bord d'écran (bug remonté par retour utilisateur). D'où aussi
+   l'étiquette discrète en forme de pastille (retour utilisateur : "les
+   mois peuvent être plus discrets, un encart bords arrondis gris moyen,
+   typo blanche") plutôt que le bandeau vert plein largeur du début. Plus
+   de chevron (rien à déplier). */
 .ev-month-label{position:sticky; top:0; z-index:5;
-  display:flex; justify-content:space-between; align-items:baseline;
-  background:var(--green); margin:0 -18px; padding:9px 18px;}
+  display:inline-flex; gap:8px; align-items:baseline;
+  background:var(--gray); color:#fff; border-radius:8px;
+  padding:4px 10px; margin:12px 0 8px; font-size:12px; font-weight:600;}
+.ev-month-label .wday-date{color:rgba(255,255,255,.75); font-weight:500;}
 .ev-month-body{padding-bottom:10px;}
 /* Repère "Aujourd'hui" dans la liste du mois en cours, même sans événement
    ce jour-là (voir renderEvList) — un simple filet avec libellé, pas une
