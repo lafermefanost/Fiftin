@@ -6162,9 +6162,17 @@ function closeDetail(){
    devrait être sur la vue profile -> espace hôte") — même bouton/span que
    mktPlanCardHtml() (même gabarit <span> attendu par startCheckoutFromSejours()/
    openBillingPortalFromSejours(), voir leur wiring dans renderHostProfile()).
-   Jamais de bouton sur la carte active : rien à "changer" vers sa propre
-   formule actuelle. */
+   Carte active : "Gérer mon abonnement" (data-manage-billing) au lieu de
+   rien du tout si la formule est payante — retour utilisateur : "nulle
+   part aujourd'hui je n'ai accès à mon compte client ... aucun endroit
+   pour aller récupérer ses factures". Avant ce correctif, le Portail
+   Stripe (factures, moyen de paiement) n'était atteignable qu'en cliquant
+   sur une AUTRE carte que la sienne, ce qui ressemblait à tort à "changer
+   de formule". Pas de bouton sur la carte "Formule Hôte" active : rien à
+   gérer côté Stripe pour un compte gratuit (aucun stripeCustomerId). */
 function planCardHtml(f, active){
+  var cta = !active ? '<button type="button" class="btn primary plan-card-cta" data-plan="'+esc(f.value)+'"><span>Changer pour cette formule</span></button>'
+    : (f.value==="simple" ? '' : '<button type="button" class="btn primary plan-card-cta" data-manage-billing="1"><span>Gérer mon abonnement</span></button>');
   return '<div class="plan-card'+(active?' active':'')+'">'+
     '<div class="plan-card-prices">'+
       '<div class="plan-card-name">'+esc(f.planName)+'</div>'+
@@ -6172,7 +6180,7 @@ function planCardHtml(f, active){
       '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
     '</div>'+
     '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
-    (active ? '' : '<button type="button" class="btn primary plan-card-cta" data-plan="'+esc(f.value)+'"><span>Changer pour cette formule</span></button>')+
+    cta+
   '</div>';
 }
 
@@ -7022,6 +7030,15 @@ function submitAuthSheet(){
     var pw2 = document.getElementById("auth-password2").value;
     if(password!==pw2){ errEl.textContent = "Les deux mots de passe ne correspondent pas."; btn.disabled = false; return; }
     firebase.auth().createUserWithEmailAndPassword(email, password)
+      .then(function(cred){
+        // Retour utilisateur : "aucun mail n'a été envoyé pour confirmer la
+        // création d'un compte" — jamais implémenté jusqu'ici (le README
+        // listait encore ce point "pas encore demandé" avant ce correctif).
+        // Non bloquant à dessein (pas de .then ici) : un échec d'envoi
+        // (quota Firebase, etc.) ne doit jamais empêcher afterAuth() de
+        // s'exécuter — le compte lui-même est déjà créé avec succès.
+        cred.user.sendEmailVerification().catch(function(err){ console.error("[auth] sendEmailVerification a échoué", err); });
+      })
       .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   } else {
@@ -7029,6 +7046,23 @@ function submitAuthSheet(){
       .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   }
+}
+/* Retour utilisateur : "ni un endroit dédié pour changer le mot de passe"
+   une fois connecté — jusqu'ici seul "mot de passe oublié" existait, et
+   seulement depuis l'écran de connexion (donc il fallait d'abord se
+   déconnecter). Même mécanisme que submitForgotPassword() juste en dessous
+   (email de réinitialisation Firebase) plutôt qu'un formulaire ancien mot
+   de passe + nouveau : évite de gérer la réauthentification, et reste
+   cohérent avec le seul autre endroit du site qui touche déjà au mot de
+   passe. Utilisée par renderProfile() (voyageur) et renderHostProfile(). */
+function changePasswordRowHtml(){
+  return '<div class="profile-row" id="row-change-password">Changer le mot de passe<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>';
+}
+function requestPasswordChange(){
+  if(!authState.email) return;
+  firebase.auth().sendPasswordResetEmail(authState.email)
+    .then(function(){ alert("E-mail envoyé à "+authState.email+" — suivez le lien pour choisir un nouveau mot de passe."); })
+    .catch(function(err){ alert("Erreur : "+(err.message||err.code||"réessayez.")); });
 }
 function submitForgotPassword(){
   var email = document.getElementById("auth-email").value.trim();
@@ -8689,6 +8723,7 @@ function renderProfile(){
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      (connected ? changePasswordRowHtml() : '')+
     '</div></div>'+
     '<div class="profile-card"><div class="profile-card-title">Informations légales</div><div class="profile-list legal">'+
       '<div class="profile-row" data-legal="mentions">Mentions légales<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
@@ -8702,6 +8737,7 @@ function renderProfile(){
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
   if(connected){
     document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
+    document.getElementById("row-change-password").addEventListener("click", requestPasswordChange);
     // Même photo de compte qu'en mode hôte (hostProfiles/{uid}, voir
     // wireAccountAvatar()) — retour utilisateur : "utilise la même photo
     // pour le mode voyageur", inutile de la reproposer séparément ici.
@@ -9491,6 +9527,7 @@ function renderHostProfile(){
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
+      changePasswordRowHtml()+
     '</div></div>'+
     '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
     /* Aucune carte marquée active au premier rendu : hostAccountCache est
@@ -9513,6 +9550,7 @@ function renderHostProfile(){
   if(switchOtherBtn) switchOtherBtn.addEventListener("click", exitHostMode);
   document.getElementById("btn-signout").addEventListener("click", function(e){ e.preventDefault(); signOutUser(); });
   document.getElementById("row-contact").addEventListener("click", function(){ openSheet("faq"); });
+  document.getElementById("row-change-password").addEventListener("click", requestPasswordChange);
   if(isAdmin()){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
@@ -9538,6 +9576,11 @@ function renderHostProfile(){
         else openBillingPortalFromSejours(btn);
       });
     });
+    // "Gérer mon abonnement" sur la carte active (retour utilisateur : accès
+    // aux factures/au moyen de paiement) — même fonction que les cartes non
+    // actives d'un compte déjà payant, voir juste au-dessus.
+    var manageBtn = container.querySelector("[data-manage-billing]");
+    if(manageBtn) manageBtn.addEventListener("click", function(){ openBillingPortalFromSejours(manageBtn); });
   });
 }
 
