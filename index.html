@@ -116,30 +116,27 @@ a{color:inherit; text-decoration:none;}
    atténue justement le banding des dégradés (vidéo ET CSS) en cassant les
    paliers de couleur unis par du micro-contraste — l'effet recherché.
    Animé (retour utilisateur : "le grain est fixe, ce n'est pas crédible
-   avec un grain vidéo" — vrai, un vrai grain scintille image par image,
-   un calque figé ressemble à une texture plaquée plutôt qu'à du bruit).
-   Le SVG lui-même reste une image statique (feTurbulence ne sait pas
-   s'animer tout seul en CSS pur, et une 2e couche de JS/canvas est hors
-   de proportion pour un effet de texture) — le mouvement vient de
-   grainFlicker ci-dessous, qui fait sauter background-position par à-
-   coups (steps(), jamais de glissement) sur une tuile plus grande que ce
-   qu'elle couvre (300px, répétée) : à chaque saut, une zone différente
-   et sans rapport du même bruit apparaît, ce qui lit comme un nouveau
-   grain aléatoire plutôt que comme un fond qui se déplace. */
+   avec un grain vidéo"). Premier essai : faire sauter background-position
+   sur une tuile répétée (par à-coups, steps()) — corrigé ensuite, moins
+   bien que ce qui suit : ça ne fait que PANNER sur le même bruit figé,
+   donc un œil attentif finit par reconnaître le motif qui défile. Cette
+   fois, le bruit lui-même change réellement à chaque palier : <animate>
+   (SMIL, pris en charge nativement par les navigateurs sur les filtres
+   SVG) fait varier l'attribut seed de feTurbulence, qui recalcule alors
+   un champ de bruit tout à fait différent à chaque valeur — pas un
+   déplacement du même motif, un nouveau motif à chaque fois, exactement
+   le comportement d'un vrai bruit vidéo. Essayé AUSSI en le cuisant
+   réellement dans le fichier vidéo (bruit indépendant par frame,
+   ré-encodé) — retour utilisateur : "obtiens exactement ce rendu en
+   CSS ?" après avoir vu que cuire un vrai bruit aléatoire dans du H.264
+   fait exploser le poids du fichier (~90 Mo par vidéo pour un rendu fin,
+   H.264 ne sachant pas compresser du bruit vraiment aléatoire d'une frame
+   à l'autre) — cette version obtient le même rendu sans toucher au
+   fichier vidéo : calculé par le moteur de rendu du navigateur à la
+   volée, poids nul. calcMode="discrete" : saute directement d'une valeur
+   de seed à la suivante sans tenter de les interpoler. */
 .brand-grain{position:absolute; inset:0; opacity:.22; mix-blend-mode:overlay; pointer-events:none;
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
-  background-size:300px 300px; animation:grainFlicker .5s steps(1) infinite;}
-@keyframes grainFlicker{
-  0%{background-position:0 0;}
-  11%{background-position:-137px 61px;}
-  22%{background-position:84px -159px;}
-  33%{background-position:-221px -94px;}
-  44%{background-position:52px 178px;}
-  55%{background-position:-96px -37px;}
-  66%{background-position:189px 23px;}
-  77%{background-position:-44px 144px;}
-  88%{background-position:118px -112px;}
-  100%{background-position:0 0;}}
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch' seed='0'><animate attributeName='seed' values='0;7;3;9;2;8;1;6;4;0' dur='.5s' calcMode='discrete' repeatCount='indefinite'/></feTurbulence><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");}
 .brand-logo{position:relative; z-index:2; border-radius:26px; border:1.5px solid rgba(255,255,255,.38);
   display:flex; align-items:center; justify-content:center; overflow:hidden;}
 .brand-logo img{width:59%; height:auto; display:block;}
@@ -2144,16 +2141,15 @@ body.map-fullscreen{overflow:hidden;}
   0%{transform:rotate(-18deg) translateY(0);opacity:1;}
   50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
   100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
-/* Même grain épaissi ET animé (grainFlicker, voir #hero/.brand-grain et
-   son commentaire — retour utilisateur : un grain figé ne lit pas comme
-   un vrai grain vidéo) que .brand-grain (#hero) — repris ici à l'identique
-   pour que .cover/.dark/.close restent le même système visuel que #hero
-   plutôt que deux textures différentes. Tuile déjà 200×200 (width/height
-   fixes sur le SVG, contrairement à .brand-grain) donc déjà répétée par
-   défaut — pas besoin de poser background-size ici. */
+/* Même grain épaissi ET animé (seed de feTurbulence animé en SMIL, voir
+   #hero/.brand-grain et son commentaire — un vrai bruit différent à
+   chaque palier, pas un panning sur un motif figé) que .brand-grain
+   (#hero) — repris ici à l'identique pour que .cover/.dark/.close
+   restent le même système visuel que #hero plutôt que deux textures
+   différentes. */
 .mkt-page .cover::before, .mkt-page .dark::before, .mkt-page .close::before{content:'';position:absolute;inset:0;z-index:-1;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode:overlay;opacity:.22;pointer-events:none; animation:grainFlicker .5s steps(1) infinite;}
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch' seed='0'%3E%3Canimate attributeName='seed' values='0;7;3;9;2;8;1;6;4;0' dur='.5s' calcMode='discrete' repeatCount='indefinite'/%3E%3C/feTurbulence%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:overlay;opacity:.22;pointer-events:none;}
 /* .cover et .close ont été basculés sur la même vidéo de fond que #hero
    (retour utilisateur) — leur .mesh-bg est remplacé par un <video
    class="brand-bg-video"> (même z-index -2 que l'ancien .mesh-bg, pour
