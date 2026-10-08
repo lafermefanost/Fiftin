@@ -3128,7 +3128,11 @@ function updateHeroMenu(){
   hostBtn.querySelector("span").textContent = authState.uid ? "Déposer une annonce" : "Devenir hôte";
   hostBtn.onclick = function(){
     if(authState.uid){ hostFormEditListing = null; openSheet("hostform"); }
-    else { authContext = "host"; openSheet("auth"); }
+    // Visiteur non connecté : la page commerciale (tarifs, Stripe déjà
+    // câblé pour l'anonyme — voir startCheckoutFromSejours()) vend la
+    // formule bien mieux qu'un sheet d'auth à froid. Navigation classique
+    // (pas de ../ : ce fichier vit à la racine), pas openSheet("auth").
+    else location.href = "../hotes";
   };
 }
 
@@ -3214,14 +3218,14 @@ function fetchPublishedListings(cb){
          repéré en revenant de Fiftin app via #backToSejoursBtn (rechargement
          complet de la page, donc ce listener repart de zéro pendant que la
          session hôte se restaure). */
-      if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
-      else if(!state.hostMode && state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
+      if(!state.hostMode && !hostPreviewMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+      else if(!state.hostMode && !hostPreviewMode && state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
       // savedListingsCount() dépend de LISTINGS : au tout premier rendu du
       // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
       // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
       // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
       renderLikeBadge();
-      if(!state.hostMode) maybeOpenDeepLink(); // idem : un lien partagé (?listing=) ne doit jamais ouvrir une fiche par-dessus une session hôte
+      if(!state.hostMode && !hostPreviewMode) maybeOpenDeepLink(); // idem : un lien partagé (?listing=) ne doit jamais ouvrir une fiche par-dessus une session hôte (ni par-dessus l'aperçu /hotes)
       settle();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
@@ -3290,9 +3294,9 @@ function fetchListingIndex(){
       if(!state.loading){
         // Même garde qu'au listener de fetchPublishedListings() ci-dessus :
         // ne jamais écraser #feed avec le fil voyageur pendant une session
-        // hôte restaurée.
-        if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
-        else if(!state.hostMode && state.tab==="likes") renderTabContent();
+        // hôte restaurée (ni pendant l'aperçu /hotes, voir hostPreviewMode).
+        if(!state.hostMode && !hostPreviewMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+        else if(!state.hostMode && !hostPreviewMode && state.tab==="likes") renderTabContent();
       }
       if(snap.empty){
         // Filet de secours — voir aussi matchingIndexListings() : un
@@ -8931,6 +8935,42 @@ function renderTabbar(){
 }
 
 /* ---------------- espace hôtes ---------------- */
+/* Aperçu public (sans compte) de la page commerciale hôte, point d'entrée
+   depuis /hotes (voir hotes/index.html, un simple redirect vers
+   /?hotes=1, et la détection de ce paramètre juste après le boot plus
+   bas) — retour utilisateur : les visiteurs ne pouvaient plus du tout
+   atteindre cette page tant qu'enterHostMode() exige authState.uid, alors
+   que "très vite on doit proposer notre service de gestion aux hôtes".
+   Reprend seulement les effets de bord d'enterHostMode() qui n'ont pas
+   besoin d'un compte (hero/map-back-btn masqués, filtres repliés, #feed
+   basculé sur le fond clair) puis appelle renderHostMarketingPage()
+   directement. NE touche PAS à state.hostMode ni à renderTabbar() :
+   HOST_TABS_HTML (Profil/Mes annonces/App gestion) suppose un compte déjà
+   connecté et n'aurait aucun sens pour un visiteur anonyme — la barre
+   d'onglets voyageur reste donc affichée telle quelle, pour qu'il puisse
+   toujours repartir vers Explorer d'un clic. hostPreviewMode (var module,
+   jamais persistée dans state/localStorage : un simple aperçu, pas un vrai
+   mode) sert uniquement de garde dans maybeFinishInitialLoad(), même
+   mécanique que state.hostMode (voir son commentaire) — sans elle, le fil
+   voyageur écraserait cet aperçu dès que listings.json/Firestore
+   répondent. */
+var hostPreviewMode = false;
+function previewHostMarketingPage(){
+  hostPreviewMode = true;
+  window.scrollTo(0,0);
+  if(!heroDismissed){
+    heroDismissed = true;
+    var heroEl = document.getElementById("hero");
+    if(heroEl) heroEl.hidden = true;
+  }
+  var mapBackBtnPreview = document.getElementById("map-back-btn");
+  if(mapBackBtnPreview) mapBackBtnPreview.hidden = true;
+  document.getElementById("filter-bar").classList.add("chrome-collapsed");
+  document.getElementById("result-line").classList.add("chrome-collapsed");
+  document.getElementById("feed").classList.remove("feed-explore");
+  document.getElementById("feed").classList.add("feed-map");
+  renderHostMarketingPage();
+}
 /* Bascule déclenchée depuis Profil → Espace hôtes (connecté) : remplace la
    barre d'onglets et le contenu de #feed, masque le bandeau de filtres
    (qui n'a pas de sens ici) — sans toucher au reste de la mécanique
@@ -10106,6 +10146,18 @@ if(state.hostMode){
 }
 updateHeroMenu();
 
+/* Point d'entrée /hotes (voir hotes/index.html, qui redirige vers
+   /?hotes=1) : affiche directement la page commerciale hôte à un visiteur
+   non connecté, voir previewHostMarketingPage() plus haut. history.
+   replaceState() retire le paramètre de l'URL une fois le rendu fait —
+   un partage/signet de cette page ne doit pas réafficher ?hotes=1 en
+   toolbar, et un rechargement ultérieur doit redevenir Explorer normal
+   (cet aperçu n'est volontairement jamais persisté, voir hostPreviewMode). */
+if(new URLSearchParams(location.search).get("hotes")==="1"){
+  previewHostMarketingPage();
+  history.replaceState(null, "", location.pathname);
+}
+
 /* Ne fait passer state.loading à false, et donc ne rend le tout premier
    fil, qu'une fois les DEUX sources revenues (listings.json ET l'index
    Firestore léger, voir fetchListingIndex() — qui inclut son propre
@@ -10128,8 +10180,10 @@ function maybeFinishInitialLoad(){
      revenant de Fiftin app via #backToSejoursBtn (rechargement complet de
      la page, donc ce chargement initial repart de zéro pendant que la
      session hôte se restaure en parallèle) — même garde que les deux
-     listeners Firestore plus haut dans ce fichier. */
-  if(state.hostMode) return;
+     listeners Firestore plus haut dans ce fichier. hostPreviewMode : même
+     logique pour l'aperçu /hotes (voir previewHostMarketingPage()), qui
+     tourne lui aussi avant que ces deux sources aient fini de répondre. */
+  if(state.hostMode || hostPreviewMode) return;
   if(listingsJsonFailed && !LISTINGS.length){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
     return;

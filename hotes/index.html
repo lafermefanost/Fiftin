@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiftin — Espace hôtes</title>
+<!-- Simple redirect stub : /hotes n'est pas une vraie page, juste un
+     chemin propre à partager/mettre en favori. Le vrai rendu (page
+     commerciale hôte, sans compte requis) vit dans index.html, voir
+     previewHostMarketingPage() — déclenché ici via ?hotes=1. Pas de
+     "../" : ce fichier vit sous /hotes/, index.html est un dossier au-
+     dessus. Meta refresh en filet de secours si JS est désactivé. -->
+<meta http-equiv="refresh" content="0; url=../?hotes=1">
+<script>location.replace("../?hotes=1");</script>
+</head>
+<body>
+<p><a href="../?hotes=1">Fiftin — Espace hôtes</a></p>
+</body>
+</html>
