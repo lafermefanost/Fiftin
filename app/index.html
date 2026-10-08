@@ -1466,32 +1466,35 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   text-align:center;}
 .evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
-/* Vert plutôt que lavande (retour utilisateur : "passe les encarts
-   sélectionnés en vert") — même --green2 que .tsec-hd.has-items/.cleaner-on,
-   déjà la couleur "actif" ailleurs dans l'app. */
-.evfilter-btn.on{background:var(--green2);color:#fff;border-color:var(--green2);}
-/* Un bandeau par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
+/* Vert du header (--green, comme .mhead) plutôt que --green2/lavande
+   (retour utilisateur : "fais plutôt couleur vert du header plutôt que le
+   vert sauge") — texte clair assorti, même --cream que .mhead. */
+.evfilter-btn.on{background:var(--green);color:var(--cream);border-color:var(--green);}
+/* Un encart par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
    — retour utilisateur : "je n'aime plus la présentation en menus
    déroulants, ça empêche d'avoir une vision globale, je préférerais que
    tous les événements soient à la suite". Avant : un volet par mois façon
    accordéon (.wday-card, un seul ouvert à la fois, repris de la vue
-   Semaine). Maintenant : tous les mois affichés en continu ; le bandeau
+   Semaine). Maintenant : tous les mois affichés en continu ; l'encart
    reste juste comme indice de navigation — position:sticky plutôt que
-   l'ancien modèle collapsed/ouvert : en scrollant, le bandeau du mois en
+   l'ancien modèle collapsed/ouvert : en scrollant, l'encart du mois en
    cours de lecture reste collé en haut de la modale jusqu'à ce que celui
    du mois suivant le pousse, comme une liste de contacts triée par
-   lettre. margin -18px : même largeur pleine que .mhead, qui sort du
-   padding de .modal de la même façon — rendu possible sans le bug de
-   défilement horizontal rencontré au premier essai grâce au
-   overflow-x:hidden maintenant explicite sur .modal-scrollarea (voir plus
-   haut). Gris clair/texte sombre (retour utilisateur), plus discret que
-   le bandeau vert plein du tout premier essai. Plus de chevron (rien à
-   déplier) : .wday-name/.wday-date réutilisées telles quelles pour le
-   texte, recolorées ici en sombre (ces classes sont par ailleurs toujours
-   en texte blanc, pensées pour un fond foncé comme .wday-head). */
+   lettre. Pas de "margin -18px" edge-to-edge : essayé en bandeau plein
+   comme .mhead, mais sans marge latérale les coins arrondis ne se
+   voyaient plus (confondus avec le bord de la modale) — retour
+   utilisateur : "laisse les bords arrondis... et une marge intérieure
+   pour que la typo ne soit pas collée". Reste donc dans le padding normal
+   de .modal (.modal-scrollarea garde overflow-x:hidden, voir plus haut,
+   qui empêchait déjà le bug de défilement horizontal du tout premier
+   essai, donc rien à y perdre). Gris clair/texte sombre (retour
+   utilisateur), plus discret qu'un bandeau vert plein. Plus de chevron
+   (rien à déplier) : .wday-name/.wday-date réutilisées telles quelles
+   pour le texte, recolorées ici en sombre (ces classes sont par ailleurs
+   toujours en texte blanc, pensées pour un fond foncé comme .wday-head). */
 .ev-month-label{position:sticky; top:0; z-index:5;
-  display:flex; justify-content:space-between; align-items:baseline;
-  background:#E3E3E3; margin:0 -18px; padding:9px 18px;}
+  display:flex; justify-content:space-between; align-items:center;
+  background:#E3E3E3; border-radius:10px; margin:12px 0 8px; padding:10px 16px;}
 .ev-month-label .wday-name{color:var(--dark);}
 .ev-month-label .wday-date{color:var(--gray); font-weight:500;}
 .ev-month-body{padding-bottom:10px;}
