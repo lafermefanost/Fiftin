@@ -1071,7 +1071,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    au-dessus du fond/mesh mais sous le picto/texte (voir logo-tile/lock-sub
    ci-dessous, non positionnés, qui peignent par-dessus un enfant
    positionné en z-index négatif). */
-#lockScreen::before,#siteGate::before{content:'';position:absolute;inset:0;z-index:-1;
+#lockScreen::before{content:'';position:absolute;inset:0;z-index:-1;
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   mix-blend-mode:overlay;opacity:.12;pointer-events:none;}
 /* Effet "verre liquide" repris À L'IDENTIQUE de #hero .brand-logo côté
@@ -1136,23 +1136,6 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    de l'écran grâce au contour blanc plein, pas à un remplissage. */
 #lockScreen .btn-p{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;}
 #lockScreen .btn-p:hover{background:rgba(255,255,255,.12);}
-
-/* ─── VERROU TEMPORAIRE DU SITE ─────────────────────────────────
-   Ajouté en plus de l'écran de connexion ci-dessus (#lockScreen), qui
-   reste le vrai contrôle d'accès aux données par compte. Celui-ci ne
-   sert qu'à empêcher un visiteur de passage de tomber sur le site tant
-   qu'il n'est pas encore annoncé : un seul mot de passe partagé, vérifié
-   côté client (voir SITE_GATE_PASSWORD dans le script) — donc visible
-   dans le code source et sans valeur face à quelqu'un de déterminé.
-   À retirer quand ce n'est plus nécessaire. Recouvre même #lockScreen
-   (z-index supérieur) puisqu'il doit passer en premier. */
-#siteGate{position:fixed;inset:0;background:var(--green2);z-index:6000;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:calc(24px + env(safe-area-inset-top)) 24px calc(24px + env(safe-area-inset-bottom));
-  text-align:center;}
-#siteGate.gate-hidden{display:none;}
-#siteGate .btn-p{background:transparent;border:1.5px solid #fff;color:#fff;border-radius:999px;}
-#siteGate .btn-p:hover{background:rgba(255,255,255,.12);}
 
 /* ─── MODALS ─────────────────────────────────────────────── */
 /* Sur mobile, le modal occupe tout l'écran (plus de cartouche flottante à
@@ -1799,25 +1782,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 </style>
 </head>
 <body>
-
-<!-- ─── VERROU TEMPORAIRE DU SITE ─────────────────────────────────
-     Voir le bloc CSS #siteGate juste au-dessus : mot de passe unique et
-     temporaire, en plus (et au-dessus) du vrai écran de connexion par
-     compte ci-dessous. Le script juste après la div masque ce verrou
-     immédiatement, avant tout affichage, si le visiteur l'a déjà passé
-     dans cet onglet (sessionStorage) — pour éviter un flash au rechargement. -->
-<div id="siteGate">
-  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>
-  <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
-  <div class="lock-sub">Site en accès restreint pour le moment.</div>
-  <div class="lock-box">
-    <input type="password" class="fi" id="siteGatePwd" placeholder="Mot de passe" autocomplete="off"
-      style="text-align:center;font-size:16px" onkeydown="if(event.key==='Enter')submitSiteGate()">
-    <button class="btn-p" style="width:100%" onclick="submitSiteGate()">Entrer</button>
-    <div class="lock-err" id="siteGateErr"></div>
-  </div>
-</div>
-<script>if(sessionStorage.getItem('fiftinGateOk')==='1'){document.getElementById('siteGate').classList.add('gate-hidden');}</script>
 
 <!-- ─── CONNEXION / INSCRIPTION ─────────────────────────────────
      Recouvre tout le reste tant qu'aucun compte n'est connecté (voir
@@ -10430,23 +10394,6 @@ function renderYear(){
 // Firestore (accounts/{uid}) — appliqué par les règles Firestore elles-
 // mêmes (request.auth.uid == uid), pas seulement par ce code JS. Voir
 // bootFirebaseApp pour le point d'entrée (onAuthStateChanged).
-// ─── VERROU TEMPORAIRE DU SITE ────────────────────────────────────
-// Un seul mot de passe partagé, à changer/retirer ici directement.
-// Volontairement simple (comparaison en clair côté client) : ça ne
-// remplace pas le compte Firebase ci-dessus, ça sert juste à décourager
-// un visiteur de passage tant que le site n'est pas encore annoncé.
-const SITE_GATE_PASSWORD='fiftin2026';
-function submitSiteGate(){
-  const val=byId('siteGatePwd').value;
-  if(val===SITE_GATE_PASSWORD){
-    try{ sessionStorage.setItem('fiftinGateOk','1'); }catch(e){}
-    byId('siteGate').classList.add('gate-hidden');
-  }else{
-    byId('siteGateErr').textContent='Mot de passe incorrect.';
-    byId('siteGatePwd').value='';
-    byId('siteGatePwd').focus();
-  }
-}
 
 let authMode='signin'; // 'signin' | 'signup' | 'pending'
 function showLockScreen(mode){
