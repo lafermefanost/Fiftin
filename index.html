@@ -1600,6 +1600,12 @@ body.map-fullscreen{overflow:hidden;}
    collection) — 14px/700, avec un "+" devant le texte (voir
    collectionAddRowHtml()) plutôt qu'un poids aussi lourd qu'un vrai titre. */
 .coll-add-row .collection-detail-title{color:var(--sauge); font-size:14px; font-weight:700;}
+/* "+ Nouvelle annonce" (Mes annonces) : retour utilisateur, "traite ça un
+   peu comme les collections" — même recette que .coll-add-row/son titre
+   juste au-dessus (contour pointillé, fond transparent, 14px/700) plutôt
+   que .btn-apply (bouton plein) utilisé jusqu'ici. */
+.host-new-listing-row{display:block; width:100%; border:1.5px dashed var(--line); background:none; border-radius:16px;
+  padding:12px 14px; margin-bottom:18px; color:var(--sauge); font-family:'Jost',sans-serif; font-size:14px; font-weight:700; text-align:left;}
 .collection-tile-photos{position:absolute; inset:0; display:grid; gap:1.5px;}
 .collection-tile-photos.n1{grid-template-columns:1fr;}
 .collection-tile-photos.n2{grid-template-columns:1fr 1fr;}
@@ -10266,7 +10272,11 @@ function renderHostListings(){
       state.hostListingId = null; state.hostUnitId = null;
     }
     feed.innerHTML = '<div class="host-view">'+
-      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Nouvelle annonce</button>'+
+      // Retour utilisateur : "traite Nouvelle annonce un peu comme les
+      // collections (Ajouter une collection)" — même recette que
+      // collectionAddRowHtml() (contour pointillé, fond transparent)
+      // plutôt que le bouton plein .btn-apply utilisé jusqu'ici.
+      '<button type="button" class="host-new-listing-row" id="host-new-listing">+ Nouvelle annonce</button>'+
       listings.map(hostListingCardHtml).join("")+
     '</div>';
     document.getElementById("host-new-listing").addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
