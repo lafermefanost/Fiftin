@@ -118,7 +118,14 @@ a{color:inherit; text-decoration:none;}
    — tant qu'elle ne l'est pas, le fond fixe déjà peint en CSS sur #hero/
    .mkt-page .cover/.close (background-image base64, juste au-dessus dans
    ce fichier) reste seul visible : exactement l'image fixe demandée,
-   réutilisant l'infra déjà là plutôt que d'en ajouter une 2e. */
+   réutilisant l'infra déjà là plutôt que d'en ajouter une 2e.
+   Retour utilisateur juste après ("il n'y a plus d'animation du tout") :
+   opacity:0 peut suffire à faire déprioriser/ne jamais démarrer le
+   décodage d'une vidéo invisible sur certains moteurs — "playing" ne se
+   déclenchait alors jamais. fiftinSetBrandVideoSrc() force maintenant la
+   révélation après 1,5 s dans tous les cas (setTimeout), qu'un "playing"
+   ait eu lieu ou non : plus aucun scénario où la vidéo reste cachée pour
+   de bon. */
 .brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;
   opacity:0; transition:opacity .4s ease;}
 .brand-bg-video.is-playing{opacity:1;}
@@ -2574,7 +2581,19 @@ function fiftinSetBrandVideoSrc(id){
     // .is-playing en CSS : la vidéo démarre invisible, "playing" (la
     // lecture a RÉELLEMENT commencé, pas juste play() qui a résolu — ça
     // peut résoudre sans qu'une image soit encore affichée) la révèle.
-    v.addEventListener("playing", function(){ v.classList.add("is-playing"); }, {once:true});
+    // Bug réel repéré juste après coup (retour utilisateur : "il n'y a
+    // plus d'animation du tout") : rester à opacity:0 peut suffire, sur
+    // certains moteurs, à faire déprioriser/ne jamais vraiment démarrer
+    // le décodage d'une vidéo invisible (optimisation batterie côté
+    // navigateur) — "playing" ne se déclenche alors jamais, et la vidéo
+    // reste cachée pour de bon : un verrou qu'elle s'impose à elle-même.
+    // Filet de sécurité borné : révèle de toute façon après 1,5 s, qu'un
+    // "playing" ait eu lieu ou non — pire cas, la vidéo apparaît comme
+    // avant ce chantier (jamais de blocage permanent) ; meilleur cas,
+    // elle apparaît plus tôt, sans bouton play visible entre-temps.
+    var reveal = function(){ v.classList.add("is-playing"); };
+    v.addEventListener("playing", reveal, {once:true});
+    setTimeout(reveal, 1500);
     /* load()+play() explicites (au lieu de compter uniquement sur l'attribut
        autoplay déjà posé en HTML) : WebKit ne relance pas toujours sa
        tentative d'autoplay après un changement de .src fait en JS après le
