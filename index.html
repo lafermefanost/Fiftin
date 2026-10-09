@@ -2059,9 +2059,13 @@ body.map-fullscreen{overflow:hidden;}
    du volet calendrier déplié d'une annonce — propriété du COMPTE, pas de
    cette annonce en particulier, mais n'a de sens qu'une fois le volet
    ouvert. */
-.cal-access-note{display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:12px; margin-bottom:12px;
-  font-size:12px; font-weight:600; line-height:1.4;}
-.cal-access-note svg{width:15px; height:15px; flex-shrink:0; margin-top:1px;}
+/* Retour utilisateur suivant : "centrer le texte dans les encarts pas
+   ferrés à gauche" — icône au-dessus, texte centré en dessous (même
+   logique colonne/centrée que .cal-disclose juste en dessous), plutôt
+   que l'icône + texte alignés à gauche en ligne essayés d'abord. */
+.cal-access-note{display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;
+  padding:14px 12px; border-radius:16px; margin-bottom:12px; font-size:12.5px; font-weight:600; line-height:1.4;}
+.cal-access-note svg{width:18px; height:18px; flex-shrink:0;}
 .cal-access-note a{color:inherit; font-weight:800; text-decoration:underline;}
 .cal-access-note.rw{background:var(--sauge-bg); color:var(--sauge-deep);}
 .cal-access-note.ro{background:var(--lavender-bg); color:var(--lavender-deep);}
@@ -2112,30 +2116,22 @@ body.map-fullscreen{overflow:hidden;}
 /* "Planning associé" — retour utilisateur : remplace le menu déroulant
    (puis les onglets, eux aussi jugés encore trop "menu") par un cartouche
    qui affiche l'état actuel et ouvre un volet de choix au clic (voir
-   kind==="roomlink" dans openSheet()) — même geste qu'un .profile-row qui
-   ouvre quelque chose ailleurs dans l'app (chevron ›), pas une navigation
-   de page comme les onglets au-dessus.
-   Retour utilisateur suivant : "améliore la clarté ... fais le prendre
-   toute la largeur comme l'encart calendrier" — width:100% existait déjà
-   (hérité du conteneur .cal-card), mais visuellement trop discret pour
-   peser autant qu'un vrai encart ; padding/typo agrandis, et deux états
-   clairement différenciés plutôt qu'un seul style neutre pour les deux :
-   .unlinked (contour pointillé, fond teinté, même idiome "appel à
-   l'action" que .host-new-listing-row/.coll-add-row ailleurs dans ce
-   fichier) vs .linked (contour plein + coche verte, confirmation nette).
-   Le détail "lecture seule, géré depuis fiftin.app" est retiré de la
-   valeur ici : il est maintenant dans .cal-access-note.ro juste au-dessus
-   (retour utilisateur suivant), pas la peine de le répéter deux fois. */
-.planning-chip{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; border-radius:16px;
-  padding:16px 14px; font-family:'Jost',sans-serif; text-align:left; cursor:pointer; margin-bottom:18px;}
-.planning-chip.unlinked{background:var(--sauge-bg); border:2px dashed var(--sauge);}
-.planning-chip.linked{background:#fff; border:1.5px solid var(--sauge-light);}
-.planning-chip-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
-.planning-chip-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sauge);}
-.planning-chip-value{display:flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--ink);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.planning-chip-value .check{width:15px; height:15px; color:var(--sauge); flex-shrink:0;}
-.planning-chip-chevron{width:16px; height:16px; color:var(--gray-mid); opacity:.6; flex-shrink:0;}
+   kind==="roomlink" dans openSheet()).
+   Repris une 3e fois (retour utilisateur : "n'est pas beau, fait un
+   encart plus comme j'ai l'habitude de les faire ... centrer le texte")
+   — le contour pointillé/carte blanche essayés abandonnés : même recette
+   que .cal-disclose juste en dessous (fond --sauge plein, texte blanc
+   centré, colonne) plutôt qu'un style inventé pour cet encart seul. Un
+   seul style pour les deux états (relié ou non) — seule la coche dans
+   .planning-chip-value change, pas de variante de couleur à gérer en
+   plus. */
+.planning-chip{display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;
+  background:var(--sauge); border:none; border-radius:16px; padding:12px 10px; gap:4px; margin-bottom:12px;
+  font-family:'Jost',sans-serif; text-align:center; cursor:pointer;}
+.planning-chip-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:rgba(255,255,255,.75);}
+.planning-chip-value{display:flex; align-items:center; justify-content:center; gap:6px; font-size:12.5px; font-weight:800; color:#fff;}
+.planning-chip-value .check{width:14px; height:14px; flex-shrink:0;}
+.planning-chip-chevron{width:15px; height:15px; flex-shrink:0;}
 /* Rangée Ajouter/modifier — sa propre ligne, centrée (retour utilisateur ;
    le bouton "Aujourd'hui" qui la partageait avant, alignée à droite pour
    lui, a été retiré : l'accordéon des mois ouvre déjà le mois en cours par
@@ -10702,15 +10698,15 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
   // n'est relié (texte d'appel à l'action) ; une fois relié, une coche +
   // "Relié à X" plutôt que répéter "en lecture seule, géré depuis
   // fiftin.app" ici — déjà dit, plus clairement, par .cal-access-note.ro
-  // juste au-dessus du calendrier.
+  // juste au-dessus du calendrier. Centré, chevron sur la même ligne que
+  // la valeur plutôt qu'à part (retour utilisateur : "centrer le texte").
   var roomLinkHtml = (isGestion && rooms.length) ?
-    '<button type="button" class="planning-chip '+(curRoomName?'linked':'unlinked')+'" id="planning-chip-btn">'+
-      '<span class="planning-chip-text"><span class="planning-chip-label">Planning associé</span>'+
-        (curRoomName
-          ? '<span class="planning-chip-value"><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Relié à '+esc(curRoomName)+'</span>'
-          : '<span class="planning-chip-value">Associer votre planning Fiftin App</span>')+
+    '<button type="button" class="planning-chip" id="planning-chip-btn">'+
+      '<span class="planning-chip-label">Planning associé</span>'+
+      '<span class="planning-chip-value">'+
+        (curRoomName ? '<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Relié à '+esc(curRoomName) : "Associer votre planning Fiftin App")+
+        '<svg class="planning-chip-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
       '</span>'+
-      '<svg class="planning-chip-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>' : '';
 
   // Texte + picto "lien externe" (retour utilisateur) — même tracé que les
@@ -10737,16 +10733,26 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
     : '<div class="cal-access-note rw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>'+
         '<span>Lecture et écriture : votre planning se remplit directement ici.</span></div>';
 
-  // Cartouche + bouton Ajouter/modifier DANS la carte blanche du calendrier
-  // (retour utilisateur, passe précédente), soudée sans espace aux onglets
-  // de chambre juste au-dessus quand il y en a (.cal-card sans le modifier
-  // "solo" — coins hauts carrés) ; coins tous arrondis sinon (.cal-card.solo
-  // — rien au-dessus à souder, une seule chambre).
+  // Retour utilisateur : "pourquoi les encarts ne font pas la même largeur
+  // que l'encart calendrier ? ... mets-les sur la carte principale
+  // directement" — bug réel repéré en le relisant : calAccessNoteHtml/
+  // roomLinkHtml vivaient DANS .cal-card (qui a son propre padding:16px
+  // 12px), donc plus étroits que .cal-disclose, lui posé à même
+  // .admin-card. Déplacés ici, directement dans #host-cal-panel comme
+  // unitPagerHtml juste en dessous — même largeur que .cal-disclose, et
+  // unitPagerHtml reste collé à .cal-card (relation "soudée" visuelle
+  // inchangée, voir le commentaire juste en dessous).
   panel.innerHTML =
+    calAccessNoteHtml+
+    roomLinkHtml+
     unitPagerHtml+
+    // Cartouche + bouton Ajouter/modifier DANS la carte blanche du
+    // calendrier (retour utilisateur, passe précédente), soudée sans
+    // espace aux onglets de chambre juste au-dessus quand il y en a
+    // (.cal-card sans le modifier "solo" — coins hauts carrés) ; coins
+    // tous arrondis sinon (.cal-card.solo — rien au-dessus à souder, une
+    // seule chambre).
     '<div class="cal-card'+(hasTabs ? '' : ' solo')+'">'+
-      calAccessNoteHtml+
-      roomLinkHtml+
       '<div class="cal-top-row">'+
         '<div class="cal-top-actions">'+
           actionPillHtml+
