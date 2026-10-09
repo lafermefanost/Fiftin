@@ -1269,6 +1269,16 @@ body.detail-open nav.tabbar{z-index:220;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
 .tab.active{color:var(--sauge-deep);}
+/* Retour utilisateur : "le picto central (Explorer/Mes annonces) mis en
+   avant par rapport aux autres, la taille ou un léger détail graphique" —
+   icône/picto agrandis + pastille de fond toujours visible (pas juste à
+   l'état actif, contrairement à .tab.active .tab-icon plus bas), pour que
+   ce picto se distingue même au repos. background au repos réutilise
+   --sauge-bg (même teinte claire que .cal-access-note.rw) ; côté hôte,
+   .tabbar.host-mode .tab-primary .tab-icon la remplace par --lavender-bg,
+   même logique que le reste de la barre hôte un peu plus bas. */
+.tab-primary .tab-icon{width:40px; height:40px; background:var(--sauge-bg);}
+.tab-primary svg{width:24px; height:24px;}
 /* Effet "verre liquide" adapté au petit format (34px) — retour
    utilisateur : "adapter un peu cet effet sur les menus du footer".
    Dégradé diagonal + box-shadow inset sur 2 côtés (sans ombre portée
@@ -1322,6 +1332,7 @@ body.detail-open nav.tabbar{z-index:220;}
 .tabbar.host-mode .tab.active .tab-icon{
   background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
       rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--lavender-deep);}
+.tabbar.host-mode .tab-primary .tab-icon{background:var(--lavender-bg);}
 .tab .badge{position:absolute; top:2px; right:22%; background:var(--danger); color:#fff; font-size:9px; font-weight:800;
   border-radius:50%; width:15px; height:15px; display:flex; align-items:center; justify-content:center;}
 
@@ -9560,7 +9571,11 @@ var TRAVELER_TABS_HTML =
      carte, menu qui disparaîtrait") — la carte s'affiche désormais en tête
      du fil Explorer lui-même (voir exploreMapBlockHtml()/wireExploreMap()),
      plus besoin d'un onglet séparé pour y accéder. */
-  '<button class="tab" data-tab="explore">'+
+  // Retour utilisateur : "le picto central (Explorer/Mes annonces) mis en
+  // avant par rapport aux autres" — .tab-primary (voir son CSS), même
+  // classe côté HOST_TABS_HTML sur Mes annonces, qui joue le même rôle
+  // "onglet principal" dans l'espace hôte.
+  '<button class="tab tab-primary" data-tab="explore">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg></span>'+
     '<span>Explorer</span>'+
   '</button>'+
@@ -9589,7 +9604,7 @@ var HOST_TABS_HTML =
      "2 menus ne sont pas nécessaires") — chaque annonce se déplie
      désormais directement dans sa propre carte (voir hostListingCardHtml/
      loadHostListingCalendar), plus besoin d'un onglet séparé pour ça. */
-  '<button class="tab" data-host-tab="listings">'+
+  '<button class="tab tab-primary" data-host-tab="listings">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>'+
     '<span>Mes annonces</span>'+
   '</button>'+
