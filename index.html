@@ -979,6 +979,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
   border-radius:50%; background:rgba(20,26,20,0.4); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center;}
 .detail-back svg{width:18px; height:18px; stroke:#fff; fill:none; stroke-width:2;}
 .detail-save{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); right:14px; z-index:10;}
+/* Retour utilisateur : "pas qu'on puisse s'auto liker" (aperçu hôte, voir
+   forceVisitorView d'openDetail()) — reste visible et cliquable (l'alerte
+   explicative est dans le handler JS) mais visuellement atténué pour que
+   ça se voie avant même le clic. */
+.detail-save-disabled{opacity:.45;}
 .detail-share{position:absolute; top:calc(14px + env(safe-area-inset-top,0px) + 46px); right:14px; z-index:10;}
 .dots{position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:5px; z-index:5;}
 .dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
@@ -6510,7 +6515,15 @@ function openDetail(id, listingOverride, forceVisitorView){
     '<div class="detail-gallery" id="detail-gallery">'+
       '<div class="detail-gallery-scroll" id="detail-gallery-scroll">'+slides+'</div>'+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
-      '<button class="save-btn detail-save'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
+      // Retour utilisateur : "on ne désactiverait pas les like dans cette
+      // vue aperçu pour pas qu'on puisse s'auto liker ?" — bouton gardé
+      // visible (forceVisitorView vise une fiche identique pixel pour
+      // pixel à ce qu'un visiteur verrait, voir le commentaire
+      // d'openDetail()) mais sa fonction normale (openCollectionPicker,
+      // juste plus bas) est remplacée par un simple message explicatif :
+      // s'auto-liker gonflerait le compteur de favoris de sa propre
+      // annonce, une donnée qui n'a de sens que venant d'un vrai voyageur.
+      '<button class="save-btn detail-save'+(isListingSaved(l)?' liked':'')+(forceVisitorView?' detail-save-disabled':'')+'" data-like="'+l.id+'" aria-label="'+(forceVisitorView?"Indisponible en aperçu":"Ajouter à une collection")+'"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
       '<button class="share-btn detail-share" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
@@ -6549,6 +6562,7 @@ function openDetail(id, listingOverride, forceVisitorView){
 
   document.getElementById("detail-back").addEventListener("click", closeDetail);
   root.querySelector("[data-like]").addEventListener("click", function(){
+    if(forceVisitorView){ alert("Aperçu uniquement : vous ne pouvez pas ajouter votre propre annonce à vos favoris."); return; }
     openCollectionPicker(l, function(){ renderLikeBadge(); openDetail(id); });
   });
   root.querySelector("[data-share]").addEventListener("click", function(){ shareListing(l); });
