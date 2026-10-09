@@ -725,6 +725,12 @@ a{color:inherit; text-decoration:none;}
   letter-spacing:.06em; color:rgba(46,43,34,.55); margin-bottom:14px;}
 .hf-sec-title svg{flex-shrink:0; width:14px; height:14px; opacity:.85;}
 .hf-sec .field-block:last-child{margin-bottom:0;}
+/* Retour utilisateur : "pour les prestations, dans ce modal uniquement,
+   passe les prestations sélectionnées en fond vert typo blanche" — surcharge
+   scoped à .hf-sec, le .amenity-chip.active de base (contour seul, voir son
+   grand commentaire juste au-dessus) reste inchangé partout ailleurs
+   (filtre Prestations, fiche détail). */
+.hf-sec .amenity-chip.active{background:var(--sauge); color:#fff; border-color:var(--sauge);}
 /* Suggestions d'adresse (API Adresse/Géoplateforme), sous le champ adresse du dépôt d'annonce. */
 .hf-address-suggestions{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
   background:var(--cream); border:1.5px solid var(--line); border-radius:16px; overflow:hidden;
@@ -814,18 +820,25 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .hf-photo-list:empty{margin-top:0;}
 .hf-photo-row{display:flex; align-items:center; gap:10px; background:#fff; border-radius:14px; padding:8px;}
 .hf-photo-row.busy{opacity:.55;}
-.hf-photo-row-thumb{position:relative; width:64px; height:64px; border-radius:10px; overflow:hidden; flex-shrink:0;}
+/* Vignettes agrandies (retour utilisateur : "grossi les cartes des photos,
+   elles sont un peu petites") — 64px -> 88px, boutons d'action assortis
+   (28px -> 32px) pour rester proportionnés à la rangée plus haute. */
+.hf-photo-row-thumb{position:relative; width:88px; height:88px; border-radius:10px; overflow:hidden; flex-shrink:0;}
 .hf-photo-row-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
 .hf-photo-cover-badge{position:absolute; left:0; right:0; bottom:0; background:rgba(53,75,56,.85); color:#fff;
   font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; text-align:center; padding:2px 0;}
 .hf-photo-row-actions{display:flex; gap:5px; margin-left:auto; flex-shrink:0;}
-.hf-photo-row-actions button{width:28px; height:28px; border-radius:50%; border:none; background:var(--cream-deep);
+.hf-photo-row-actions button{width:32px; height:32px; border-radius:50%; border:none; background:var(--cream-deep);
   color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .hf-photo-row-actions button svg{width:14px; height:14px;}
 .hf-photo-row-actions button:disabled{opacity:.3;}
 .hf-photo-row-actions .hf-photo-remove{color:var(--danger);}
 .hf-photo-row-actions .hf-photo-enhance.active{background:var(--sauge-mid); color:#fff;}
-.hf-unit-card{background:var(--cream-deep); border-radius:16px; padding:14px; margin-bottom:12px;}
+/* Fond blanc (retour utilisateur : "passe le fond des cartes locations en
+   blanc plutôt") + contour, comme .hf-sec : sans ce contour, une carte
+   blanche se fondrait dans .hf-sec (--cream-light, déjà très proche du
+   blanc) qui la contient. */
+.hf-unit-card{background:#fff; border:1px solid var(--line); border-radius:16px; padding:14px; margin-bottom:12px;}
 .hf-unit-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;}
 .hf-unit-head span{font-size:12.5px; font-weight:800; color:var(--sauge-deep); text-transform:uppercase; letter-spacing:.02em;}
 .hf-unit-remove{background:none; border:none; color:var(--danger); font-size:20px; line-height:1; padding:2px 4px;}
@@ -6481,7 +6494,7 @@ function openSheet(kind){
       // dans les premiers, c'est la partie que les gens modifieront le
       // plus souvent") — avant tous les champs modifiés bien plus
       // rarement une fois l'annonce créée (adresse, description, réseaux…).
-      '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos &amp; tarifs")+
+      '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos & tarifs")+
         '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
           '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
           '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
@@ -6551,7 +6564,7 @@ function openSheet(kind){
           '<div id="hf-desc-reuse-wrap"></div>'+
         '</div>'+
       '</div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact &amp; réseaux")+
+      '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact & réseaux")+
         '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
         '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
           '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
@@ -7528,7 +7541,13 @@ function renderHostUnits(){
         '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
         '<div class="field-block"><label>Capacité *</label><input class="text-input hf-unit-capacity" type="number" min="1" max="30" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
       '</div>'+
-      (hfAvailableRooms.length ? '<div class="host-link-row"><label>Relier à une chambre de votre Fiftin app (optionnel)</label><select class="hf-unit-room" data-unit-id="'+u.id+'">'+
+      // .host-link-row n'avait aucune règle CSS propre (label et <select>
+      // nu, sans même .text-input) — retour utilisateur : "l'encart n'est
+      // pas beau et n'est pas assez visible, reprends un style graphique
+      // déjà utilisé". Repris en .field-block/.text-input, exactement le
+      // même habillage que tous les autres champs de ce formulaire (Prix,
+      // Capacité juste au-dessus), au lieu d'un style inédit non stylé.
+      (hfAvailableRooms.length ? '<div class="field-block"><label>Relier à une chambre de votre Fiftin app (optionnel)</label><select class="text-input hf-unit-room" data-unit-id="'+u.id+'">'+
         '<option value="">— Aucun lien —</option>'+
         hfAvailableRooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===u.linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
       '</select></div>' : '')+
