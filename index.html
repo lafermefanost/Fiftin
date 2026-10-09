@@ -2785,24 +2785,41 @@ function taglineHtml(l){
 function avatarBadgeSvg(){
   return '<span class="profile-avatar-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l1.6-2h6.8L17 8h3v11H4z"/><circle cx="12" cy="14" r="3"/></svg></span>';
 }
+/* Retour utilisateur : "il met en préfixe [l'adresse du site] alors qu'en
+   réalité il ne devrait pas y avoir de préfixe, ça doit être uniquement
+   l'adresse que les gens renseignent, sinon on ne trouvera jamais les
+   sites" — bug réel : websiteUrl/googleUrl/instagramUrl/facebookUrl
+   étaient posés tels quels en href, sans schéma obligatoire. Un hôte qui
+   tape "monsite.fr" (sans "https://", le cas le plus courant) obtenait un
+   lien RELATIF, que le navigateur résout contre fiftin.fr lui-même
+   ("fiftin.fr/monsite.fr") au lieu du vrai site — jamais trouvé. Ajoute
+   "https://" uniquement si absent (http:// existant respecté tel quel).
+   Appliquée ici (rendu, corrige aussi les annonces déjà publiées avec une
+   valeur sans schéma en base) ET à l'enregistrement (submitHostForm(),
+   pour que les nouvelles valeurs soient propres dès le départ). */
+function extUrl(u){
+  u = (u||"").trim();
+  if(!u) return "";
+  return /^https?:\/\//i.test(u) ? u : "https://"+u;
+}
 function socialLinksHtml(l){
   if(!l.instagramUrl && !l.facebookUrl) return "";
-  return (l.instagramUrl ? '<a class="google-link icon-only" href="'+l.instagramUrl+'" target="_blank" rel="noopener" aria-label="Instagram">'+
+  return (l.instagramUrl ? '<a class="google-link icon-only" href="'+esc(extUrl(l.instagramUrl))+'" target="_blank" rel="noopener" aria-label="Instagram">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4.2"/><circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/></svg>'+
     '</a>' : '')+
-    (l.facebookUrl ? '<a class="google-link icon-only" href="'+l.facebookUrl+'" target="_blank" rel="noopener" aria-label="Facebook">'+
+    (l.facebookUrl ? '<a class="google-link icon-only" href="'+esc(extUrl(l.facebookUrl))+'" target="_blank" rel="noopener" aria-label="Facebook">'+
       '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 4h-2a4 4 0 0 0-4 4v3H7v4h2v7h4v-7h2.6l.9-4H13V8a1 1 0 0 1 1-1h3V4z"/></svg>'+
     '</a>' : '');
 }
 function extLinksHtml(l){
   if(!l.websiteUrl && !l.googleUrl && !l.instagramUrl && !l.facebookUrl) return "";
   return '<div class="ext-links">'+
-    (l.websiteUrl ? '<a class="google-link" href="'+l.websiteUrl+'" target="_blank" rel="noopener">'+
+    (l.websiteUrl ? '<a class="google-link" href="'+esc(extUrl(l.websiteUrl))+'" target="_blank" rel="noopener">'+
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 4 5.7 4 9s-1.5 6.5-4 9c-2.5-2.5-4-5.7-4-9s1.5-6.5 4-9z"/></svg>'+
       '<span>Site web</span>'+
       '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
     '</a>' : '')+
-    (l.googleUrl ? '<a class="google-link" href="'+l.googleUrl+'" target="_blank" rel="noopener">'+
+    (l.googleUrl ? '<a class="google-link" href="'+esc(extUrl(l.googleUrl))+'" target="_blank" rel="noopener">'+
       '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6L22 9.3l-5 4.8 1.4 7L12 17.8 5.6 21.1 7 14.1 2 9.3l7.1-.7z"/></svg>'+
       '<span>Avis Google</span>'+
       '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg>'+
@@ -8682,10 +8699,13 @@ function submitHostForm(){
   var desc = document.getElementById("hf-desc").value.trim();
   var phone = document.getElementById("hf-phone").value.trim();
   var email = document.getElementById("hf-email").value.trim();
-  var websiteUrl = document.getElementById("hf-website").value.trim();
-  var googleUrl = document.getElementById("hf-google").value.trim();
-  var instagramUrl = document.getElementById("hf-instagram").value.trim();
-  var facebookUrl = document.getElementById("hf-facebook").value.trim();
+  // extUrl() (voir son commentaire) : ajoute "https://" si l'hôte a tapé
+  // l'adresse sans schéma (cas le plus courant) — sans ça, le lien
+  // enregistré était relatif et ne menait jamais au bon site.
+  var websiteUrl = extUrl(document.getElementById("hf-website").value);
+  var googleUrl = extUrl(document.getElementById("hf-google").value);
+  var instagramUrl = extUrl(document.getElementById("hf-instagram").value);
+  var facebookUrl = extUrl(document.getElementById("hf-facebook").value);
   var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
   var errEl = document.getElementById("hf-err");
   errEl.textContent = "";
