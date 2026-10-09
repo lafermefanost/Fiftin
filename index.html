@@ -707,9 +707,22 @@ a{color:inherit; text-decoration:none;}
 .hf-head{background:var(--sauge); color:var(--cream); margin:0 -20px 20px; padding:18px 20px 20px;}
 .sheet .hf-head h3{color:var(--cream); margin:0 0 6px;}
 .sheet .hf-head .sheet-sub{color:rgba(245,240,229,.88); margin:0;}
-.hf-sec{background:var(--cream-deep); border-radius:16px; padding:16px; margin-bottom:16px;}
+/* Retour utilisateur : "ajuste un peu les couleurs de fonds et des encarts
+   et les contours pour être plus proche du style de l'app de gestion" —
+   .msec (app/index.html) a un fond À PEINE plus clair que son modal (blanc)
+   plutôt qu'un bloc nettement plus foncé, ET un contour visible (c'est lui
+   qui délimite la carte, pas un aplat de couleur) ; son .msec-title est en
+   gris neutre, pas dans la couleur de marque. Repris ici : --cream-light
+   (plus clair que --cream, le fond de .sheet) + var(--line) en contour —
+   .text-input (fond --cream-deep, inchangé, partagé par tous les volets
+   du site) devient de fait légèrement plus foncé que sa carte, lui donnant
+   un léger retrait plutôt qu'un fond confondu avec celui de la carte comme
+   avant. Gris neutre (ink à 55% d'opacité, pas de gris pur déclaré dans ce
+   fichier) plutôt que --sauge sur .hf-sec-title, même logique que .msec-title :
+   le vert reste réservé à .hf-head/aux actions, pas à chaque libellé. */
+.hf-sec{background:var(--cream-light); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:16px;}
 .hf-sec-title{display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase;
-  letter-spacing:.06em; color:var(--sauge); margin-bottom:14px;}
+  letter-spacing:.06em; color:rgba(46,43,34,.55); margin-bottom:14px;}
 .hf-sec-title svg{flex-shrink:0; width:14px; height:14px; opacity:.85;}
 .hf-sec .field-block:last-child{margin-bottom:0;}
 /* Suggestions d'adresse (API Adresse/Géoplateforme), sous le champ adresse du dépôt d'annonce. */
