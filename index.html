@@ -3593,6 +3593,13 @@ function normalizeHostListing(doc){
     galleryThumb: l.galleryThumb || null, // vignette légère de gallery[0] (voir listingThumbUrl()) — absente sur une annonce créée avant ce chantier, repli automatique sur gallery[0]
     units: units, // chaque chambre porte déjà son propre galleryThumb tel quel (même mécanisme, pas besoin de le remapper ici)
     amen: l.amen || [],
+    // Oubli repéré en corrigeant le bouton Aperçu (voir openDetail()) :
+    // sans ce champ, detailSpacesHtml()/l.spaces était TOUJOURS vide côté
+    // fiche détail publique (data-open/LISTINGS, le seul chemin qu'un
+    // vrai voyageur emprunte) — "Pièces & annexes" ne s'affichait donc
+    // jamais pour personne d'autre que l'hôte prévisualisant sa propre
+    // annonce (listingOverride, qui lit le doc brut, lui, intact).
+    spaces: l.spaces || {},
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     instagramUrl: l.instagramUrl || "", facebookUrl: l.facebookUrl || "",
@@ -6366,6 +6373,35 @@ function openDetail(id, listingOverride, forceVisitorView){
   userInteracted = true; // voir sa déclaration : annule le popup de connexion programmé au boot
   var l = listingOverride || LISTINGS.filter(function(x){ return x.id===id; })[0];
   if(!l) return;
+  /* Bug réel (retour utilisateur : "le bouton aperçu ne dirige vers
+     rien, même pas une page aperçu d'ouverte") : listingOverride vient
+     d'ensureHostListingsLoaded() (voir hostListingCardHtml()), qui lit le
+     document Firestore BRUT (champs plats hostName/hostBio/hostPhotoUrl,
+     pas de l.photos/l.grad) — contrairement à LISTINGS, dont chaque
+     entrée est passée par normalizeHostListing(), qui construit
+     notamment l.host={name,initial,phone,email,bio,photo}. Plus bas,
+     cette fonction lit l.host.name/l.host.photo sans garde : sur un doc
+     brut, l.host est undefined, donc l.host.name levait un TypeError —
+     avant même d'atteindre root.innerHTML=, donc rien ne s'affichait,
+     aucune erreur visible. Complète ici les mêmes champs que
+     normalizeHostListing() (sur une COPIE de l, jamais le doc brut mis
+     en cache par ensureHostListingsLoaded() : hostListingCardHtml() et
+     le formulaire d'édition lisent toujours les champs plats d'origine,
+     ne pas les polluer). Pas besoin de toucher id/docId : l.id est déjà
+     l'id Firestore réel ici (listingOverride, pas LISTINGS). price aussi
+     manquait au niveau racine du doc brut (seul units[].price existe,
+     payload de submitHostForm()) : sans repli, une annonce à chambre
+     unique affichait "undefined€ / nuit" dans l'aperçu. */
+  if(listingOverride && !l.host){
+    var ovUnits = l.units || null;
+    l = Object.assign({}, l, {
+      host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || "", photo: l.hostPhotoUrl || ""},
+      photos: (l.photos!=null) ? l.photos : ((l.gallery && l.gallery.length) || 0),
+      grad: l.grad || "clay",
+      price: (ovUnits && ovUnits.length) ? Math.min.apply(null, ovUnits.map(function(u){ return u.price; })) : l.price,
+      docId: l.docId || l.id
+    });
+  }
   var root = document.getElementById("detail-root");
   var hasTabs = !!(l.units && l.units.length > 1);
 
