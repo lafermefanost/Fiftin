@@ -102,7 +102,26 @@ a{color:inherit; text-decoration:none;}
 #hero{position:relative; z-index:100; min-height:100dvh; display:flex; flex-direction:column;
   align-items:center; justify-content:center; overflow:hidden; background:var(--sauge-light);
   padding:32px 28px; text-align:center;}
-.brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;}
+/* Retour utilisateur : "la vidéo se met pas en lecture automatique, on
+   voit le play" — l'autoplay est déjà couvert côté attributs (autoplay
+   muted playsinline + .load()/.play() explicites, voir
+   fiftinSetBrandVideoSrc()), mais rien ne peut forcer WebKit à autoriser
+   l'autoplay quand l'OS le bloque lui-même (Mode Économie d'énergie /
+   Mode Données Cellulaires Faible, iOS — hors de portée du site : aucune
+   API web ne permet de passer outre). Dans ce cas, WebKit affiche son
+   propre rond "lecture" par-dessus la vidéo, même sans l'attribut
+   controls — purement cosmétique ici (pointer-events:none juste
+   au-dessus : un tap dessus ne fait de toute façon rien). Plutôt que de
+   laisser voir ce rond, la vidéo démarre invisible (opacity:0) et ne
+   devient visible qu'une fois la lecture RÉELLEMENT démarrée (voir
+   l'écouteur "playing" dans fiftinSetBrandVideoSrc(), classe .is-playing)
+   — tant qu'elle ne l'est pas, le fond fixe déjà peint en CSS sur #hero/
+   .mkt-page .cover/.close (background-image base64, juste au-dessus dans
+   ce fichier) reste seul visible : exactement l'image fixe demandée,
+   réutilisant l'infra déjà là plutôt que d'en ajouter une 2e. */
+.brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;
+  opacity:0; transition:opacity .4s ease;}
+.brand-bg-video.is-playing{opacity:1;}
 /* Fond de secours peint dès le tout premier rendu, avant même que la
    vidéo ou son poster= ne soient chargés (voir fiftinSetBrandVideoSrc plus
    bas) — retour utilisateur : "les premières millisecondes, j'ai l'ancien
@@ -2550,6 +2569,12 @@ function fiftinSetBrandVideoSrc(id){
     v.src=portrait
       ? "assets/185A0A76-1171-4E6D-92C7-5EA6C49AE110.mp4"
       : "assets/B7182075-2385-481F-A820-77AE0ED3E525.mp4";
+    // Retour utilisateur : "fais en sorte qu'une image fixe soit visible
+    // jusqu'à ce que la vidéo se mette en route" — voir .brand-bg-video/
+    // .is-playing en CSS : la vidéo démarre invisible, "playing" (la
+    // lecture a RÉELLEMENT commencé, pas juste play() qui a résolu — ça
+    // peut résoudre sans qu'une image soit encore affichée) la révèle.
+    v.addEventListener("playing", function(){ v.classList.add("is-playing"); }, {once:true});
     /* load()+play() explicites (au lieu de compter uniquement sur l'attribut
        autoplay déjà posé en HTML) : WebKit ne relance pas toujours sa
        tentative d'autoplay après un changement de .src fait en JS après le
