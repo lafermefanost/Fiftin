@@ -103,32 +103,22 @@ a{color:inherit; text-decoration:none;}
   align-items:center; justify-content:center; overflow:hidden; background:var(--sauge-light);
   padding:32px 28px; text-align:center;}
 /* Retour utilisateur : "la vidéo se met pas en lecture automatique, on
-   voit le play" — l'autoplay est déjà couvert côté attributs (autoplay
-   muted playsinline + .load()/.play() explicites, voir
-   fiftinSetBrandVideoSrc()), mais rien ne peut forcer WebKit à autoriser
-   l'autoplay quand l'OS le bloque lui-même (Mode Économie d'énergie /
-   Mode Données Cellulaires Faible, iOS — hors de portée du site : aucune
-   API web ne permet de passer outre). Dans ce cas, WebKit affiche son
-   propre rond "lecture" par-dessus la vidéo, même sans l'attribut
-   controls — purement cosmétique ici (pointer-events:none juste
-   au-dessus : un tap dessus ne fait de toute façon rien). Plutôt que de
-   laisser voir ce rond, la vidéo démarre invisible (opacity:0) et ne
-   devient visible qu'une fois la lecture RÉELLEMENT démarrée (voir
-   l'écouteur "playing" dans fiftinSetBrandVideoSrc(), classe .is-playing)
-   — tant qu'elle ne l'est pas, le fond fixe déjà peint en CSS sur #hero/
-   .mkt-page .cover/.close (background-image base64, juste au-dessus dans
-   ce fichier) reste seul visible : exactement l'image fixe demandée,
-   réutilisant l'infra déjà là plutôt que d'en ajouter une 2e.
-   Retour utilisateur juste après ("il n'y a plus d'animation du tout") :
-   opacity:0 peut suffire à faire déprioriser/ne jamais démarrer le
-   décodage d'une vidéo invisible sur certains moteurs — "playing" ne se
-   déclenchait alors jamais. fiftinSetBrandVideoSrc() force maintenant la
-   révélation après 1,5 s dans tous les cas (setTimeout), qu'un "playing"
-   ait eu lieu ou non : plus aucun scénario où la vidéo reste cachée pour
-   de bon. */
-.brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;
-  opacity:0; transition:opacity .4s ease;}
-.brand-bg-video.is-playing{opacity:1;}
+   voit le play" — deux tentatives pour masquer ce rond WebKit (vidéo
+   démarrée invisible, révélée au "playing", puis un filet de sécurité par
+   setTimeout) sont revenues sur elles-mêmes : la 1ère laissait la vidéo
+   invisible pour de bon sur le vrai appareil testé ("il n'y a plus
+   d'animation du tout"), la 2e retombait exactement sur le même rond
+   visible après le délai de secours — aucune des deux n'a rien réglé,
+   seulement ajouté un risque de régression pour un gain nul. Revenu ici
+   à la version simple d'origine (vidéo toujours visible dès le départ,
+   pas de opacity/is-playing) : l'autoplay reste couvert côté attributs
+   (autoplay muted playsinline + .load()/.play() explicites, voir
+   fiftinSetBrandVideoSrc()), mais rien côté code ne peut forcer WebKit à
+   autoriser l'autoplay quand l'OS le bloque lui-même — aucune API web ne
+   permet de passer outre. Le rond "lecture" que WebKit affiche alors est
+   cosmétique (pointer-events:none juste au-dessus : un tap dessus ne fait
+   rien), pas un vrai bug de ce fichier. */
+.brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;}
 /* Fond de secours peint dès le tout premier rendu, avant même que la
    vidéo ou son poster= ne soient chargés (voir fiftinSetBrandVideoSrc plus
    bas) — retour utilisateur : "les premières millisecondes, j'ai l'ancien
@@ -2576,24 +2566,6 @@ function fiftinSetBrandVideoSrc(id){
     v.src=portrait
       ? "assets/185A0A76-1171-4E6D-92C7-5EA6C49AE110.mp4"
       : "assets/B7182075-2385-481F-A820-77AE0ED3E525.mp4";
-    // Retour utilisateur : "fais en sorte qu'une image fixe soit visible
-    // jusqu'à ce que la vidéo se mette en route" — voir .brand-bg-video/
-    // .is-playing en CSS : la vidéo démarre invisible, "playing" (la
-    // lecture a RÉELLEMENT commencé, pas juste play() qui a résolu — ça
-    // peut résoudre sans qu'une image soit encore affichée) la révèle.
-    // Bug réel repéré juste après coup (retour utilisateur : "il n'y a
-    // plus d'animation du tout") : rester à opacity:0 peut suffire, sur
-    // certains moteurs, à faire déprioriser/ne jamais vraiment démarrer
-    // le décodage d'une vidéo invisible (optimisation batterie côté
-    // navigateur) — "playing" ne se déclenche alors jamais, et la vidéo
-    // reste cachée pour de bon : un verrou qu'elle s'impose à elle-même.
-    // Filet de sécurité borné : révèle de toute façon après 1,5 s, qu'un
-    // "playing" ait eu lieu ou non — pire cas, la vidéo apparaît comme
-    // avant ce chantier (jamais de blocage permanent) ; meilleur cas,
-    // elle apparaît plus tôt, sans bouton play visible entre-temps.
-    var reveal = function(){ v.classList.add("is-playing"); };
-    v.addEventListener("playing", reveal, {once:true});
-    setTimeout(reveal, 1500);
     /* load()+play() explicites (au lieu de compter uniquement sur l'attribut
        autoplay déjà posé en HTML) : WebKit ne relance pas toujours sa
        tentative d'autoplay après un changement de .src fait en JS après le
