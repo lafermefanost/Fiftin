@@ -1877,7 +1877,7 @@ body.map-fullscreen{overflow:hidden;}
    file d'admin (Annonces à valider, .admin-card sans host-listing-card) et
    au panneau "Demande rapide" ailleurs : grossir b/span directement les
    aurait fait grossir partout, d'où ce scope .host-listing-card. */
-.host-listing-card .admin-card-body b{font-size:16px;}
+.host-listing-card .admin-card-body b{font-size:18px;}
 .host-listing-card .admin-card-body span{font-size:13px;}
 .admin-owner{color:var(--gray-mid)!important; font-weight:500!important;}
 .admin-actions{display:flex; gap:8px; margin-top:6px; flex-wrap:wrap;}
@@ -1905,8 +1905,22 @@ body.map-fullscreen{overflow:hidden;}
    est le palier standard du site (voir README, « Détail visuel » :
    .admin-card lui-même, .stat-tile, .map-list-item… tous à 16px), 20px
    cassait cette cohérence sans raison. */
-.admin-card.host-listing-card{background:#fff;}
-.admin-card.host-listing-card .admin-thumb{width:112px; height:112px; border-radius:16px;}
+/* Retour utilisateur (capture d'écran, "Mes annonces") : "un peu plus sexy,
+   ça donne pas très envie... grossis un peu le visuel et rends ça plus
+   graphique" — la vignette carrée 112px à côté du texte (ci-dessus)
+   laissait la photo trop secondaire. Passée en bandeau pleine largeur en
+   tête de carte (ratio 2/1, donc bien plus grande), colonne plutôt que
+   ligne (.admin-card-row), avec une légère ombre portée sur la carte
+   elle-même pour la détacher un peu plus du fond — même registre que
+   .gestion-promo-shot img un peu plus bas, pas un effet nouveau. margin
+   négatif (-12px, le padding de .admin-card) + rayon seulement en haut :
+   la photo mord jusqu'aux bords/au coin arrondi de la carte, comme
+   .mhead/.hf-head mordent le padding de leur propre conteneur ailleurs
+   dans ce fichier. */
+.admin-card.host-listing-card{background:#fff; box-shadow:0 2px 10px rgba(20,26,20,.08);}
+.admin-card.host-listing-card .admin-card-row{flex-direction:column;}
+.admin-card.host-listing-card .admin-thumb{display:block; width:calc(100% + 24px); height:auto; aspect-ratio:2/1;
+  border-radius:16px 16px 0 0; margin:-12px -12px 12px;}
 .host-status-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 /* Mettre en pause / Modifier / Supprimer : trois actions au même niveau,
    même style de pilule, même ligne (.admin-actions). Deux retours
@@ -1992,9 +2006,14 @@ body.map-fullscreen{overflow:hidden;}
    bas au repos (son tracé de base) et se retourne vers le haut une fois
    déplié — inversé par rapport à l'ancienne variante en ligne (qui partait
    tournée à -90°, vers la droite) : posée sous un texte centré, une flèche
-   vers le bas se lit naturellement comme "dérouler en dessous". */
+   vers le bas se lit naturellement comme "dérouler en dessous". Repassée
+   une 2e fois (retour utilisateur : "mets l'encart calendrier de la même
+   couleur que les autres encarts") : --sauge, pas --sauge-mid — le même
+   vert que .host-status-toggle.on/.host-edit-btn juste au-dessus, pour
+   que les 4 encarts de la carte (En ligne/Modifier + Calendrier) soient
+   enfin dans la même teinte plutôt que deux verts voisins mais différents. */
 .cal-disclose{display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%;
-  background:var(--sauge-mid); border:none; border-radius:16px; margin-top:10px; padding:12px 10px; gap:4px;
+  background:var(--sauge); border:none; border-radius:16px; margin-top:10px; padding:12px 10px; gap:4px;
   font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:#fff; text-align:center; cursor:pointer;}
 .cal-disclose-chevron{width:16px; height:16px; color:#fff; flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
 .cal-disclose.expanded .cal-disclose-chevron{transform:rotate(180deg);}
