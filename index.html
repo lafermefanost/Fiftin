@@ -9462,11 +9462,25 @@ function switchTab(tab){
   // changer de sous-onglet Favoris/Demandes/Séjours) qui repasserait par
   // refreshLikesChrome()/renderTabContent() sans qu'on ait quitté l'onglet.
   var enteringLikes = tab==="likes" && state.tab!=="likes";
+  // Retour utilisateur : "quand je reclique sur Explorer depuis un autre
+  // menu, je veux atterrir au niveau des filtres/de la carte, pas sur
+  // l'intro hero ... le menu bottom [est] caché, c'est perturbant" — #hero
+  // (z-index:100) couvre visuellement nav.tabbar (z-index:50) tant qu'il
+  // occupe l'écran, d'où la barre "cachée" en atterrissant dessus. Capturé
+  // AVANT state.tab=tab juste en dessous, même principe qu'enteringLikes :
+  // seule une vraie ENTRÉE sur Explorer depuis un AUTRE onglet saute le
+  // hero ; re-cliquer Explorer alors qu'on y est déjà continue d'y ramener
+  // (voir le commentaire plus bas, "doit TOUJOURS ramener au tout début
+  // ... y compris en cliquant Explorer alors qu'on y est déjà" — décision
+  // volontaire gardée telle quelle pour CE cas précis).
+  var enteringExplore = tab==="explore" && state.tab!=="explore";
   // Retour utilisateur : changer d'onglet laissait la page à la position
   // de défilement de l'onglet précédent, ce qui pouvait retomber tout en
   // bas d'un onglet plus court que le précédent (page blanche, contenu
-  // hors écran au-dessus). Repartie du haut à chaque changement.
-  window.scrollTo(0,0);
+  // hors écran au-dessus). Repartie du haut à chaque changement — sauf
+  // enteringExplore, qui saute directement aux filtres (voir le vrai
+  // scroll, décidé plus bas une fois le hero/#filter-bar en place).
+  if(!enteringExplore) window.scrollTo(0,0);
   // Cliquer un onglet de la barre du bas pendant qu'une fiche détail est
   // ouverte doit ramener naturellement au fil (ou à l'onglet visé) plutôt
   // que de laisser la fiche ouverte par-dessus le nouvel onglet — nav.tabbar
@@ -9540,6 +9554,16 @@ function switchTab(tab){
     document.getElementById("filter-bar").classList.add("chrome-collapsed");
     document.getElementById("result-line").classList.add("chrome-collapsed");
     renderProfile();
+  }
+  // Le vrai saut par-dessus le hero (voir enteringExplore plus haut) : même
+  // cible que hero-scroll-btn (bouton "Découvrez vos prochains séjours."
+  // du hero lui-même) — .filters vient d'être repeuplée par
+  // renderFilterBar() juste au-dessus, donc déjà à sa vraie hauteur ici.
+  // Pas d'animation (comme l'ancien scrollTo(0,0) qu'il remplace pour ce
+  // cas précis) : un saut instantané, pas un défilement visible.
+  if(enteringExplore){
+    var filterBarEl = document.querySelector(".filters");
+    if(filterBarEl) filterBarEl.scrollIntoView({block:"start"}); else window.scrollTo(0,0);
   }
   // Laisse le temps à la transition d'onglet / au rendu de refreshLikesChrome()
   // ci-dessus de se poser avant l'indice (voir playSwipeHint() plus bas) —
