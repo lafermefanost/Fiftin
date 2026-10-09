@@ -670,8 +670,15 @@ a{color:inherit; text-decoration:none;}
 .sheet-backdrop{position:fixed; inset:0; background:rgba(20,26,20,.5); z-index:150;
   display:flex; align-items:flex-end; justify-content:center;}
 .sheet-backdrop > .frame{width:100%; max-width:520px;}
+/* overflow-x:hidden explicite : sans lui, poser overflow-y:auto seul fait
+   que le navigateur calcule overflow-x comme "auto" lui aussi (règle CSS :
+   un axe non-"visible" rend l'autre "auto" par défaut) — un enfant plus
+   large que .sheet (ex: .hf-head en bandeau plein, voir plus bas) devient
+   alors "slidable" horizontalement au lieu d'être simplement rogné (même
+   bug que .modal-scrollarea côté app/index.html, corrigé pour la même
+   raison). */
 .sheet{background:var(--cream); border-radius:26px 26px 0 0; padding:8px 20px calc(20px + env(safe-area-inset-bottom,0px));
-  max-height:82vh; overflow-y:auto; box-shadow:0 -20px 50px rgba(0,0,0,.25);}
+  max-height:82vh; overflow-y:auto; overflow-x:hidden; box-shadow:0 -20px 50px rgba(0,0,0,.25);}
 .sheet-handle{width:38px; height:4px; background:var(--line); border-radius:3px; margin:10px auto 16px;}
 .sheet h3{font-size:19px; font-weight:700; margin:4px 0 16px;}
 .sheet-close{position:absolute; top:16px; right:20px; width:32px; height:32px; border-radius:50%; background:var(--cream-deep);
@@ -683,6 +690,28 @@ a{color:inherit; text-decoration:none;}
 .legal-doc h4:first-child{margin-top:0;}
 .legal-doc p{font-size:13.5px; line-height:1.55; color:var(--ink); margin:0 0 10px;}
 .legal-doc p.field-hint{margin-bottom:16px;}
+/* Dépôt d'annonce (openSheet, kind==="hostform") — retour utilisateur :
+   "ce modal doit être un peu plus sexy et donner plus envie de le
+   remplir... inspire-toi du modal de réservation de l'outil de gestion
+   (app/index.html), il est plus clair... hiérarchise bien les infos,
+   homogénéise les encarts... ajoute peut-être un header sur fond vert".
+   .hf-head reprend .mhead (app/index.html) : bandeau plein --sauge, texte
+   clair, débordant du padding latéral de .sheet par marge négative — safe
+   ici grâce à overflow-x:hidden posé sur .sheet juste au-dessus (sans ça,
+   même bug de défilement horizontal que rencontré sur .modal-scrollarea
+   côté app/index.html). .hf-sec/.hf-sec-title reprennent .msec/.msec-title
+   du modal Réservation (section Client/Séjour/Services/Paiement) : même
+   principe de carte groupée avec petite icône + libellé en tête, mais
+   dans la palette de ce fichier (--cream-deep au lieu du gris clair de
+   app/index.html) plutôt qu'une simple suite de .field-block à plat. */
+.hf-head{background:var(--sauge); color:var(--cream); margin:0 -20px 20px; padding:18px 20px 20px;}
+.sheet .hf-head h3{color:var(--cream); margin:0 0 6px;}
+.sheet .hf-head .sheet-sub{color:rgba(245,240,229,.88); margin:0;}
+.hf-sec{background:var(--cream-deep); border-radius:16px; padding:16px; margin-bottom:16px;}
+.hf-sec-title{display:flex; align-items:center; gap:7px; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.06em; color:var(--sauge); margin-bottom:14px;}
+.hf-sec-title svg{flex-shrink:0; width:14px; height:14px; opacity:.85;}
+.hf-sec .field-block:last-child{margin-bottom:0;}
 /* Suggestions d'adresse (API Adresse/Géoplateforme), sous le champ adresse du dépôt d'annonce. */
 .hf-address-suggestions{position:absolute; left:0; right:0; top:100%; z-index:20; margin-top:4px;
   background:var(--cream); border:1.5px solid var(--line); border-radius:16px; overflow:hidden;
@@ -1727,11 +1756,20 @@ body.map-fullscreen{overflow:hidden;}
    teinte avec l'arrière-plan — même logique que le logo posé sur le mesh
    sombre de la page d'intro, pas besoin d'un fond neutre derrière pour que
    l'effet se lise. */
-.profile-identity-switch{display:flex; gap:8px; margin-bottom:18px;}
-.profile-identity-switch button{flex:1; display:flex; align-items:center; justify-content:center; gap:6px;
-  padding:18px 6px; border-radius:12px; border:none; font-family:'Jost',sans-serif; font-size:12px; font-weight:700;
-  color:#fff; animation:tileFadeIn .35s ease-out;}
-.profile-identity-switch button svg{width:16px; height:16px; flex-shrink:0; position:relative; z-index:1;}
+/* Encarts carrés (retour utilisateur : "dans un encart carré à bords
+   arrondis... rééquilibrer picto dessus et texte sur deux lignes") —
+   avant : icône+libellé seul sur une ligne, bouton bas et large. Colonne
+   plutôt que ligne (picto en tête, gros, puis le texte juste en dessous
+   via .pis-label) + aspect-ratio:1 pour la forme carrée demandée ; coins
+   plus arrondis (18px, avant 12px) pour rester cohérent avec ce format. */
+.profile-identity-switch{display:flex; gap:10px; margin-bottom:18px;}
+.profile-identity-switch button{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+  padding:14px 8px; border-radius:18px; border:none; font-family:'Jost',sans-serif;
+  color:#fff; animation:tileFadeIn .35s ease-out; aspect-ratio:1;}
+.profile-identity-switch button svg{width:26px; height:26px; flex-shrink:0; position:relative; z-index:1;}
+.profile-identity-switch .pis-label{position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; gap:3px; text-align:center;}
+.profile-identity-switch .pis-label b{font-size:15.5px; font-weight:700; line-height:1.2;}
+.profile-identity-switch .pis-label em{font-style:normal; font-size:11px; font-weight:600; opacity:.82; line-height:1.2;}
 .profile-identity-switch button span{position:relative; z-index:1;}
 .profile-identity-switch-voyageur{--tile-base:var(--sauge);}
 .profile-identity-switch-hotes{--tile-base:var(--lavender-deep);}
@@ -4496,6 +4534,26 @@ var FILTER_ICONS = {
   amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>",
   sort:"<path d='M4 6h16M4 12h10M4 18h6'/>"
 };
+/* Icônes des encarts du formulaire d'annonce (openSheet, kind==="hostform"),
+   voir le grand commentaire de .hf-sec plus loin dans le CSS — retour
+   utilisateur : "hiérarchise les infos, homogénéise les encarts, inspire-toi
+   du modal de réservation de l'outil de gestion" (.msec/.msec-title côté
+   app/index.html). Certaines réutilisent une icône déjà déclarée ailleurs
+   (loc=FILTER_ICONS.loc, amen=FILTER_ICONS.amen, home=PROFILE_SWITCH_ICON_HOTES
+   un peu plus bas) plutôt qu'un doublon : même glyphe, même sens, à chaque
+   fois qu'il apparaît ailleurs dans l'app. */
+var HF_SEC_ICONS = {
+  home:"<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/>",
+  photos:"<path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/><circle cx='12' cy='13' r='4'/>",
+  host:"<path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/>",
+  loc:"<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>",
+  text:"<line x1='17' y1='10' x2='3' y2='10'/><line x1='21' y1='6' x2='3' y2='6'/><line x1='21' y1='14' x2='3' y2='14'/><line x1='17' y1='18' x2='3' y2='18'/>",
+  phone:"<path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/>",
+  amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>"
+};
+function hfSecTitleHtml(iconKey,label){
+  return '<div class="hf-sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+HF_SEC_ICONS[iconKey]+'</svg>'+esc(label)+'</div>';
+}
 
 /* Libellé de la puce Lieu : le plus précis des trois niveaux renseignés
    (mot-clé libre > département > région), sinon "Lieu". Les trois peuvent
@@ -6392,92 +6450,107 @@ function openSheet(kind){
   } else if(kind==="hostform"){
     var hfEditing = !!hostFormEditListing;
     var hfEf = hostFormEditListing;
-    inner = '<h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
+    inner = '<div class="hf-head"><h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
       '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
+      '</div>'+
       '<p class="field-hint">Les champs marqués <b>*</b> sont obligatoires.</p>'+
-      '<div class="field-block"><label>Nom du logement *</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
-      '<div class="field-block"><label>Type d\'hébergement *</label><select class="text-input" id="hf-type">'+
-        '<option value="">— Choisir —</option>'+
-        Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
-      '</select>'+
-        '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("home","Votre logement")+
+        '<div class="field-block"><label>Nom du logement *</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
+        '<div class="field-block"><label>Type d\'hébergement *</label><select class="text-input" id="hf-type">'+
+          '<option value="">— Choisir —</option>'+
+          Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
+        '</select>'+
+          '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
+        '</div>'+
       '</div>'+
       // Photos et Capacité/tarif remontées ici, juste après Nom/Type
       // (retour utilisateur : "mets la partie photo et la partie prix
       // dans les premiers, c'est la partie que les gens modifieront le
       // plus souvent") — avant tous les champs modifiés bien plus
       // rarement une fois l'annonce créée (adresse, description, réseaux…).
-      '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
-        '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
-        '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
-        '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
-      '</div>'+
-      '<div class="field-block"><label id="hf-units-label">Capacité et tarif *</label>'+
-        '<div id="hf-units"></div>'+
-        '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
-      '</div>'+
-      '<div class="field-block"><label>Votre photo (facultatif)</label>'+
-        '<div class="profile-avatar editable" id="hf-host-photo-avatar">'+
-          (hfEf && hfEf.hostPhotoUrl ? '<img src="'+esc(hfEf.hostPhotoUrl)+'" alt="">' : '')+
-          avatarBadgeSvg()+
+      '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos &amp; tarifs")+
+        '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
+          '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
+          '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
+          '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
         '</div>'+
-        '<input type="file" id="hf-host-photo-input" accept="image/*" style="display:none">'+
-        '<p class="field-hint">Affichée à côté de votre nom, section "Votre hôte" — cliquez la photo pour la changer.</p>'+
+        '<div class="field-block"><label id="hf-units-label">Capacité et tarif *</label>'+
+          '<div id="hf-units"></div>'+
+          '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
+        '</div>'+
       '</div>'+
-      // Champ "Votre nom" retiré d'ici (retour utilisateur) : déplacé au
-      // niveau du PROFIL (voir profileIdentityCardHtml()), au même titre
-      // que la présentation juste en dessous — une seule saisie, jamais
-      // ressaisie annonce par annonce. hfProfileName (résolu par
-      // updateHfHostBioUI() -> resolveHostProfileName(), voir plus bas)
-      // alimente directement submitHostForm(), aucun input ici.
-      /* Présentation : au niveau du PROFIL hôte désormais (retour
-         utilisateur : "stocker la présentation au niveau du profil hôte,
-         pas de chaque annonce : une seule saisie, réutilisée automatiquement
-         sur toutes ses annonces"), pas un champ libre à chaque annonce comme
-         avant. Rendu statique ici en attendant la résolution asynchrone de
-         resolveHostProfileBio() (même défi que hfHostPhoto/l'avatar juste
-         au-dessus : il faut une lecture Firestore avant de savoir si une
-         présentation de profil existe déjà) — updateHfHostBioUI(), câblée
-         plus bas, patche ce bloc une fois la réponse connue : textarea
-         masqué + case "présentation spécifique" si un profil existe déjà,
-         sinon ce textarea EST la présentation de profil (première fois,
-         obligatoire — "champ obligatoire lors de la création de la première
-         annonce (ou du profil)"). */
-      '<div class="field-block" id="hf-hostbio-block">'+
-        '<label>Présentation *</label>'+
-        '<p class="field-hint" id="hf-hostbio-profile-preview" hidden></p>'+
-        '<label class="hf-checkbox-row" id="hf-hostbio-override-row" hidden>'+
-          '<input type="checkbox" id="hf-hostbio-override"> Utiliser une présentation spécifique pour cette annonce'+
-        '</label>'+
-        '<textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
-        '<p class="field-hint" id="hf-hostbio-hint">Affichée dans la fiche de l\'annonce, encart « À propos de votre hôte ».</p>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("host","Vous, l\'hôte")+
+        '<div class="field-block"><label>Votre photo (facultatif)</label>'+
+          '<div class="profile-avatar editable" id="hf-host-photo-avatar">'+
+            (hfEf && hfEf.hostPhotoUrl ? '<img src="'+esc(hfEf.hostPhotoUrl)+'" alt="">' : '')+
+            avatarBadgeSvg()+
+          '</div>'+
+          '<input type="file" id="hf-host-photo-input" accept="image/*" style="display:none">'+
+          '<p class="field-hint">Affichée à côté de votre nom, section "Votre hôte" — cliquez la photo pour la changer.</p>'+
+        '</div>'+
+        // Champ "Votre nom" retiré d'ici (retour utilisateur) : déplacé au
+        // niveau du PROFIL (voir profileIdentityCardHtml()), au même titre
+        // que la présentation juste en dessous — une seule saisie, jamais
+        // ressaisie annonce par annonce. hfProfileName (résolu par
+        // updateHfHostBioUI() -> resolveHostProfileName(), voir plus bas)
+        // alimente directement submitHostForm(), aucun input ici.
+        /* Présentation : au niveau du PROFIL hôte désormais (retour
+           utilisateur : "stocker la présentation au niveau du profil hôte,
+           pas de chaque annonce : une seule saisie, réutilisée automatiquement
+           sur toutes ses annonces"), pas un champ libre à chaque annonce comme
+           avant. Rendu statique ici en attendant la résolution asynchrone de
+           resolveHostProfileBio() (même défi que hfHostPhoto/l'avatar juste
+           au-dessus : il faut une lecture Firestore avant de savoir si une
+           présentation de profil existe déjà) — updateHfHostBioUI(), câblée
+           plus bas, patche ce bloc une fois la réponse connue : textarea
+           masqué + case "présentation spécifique" si un profil existe déjà,
+           sinon ce textarea EST la présentation de profil (première fois,
+           obligatoire — "champ obligatoire lors de la création de la première
+           annonce (ou du profil)"). */
+        '<div class="field-block" id="hf-hostbio-block">'+
+          '<label>Présentation *</label>'+
+          '<p class="field-hint" id="hf-hostbio-profile-preview" hidden></p>'+
+          '<label class="hf-checkbox-row" id="hf-hostbio-override-row" hidden>'+
+            '<input type="checkbox" id="hf-hostbio-override"> Utiliser une présentation spécifique pour cette annonce'+
+          '</label>'+
+          '<textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
+          '<p class="field-hint" id="hf-hostbio-hint">Affichée dans la fiche de l\'annonce, encart « À propos de votre hôte ».</p>'+
+        '</div>'+
       '</div>'+
-      '<div class="field-block" style="position:relative;"><label>Adresse complète du logement *</label>'+
-        '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
-        '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
-        '<p class="field-hint">Choisissez une adresse dans la liste proposée : région, département et ville se remplissent tout seuls juste en dessous (modifiables si besoin). Sert aussi à calculer la distance réelle affichée aux voyageurs — jamais montrée telle quelle sur l\'annonce.</p>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("loc","Adresse")+
+        '<div class="field-block" style="position:relative;"><label>Adresse complète du logement *</label>'+
+          '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
+          '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
+          '<p class="field-hint">Choisissez une adresse dans la liste proposée : région, département et ville se remplissent tout seuls juste en dessous (modifiables si besoin). Sert aussi à calculer la distance réelle affichée aux voyageurs — jamais montrée telle quelle sur l\'annonce.</p>'+
+        '</div>'+
+        '<div class="field-block"><label>Région</label><select class="text-input" id="hf-region-name">'+
+          '<option value="">— Choisir —</option>'+
+          FR_REGIONS.map(function(r){ return '<option value="'+esc(r.name)+'"'+(hfEf&&hfEf.regionName===r.name?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
+        '</select></div>'+
+        '<div class="field-block"><label>Département</label><select class="text-input" id="hf-dept-name">'+
+          deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
+        '</select></div>'+
+        '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '</div>'+
-      '<div class="field-block"><label>Région</label><select class="text-input" id="hf-region-name">'+
-        '<option value="">— Choisir —</option>'+
-        FR_REGIONS.map(function(r){ return '<option value="'+esc(r.name)+'"'+(hfEf&&hfEf.regionName===r.name?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
-      '</select></div>'+
-      '<div class="field-block"><label>Département</label><select class="text-input" id="hf-dept-name">'+
-        deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
-      '</select></div>'+
-      '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
-      '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
-      '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
-        '<div id="hf-desc-reuse-wrap"></div>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("text","Présentation de l\'annonce")+
+        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
+        '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
+          '<div id="hf-desc-reuse-wrap"></div>'+
+        '</div>'+
       '</div>'+
-      '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
-      '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
-        '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact &amp; réseaux")+
+        '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
+        '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
+          '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
+        '</div>'+
+        '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
+        '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
+        '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
+        '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
       '</div>'+
-      '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
-      '<div class="field-block"><label>Prestations (communes au logement)</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
+      '<div class="hf-sec">'+hfSecTitleHtml("amen","Prestations")+
+        '<div class="field-block" style="margin-bottom:0;"><label>Communes au logement</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
+      '</div>'+
       '<a class="host-app-link" href="app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     // thumbUrl repris ici (galleryThumb, même index que gallery) pour
@@ -9438,13 +9511,21 @@ var PROFILE_SWITCH_ICON_HOTES = "<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V1
    chaque appelant (renderProfile()/renderHostProfile()) sait déjà quelle
    action lui donner (switchTab("explore")+auth, ou exitHostMode), seul le
    SENS change selon la page, jamais le marquage HTML. */
+/* Retour utilisateur : "dans un encart carré à bords arrondis, avec une
+   typo un peu plus mise en valeur, plus grosse, rééquilibrer picto dessus
+   et texte sur deux lignes" — picto seul en tête (gros, plus de place) puis
+   un libellé <b>+une courte légende <em> l'un sous l'autre (voir .pis-label
+   /.hf-sec-title dans le CSS), plutôt que picto+libellé sur une seule
+   ligne comme avant. */
 function profileIdentitySwitchHtml(isHost){
   return '<div class="profile-identity-switch">'+
     '<button type="button" class="profile-identity-switch-voyageur'+(!isHost?' current':'')+'"'+(!isHost?' disabled':' id="profile-switch-other"')+'>'+
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_VOYAGEUR+'</svg><span>Espace voyageur</span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_VOYAGEUR+'</svg>'+
+      '<span class="pis-label"><b>Espace voyageur</b><em>Réservez vos séjours</em></span>'+
     '</button>'+
     '<button type="button" class="profile-identity-switch-hotes'+(isHost?' current':'')+'"'+(isHost?' disabled':' id="profile-switch-other"')+'>'+
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_HOTES+'</svg><span>Espace hôtes</span>'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">'+PROFILE_SWITCH_ICON_HOTES+'</svg>'+
+      '<span class="pis-label"><b>Espace hôtes</b><em>Gérez vos annonces</em></span>'+
     '</button>'+
   '</div>';
 }
