@@ -794,6 +794,12 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    .xchip-qty repris tels quels (mêmes noms de classe, même recette) de
    .xchip côté app/index.html (consommations/extras, voir setExtra()) :
    même interaction, pas besoin d'en réinventer une. */
+/* Retour utilisateur : "l'encart des pièces et annexes n'a toujours pas
+   le fond un peu gris" — boîte à part (même idée que .hf-unit-card plus
+   haut, mais en --cream-deep plutôt qu'en blanc : ce n'est pas une
+   "chambre" éditable, juste un groupe de puces) pour détacher visuellement
+   Pièces & annexes du reste de la section Prestations. */
+.hf-spaces-box{background:var(--cream-deep); border-radius:16px; padding:14px;}
 .hf-spaces-grid{display:flex; flex-wrap:wrap; gap:8px;}
 .xchip{display:inline-flex; align-items:center; gap:5px; padding:9px 12px;
   border:1.5px solid var(--line); border-radius:16px; cursor:pointer;
@@ -848,7 +854,10 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .auth-err{font-size:12.5px; font-weight:600; color:var(--danger); min-height:16px; margin-bottom:8px;}
 .link-btn{display:block; background:none; border:none; padding:0; font-family:inherit; font-size:12.5px; font-weight:700;
   color:var(--sauge-deep); text-decoration:underline; margin-bottom:14px;}
-.host-app-link{display:block; font-size:12.5px; font-weight:600; color:var(--lavender-deep); text-decoration:underline; margin:-6px 0 18px;}
+/* Retour utilisateur : "il doit être dans un bouton" — remplace l'ancien
+   .host-app-link (simple lien texte souligné) sur #hf-gestion-link. */
+.hf-gestion-btn{display:block; width:100%; text-align:center; background:var(--sauge-bg); border:1.5px solid var(--sauge); border-radius:16px;
+  padding:12px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; color:var(--sauge-deep); margin:-6px 0 18px;}
 .btn-photo-add{width:100%; padding:12px; border:1.5px dashed var(--line); border-radius:16px; background:var(--cream-deep);
   font-family:'Jost',sans-serif; font-size:13px; font-weight:700; color:var(--sauge-deep);}
 /* Retour utilisateur : "améliore toute la partie photo, elle doit être
@@ -6342,8 +6351,18 @@ function unitCardHtml(u, selectable){
    rebuildListings()/fetchPublishedListings() ; une annonce "pending" ou
    "paused" n'y est jamais, alors que c'est justement là qu'un aperçu est
    le plus utile, avant publication). Sans 2e argument, comportement
-   identique à avant (recherche dans LISTINGS par id). */
-function openDetail(id, listingOverride){
+   identique à avant (recherche dans LISTINGS par id).
+   forceVisitorView (retour utilisateur, bouton Aperçu toujours : "ne
+   dirige pas vers l'aperçu comme chez un visiteur" — bug réel repéré en
+   relisant cette fonction, pas juste un ressenti : l'hôte qui prévisualise
+   SA PROPRE annonce reste connecté avec son propre uid, et
+   authState.uid===l.ownerUid déclenche plus bas l'affichage du taux de
+   conversion demandes->séjours, un badge que seul le propriétaire voit
+   jamais côté voyageur, voir conversionLabelFor(). true force ce badge à
+   rester masqué, pour que l'aperçu soit identique pixel pour pixel à ce
+   qu'un inconnu verrait — aucun autre endroit de cette fonction ne
+   dépend d'authState.uid/ownerUid. */
+function openDetail(id, listingOverride, forceVisitorView){
   userInteracted = true; // voir sa déclaration : annule le popup de connexion programmé au boot
   var l = listingOverride || LISTINGS.filter(function(x){ return x.id===id; })[0];
   if(!l) return;
@@ -6409,7 +6428,7 @@ function openDetail(id, listingOverride){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
-    var convLabel = (authState.uid && l.ownerUid && l.ownerUid===authState.uid) ? conversionLabelFor(l) : null;
+    var convLabel = (!forceVisitorView && authState.uid && l.ownerUid && l.ownerUid===authState.uid) ? conversionLabelFor(l) : null;
     var dKmOverview = listingDistanceKm(l);
     metaRowHtml = '<div class="detail-card"><div class="meta-row">'+
       metaItemHtml(META_ICON_PRICE, (hasTabs ? "dès "+l.price : l.price)+"€", "par nuit")+
@@ -6835,21 +6854,25 @@ function openSheet(kind){
         // sélectionner les pièces de la maison et leur nombre, même
         // principe que le catalogue de l'app de gestion" — voir
         // hfSpaceChipsHtml()/hfStepSpace() plus haut.
-        '<div class="field-block" style="margin-bottom:0;"><label>Pièces & annexes</label>'+
+        '<div class="field-block hf-spaces-box" style="margin-bottom:0;"><label>Pièces & annexes</label>'+
           '<p class="field-hint" style="margin:0 0 8px;">Cliquez pour ajouter, cliquez sur le nombre pour retirer.</p>'+
           '<div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>'+
         '</div>'+
       '</div>'+
-      // Retour utilisateur : "la phrase à la toute fin n'est pas très
-      // claire — inviter à utiliser l'app de gestion si le client n'a que
-      // la formule hôte, et inviter à modifier ses réservations via l'app
-      // de gestion s'il a une des formules gestion". resolveHostAccount()
-      // est async (lecture Firestore) : texte par défaut (formule simple,
-      // le cas le plus courant pour qui dépose une 1ère annonce) posé ici,
-      // recalculé juste après l'insertion DOM (voir le câblage de
-      // kind==="hostform" plus bas, même endroit que hfHostPhoto/
-      // updateHfHostBioUI() pour les autres résolutions async de ce volet).
-      '<a class="host-app-link" href="app/" target="_blank" rel="noopener" id="hf-gestion-link">Envie de gérer aussi vos réservations ? Découvrez l\'app de gestion Fiftin →</a>'+
+      // Retour utilisateur : "il doit être dans un bouton" (c'était un
+      // simple lien texte) "et il doit s'adapter ... soit te diriger vers
+      // le changement formule gestion soit vers l'app directement. Et le
+      // texte est trop long" — devient un vrai <button>, câblé sur
+      // openHostGestionApp() (voir son commentaire : essentiel/pro -> app/
+      // direct, sinon -> page commerciale de changement de formule) plutôt
+      // que sur un href fixe vers app/, qui ignorait le cas sans formule
+      // gestion. Textes raccourcis. resolveHostAccount() est async (lecture
+      // Firestore) : texte par défaut (formule simple, le cas le plus
+      // courant pour qui dépose une 1ère annonce) posé ici, recalculé juste
+      // après l'insertion DOM (voir le câblage de kind==="hostform" plus
+      // bas, même endroit que hfHostPhoto/updateHfHostBioUI() pour les
+      // autres résolutions async de ce volet).
+      '<button type="button" class="hf-gestion-btn" id="hf-gestion-link">Découvrir l\'app de gestion Fiftin →</button>'+
       '<div class="auth-err" id="hf-err"></div>';
     // thumbUrl repris ici (galleryThumb, même index que gallery) pour
     // qu'une photo déjà en ligne, gardée telle quelle, n'ait jamais besoin
@@ -7122,20 +7145,25 @@ function openSheet(kind){
       var pruned = pruneStaleLinkedRoomIds(hfUnits, hfAvailableRooms);
       if(pruned.changed) hfUnits = pruned.units;
       if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
-      // Retour utilisateur : "la phrase à la toute fin n'est pas très
-      // claire — inviter à utiliser l'app de gestion si le client n'a que
-      // la formule hôte, et inviter à modifier ses réservations via l'app
-      // de gestion s'il a une des formules gestion" — même lecture de
+      // Retour utilisateur : "inviter à utiliser l'app de gestion si le
+      // client n'a que la formule hôte, et inviter à modifier ses
+      // réservations via l'app de gestion s'il a une des formules
+      // gestion" (texte), puis "il doit être dans un bouton ... il doit
+      // s'adapter ... soit te diriger vers le changement formule gestion
+      // soit vers l'app directement" (comportement) — même lecture de
       // compte (account.settings.plan) qu'openHostGestionApp(), pas de
       // 2e appel à resolveHostAccount() : ce callback-ci la connaît déjà.
+      // Le clic, lui, rappelle openHostGestionApp() (qui refait sa propre
+      // lecture, mise en cache par resolveHostAccount() — pas un vrai 2e
+      // aller-retour réseau) plutôt que de dupliquer ici le choix
+      // app/ vs changement de formule.
       var gestionLink = document.getElementById("hf-gestion-link");
       if(gestionLink){
         var hfPlan = (account && account.settings && account.settings.plan) || "simple";
-        if(hfPlan==="essentiel" || hfPlan==="pro"){
-          gestionLink.textContent = "Vous gérez déjà vos réservations ? Modifiez-les depuis votre espace de gestion →";
-        } else {
-          gestionLink.textContent = "Envie de gérer aussi vos réservations ? Découvrez l'app de gestion Fiftin →";
-        }
+        gestionLink.textContent = (hfPlan==="essentiel" || hfPlan==="pro")
+          ? "Accéder à mon espace de gestion →"
+          : "Découvrir l'app de gestion Fiftin →";
+        gestionLink.addEventListener("click", function(){ closeSheet(); openHostGestionApp(); });
       }
     });
     // hf-bio-reuse ("reprendre la présentation d'une autre annonce") retiré
@@ -9450,7 +9478,7 @@ var HOST_TABS_HTML =
   /* Onglet central, entre Mes annonces et Profil (retour utilisateur :
      "un 3e picto au centre") : pas une vue de plus côté Séjours, juste un
      raccourci vers l'outil de planning Fiftin app (même lien app/ que
-     .host-app-link/.cal-add-pill ailleurs dans ce fichier) — jamais marqué
+     .hf-gestion-btn/.cal-add-pill ailleurs dans ce fichier) — jamais marqué
      .active (data-host-tab="app" ne correspond à aucune valeur possible de
      state.hostTab), câblé à part dans renderTabbar() vers
      openHostGestionApp() plutôt que switchHostTab(). Réservé aux comptes
@@ -10228,7 +10256,7 @@ function renderHostListings(){
         e.stopPropagation();
         var listingId = btn.getAttribute("data-host-preview");
         var l = listings.filter(function(x){ return x.id===listingId; })[0];
-        if(l) openDetail(l.id, l);
+        if(l) openDetail(l.id, l, true);
       });
     });
     // Pause/reprise (voir toggleListingPause()) et suppression (voir
