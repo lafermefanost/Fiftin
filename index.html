@@ -1909,18 +1909,37 @@ body.map-fullscreen{overflow:hidden;}
    ça donne pas très envie... grossis un peu le visuel et rends ça plus
    graphique" — la vignette carrée 112px à côté du texte (ci-dessus)
    laissait la photo trop secondaire. Passée en bandeau pleine largeur en
-   tête de carte (ratio 2/1, donc bien plus grande), colonne plutôt que
-   ligne (.admin-card-row), avec une légère ombre portée sur la carte
-   elle-même pour la détacher un peu plus du fond — même registre que
-   .gestion-promo-shot img un peu plus bas, pas un effet nouveau. margin
-   négatif (-12px, le padding de .admin-card) + rayon seulement en haut :
-   la photo mord jusqu'aux bords/au coin arrondi de la carte, comme
-   .mhead/.hf-head mordent le padding de leur propre conteneur ailleurs
-   dans ce fichier. */
+   tête de carte, colonne plutôt que ligne (.admin-card-row), avec une
+   légère ombre portée sur la carte elle-même pour la détacher un peu plus
+   du fond — même registre que .gestion-promo-shot img un peu plus bas,
+   pas un effet nouveau. margin négatif (-12px, le padding de .admin-card)
+   + rayon seulement en haut : la photo mord jusqu'aux bords/au coin
+   arrondi de la carte, comme .mhead/.hf-head mordent le padding de leur
+   propre conteneur ailleurs dans ce fichier.
+   Repris une 2e fois (retour utilisateur, capture d'écran suivante) :
+   "affiche le carousel, pour avoir un peu comme un doublon réel de
+   l'annonce du fil, augmente aussi un peu la hauteur de l'image" — ratio
+   2/1 remplacé par 4/5, EXACTEMENT le ratio de .cover sur le fil (voir
+   hostListingCoverShots()/hostListingCardHtml()), pas juste "un peu plus
+   grand" : un vrai doublon de hauteur, pas une valeur inventée. */
 .admin-card.host-listing-card{background:#fff; box-shadow:0 2px 10px rgba(20,26,20,.08);}
 .admin-card.host-listing-card .admin-card-row{flex-direction:column;}
-.admin-card.host-listing-card .admin-thumb{display:block; width:calc(100% + 24px); height:auto; aspect-ratio:2/1;
-  border-radius:16px 16px 0 0; margin:-12px -12px 12px;}
+.host-listing-card .hlc-photo{position:relative; width:calc(100% + 24px); aspect-ratio:4/5;
+  border-radius:16px 16px 0 0; margin:-12px -12px 12px; overflow:hidden; background:var(--line);}
+.host-listing-card .hlc-photo .cover-carousel{position:absolute; inset:0; display:flex; overflow-x:auto;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch;}
+.host-listing-card .hlc-photo .cc-slide{min-width:100%; height:100%; object-fit:cover; scroll-snap-align:start; flex-shrink:0;}
+.host-listing-card .hlc-photo .cover-dots{position:absolute; top:12px; left:0; right:0; z-index:5;
+  display:flex; justify-content:center; gap:5px;}
+.host-listing-card .hlc-photo .cover-dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
+.host-listing-card .hlc-photo .cover-dots span.on{background:#fff; width:16px; border-radius:3px;}
+/* Accroche courte (retour utilisateur : "mets aussi la description
+   courte") — taglineHtml(l), même fonction/texte que sur la carte du
+   fil ; recolorée pour un fond blanc (--ink, pas --cream/--sauge-deep
+   comme ses deux autres contextes, voir .cover-info .tagline/
+   .detail-body .tagline, pensés chacun pour SON propre fond). */
+.host-listing-card .admin-card-body .tagline{font-family:'Fraunces',serif; font-style:italic; font-size:13px;
+  line-height:1.3; color:var(--ink); opacity:.75; margin:2px 0 0;}
 .host-status-line{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 /* Mettre en pause / Modifier / Supprimer : trois actions au même niveau,
    même style de pilule, même ligne (.admin-actions). Deux retours
@@ -9974,6 +9993,13 @@ function renderHostListings(){
       listings.map(hostListingCardHtml).join("")+
     '</div>';
     document.getElementById("host-new-listing").addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
+    // Carousel de chaque carte (hostListingCoverShots(), mêmes classes
+    // .cover-carousel/.cc-slide/.cover-dots que le fil) : wireFeedEvents()
+    // cherche tout [data-cc] du document pour synchroniser les points au
+    // scroll — déjà réutilisée telle quelle pour Favoris/collections (voir
+    // ses autres appels), [data-like]/[data-open]/etc. n'existant pas ici,
+    // simplement sans effet (querySelectorAll vide), rien à dupliquer.
+    wireFeedEvents();
     // "Voir les calendriers" — déplie/replie le calendrier de CETTE annonce
     // directement sous sa carte (retour utilisateur : "2 menus ne sont pas
     // nécessaires", fusion de l'ancien onglet "Mon calendrier" ici). Un seul
@@ -10060,9 +10086,32 @@ function deleteListing(l){
       .catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
   });
 }
+// Retour utilisateur (capture d'écran) : "affiche le carousel, pour avoir
+// un peu comme un doublon réel de l'annonce du fil... augmente aussi un
+// peu la hauteur de l'image pour que ce soit plus proche de l'annonce" —
+// même construction de shots[] que coverHtml() (galerie de l'établissement,
+// repli sur celle des locations si aucune n'est définie au niveau
+// établissement), mêmes classes .cover-carousel/.cc-slide/.cover-dots que
+// le fil, pour réutiliser tel quel le câblage existant (wireFeedEvents(),
+// cherche tout [data-cc] du document) plutôt que dupliquer la logique de
+// swipe. .hlc-photo (pas .cover) : le conteneur a besoin de son propre
+// habillage (bandeau qui mord le padding de .admin-card, coins arrondis
+// seulement en haut) — .cover est pensé pour vivre dans .card, qui a sa
+// propre convention de coins/overflow, pas la même ici.
+function hostListingCoverShots(l){
+  var fallbackShots = (!l.gallery || !l.gallery.length) && l.units ?
+    l.units.reduce(function(acc,u){ return acc.concat(u.gallery||[]); }, []) : null;
+  return l.gallery && l.gallery.length ? l.gallery.slice(0,3) : (fallbackShots && fallbackShots.length ? fallbackShots.slice(0,3) : null);
+}
 function hostListingCardHtml(l){
-  var coverUrl = listingCoverUrl(l);
-  var cover = coverUrl ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">' : '<div class="admin-thumb admin-thumb-empty"></div>';
+  var shots = hostListingCoverShots(l);
+  var cover = shots
+    ? '<div class="hlc-photo"><div class="cover-carousel" data-cc="hlc-'+esc(l.id)+'">'+
+        shots.map(function(src){ return '<img class="cc-slide" src="'+src+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
+      '</div>'+
+      (shots.length>1 ? '<div class="cover-dots">'+shots.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
+    '</div>'
+    : '<div class="hlc-photo admin-thumb-empty"></div>';
   var isPaused = l.status==="paused";
   var canTogglePause = l.status==="published" || isPaused;
   // "pending" n'a ni bouton de bascule (rien à publier/mettre en pause
@@ -10091,6 +10140,13 @@ function hostListingCardHtml(l){
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
         (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">En attente de validation</span></div>' : '')+
         (l.units && l.units.length ? '<span>'+l.units.length+' chambre'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune chambre — à compléter</span>')+
+        // Retour utilisateur : "mets aussi la description courte" —
+        // l'accroche (taglineHtml(), même fonction que le fil), pas la
+        // vraie description : c'est elle qui apparaît sur la carte du fil
+        // (voir son commentaire), "la description" ne s'affiche nulle
+        // part dans le fil — exactement ce que cette carte cherche à
+        // dupliquer ici.
+        (l.claim ? taglineHtml(l) : '')+
       '</div>'+
     '</div>'+
     '<div class="admin-actions">'+
