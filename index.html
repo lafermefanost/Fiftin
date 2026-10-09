@@ -9542,7 +9542,19 @@ function switchTab(tab){
    d'avoir deux <nav> superposées — plus simple, et la hiérarchie de
    calques (#hero > nav.tabbar > #feed, voir CSS plus haut) reste valable
    quel que soit le contenu de la barre. */
+// Retour utilisateur : "le profil sur les deux vues ... à gauche, Explorer/
+// Mes annonces au centre, Mes séjours/App gestion à droite" — Profil passe
+// de dernière à première position dans les deux tabbars (TRAVELER_TABS_HTML
+// et HOST_TABS_HTML), Explorer/Mes annonces et Mes séjours/App gestion
+// gardent leur ordre relatif l'un par rapport à l'autre, juste décalés
+// d'un cran. Pas de CSS/JS ailleurs qui dépende de l'ordre des onglets
+// (wireTabs itère .tab par data-tab/data-host-tab, pas par position ;
+// aucun nth-child sur nav.tabbar) : un simple réordonnancement du HTML.
 var TRAVELER_TABS_HTML =
+  '<button class="tab" data-tab="profile">'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
+    '<span>Profil voyageur</span>'+
+  '</button>'+
   /* "Carte" fusionnée dans "Explorer" (retour utilisateur : "j'aimerais que
      sur le mode visiteur explorer intègre finalement directement la vue
      carte, menu qui disparaîtrait") — la carte s'affiche désormais en tête
@@ -9556,13 +9568,23 @@ var TRAVELER_TABS_HTML =
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></span>'+
     '<span>Mes séjours</span>'+
     '<span class="badge" id="like-badge" hidden>0</span>'+
-  '</button>'+
-  '<button class="tab" data-tab="profile">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
-    '<span>Profil voyageur</span>'+
   '</button>';
 
 var HOST_TABS_HTML =
+  /* Profil reste accessible en mode hôte, comme demandé — même icône que
+     TRAVELER_TABS_HTML, désormais en première position (voir le
+     commentaire juste au-dessus). Contenu différent de la vue voyageur
+     (renderHostProfile(), pas renderProfile()) : formules hôte à la place
+     des lignes "Mes demandes de disponibilité"/"Notifications"/"Moyens de
+     contact préférés", retirées des deux côtés (n'ont jamais eu de
+     contenu réel derrière). Plus de 3e onglet "Espace voyageur" séparé
+     (retour utilisateur) : redondant avec la tuile "Espace voyageur"
+     intégrée à la carte Profil (renderHostProfile(),
+     profileIdentityCardHtml()) — un seul chemin pour en sortir. */
+  '<button class="tab" data-host-tab="profile">'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
+    '<span>Profil hôte</span>'+
+  '</button>'+
   /* "Mon calendrier" fusionné dans "Mes annonces" (retour utilisateur :
      "2 menus ne sont pas nécessaires") — chaque annonce se déplie
      désormais directement dans sa propre carte (voir hostListingCardHtml/
@@ -9571,31 +9593,18 @@ var HOST_TABS_HTML =
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>'+
     '<span>Mes annonces</span>'+
   '</button>'+
-  /* Onglet central, entre Mes annonces et Profil (retour utilisateur :
-     "un 3e picto au centre") : pas une vue de plus côté Séjours, juste un
-     raccourci vers l'outil de planning Fiftin app (même lien app/ que
-     .hf-gestion-btn/.cal-add-pill ailleurs dans ce fichier) — jamais marqué
-     .active (data-host-tab="app" ne correspond à aucune valeur possible de
-     state.hostTab), câblé à part dans renderTabbar() vers
-     openHostGestionApp() plutôt que switchHostTab(). Réservé aux comptes
-     gestion (formule Essentiel/Avancé, voir openHostGestionApp()) : une
-     formule Hôte simple n'a pas de compte Fiftin app à ouvrir. */
+  /* Onglet central (retour utilisateur : "un 3e picto au centre") : pas
+     une vue de plus côté Séjours, juste un raccourci vers l'outil de
+     planning Fiftin app (même lien app/ que .hf-gestion-btn/.cal-add-pill
+     ailleurs dans ce fichier) — jamais marqué .active (data-host-tab="app"
+     ne correspond à aucune valeur possible de state.hostTab), câblé à
+     part dans renderTabbar() vers openHostGestionApp() plutôt que
+     switchHostTab(). Réservé aux comptes gestion (formule Essentiel/
+     Avancé, voir openHostGestionApp()) : une formule Hôte simple n'a pas
+     de compte Fiftin app à ouvrir. */
   '<button class="tab" data-host-tab="app">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg></span>'+
     '<span>App gestion</span>'+
-  '</button>'+
-  /* Profil reste accessible en mode hôte, comme demandé — même icône que
-     TRAVELER_TABS_HTML, en dernière position. Contenu différent de la
-     vue voyageur (renderHostProfile(), pas renderProfile()) : formules
-     hôte à la place des lignes "Mes demandes de disponibilité"/
-     "Notifications"/"Moyens de contact préférés", retirées des deux
-     côtés (n'ont jamais eu de contenu réel derrière). Plus de 3e onglet
-     "Espace voyageur" séparé (retour utilisateur) : redondant avec la
-     tuile "Espace voyageur" intégrée à la carte Profil (renderHostProfile(),
-     profileIdentityCardHtml()) — un seul chemin pour en sortir. */
-  '<button class="tab" data-host-tab="profile">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></span>'+
-    '<span>Profil hôte</span>'+
   '</button>';
 
 function renderTabbar(){
