@@ -787,7 +787,7 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
   color:var(--sauge); display:flex; align-items:center; gap:8px;}
 .amenity-chip.active{background:none; color:var(--sauge); border-color:var(--sauge); border-width:2px;}
 .amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
-/* Espaces & annexes (retour utilisateur : "un groupe clair qui permette de
+/* Pièces & annexes (retour utilisateur : "un groupe clair qui permette de
    sélectionner les pièces de la maison et leur nombre, même principe que
    le catalogue de l'app de gestion, clic plusieurs fois pour augmenter le
    nombre et clic sur le nombre pour réduire ou supprimer") — .xchip/
@@ -2794,6 +2794,25 @@ function detailAmenitiesHtml(l){
   }).join("");
   return groupsHtml || '<p class="sheet-sub" style="margin:0;">Aucune prestation renseignée pour le moment.</p>';
 }
+/* Pièces/annexes quantifiées (l.spaces, voir hfSpaceChipsHtml() côté
+   formulaire) — section séparée des Prestations car ce n'est pas un
+   simple oui/non comme AMEN_GROUPS : chaque pièce a une quantité.
+   Retour utilisateur : "pourquoi ce n'est pas visible sur la fiche
+   annonce ?" — repris avec les mêmes .amenity-chip.active que
+   detailAmenitiesHtml() pour un style homogène ; la quantité n'est
+   affichée (×N) qu'au-delà de 1, un simple "Garage" suffit pour 1.
+   Retourne "" si aucun espace renseigné, pour que l'appelant n'affiche
+   pas du tout la carte "Pièces & annexes" dans ce cas (section
+   optionnelle, contrairement aux Prestations). */
+function detailSpacesHtml(l){
+  var sp = l.spaces || {};
+  var names = HOUSE_SPACES.filter(function(name){ return sp[name]>0; });
+  if(!names.length) return "";
+  return '<div class="amenity-grid">'+names.map(function(name){
+    var qty = sp[name];
+    return '<span class="amenity-chip active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg>'+esc(name)+(qty>1?' ×'+qty:'')+'</span>';
+  }).join("")+'</div>';
+}
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
   '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>'+
@@ -3127,18 +3146,32 @@ var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPer
 // réduire ou supprimer)" — reprend .xchip/.xchip-qty (app/index.html,
 // setExtra()) telles quelles en CSS/interaction, mais hfSpaces est une
 // donnée à part (objet {nomEspace: nombre}), PAS une entrée de plus dans
-// AMEN_GROUPS/l.amen : ce tableau est partagé avec le volet filtre
-// voyageur (kind==="amen", voir amenityGroupsHtml()) qui n'a besoin que
-// d'un oui/non, jamais d'une quantité, et porte déjà des annonces
-// publiées avec amen:["Jardin",...] — mélanger les deux modèles, ou
-// retirer Jardin/Terrasse de AMEN_GROUPS pour éviter le doublon, aurait
-// changé le filtre voyageur sans qu'on le demande. Les deux cohabitent
-// donc tels quels pour Jardin/Terrasse (oui/non d'un côté, quantité de
-// l'autre) — redondance mineure assumée plutôt qu'un effet de bord sur
-// une fonctionnalité non visée par cette demande.
-var hfSpaces = {}; // espaces du formulaire en cours : {"Jardin":2, "Garage":1, ...} — clé absente ou 0 = non renseigné
-var HOUSE_SPACES = ["Jardin","Terrasse","Balcon","Piscine","Garage","Abri de jardin","Cuisine extérieure","Buanderie","Cave","Dépendance"];
+// AMEN_GROUPS (qui n'a qu'un oui/non, jamais de quantité).
+// Retour utilisateur : "espace et annexe doit en fait être toutes les
+// pièces de la maison" — HOUSE_SPACES couvre donc aussi bien les pièces
+// intérieures (Chambre, Salle de bain…) que les annexes extérieures
+// (Jardin, Garage…), d'où le nom affiché "Pièces & annexes" côté UI.
+// Jardin/Terrasse ont été retirés de AMEN_GROUPS (retour utilisateur :
+// "pas de double existence, nulle part") — ils n'existent plus que comme
+// espaces quantifiés ici. De même, le groupe "Confort — Salle de bain"
+// (attenante/non attenante/partagée) a été retiré d'AMEN_GROUPS : ce
+// même retour signalait qu'il ne fallait "pas répéter les salles de
+// bain" maintenant qu'elles sont comptées ici. Les annonces publiées
+// avant ces changements avec amen:["Jardin",...]/["Salle de bain
+// partagée",...] gardent ces valeurs en base (champ non nettoyé
+// rétroactivement) mais elles ne sont plus filtrables ni affichées nulle
+// part : seul hfSpaces/l.spaces compte désormais pour ces prestations.
+var hfSpaces = {}; // pièces/annexes du formulaire en cours : {"Chambre":3, "Garage":1, ...} — clé absente ou 0 = non renseigné
+var HOUSE_SPACES = ["Chambre","Salle de bain","Salle de douche","WC","Salon","Salle à manger","Cuisine","Bureau","Jardin","Terrasse","Balcon","Piscine","Garage","Abri de jardin","Cuisine extérieure","Buanderie","Cave","Dépendance"];
 var HOUSE_SPACE_ICONS = {
+  "Chambre":"<rect x='3' y='10' width='18' height='9' rx='2'/><rect x='5' y='7' width='6' height='3' rx='1'/><path d='M3 19v2M21 19v2'/>",
+  "Salle de bain":"<path d='M3 12h18v3a4 4 0 01-4 4H7a4 4 0 01-4-4z'/><path d='M5 12V7a2 2 0 012-2h1'/><circle cx='8' cy='6' r='1'/>",
+  "Salle de douche":"<path d='M6 3h7a3 3 0 013 3v1'/><rect x='5' y='9' width='14' height='11' rx='1'/><path d='M9 13v4M13 13v4M17 13v4'/>",
+  "WC":"<path d='M6 4h8v6H6z'/><path d='M5 10h10v3a5 5 0 01-5 5 5 5 0 01-5-5z'/>",
+  "Salon":"<rect x='3' y='11' width='18' height='6' rx='2'/><path d='M3 17v3M21 17v3'/><path d='M5 11V8a2 2 0 012-2h10a2 2 0 012 2v3'/>",
+  "Salle à manger":"<rect x='3' y='9' width='18' height='2' rx='1'/><path d='M5 11v7M19 11v7'/>",
+  "Cuisine":"<rect x='3' y='9' width='18' height='4' rx='1'/><circle cx='7' cy='11' r='1'/><circle cx='12' cy='11' r='1'/><circle cx='17' cy='11' r='1'/><path d='M4 13v7h16v-7'/>",
+  "Bureau":"<rect x='3' y='13' width='18' height='2'/><path d='M5 15v5M19 15v5'/><rect x='8' y='7' width='8' height='6' rx='1'/>",
   "Jardin":"<path d='M12 21v-8M12 13c0-4-3-6-7-6 0 4 3 7 7 6zM12 13c0-5 3-8 8-8 0 5-3 9-8 8z'/>",
   "Terrasse":"<path d='M12 3a8 8 0 018 8H4a8 8 0 018-8z'/><path d='M12 11v8a2 2 0 01-4 0'/>",
   "Balcon":"<path d='M4 10h16v3H4z'/><path d='M4 13v8M20 13v8M8 13v8M12 13v8M16 13v8'/>",
@@ -3767,10 +3800,9 @@ var AMEN_GROUPS = [
   {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Chauffage","Wifi","Parking privé","Accès PMR"], required:true},
   {title:"Accueil", items:["Accueil en personne","Installation autonome","Animaux acceptés"], required:true},
   {title:"Confort — Literie", items:["Lit 180","Lit 160","Lit 140","Lit 90","Lits jumeaux","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
-  {title:"Confort — Salle de bain", items:["Salle de bain privative attenante","Salle de bain privative non attenante","Salle de bain partagée"], single:true, required:true},
   {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
   {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition"]},
-  {title:"Esprit & ambiance", items:["Jardin","Terrasse","Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Télévision"]},
+  {title:"Esprit & ambiance", items:["Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Télévision"]},
   {title:"Atouts", items:["Au calme","Aucun vis-à-vis","Enfants bienvenus","Vue dégagée","Accessible sans voiture","Adapté au télétravail","Privatisation / événements possibles"]}
 ];
 /* Grille de prestations par groupe — utilisée à la fois par le volet
@@ -4019,8 +4051,6 @@ var AMEN_ICONS = {
   "Baby-foot":"<rect x='3' y='6' width='18' height='12' rx='1'/><path d='M8 6v12M16 6v12'/><circle cx='8' cy='12' r='1.3'/><circle cx='16' cy='12' r='1.3'/>",
   "Jeux de plage à disposition":"<path d='M5 8h14l-1.5 12a2 2 0 01-2 1.8H8.5a2 2 0 01-2-1.8z'/><path d='M5 8a7 3 0 0014 0'/>",
   // Extérieur & ambiance
-  "Jardin":"<path d='M12 21v-8M12 13c0-4-3-6-7-6 0 4 3 7 7 6zM12 13c0-5 3-8 8-8 0 5-3 9-8 8z'/>",
-  "Terrasse":"<path d='M12 3a8 8 0 018 8H4a8 8 0 018-8z'/><path d='M12 11v8a2 2 0 01-4 0'/>",
   "Cheminée":"<path d='M8 21V11l4-7 4 7v10z'/><path d='M8 15h8'/>",
   "Poêle à bois":"<rect x='6' y='9' width='12' height='10' rx='2'/><circle cx='12' cy='14' r='3'/><path d='M9 9V6a3 3 0 016 0v3'/>",
   "Barbecue":"<path d='M5 12a7 4 0 0114 0z'/><path d='M5 12v2a7 4 0 0014 0v-2'/><path d='M12 5v3'/>",
@@ -4059,10 +4089,6 @@ var AMEN_ICONS = {
   "Canapé-lit":"<rect x='3' y='10' width='18' height='8' rx='2'/><path d='M3 14V8a2 2 0 012-2h2M19 14V8a2 2 0 00-2-2h-2'/>",
   "Lit superposé":"<rect x='4' y='4' width='16' height='6' rx='1.5'/><rect x='4' y='13' width='16' height='6' rx='1.5'/><path d='M4 10v3M20 10v3'/>",
   "Lit bébé disponible":"<rect x='5' y='9' width='14' height='9' rx='1.5'/><path d='M8 9V6M12 9V6M16 9V6'/>",
-  // Confort — Salle de bain (single:true, LOT 4.3)
-  "Salle de bain privative attenante":"<rect x='3' y='12' width='14' height='7' rx='2'/><path d='M3 12V9a3 3 0 013-3'/><path d='M17 15h4v4h-4z'/>",
-  "Salle de bain privative non attenante":"<rect x='4' y='11' width='16' height='8' rx='2'/><path d='M4 11V8a3 3 0 013-3'/><path d='M2 19h1M21 19h1'/>",
-  "Salle de bain partagée":"<rect x='5' y='13' width='14' height='7' rx='2'/><path d='M5 13V10a3 3 0 013-3'/><circle cx='4' cy='6' r='1.6'/><circle cx='9' cy='5' r='1.6'/>",
   // Confort — Autres (LOT 4.3) — "Climatisation" volontairement absente, déjà dans Équipements.
   "WC privatifs":"<path d='M6 4h8v6H6z'/><path d='M5 10h10v3a5 5 0 01-5 5 5 5 0 01-5-5z'/>",
   "Douche à l'italienne":"<path d='M6 3h7a3 3 0 013 3'/><path d='M9 9v2M13 9v2M17 9v2'/><path d='M3 20h18'/>",
@@ -6329,6 +6355,14 @@ function openDetail(id){
     '</div>';
 
   var metaRowHtml, bodyExtraHtml;
+  // Pièces & annexes (l.spaces) : carte à part de Prestations, affichée
+  // seulement si l'hôte a renseigné au moins une pièce (detailSpacesHtml
+  // renvoie "" sinon) — retour utilisateur, "pourquoi ce n'est pas
+  // visible sur la fiche annonce ?". Identique en vue d'ensemble et en
+  // vue chambre : ce sont les pièces du logement entier, pas de la
+  // chambre sélectionnée.
+  var spacesHtml = detailSpacesHtml(l);
+  var spacesCardHtml = spacesHtml ? '<div class="detail-card"><div class="section-title">Pièces & annexes</div>'+spacesHtml+'</div>' : "";
   if(!activeUnit){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
@@ -6346,6 +6380,7 @@ function openDetail(id){
       '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
+      spacesCardHtml+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -6368,7 +6403,8 @@ function openDetail(id){
       '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
-      detailAmenitiesHtml(l)+'</div>';
+      detailAmenitiesHtml(l)+'</div>'+
+      spacesCardHtml;
   }
 
   var qrUid = "qrd"+l.id+(activeUnit ? "-"+activeUnit.id : "");
@@ -6757,7 +6793,7 @@ function openSheet(kind){
         // sélectionner les pièces de la maison et leur nombre, même
         // principe que le catalogue de l'app de gestion" — voir
         // hfSpaceChipsHtml()/hfStepSpace() plus haut.
-        '<div class="field-block" style="margin-bottom:0;"><label>Espaces & annexes</label>'+
+        '<div class="field-block" style="margin-bottom:0;"><label>Pièces & annexes</label>'+
           '<p class="field-hint" style="margin:0 0 8px;">Cliquez pour ajouter, cliquez sur le nombre pour retirer.</p>'+
           '<div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>'+
         '</div>'+
@@ -6946,7 +6982,7 @@ function openSheet(kind){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
       el.addEventListener("click", function(){ toggleAmenityChip(el); });
     });
-    // Espaces & annexes (hfStepSpace()) : un seul écouteur délégué sur le
+    // Pièces & annexes (hfStepSpace()) : un seul écouteur délégué sur le
     // conteneur plutôt qu'un par puce — hfStepSpace() réécrit l'innerHTML
     // de #hf-spaces-grid à chaque clic (même puce redessinée pour refléter
     // le nouveau nombre), des écouteurs posés directement sur les boutons
