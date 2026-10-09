@@ -2014,11 +2014,11 @@ body.map-fullscreen{overflow:hidden;}
   border:none; border-radius:16px; padding:9px 6px; font-family:'Jost',sans-serif; font-size:11.5px; font-weight:700;}
 .host-status-toggle.on{background:var(--sauge); color:#fff;}
 .host-status-toggle.off{background:var(--cream-deep); color:var(--gray-mid);}
-/* .host-preview-btn (retour utilisateur, "aperçu point de vue visiteur") :
-   contour neutre comme .host-delete-btn, mais en --sauge plutôt qu'en
-   --danger — ni l'action principale (Modifier, fond plein) ni une action
-   destructrice, juste consultative. */
-.host-preview-btn{background:none; border:1.5px solid var(--line); color:var(--sauge);}
+/* .host-preview-btn : contour neutre essayé d'abord, puis retour
+   utilisateur "passe l'encart aperçu en vert comme les autres" — même
+   fond plein --sauge que .host-status-toggle.on/.host-edit-btn plutôt
+   qu'un traitement à part. */
+.host-preview-btn{background:var(--sauge); color:#fff;}
 .host-edit-btn{background:var(--sauge); color:#fff;}
 .host-delete-btn{background:none; border:1.5px solid rgba(178,84,59,.35); color:var(--danger);}
 .host-status-toggle svg, .host-preview-btn svg, .host-edit-btn svg, .host-delete-btn svg{width:13px; height:13px; flex-shrink:0;}
