@@ -708,15 +708,39 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .extras-total{font-size:12px;color:var(--green);font-weight:700;}
 
 /* ─── BACKUP REMINDER ────────────────────────────────────────── */
-#backupReminder{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
-  background:#7A5800;color:#fff;border-radius:30px;padding:9px 16px;
-  display:none;align-items:center;gap:10px;z-index:800;
-  font-size:12px;font-weight:500;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+/* Avant : petite pastille discrète collée en bas d'écran (fond brun
+   #7A5800, hors charte) — retour utilisateur : "ce petit encart devrait
+   être ajusté : plus gros et central pour pas se perdre dans l'écran,
+   plus dans le style de tout ce qui a été fait... pas mettre de cette
+   couleur, faire en lavande". Repris en vraie fenêtre centrée (overlay +
+   carte), même charpente que les modaux (.mhead/.mtitle/.mclose, voir
+   plus bas) mais en --lavender-strong plutôt qu'en --green : c'est une
+   notification, pas un volet de contenu, le lavande la distingue du
+   reste de l'app tout en restant dans la charte existante (déjà utilisé
+   par ex. sur .evfilter-btn). Pas de .modal/.overlay générique (pensé
+   pour un volet qui peut être long, plein écran sur mobile) : ici le
+   contenu tient en 3 lignes, une carte centrée de taille fixe reste
+   lisible sans jamais occuper tout l'écran. */
+#backupReminder{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.68);
+  display:none;align-items:center;justify-content:center;padding:24px;}
 #backupReminder.show{display:flex;}
-.bkp-btn{padding:4px 12px;background:#fff;color:#7A5800;border:none;border-radius:20px;
-  font-family:'Jost',sans-serif;font-size:11px;font-weight:600;cursor:pointer;}
-.bkp-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:16px;
-  cursor:pointer;padding:0;line-height:1;}
+.bkp-card{background:var(--white);border-radius:16px;max-width:360px;width:100%;
+  overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,.35);text-align:center;}
+/* .bkp-card .mhead (pas .bkp-head seul) : sélecteur plus spécifique que
+   .mhead pour gagner le cascade quoi qu'il arrive, cette règle étant
+   placée plus tôt dans la feuille de style que .mhead (sinon .mhead,
+   déclaré après, écraserait background/margin/padding ici redéfinis).
+   margin:0 (pas le -20px -18px de .mhead, pensé pour .modal dont il
+   mord le padding) : .bkp-card n'a pas ce padding, chaque zone a le
+   sien en propre. */
+.bkp-card .mhead{background:var(--lavender-strong);margin:0;border-radius:0;
+  padding:16px 14px 16px 20px;}
+.bkp-card .mtitle{font-size:18px;}
+.bkp-body{padding:22px 22px 24px;}
+.bkp-msg{font-size:14px;color:var(--dark);line-height:1.5;margin:0 0 18px;}
+.bkp-link{display:block;width:100%;padding:12px;background:var(--lavender-strong);
+  color:#fff;border:none;border-radius:8px;font-family:'Jost',sans-serif;font-size:13.5px;
+  font-weight:600;cursor:pointer;}
 #weekWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
 .week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
@@ -1913,9 +1937,16 @@ Gardez la main.</div>
 
 <!-- ─── BACKUP REMINDER ───────────────────────────────────────── -->
 <div id="backupReminder">
-  <span id="backupMsg">💾 Pas de sauvegarde depuis 7 jours</span>
-  <button class="bkp-btn" onclick="doExport();byId('backupReminder').classList.remove('show')">Exporter</button>
-  <button class="bkp-close" onclick="localStorage.setItem('ff2_lastExport',todayISO());byId('backupReminder').classList.remove('show')">✕</button>
+  <div class="bkp-card">
+    <div class="mhead">
+      <div class="mtitle">💾 Sauvegarde</div>
+      <button class="mclose" onclick="dismissBackupReminder()">✕</button>
+    </div>
+    <div class="bkp-body">
+      <p class="bkp-msg" id="backupMsg">Pas de sauvegarde depuis 7 jours</p>
+      <button class="bkp-link" onclick="openBackupExport()">Exporter mes données</button>
+    </div>
+  </div>
 </div>
 
 <!-- ─── BOOKING MODAL ─────────────────────────────────────────────── -->
@@ -7189,6 +7220,23 @@ function toggleSettingsPanel(id){
   if(!wasOpen)settingsPanelOpen[id]=true;
   if(id==='equipe'&&settingsPanelOpen[id])loadTeamMembers();
   renderSettings();
+}
+// Retour utilisateur sur #backupReminder : le lien "Exporter mes données"
+// doit renvoyer directement au panneau Export / Import des Réglages,
+// pas juste ouvrir Réglages à l'aveugle — même mécanique de lien profond
+// qu'openHostGestionApp()/?openSettings=1 plus haut (settingsPanelOpen
+// pré-rempli avant renderSettings() au lieu de {} comme openSettings()).
+function openBackupExport(){
+  byId('backupReminder').classList.remove('show');
+  settingsPanelOpen={export:true};
+  renderSettings();
+  openM('modalSettings');
+  prefetchSejoursListings();
+  requestAnimationFrame(()=>byId('setpanel-export')?.scrollIntoView({block:'start'}));
+}
+function dismissBackupReminder(){
+  localStorage.setItem('ff2_lastExport',todayISO());
+  byId('backupReminder').classList.remove('show');
 }
 // Rappels réglementaires (déclaration meublé de tourisme, TVA, LMP, Loi Le
 // Meur…) — déplacés de la vue Année vers ce dernier onglet de Réglages
