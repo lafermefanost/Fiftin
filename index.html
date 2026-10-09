@@ -787,6 +787,20 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
   color:var(--sauge); display:flex; align-items:center; gap:8px;}
 .amenity-chip.active{background:none; color:var(--sauge); border-color:var(--sauge); border-width:2px;}
 .amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
+/* Espaces & annexes (retour utilisateur : "un groupe clair qui permette de
+   sélectionner les pièces de la maison et leur nombre, même principe que
+   le catalogue de l'app de gestion, clic plusieurs fois pour augmenter le
+   nombre et clic sur le nombre pour réduire ou supprimer") — .xchip/
+   .xchip-qty repris tels quels (mêmes noms de classe, même recette) de
+   .xchip côté app/index.html (consommations/extras, voir setExtra()) :
+   même interaction, pas besoin d'en réinventer une. */
+.hf-spaces-grid{display:flex; flex-wrap:wrap; gap:8px;}
+.xchip{display:inline-flex; align-items:center; gap:5px; padding:9px 12px;
+  border:1.5px solid var(--line); border-radius:16px; cursor:pointer;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink); background:none;}
+.xchip svg{width:15px; height:15px; flex-shrink:0;}
+.xchip.on{border-color:var(--sauge); border-width:2px; color:var(--sauge);}
+.xchip-qty{background:var(--sauge); color:#fff; border-radius:10px; padding:2px 7px; font-size:11px; font-weight:700;}
 .region-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
 .region-chip{border:1.5px solid var(--line); border-radius:16px; padding:9px 14px; font-size:12.5px; font-weight:600;
   font-family:'Jost',sans-serif; background:var(--cream);}
@@ -3106,6 +3120,55 @@ function wireLegalRows(){
    exactement le même code que pour une création. */
 var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
 var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[], linkedRoomId}]
+// Retour utilisateur : "dans les prestations, j'aimerais vraiment un groupe
+// clair qui permette de sélectionner les pièces de la maison et leur
+// nombre (utilise le même principe que le catalogue de l'app de gestion,
+// clic plusieurs fois pour augmenter le nombre et clic sur le nombre pour
+// réduire ou supprimer)" — reprend .xchip/.xchip-qty (app/index.html,
+// setExtra()) telles quelles en CSS/interaction, mais hfSpaces est une
+// donnée à part (objet {nomEspace: nombre}), PAS une entrée de plus dans
+// AMEN_GROUPS/l.amen : ce tableau est partagé avec le volet filtre
+// voyageur (kind==="amen", voir amenityGroupsHtml()) qui n'a besoin que
+// d'un oui/non, jamais d'une quantité, et porte déjà des annonces
+// publiées avec amen:["Jardin",...] — mélanger les deux modèles, ou
+// retirer Jardin/Terrasse de AMEN_GROUPS pour éviter le doublon, aurait
+// changé le filtre voyageur sans qu'on le demande. Les deux cohabitent
+// donc tels quels pour Jardin/Terrasse (oui/non d'un côté, quantité de
+// l'autre) — redondance mineure assumée plutôt qu'un effet de bord sur
+// une fonctionnalité non visée par cette demande.
+var hfSpaces = {}; // espaces du formulaire en cours : {"Jardin":2, "Garage":1, ...} — clé absente ou 0 = non renseigné
+var HOUSE_SPACES = ["Jardin","Terrasse","Balcon","Piscine","Garage","Abri de jardin","Cuisine extérieure","Buanderie","Cave","Dépendance"];
+var HOUSE_SPACE_ICONS = {
+  "Jardin":"<path d='M12 21v-8M12 13c0-4-3-6-7-6 0 4 3 7 7 6zM12 13c0-5 3-8 8-8 0 5-3 9-8 8z'/>",
+  "Terrasse":"<path d='M12 3a8 8 0 018 8H4a8 8 0 018-8z'/><path d='M12 11v8a2 2 0 01-4 0'/>",
+  "Balcon":"<path d='M4 10h16v3H4z'/><path d='M4 13v8M20 13v8M8 13v8M12 13v8M16 13v8'/>",
+  "Piscine":"<circle cx='12' cy='12' r='9'/><path d='M7 12h10M7 8h10M7 16h10'/>",
+  "Garage":"<path d='M3 9l9-6 9 6'/><rect x='3' y='9' width='18' height='12' rx='1'/><path d='M3 13h18M3 17h18'/>",
+  "Abri de jardin":"<path d='M3 11l9-7 9 7'/><path d='M5 10v10h14V10'/><rect x='10' y='14' width='4' height='6'/>",
+  "Cuisine extérieure":"<rect x='3' y='13' width='18' height='7' rx='1'/><path d='M7 13V9a2 2 0 012-2h6a2 2 0 012 2v4'/><path d='M9 7V5M15 7V5'/>",
+  "Buanderie":"<rect x='4' y='3' width='16' height='18' rx='2'/><circle cx='12' cy='13' r='4'/><path d='M8 7h.01M11 7h.01'/>",
+  "Cave":"<path d='M3 21V15h4v-4h4V7h4V3'/><path d='M3 21h18'/>",
+  "Dépendance":"<rect x='4' y='9' width='16' height='11' rx='1'/><path d='M4 9l8-5 8 5'/>"
+};
+function hfSpaceChipsHtml(){
+  return HOUSE_SPACES.map(function(name){
+    var qty = hfSpaces[name]||0;
+    return '<button type="button" class="xchip'+(qty>0?' on':'')+'" data-space="'+esc(name)+'">'+
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg> '+esc(name)+
+      (qty>0 ? '<span class="xchip-qty" data-space-minus="'+esc(name)+'">×'+qty+'</span>' : '')+
+    '</button>';
+  }).join("");
+}
+// Même logique que setExtra() côté app/index.html : Math.max(0,...), clé
+// retirée à 0 plutôt que laissée à 0 — un objet sans la clé et un objet
+// avec {clé:0} doivent se comporter de façon identique au submit, autant
+// ne jamais produire le 2e cas.
+function hfStepSpace(name,delta){
+  var nv = Math.max(0,(hfSpaces[name]||0)+delta);
+  if(nv===0) delete hfSpaces[name]; else hfSpaces[name]=nv;
+  var wrap = document.getElementById("hf-spaces-grid");
+  if(wrap) wrap.innerHTML = hfSpaceChipsHtml();
+}
 var hfHostPhoto = null; // photo de l'hôte (facultative) : null, {type:"existing", url} ou {type:"new", file} — même mécanique que hfSelectedFiles, mais un seul fichier
 /* Présentation de PROFIL résolue par resolveHostProfileBio() (voir plus
    bas, près de wireAccountAvatar()) : `undefined` tant que pas encore
@@ -6575,6 +6638,14 @@ function openSheet(kind){
   } else if(kind==="hostform"){
     var hfEditing = !!hostFormEditListing;
     var hfEf = hostFormEditListing;
+    // Avant la construction d'`inner` (hfSpaceChipsHtml() y est appelée,
+    // voir plus bas) : contrairement à hfUnits/hfSelectedFiles (remplis
+    // après, car affichés via un <div id> vide + rendu JS séparé),
+    // hfSpaces est lu directement au moment où ce HTML est construit —
+    // doit donc déjà refléter CETTE annonce avant cet appel. Copie
+    // superficielle (pas une référence directe à hfEf.spaces) : hfStepSpace()
+    // mute cet objet en place, ne jamais muter les données déjà en cache.
+    hfSpaces = (hfEf && hfEf.spaces) ? Object.assign({}, hfEf.spaces) : {};
     inner = '<div class="hf-head"><h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
       '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
       '</div>'+
@@ -6586,6 +6657,16 @@ function openSheet(kind){
           Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
         '</select>'+
           '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
+        '</div>'+
+        // Retour utilisateur : "mets Présentation de l'annonce directement
+        // dans Votre logement, c'est plus logique" — Accroche/Description
+        // n'ont plus leur propre .hf-sec, elles rejoignent Nom/Type.
+        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'">'+
+          hfWordCountHtml("hf-claim",HF_CLAIM_MAX_WORDS)+
+        '</div>'+
+        '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
+          hfWordCountHtml("hf-desc",HF_DESC_MAX_WORDS)+
+          '<div id="hf-desc-reuse-wrap"></div>'+
         '</div>'+
       '</div>'+
       // Photos et Capacité/tarif remontées ici, juste après Nom/Type
@@ -6657,15 +6738,6 @@ function openSheet(kind){
         '</select></div>'+
         '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '</div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("text","Présentation de l\'annonce")+
-        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'">'+
-          hfWordCountHtml("hf-claim",HF_CLAIM_MAX_WORDS)+
-        '</div>'+
-        '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
-          hfWordCountHtml("hf-desc",HF_DESC_MAX_WORDS)+
-          '<div id="hf-desc-reuse-wrap"></div>'+
-        '</div>'+
-      '</div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact & réseaux")+
         '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
         '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
@@ -6677,9 +6749,29 @@ function openSheet(kind){
         '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
       '</div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("amen","Prestations")+
-        '<div class="field-block" style="margin-bottom:0;"><label>Communes au logement</label>'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
+        // Retour utilisateur : "pas sûr de l'utilité de « communes au
+        // logement »" — le titre de section "PRESTATIONS" juste au-dessus
+        // dit déjà ça, label retiré (field-block gardé, juste sans label).
+        '<div class="field-block">'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
+        // Retour utilisateur : "un groupe clair qui permette de
+        // sélectionner les pièces de la maison et leur nombre, même
+        // principe que le catalogue de l'app de gestion" — voir
+        // hfSpaceChipsHtml()/hfStepSpace() plus haut.
+        '<div class="field-block" style="margin-bottom:0;"><label>Espaces & annexes</label>'+
+          '<p class="field-hint" style="margin:0 0 8px;">Cliquez pour ajouter, cliquez sur le nombre pour retirer.</p>'+
+          '<div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>'+
+        '</div>'+
       '</div>'+
-      '<a class="host-app-link" href="app/" target="_blank" rel="noopener">Vous gérez déjà des réservations ? Ouvrir votre espace de gestion →</a>'+
+      // Retour utilisateur : "la phrase à la toute fin n'est pas très
+      // claire — inviter à utiliser l'app de gestion si le client n'a que
+      // la formule hôte, et inviter à modifier ses réservations via l'app
+      // de gestion s'il a une des formules gestion". resolveHostAccount()
+      // est async (lecture Firestore) : texte par défaut (formule simple,
+      // le cas le plus courant pour qui dépose une 1ère annonce) posé ici,
+      // recalculé juste après l'insertion DOM (voir le câblage de
+      // kind==="hostform" plus bas, même endroit que hfHostPhoto/
+      // updateHfHostBioUI() pour les autres résolutions async de ce volet).
+      '<a class="host-app-link" href="app/" target="_blank" rel="noopener" id="hf-gestion-link">Envie de gérer aussi vos réservations ? Découvrez l\'app de gestion Fiftin →</a>'+
       '<div class="auth-err" id="hf-err"></div>';
     // thumbUrl repris ici (galleryThumb, même index que gallery) pour
     // qu'une photo déjà en ligne, gardée telle quelle, n'ait jamais besoin
@@ -6854,6 +6946,19 @@ function openSheet(kind){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
       el.addEventListener("click", function(){ toggleAmenityChip(el); });
     });
+    // Espaces & annexes (hfStepSpace()) : un seul écouteur délégué sur le
+    // conteneur plutôt qu'un par puce — hfStepSpace() réécrit l'innerHTML
+    // de #hf-spaces-grid à chaque clic (même puce redessinée pour refléter
+    // le nouveau nombre), des écouteurs posés directement sur les boutons
+    // seraient donc perdus dès le 2e clic. data-space-minus (la pastille
+    // ×N) avant data-space (toute la puce) : la pastille vit À L'INTÉRIEUR
+    // du bouton, closest() la trouverait aussi en cherchant data-space.
+    document.getElementById("hf-spaces-grid").addEventListener("click", function(e){
+      var minusEl = e.target.closest("[data-space-minus]");
+      if(minusEl){ e.stopPropagation(); hfStepSpace(minusEl.getAttribute("data-space-minus"), -1); return; }
+      var plusEl = e.target.closest("[data-space]");
+      if(plusEl) hfStepSpace(plusEl.getAttribute("data-space"), 1);
+    });
     document.getElementById("hf-region-name").addEventListener("change", function(){
       document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(this.value, "");
     });
@@ -6939,6 +7044,21 @@ function openSheet(kind){
       var pruned = pruneStaleLinkedRoomIds(hfUnits, hfAvailableRooms);
       if(pruned.changed) hfUnits = pruned.units;
       if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
+      // Retour utilisateur : "la phrase à la toute fin n'est pas très
+      // claire — inviter à utiliser l'app de gestion si le client n'a que
+      // la formule hôte, et inviter à modifier ses réservations via l'app
+      // de gestion s'il a une des formules gestion" — même lecture de
+      // compte (account.settings.plan) qu'openHostGestionApp(), pas de
+      // 2e appel à resolveHostAccount() : ce callback-ci la connaît déjà.
+      var gestionLink = document.getElementById("hf-gestion-link");
+      if(gestionLink){
+        var hfPlan = (account && account.settings && account.settings.plan) || "simple";
+        if(hfPlan==="essentiel" || hfPlan==="pro"){
+          gestionLink.textContent = "Vous gérez déjà vos réservations ? Modifiez-les depuis votre espace de gestion →";
+        } else {
+          gestionLink.textContent = "Envie de gérer aussi vos réservations ? Découvrez l'app de gestion Fiftin →";
+        }
+      }
     });
     // hf-bio-reuse ("reprendre la présentation d'une autre annonce") retiré
     // avec le passage de la présentation au niveau du profil (point 3.2) :
@@ -8492,6 +8612,7 @@ function submitHostForm(){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
           name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
+          spaces:hfSpaces,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng, inseeCode:coords.citycode||"",
           websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
