@@ -704,9 +704,31 @@ a{color:inherit; text-decoration:none;}
    principe de carte groupée avec petite icône + libellé en tête, mais
    dans la palette de ce fichier (--cream-deep au lieu du gris clair de
    app/index.html) plutôt qu'une simple suite de .field-block à plat. */
-.hf-head{background:var(--sauge); color:var(--cream); margin:0 -20px 20px; padding:18px 20px 20px;}
+/* Retour utilisateur : "qu'il n'y ait pas la bande blanche au-dessus du
+   cartouche header vert" — .sheet-handle (chrome générique, partagé par
+   tous les volets, voir root.innerHTML dans openSheet()) laissait 8px de
+   padding-top de .sheet + sa propre hauteur/marges (~30px) en crème avant
+   que .hf-head ne commence. Masqué uniquement quand .hf-head est présent
+   (:has(), le volet hostform étant le seul à en avoir un) plutôt que
+   retiré pour tous les volets — un volet sans bandeau coloré (filtres,
+   connexion…) garde besoin de ce repère de défilement tactile. .hf-head
+   remonte alors de -8px (juste le padding-top de .sheet, plus de hauteur
+   de poignée à compenser) jusqu'au bord, avec le même rayon que .sheet
+   (26px 26px 0 0) pour épouser exactement son coin arrondi. */
+.sheet:has(.hf-head) .sheet-handle{display:none;}
+.hf-head{background:var(--sauge); color:var(--cream); margin:-8px -20px 20px; padding:18px 20px 20px;
+  border-radius:26px 26px 0 0;}
 .sheet .hf-head h3{color:var(--cream); margin:0 0 6px;}
 .sheet .hf-head .sheet-sub{color:rgba(245,240,229,.88); margin:0;}
+/* Retour utilisateur : "fais la croix dans le même style de picto glass
+   effect que sur les annonces" — reprend .detail-back (bouton retour sur
+   la galerie photo de la fiche annonce) : cercle translucide + flou, pas
+   l'aplat clair utilisé par défaut. Scoped comme .sheet-handle ci-dessus :
+   ce style convient à un bouton posé sur le bandeau vert de .hf-head,
+   pas sur le fond crème clair des autres volets (le bouton par défaut,
+   clair sur clair déjà, y reste adapté). */
+.sheet:has(.hf-head) .sheet-close{background:rgba(20,26,20,.4); color:#fff;
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);}
 /* Retour utilisateur : "ajuste un peu les couleurs de fonds et des encarts
    et les contours pour être plus proche du style de l'app de gestion" —
    .msec (app/index.html) a un fond À PEINE plus clair que son modal (blanc)
