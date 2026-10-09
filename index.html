@@ -801,6 +801,15 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .xchip svg{width:15px; height:15px; flex-shrink:0;}
 .xchip.on{border-color:var(--sauge); border-width:2px; color:var(--sauge);}
 .xchip-qty{background:var(--sauge); color:#fff; border-radius:10px; padding:2px 7px; font-size:11px; font-weight:700;}
+/* Retour utilisateur : "pas dans le même style que les autres boutons"
+   (Pièces & annexes comparé aux puces Prestations du même modal) — même
+   principe que .hf-sec .amenity-chip.active plus bas (fond vert/typo
+   blanche une fois sélectionné), appliqué ici à .xchip pour que les deux
+   groupes de puces du formulaire se ressemblent. La pastille ×N passe en
+   blanc/vert pour rester lisible sur le fond vert plein. */
+.hf-spaces-grid .xchip{color:var(--sauge);}
+.hf-spaces-grid .xchip.on{background:var(--sauge); color:#fff;}
+.hf-spaces-grid .xchip-qty{background:#fff; color:var(--sauge);}
 .region-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
 .region-chip{border:1.5px solid var(--line); border-radius:16px; padding:9px 14px; font-size:12.5px; font-weight:600;
   font-family:'Jost',sans-serif; background:var(--cream);}
@@ -3797,13 +3806,13 @@ function fetchListingIndex(){
 var AMEN_GROUPS = [
   {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true, required:true},
   {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true, required:true},
-  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Chauffage","Wifi","Parking privé","Accès PMR"], required:true},
-  {title:"Accueil", items:["Accueil en personne","Installation autonome","Animaux acceptés"], required:true},
-  {title:"Confort — Literie", items:["Lit 180","Lit 160","Lit 140","Lit 90","Lits jumeaux","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
+  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Ventilateur","Ventilateur plafond","Moustiquaire","Chauffage","Wifi","Parking privé","Accès PMR","Sèche-cheveux"], required:true},
+  {title:"Accueil", items:["Accueil en personne","Installation autonome"], required:true},
+  {title:"Confort — Literie", items:["Lit 180 cm","Lit 160 cm","Lit 140 cm","Lit 90 cm","Lits jumeaux 2×80 cm","Lits jumeaux 2×90 cm","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
   {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
   {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition"]},
   {title:"Esprit & ambiance", items:["Cheminée","Poêle à bois","Barbecue","Plancha","Brasero","Enceintes connectées","Home cinéma","Télévision"]},
-  {title:"Atouts", items:["Au calme","Aucun vis-à-vis","Enfants bienvenus","Vue dégagée","Accessible sans voiture","Adapté au télétravail","Privatisation / événements possibles"]}
+  {title:"Atouts", items:["Au calme","Aucun vis-à-vis","Enfants bienvenus","Animaux acceptés","Vue dégagée","Accessible sans voiture","Adapté au télétravail","Privatisation / événements possibles"]}
 ];
 /* Grille de prestations par groupe — utilisée à la fois par le volet
    filtre (kind==="amen") et par le formulaire de dépôt/édition d'annonce,
@@ -4068,24 +4077,42 @@ var AMEN_ICONS = {
   "Sèche-linge":"<rect x='4' y='3' width='16' height='18' rx='2'/><circle cx='12' cy='14' r='5'/><path d='M9 6h2M13 6h2'/>",
   "Machine à café à capsules":"<rect x='7' y='3' width='10' height='7' rx='1'/><path d='M12 10v3'/><path d='M8 16h8l-1 5H9z'/>",
   "Climatisation":"<rect x='3' y='6' width='18' height='6' rx='2'/><path d='M7 15l-1 3M12 15v4M17 15l1 3'/>",
+  "Ventilateur":"<circle cx='12' cy='12' r='1.6'/><path d='M12 12c0-3 2-5 4.5-4.5S18 11 15 12M12 12c0 3-2 5-4.5 4.5S6 13 9 12M12 12c3 0 5 2 4.5 4.5S9 18 9 15M12 12c-3 0-5-2-4.5-4.5S15 6 15 9'/><path d='M12 18v3'/>",
+  "Ventilateur plafond":"<path d='M12 2v3'/><circle cx='12' cy='7' r='1.4'/><path d='M12 7L4 9M12 7l8 2M12 7l-1 7'/>",
+  "Moustiquaire":"<rect x='4' y='4' width='16' height='16' rx='1'/><path d='M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16'/>",
   "Chauffage":"<rect x='5' y='6' width='14' height='12' rx='1'/><path d='M8 6v12M12 6v12M16 6v12'/>",
   "Parking privé":"<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M9 8h3.5a2.5 2.5 0 010 5H9V8zm0 5v4'/>",
   "Wifi":"<path d='M5 12a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0M11.5 19a1.5 1.5 0 011 0'/>",
   "Accès PMR":"<circle cx='12' cy='5' r='2'/><path d='M6 20l4-9 2 3h5M10 11l1-4 5 1'/>",
+  "Sèche-cheveux":"<path d='M4 10a6 6 0 0112 0c0 2-1 3-3 3H7c-2 0-3-1-3-3z'/><path d='M10 13v4a2 2 0 002 2h1'/><path d='M16 9h4'/>",
   // Accueil
   "Accueil en personne":"<path d='M4 21V3h10v18'/><circle cx='17' cy='9' r='2'/><path d='M17 13v8'/>",
   "Installation autonome":"<rect x='5' y='10' width='14' height='9' rx='2'/><circle cx='12' cy='14' r='2'/><path d='M9 10V7a3 3 0 016 0v3'/>",
   /* Même tracé qu'ailleurs dans le fichier (cœur du bouton favori/onglet
      Mes séjours) pour Animaux acceptés — cohérence visuelle plutôt qu'une
-     icône réinventée, comme les trois de Séjours plus haut. */
+     icône réinventée, comme les trois de Séjours plus haut. Déplacée
+     d'Accueil vers Atouts dans AMEN_GROUPS (retour utilisateur), la clé
+     reste ici : l'ordre dans AMEN_ICONS n'a pas besoin de suivre celui
+     des groupes. */
   "Animaux acceptés":"<circle cx='8' cy='9' r='2'/><circle cx='16' cy='9' r='2'/><circle cx='5' cy='14' r='2'/><circle cx='19' cy='14' r='2'/><path d='M12 22c3 0 5-2 5-4.5S15 13 12 13s-5 2-5 4.5S9 22 12 22z'/>",
   // Confort — Literie (LOT 4.3) : un même gabarit "cadre + oreiller(s)" décliné,
   // la taille du lit se lit dans le libellé, pas dans le tracé (comme Lit 180/160/140/90).
-  "Lit 180":"<rect x='2' y='11' width='20' height='8' rx='2'/><rect x='4' y='8' width='6' height='3' rx='1'/><rect x='13' y='8' width='6' height='3' rx='1'/>",
-  "Lit 160":"<rect x='3' y='11' width='18' height='8' rx='2'/><rect x='5' y='8' width='5' height='3' rx='1'/><rect x='13' y='8' width='5' height='3' rx='1'/>",
-  "Lit 140":"<rect x='4' y='11' width='16' height='8' rx='2'/><rect x='6' y='8' width='5' height='3' rx='1'/><rect x='12' y='8' width='5' height='3' rx='1'/>",
-  "Lit 90":"<rect x='6' y='11' width='12' height='8' rx='2'/><rect x='8' y='8' width='7' height='3' rx='1'/>",
-  "Lits jumeaux":"<rect x='2' y='11' width='8' height='8' rx='2'/><rect x='14' y='11' width='8' height='8' rx='2'/><rect x='3' y='8' width='5' height='3' rx='1'/><rect x='15' y='8' width='5' height='3' rx='1'/>",
+  // Retour utilisateur : "mets les centimètres partout" — labels renommés
+  // "Lit 180 cm" etc. (était "Lit 180"...). Les annonces publiées avant ce
+  // renommage avec amen:["Lit 180",...] gardent l'ancienne valeur en base
+  // (non nettoyée rétroactivement) mais ne correspondent plus à aucune
+  // entrée de AMEN_GROUPS : même limitation déjà assumée pour Jardin/
+  // Terrasse/Salle de bain plus haut dans ce fichier.
+  "Lit 180 cm":"<rect x='2' y='11' width='20' height='8' rx='2'/><rect x='4' y='8' width='6' height='3' rx='1'/><rect x='13' y='8' width='6' height='3' rx='1'/>",
+  "Lit 160 cm":"<rect x='3' y='11' width='18' height='8' rx='2'/><rect x='5' y='8' width='5' height='3' rx='1'/><rect x='13' y='8' width='5' height='3' rx='1'/>",
+  "Lit 140 cm":"<rect x='4' y='11' width='16' height='8' rx='2'/><rect x='6' y='8' width='5' height='3' rx='1'/><rect x='12' y='8' width='5' height='3' rx='1'/>",
+  "Lit 90 cm":"<rect x='6' y='11' width='12' height='8' rx='2'/><rect x='8' y='8' width='7' height='3' rx='1'/>",
+  // Retour utilisateur : "je mettrais lit jumeaux 2x80 et lits jumeaux
+  // 2x90" — remplace l'unique "Lits jumeaux" par ces deux largeurs ; même
+  // tracé pour les deux (la taille se lit dans le libellé, pas le tracé,
+  // comme Lit 180/160/140/90 juste au-dessus).
+  "Lits jumeaux 2×80 cm":"<rect x='2' y='11' width='8' height='8' rx='2'/><rect x='14' y='11' width='8' height='8' rx='2'/><rect x='3' y='8' width='5' height='3' rx='1'/><rect x='15' y='8' width='5' height='3' rx='1'/>",
+  "Lits jumeaux 2×90 cm":"<rect x='2' y='11' width='8' height='8' rx='2'/><rect x='14' y='11' width='8' height='8' rx='2'/><rect x='3' y='8' width='5' height='3' rx='1'/><rect x='15' y='8' width='5' height='3' rx='1'/>",
   "Canapé-lit":"<rect x='3' y='10' width='18' height='8' rx='2'/><path d='M3 14V8a2 2 0 012-2h2M19 14V8a2 2 0 00-2-2h-2'/>",
   "Lit superposé":"<rect x='4' y='4' width='16' height='6' rx='1.5'/><rect x='4' y='13' width='16' height='6' rx='1.5'/><path d='M4 10v3M20 10v3'/>",
   "Lit bébé disponible":"<rect x='5' y='9' width='14' height='9' rx='1.5'/><path d='M8 9V6M12 9V6M16 9V6'/>",
