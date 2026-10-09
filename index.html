@@ -686,6 +686,12 @@ a{color:inherit; text-decoration:none;}
 .field-block{margin-bottom:22px;}
 .field-block > label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:var(--sauge); display:block; margin-bottom:10px;}
 .field-hint{font-size:11.5px; color:var(--gray-mid); margin:6px 0 0;}
+/* Compteur de mots (Accroche courte / Description, voir HF_CLAIM_MAX_WORDS/
+   HF_DESC_MAX_WORDS) : aligné à droite, discret tant que dans la limite,
+   vire sur --danger dès qu'elle est dépassée (hfUpdateWordCount(), câblée
+   sur l'évènement input des deux champs). */
+.hf-wordcount{text-align:right;}
+.hf-wordcount.over{color:var(--danger); font-weight:700;}
 .legal-doc h4{font-size:13.5px; font-weight:700; margin:20px 0 8px; color:var(--ink);}
 .legal-doc h4:first-child{margin-top:0;}
 .legal-doc p{font-size:13.5px; line-height:1.55; color:var(--ink); margin:0 0 10px;}
@@ -2589,6 +2595,39 @@ var ACCOM_TYPES = {
   chambre: {label:"Chambre d'hôtes"},
   gite: {label:"Gîte"}
 };
+/* Retour utilisateur : "crée une règle de nombre de mots maximum pour
+   l'accroche courte et la description, réfléchis logiquement par rapport
+   à l'occupation sur l'annonce dans le fil". L'accroche (taglineHtml(),
+   juste au-dessus) est affichée en superposition sur la couverture de la
+   carte du fil (.cover-info .tagline, position:absolute en bas d'une
+   image ratio 4:5, voir sa règle CSS) — SA taille d'affichage limite
+   directement l'espace disponible, contrairement à la description, jamais
+   montrée dans le fil (seulement sur la fiche détail, .detail-body p.desc,
+   page normale sans contrainte de hauteur). HF_CLAIM_MAX_WORDS mesuré en
+   conditions réelles (Playwright, carte 354px de large, le cas le plus
+   défavorable "Chambre d'hôtes • " en préfixe) : 15 mots tenaient encore
+   sur 2 lignes, 17 mots passaient à 3 — 14 mots de marge pour rester
+   fiable malgré la variation de longueur des mots, et nettement généreux
+   par rapport à l'accroche déjà en production ("Un air de campagne à deux
+   pas de la Capitale", 10 mots). HF_DESC_MAX_WORDS n'a PAS la même
+   justification (la description n'apparaît jamais dans le fil) : 60 mots
+   vise simplement un paragraphe "À propos" qui reste lisible d'une traite
+   sur la fiche détail, sans devenir un mur de texte. */
+var HF_CLAIM_MAX_WORDS = 14;
+var HF_DESC_MAX_WORDS = 60;
+function hfWordCount(s){ s=(s||"").trim(); return s ? s.split(/\s+/).length : 0; }
+function hfWordCountHtml(id,max){
+  return '<p class="field-hint hf-wordcount" id="'+id+'-count" data-max="'+max+'">0 / '+max+' mots</p>';
+}
+function hfUpdateWordCount(inputId){
+  var el = document.getElementById(inputId);
+  var countEl = document.getElementById(inputId+"-count");
+  if(!el || !countEl) return;
+  var max = Number(countEl.getAttribute("data-max"));
+  var n = hfWordCount(el.value);
+  countEl.textContent = n+" / "+max+" mots";
+  countEl.classList.toggle("over", n>max);
+}
 /* Type + accroche sur UNE seule ligne : "Gîte • Un air de campagne..."
    (retour utilisateur — avant, deux paragraphes empilés). Le type reste
    distinct typographiquement (.type-label : gras, sans-serif, droit) au
@@ -6581,8 +6620,11 @@ function openSheet(kind){
         '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '</div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("text","Présentation de l\'annonce")+
-        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'"></div>'+
+        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'">'+
+          hfWordCountHtml("hf-claim",HF_CLAIM_MAX_WORDS)+
+        '</div>'+
         '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
+          hfWordCountHtml("hf-desc",HF_DESC_MAX_WORDS)+
           '<div id="hf-desc-reuse-wrap"></div>'+
         '</div>'+
       '</div>'+
@@ -6776,6 +6818,13 @@ function openSheet(kind){
     });
     document.getElementById("hf-region-name").addEventListener("change", function(){
       document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(this.value, "");
+    });
+    // Compteur de mots (voir HF_CLAIM_MAX_WORDS/HF_DESC_MAX_WORDS) : mis à
+    // jour en direct, et initialisé tout de suite (une annonce en édition
+    // arrive déjà remplie, pas seulement après une première frappe).
+    ["hf-claim","hf-desc"].forEach(function(id){
+      document.getElementById(id).addEventListener("input", function(){ hfUpdateWordCount(id); });
+      hfUpdateWordCount(id);
     });
     wireHfAddressAutocomplete();
     hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl} : null;
@@ -8325,6 +8374,11 @@ function submitHostForm(){
       return;
     }
   }
+  // Voir HF_CLAIM_MAX_WORDS/HF_DESC_MAX_WORDS (compteur déjà visible en
+  // direct sous chaque champ) : revérifié ici pour de bon à l'envoi, pas
+  // seulement affiché à titre indicatif.
+  if(hfWordCount(claim)>HF_CLAIM_MAX_WORDS){ errEl.textContent = "L'accroche courte dépasse "+HF_CLAIM_MAX_WORDS+" mots."; scrollToField("hf-claim"); return; }
+  if(hfWordCount(desc)>HF_DESC_MAX_WORDS){ errEl.textContent = "La description dépasse "+HF_DESC_MAX_WORDS+" mots."; scrollToField("hf-desc"); return; }
   // Nom de contact (profil) : pas de champ à scroller ici, le message
   // renvoie directement vers la section Profil plutôt que vers un id
   // inexistant dans ce volet.
