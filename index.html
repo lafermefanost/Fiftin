@@ -906,6 +906,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .field-block-row{display:flex; gap:10px;}
 .field-block-row .field-block{flex:1;}
 .btn-apply{width:100%; background:var(--sauge-deep); color:var(--cream); padding:15px; border-radius:16px; font-weight:700; font-size:14.5px; border:none;}
+/* Retour utilisateur : "mets le vert moyen, le même que l'encart
+   calendrier" — override scopé à ce seul bouton (pas touché à .btn-apply
+   en général, utilisé tel quel ailleurs : Enregistrer les modifications,
+   + Déposer une annonce de l'état vide…) : --sauge, comme .cal-disclose. */
+#host-new-listing{background:var(--sauge);}
 
 /* ---------- crop overlay (recadrage manuel des photos, cadre 4:5 unique) ---------- */
 .crop-overlay{position:fixed; inset:0; z-index:400; background:rgba(20,26,20,.92); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:20px; gap:16px;}
@@ -2040,15 +2045,26 @@ body.map-fullscreen{overflow:hidden;}
 .gestion-promo-caption{font-size:13.5px; line-height:1.5; color:var(--ink); opacity:.78; margin:0; padding:0 12px;}
 .gestion-promo-caption b{font-size:14.5px;}
 #gestion-promo-upgrade{margin-top:10px;}
-/* Statut du compte (géré depuis Fiftin app / calendrier simplifié) — sa
-   propre ligne, alignée à droite, en tête du volet calendrier déplié d'une
-   annonce : c'est une propriété du COMPTE, pas de cette annonce en
-   particulier, mais elle n'a de sens qu'une fois le volet ouvert. */
-.host-status-row{display:flex; justify-content:flex-end; margin-bottom:10px;}
 .host-status-badge{font-size:10px; font-weight:800; padding:4px 10px; border-radius:16px; white-space:nowrap;}
 .host-status-badge.published, .host-status-badge.linked{background:var(--sauge-light); color:var(--sauge-deep);}
-.host-status-badge.pending, .host-status-badge.standalone{background:var(--lavender-bg); color:var(--lavender-deep);}
+.host-status-badge.pending{background:var(--lavender-bg); color:var(--lavender-deep);}
 .host-status-badge.paused{background:var(--cream-deep); color:var(--gray-mid);}
+/* Retour utilisateur : "il faut qu'il y ait un message vraiment
+   personnalisé en fonction de si tu es en formule hôte seul ou si tu es
+   en formule gestion" — remplace l'ancien badge "Calendrier simplifié"
+   (seul, discret, rien côté gestion) par une phrase complète dans les
+   deux cas : .rw (formule hôte seule) dit explicitement que le planning
+   se remplit ICI ; .ro (formule gestion) dit explicitement que c'est en
+   lecture seule ici et pointe vers l'app de gestion pour écrire. En tête
+   du volet calendrier déplié d'une annonce — propriété du COMPTE, pas de
+   cette annonce en particulier, mais n'a de sens qu'une fois le volet
+   ouvert. */
+.cal-access-note{display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border-radius:12px; margin-bottom:12px;
+  font-size:12px; font-weight:600; line-height:1.4;}
+.cal-access-note svg{width:15px; height:15px; flex-shrink:0; margin-top:1px;}
+.cal-access-note a{color:inherit; font-weight:800; text-decoration:underline;}
+.cal-access-note.rw{background:var(--sauge-bg); color:var(--sauge-deep);}
+.cal-access-note.ro{background:var(--lavender-bg); color:var(--lavender-deep);}
 /* Encart "volet" pleine largeur, à l'intérieur de la carte d'annonce
    (.admin-card) — retour utilisateur d'origine : "j'aimerais que le
    calendrier soit sur la même carte que l'annonce (...) le bouton
@@ -2098,14 +2114,28 @@ body.map-fullscreen{overflow:hidden;}
    qui affiche l'état actuel et ouvre un volet de choix au clic (voir
    kind==="roomlink" dans openSheet()) — même geste qu'un .profile-row qui
    ouvre quelque chose ailleurs dans l'app (chevron ›), pas une navigation
-   de page comme les onglets au-dessus. */
-.planning-chip{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
-  background:var(--cream-deep); border:1.5px solid var(--line); border-radius:16px; padding:12px 14px;
-  font-family:'Jost',sans-serif; text-align:left; cursor:pointer; margin-bottom:18px;}
-.planning-chip-text{display:flex; flex-direction:column; gap:1px; min-width:0;}
-.planning-chip-label{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sauge);}
-.planning-chip-value{font-size:14px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.planning-chip svg{width:16px; height:16px; color:var(--gray-mid); opacity:.6; flex-shrink:0;}
+   de page comme les onglets au-dessus.
+   Retour utilisateur suivant : "améliore la clarté ... fais le prendre
+   toute la largeur comme l'encart calendrier" — width:100% existait déjà
+   (hérité du conteneur .cal-card), mais visuellement trop discret pour
+   peser autant qu'un vrai encart ; padding/typo agrandis, et deux états
+   clairement différenciés plutôt qu'un seul style neutre pour les deux :
+   .unlinked (contour pointillé, fond teinté, même idiome "appel à
+   l'action" que .host-new-listing-row/.coll-add-row ailleurs dans ce
+   fichier) vs .linked (contour plein + coche verte, confirmation nette).
+   Le détail "lecture seule, géré depuis fiftin.app" est retiré de la
+   valeur ici : il est maintenant dans .cal-access-note.ro juste au-dessus
+   (retour utilisateur suivant), pas la peine de le répéter deux fois. */
+.planning-chip{display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%; border-radius:16px;
+  padding:16px 14px; font-family:'Jost',sans-serif; text-align:left; cursor:pointer; margin-bottom:18px;}
+.planning-chip.unlinked{background:var(--sauge-bg); border:2px dashed var(--sauge);}
+.planning-chip.linked{background:#fff; border:1.5px solid var(--sauge-light);}
+.planning-chip-text{display:flex; flex-direction:column; gap:2px; min-width:0;}
+.planning-chip-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--sauge);}
+.planning-chip-value{display:flex; align-items:center; gap:6px; font-size:15px; font-weight:800; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.planning-chip-value .check{width:15px; height:15px; color:var(--sauge); flex-shrink:0;}
+.planning-chip-chevron{width:16px; height:16px; color:var(--gray-mid); opacity:.6; flex-shrink:0;}
 /* Rangée Ajouter/modifier — sa propre ligne, centrée (retour utilisateur ;
    le bouton "Aujourd'hui" qui la partageait avant, alignée à droite pour
    lui, a été retiré : l'accordéon des mois ouvre déjà le mois en cours par
@@ -10668,11 +10698,19 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
   // app ne doit se voir proposée en onglet de premier plan comme celles
   // du dessus.
   var curRoomName = linkedRoomId ? (rooms.filter(function(r){ return r.id===linkedRoomId; })[0] || {}).name : "";
+  // Retour utilisateur : "Associer votre planning Fiftin App" quand rien
+  // n'est relié (texte d'appel à l'action) ; une fois relié, une coche +
+  // "Relié à X" plutôt que répéter "en lecture seule, géré depuis
+  // fiftin.app" ici — déjà dit, plus clairement, par .cal-access-note.ro
+  // juste au-dessus du calendrier.
   var roomLinkHtml = (isGestion && rooms.length) ?
-    '<button type="button" class="planning-chip" id="planning-chip-btn">'+
+    '<button type="button" class="planning-chip '+(curRoomName?'linked':'unlinked')+'" id="planning-chip-btn">'+
       '<span class="planning-chip-text"><span class="planning-chip-label">Planning associé</span>'+
-        '<span class="planning-chip-value">'+(curRoomName ? esc(curRoomName)+" (en lecture seule, géré depuis fiftin.app)" : "Aucun — associer un planning")+'</span></span>'+
-      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
+        (curRoomName
+          ? '<span class="planning-chip-value"><svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Relié à '+esc(curRoomName)+'</span>'
+          : '<span class="planning-chip-value">Associer votre planning Fiftin App</span>')+
+      '</span>'+
+      '<svg class="planning-chip-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>' : '';
 
   // Texte + picto "lien externe" (retour utilisateur) — même tracé que les
@@ -10683,15 +10721,31 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
         '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></a>'
     : '<button type="button" class="cal-add-pill" id="cal-add-btn">+ Réservation</button>';
 
+  // Retour utilisateur : "il faut qu'il y ait un message vraiment
+  // personnalisé en fonction de si tu es en formule hôte seul ou si tu es
+  // en formule gestion ... si tu es en formule hôte, le planning est
+  // remplissable, disponible en lecture et écriture ici ; en formule
+  // gestion, le planning est juste en lecture seule ici, et il faut que
+  // ça redirige vers l'app de gestion" — un message complet dans les deux
+  // cas (voir .cal-access-note), pas juste un badge pour l'un des deux
+  // comme avant. Pictos repris tels quels : crayon = .host-edit-btn, juste
+  // au-dessus dans "Mes annonces" (même geste "modifier") ; cadenas,
+  // nouveau mais cohérent avec le rôle "verrouillé en lecture".
+  var calAccessNoteHtml = isGestion
+    ? '<div class="cal-access-note ro"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>'+
+        '<span>Lecture seule ici — ajoutez ou modifiez vos réservations depuis <a href="app/" target="_blank" rel="noopener">l\'app de gestion</a>.</span></div>'
+    : '<div class="cal-access-note rw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>'+
+        '<span>Lecture et écriture : votre planning se remplit directement ici.</span></div>';
+
   // Cartouche + bouton Ajouter/modifier DANS la carte blanche du calendrier
   // (retour utilisateur, passe précédente), soudée sans espace aux onglets
   // de chambre juste au-dessus quand il y en a (.cal-card sans le modifier
   // "solo" — coins hauts carrés) ; coins tous arrondis sinon (.cal-card.solo
   // — rien au-dessus à souder, une seule chambre).
   panel.innerHTML =
-    (isGestion ? '' : '<div class="host-status-row"><span class="host-status-badge standalone">Calendrier simplifié</span></div>')+
     unitPagerHtml+
     '<div class="cal-card'+(hasTabs ? '' : ' solo')+'">'+
+      calAccessNoteHtml+
       roomLinkHtml+
       '<div class="cal-top-row">'+
         '<div class="cal-top-actions">'+
