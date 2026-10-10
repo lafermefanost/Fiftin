@@ -536,20 +536,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    (vérifié : ~39.4px ici contre ~39.7px côté Séjours). */
 .rv-calendar{background:#fff;border-radius:14px;padding:16px 31px;
   display:flex;flex-direction:column;}
-/* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
-   d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear. */
-.rv-year-nav{display:flex;align-items:center;
-  justify-content:center;gap:16px;margin-bottom:10px;}
-.rv-year-btn{background:none;border:1.5px solid var(--light);border-radius:8px;
-  width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-  cursor:pointer;color:var(--dark);flex-shrink:0;}
-.rv-year-btn:active{filter:brightness(.96);}
-/* Retour utilisateur : "j'ai oublié Location aussi c'est pareil, ça doit
-   être similaire sur les 4" — même logique que .vnav-title juste au-dessus
-   (déjà 700, juste agrandi : 16px -> 19px, 1ère passe comme pour les 3
-   autres vues). */
-.rv-year-label{font-size:19px;font-weight:700;color:var(--dark);
-  min-width:44px;text-align:center;}
+/* Retour utilisateur : "tu as oublié d'enlever la navigation 2026 sur la
+   vue Location" — .rv-year-nav/.rv-year-btn/.rv-year-label (ex-navigation
+   d'année locale, redondante avec la barre fixe qui pilote le même S.year
+   partout) retirés avec chLocYear() qui les pilotait, voir ce commentaire
+   sur chYear() plus bas. */
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
   border-top:1.5px solid var(--light);padding:4px 0;}
 .rv-month-block:first-child{border-top:none;}
@@ -4543,14 +4534,6 @@ function chRoomView(n){
   roomViewIdx=(roomViewIdx+n+rooms.length)%rooms.length;
   renderToday();
 }
-// Année du calendrier annuel — S.year, la même variable globale que la vue
-// Année et le sélecteur d'année de la barre du haut (#yrLabel), qu'on garde
-// synchronisé pour que les deux contrôles restent cohérents entre eux.
-function chLocYear(d){
-  S.year+=d;
-  byId('yrLabel').textContent=S.year;
-  renderToday();
-}
 // Déplie/replie un mois du calendrier annuel de la vue Location (voir
 // monthBlock dans renderToday()) — état purement visuel, jamais persisté :
 // chaque re-rendu (changement d'année/chambre, goToday…) reprend le repli
@@ -4688,9 +4671,15 @@ function renderToday(){
     // une année entièrement passée ou entièrement future (hors mois en
     // cours/suivant) s'ouvre donc tout entière repliée.
     const defaultOpen=isCurMonth||isNextMonth;
+    // Retour utilisateur : "tu as oublié de mettre l'encart mois suivant
+    // comme ce mois-ci à côté d'octobre" — même traitement visuel
+    // (libellé vert + pastille) que le mois en cours, texte distinct
+    // ("Mois prochain", déjà le vocabulaire de monthRelLabel en vue Mois)
+    // pour ne pas prétendre que le mois suivant est "ce mois-ci".
+    const isMarked=isCurMonth||isNextMonth;
     return`<div class="rv-month-block${defaultOpen?'':' collapsed'}">
-      <button type="button" class="rv-month-label${isCurMonth?' rv-month-cur':''}" onclick="toggleRvMonth(this)">
-        <span>${MON[m]}${isCurMonth?'<span class="rv-month-cur-tag">Ce mois-ci</span>':''}</span>
+      <button type="button" class="rv-month-label${isMarked?' rv-month-cur':''}" onclick="toggleRvMonth(this)">
+        <span>${MON[m]}${isCurMonth?'<span class="rv-month-cur-tag">Ce mois-ci</span>':isNextMonth?'<span class="rv-month-cur-tag">Mois prochain</span>':''}</span>
         <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <div class="rv-dow-hd"><span></span>${DOW_LETTERS_MON.map(l=>`<span>${l}</span>`).join('')}</div>
@@ -4721,11 +4710,6 @@ function renderToday(){
     <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   <div class="rv-calendar">
-    <div class="rv-year-nav">
-      <button class="rv-year-btn" onclick="chLocYear(-1)">${chevL}</button>
-      <span class="rv-year-label">${year}</span>
-      <button class="rv-year-btn" onclick="chLocYear(1)">${chevR}</button>
-    </div>
     ${monthsHtml}
   </div>
   </div>`;
@@ -10131,9 +10115,19 @@ function setView(v){
   else byId(v+'Wrap').scrollTop=0;
 }
 
+// Retour utilisateur : "les seuls endroits où tu modifies l'année et où
+// ça s'applique partout sont : la barre commune fixe" — chYear() (piloté
+// par cette barre, #yrLabel) doit donc remettre à jour la vue
+// actuellement affichée, pas seulement la Grille comme avant : les vues
+// Location/Année lisent S.year directement (voir renderToday/renderYear)
+// et restaient sinon sur l'ancienne année tant qu'on ne changeait pas de
+// vue. Semaine/Mois ont leur propre notion de "quand" (S.wStart/S.mYear+
+// S.mMonth), indépendante de S.year — rien à refaire pour elles ici.
 function chYear(d){
   S.year+=d;byId('yrLabel').textContent=S.year;
   renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='year')renderYear();
 }
 
 // "Aujourd'hui" ramène sur aujourd'hui SANS changer de vue — chaque vue a
@@ -10651,13 +10645,13 @@ function renderYear(){
 
   byId('yearWrap').innerHTML=`<div class="yr-inner">
     <div class="vnav">
-      <button class="vnav-btn" onclick="chYear(-1);renderYear()">${chevL}</button>
+      <button class="vnav-btn" onclick="chYear(-1)">${chevL}</button>
       <div class="vnav-center">
         <div class="vnav-rel">${yearRelLabel}</div>
         <div class="vnav-title">${year}</div>
         <div class="vnav-sub">&nbsp;</div>
       </div>
-      <button class="vnav-btn" onclick="chYear(1);renderYear()">${chevR}</button>
+      <button class="vnav-btn" onclick="chYear(1)">${chevR}</button>
     </div>
     ${yearBriefHTML}
     ${globalHTML}

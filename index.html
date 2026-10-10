@@ -10646,9 +10646,15 @@ function monthMiniHtml(year, monthIdx, occMap, todayStr){
   var isCurrent = (year===todayY && monthIdx===todayM);
   var isNextMonth = (year===nextMonY && monthIdx===nextMonM);
   var defaultOpen = isCurrent || isNextMonth;
-  return '<div class="cal-mini'+(defaultOpen?'':' collapsed')+(isCurrent?' current-month':'')+'">'+
+  // Retour utilisateur : "tu as oublié de mettre l'encart mois suivant
+  // comme ce mois-ci à côté d'octobre" (même règle côté app/index.html,
+  // voir son commentaire) — .current-month (libellé vert) réutilisée pour
+  // le mois suivant aussi, texte de la pastille distinct ("Mois
+  // prochain") pour ne pas prétendre qu'il est "ce mois-ci".
+  var isMarked = isCurrent || isNextMonth;
+  return '<div class="cal-mini'+(defaultOpen?'':' collapsed')+(isMarked?' current-month':'')+'">'+
     '<button type="button" class="cal-mini-head" data-cal-toggle>'+
-      '<span>'+CAL_MONTH_NAMES[monthIdx]+(isCurrent ? '<span class="cal-mini-current-tag">Ce mois-ci</span>' : '')+'</span>'+
+      '<span>'+CAL_MONTH_NAMES[monthIdx]+(isCurrent ? '<span class="cal-mini-current-tag">Ce mois-ci</span>' : isNextMonth ? '<span class="cal-mini-current-tag">Mois prochain</span>' : '')+'</span>'+
       '<svg class="cal-mini-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>'+
     '</button>'+
     '<div class="cal-mini-grid">'+head+body+'</div></div>';
