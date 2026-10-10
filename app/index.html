@@ -8343,6 +8343,13 @@ function delSource(id){
   // une source doit toujours rester, sinon plus aucune résa n'a de source
   // possible à choisir.
   if(sources.length<=1){alert('Il doit toujours rester au moins une source de réservation.');return;}
+  // Même garde-fou que delGuest/delStructure (compte d'usage + confirm) —
+  // manquait ici, d'où un retour utilisateur réel : source supprimée par
+  // erreur, orpheline sur toutes les réservations qui la référençaient
+  // (bk.source n'est jamais touché par cette fonction, voir plus bas), sans
+  // aucun avertissement préalable sur l'ampleur de l'impact.
+  const nb=S.bookings.filter(b=>b.source===id).length;
+  if(nb&&!confirm(`Cette source est utilisée par ${nb} réservation(s), qui perdront son libellé/couleur et sa prise en compte dans le CA tant qu'une source n'est pas recréée avec le même identifiant. Supprimer quand même ?`))return;
   S.settings.sources=sources.filter(s=>s.id!==id);
   saveSettings();renderSettings();renderSourceBtns();renderSourceBtnsEv();
 }
