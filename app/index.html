@@ -823,7 +823,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .wsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
-.wsm-val{font-size:26px;font-weight:500;line-height:1;color:#fff;}
+/* Retour utilisateur : "sur tous les encarts verts d'introduction des
+   vues... réduis la grosse typo, les chiffres, d'à peu près 10%" — 26px
+   (taille unifiée entre .wsm-val/.mstat-val/.mfin-val, voir juste en
+   dessous) -> 23.5px (-9.6%) sur les 3 à la fois, pour garder "même corps
+   de texte partout" entre les 4 vues. */
+.wsm-val{font-size:23.5px;font-weight:500;line-height:1;color:#fff;}
 /* Même logique que .mstat-val (voir plus haut), étendue à .wsm-val :
    500 par défaut (chiffres secondaires), .wsm-val-strong (700) pour les
    chiffres importants — appliqué maintenant aussi en vue Semaine
@@ -1057,7 +1062,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    chiffres importants. .mstat-val-light est conservée (= 500, donc
    redondante avec la base) uniquement pour ne pas devoir retoucher le HTML
    déjà écrit avec cette classe. */
-.mstat-val{font-size:26px;font-weight:500;color:var(--green);line-height:1.1;}
+.mstat-val{font-size:23.5px;font-weight:500;color:var(--green);line-height:1.1;}
 .mstat-val-strong{font-weight:700;}
 .mstat-val-light{font-weight:500;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
@@ -1144,7 +1149,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Financial cards row */
 .month-fin{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mfin-card{background:var(--green);border-radius:12px;padding:14px 14px 12px;border:1.5px solid var(--green);}
-.mfin-val{font-size:26px;font-weight:500;line-height:1.1;color:#fff;}
+.mfin-val{font-size:23.5px;font-weight:500;line-height:1.1;color:#fff;}
 /* Charges/mois et marge nette sont les deux seules valeurs de cet encart et
    sont toutes deux "importantes" (équivalent des charges réelles/marge
    nette en 700 côté Année) — donc .mfin-val-strong sur les deux plutôt
