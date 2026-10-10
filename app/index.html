@@ -3854,6 +3854,7 @@ function applyRemoteData(d,meta){
     migrateStructures();
     migrateRoomFields();
     migrateTariffFields();
+    restoreDirectSource();
     localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
     applySettings();
   }
@@ -6829,6 +6830,29 @@ function loadSettings(){
   migrateStructures();
   migrateRoomFields();
   migrateTariffFields();
+  restoreDirectSource();
+}
+// Retour utilisateur : "J'ai fait une erreur. J'ai supprimé dans les
+// réglages la source de réservation directe. Or ça nourrissait les données
+// de plusieurs modules et j'ai trop de réservations pour le refaire
+// manuellement." — delSource() ne touche jamais bk.source sur les
+// réservations existantes (voir son code), seulement S.settings.sources :
+// toutes les réservations déjà enregistrées avec source:'direct' ont donc
+// gardé cette valeur intacte, simplement orpheline (plus aucune entrée
+// 'direct' dans sources pour lui donner libellé/couleur/inclusion dans le
+// CA). Recréer "Direct" depuis Réglages → "+ Ajouter une source" ne
+// suffirait pas : ce bouton génère un id aléatoire (uid()), qui ne
+// matcherait pas l'ancien 'direct' stocké sur chaque réservation. Cette
+// migration réinsère directement l'entrée 'direct' manquante (même id,
+// donc reconnecte automatiquement toutes les réservations concernées,
+// aucune saisie manuelle requise) si elle n'existe plus — idempotente,
+// ne fait plus rien dès qu'elle existe à nouveau (y compris si l'hôte la
+// renomme ou change sa couleur ensuite depuis Réglages).
+function restoreDirectSource(){
+  if(!S.settings.sources)return;
+  if(!S.settings.sources.find(s=>s.id==='direct')){
+    S.settings.sources.push({id:'direct',label:'Direct',color:'#7ABF6A',colorOverride:false,noRevenue:false});
+  }
 }
 // Tarif repas personnes extérieures (thExt) : ajouté après coup, distinct du
 // tarif repas des clients en séjour (th) — 30 € par défaut sur les tarifs déjà
