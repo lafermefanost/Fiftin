@@ -2282,6 +2282,20 @@ body.map-fullscreen{overflow:hidden;}
    disposition 2 colonnes documentée plus haut. Seules les cartes non actives
    en ont un (voir planCardHtml()) — jamais sur la formule déjà active. */
 .plan-card-cta{flex-basis:100%; width:100%; margin-top:2px; padding:12px; font-size:13px;}
+/* Retour utilisateur : "l'encart 'changer pour cette formule' est en gris
+   actuellement, passe-le au lavender deep également" — ce bouton hérite de
+   .btn.primary (recette "verre liquide" générique, base rgba(20,26,20,.22)
+   quasi-noire, d'où le gris perçu une fois posée sur la carte blanche).
+   Override ciblé sur .plan-card-cta (jamais .btn.primary lui-même, partagé
+   par d'autres boutons sans rapport, ex. Contact/Voir plus sur les cartes
+   photo) : même calque de dégradé diagonal (reflet "verre"), base unie
+   --lavender-deep au lieu du gris translucide. Sélecteur .btn.primary.
+   plan-card-cta (3 classes, pas .plan-card-cta seul) : .btn.primary (2
+   classes) l'emporterait sinon sur la seule spécificité, quel que soit
+   l'ordre des règles dans la feuille. */
+.btn.primary.plan-card-cta{background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%,
+    rgba(255,255,255,.04) 48%, rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+  var(--lavender-deep);}
 /* Effet "verre liquide" retiré (retour utilisateur précédent) mais la
    formule active doit "sortir du lot" quand même, fond plein uni (retour
    utilisateur). Retour utilisateur ultérieur : "mets l'encart du prix de
