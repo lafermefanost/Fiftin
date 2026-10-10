@@ -285,13 +285,18 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
    colonnes de date. Après .r-wkstart dans la feuille de style pour gagner
    sur son propre border-top si le jour tombe justement en début de semaine. */
 .pt tbody tr.r-today td{border-top:2px solid var(--green);border-bottom:2px solid var(--green);}
-.pt tbody tr.r-wkend > td{background:#E8E3DB !important;}
+/* Retour utilisateur : "idem sur le gris des week-ends, un gris un peu
+   moins chaud, plus proche du gris du fond [--cream]" (même demande que
+   .dep-total-line juste au-dessus) — teintes recalculées à même luminosité
+   que les précédentes, juste désaturées vers le neutre (écart R-B ramené
+   à ~6, comme --cream, au lieu de ~13-20 avant). */
+.pt tbody tr.r-wkend > td{background:#E5E3DF !important;}
 .pt tbody tr.r-wkend td.c-dow,
 .pt tbody tr.r-wkend td.c-day,
-.pt tbody tr.r-wkend td.c-wk{background:#DDD8CF !important;}
-.pt tbody tr.r-wkend td.c-dow{color:#5C5248 !important;font-weight:700;}
-.pt tbody tr.r-wkend td.c-day{color:#5C5248 !important;font-weight:700;}
-.pt tbody tr.r-wkend:hover > td{background:#DCD7CE !important;}
+.pt tbody tr.r-wkend td.c-wk{background:#D9D8D3 !important;}
+.pt tbody tr.r-wkend td.c-dow{color:#55524F !important;font-weight:700;}
+.pt tbody tr.r-wkend td.c-day{color:#55524F !important;font-weight:700;}
+.pt tbody tr.r-wkend:hover > td{background:#D8D7D2 !important;}
 
 /* Month separator row */
 .pt tr.r-msep > td{background:var(--green-deep) !important;height:22px;
