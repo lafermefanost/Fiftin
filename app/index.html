@@ -794,14 +794,33 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    volet Événements) — le préfixe "Aujourd'hui — "/"Ce mois-ci — " dans
    .wday-name suffit déjà à la repérer, le contour en plus alourdissait. */
 .wday-head{display:flex;justify-content:space-between;align-items:baseline;
-  background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer;}
-.wday-card.collapsed .wday-head{margin:-12px -14px -12px;border-radius:10px;}
-.wday-card.collapsed .wday-body{display:none;}
+  background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;}
 .wday-name{font-weight:600;font-size:12px;color:#fff;letter-spacing:.03em;text-transform:uppercase;}
 .wday-date{font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:6px;}
-.wday-chev{display:inline-block;transition:transform .15s;}
-.wday-card.collapsed .wday-chev{transform:rotate(-90deg);}
 .wday-card .tsec-panel{margin-bottom:10px;}
+/* Menu à 7 cases (Lun → Dim) remplaçant l'ancien accordéon de la vue
+   Semaine — retour utilisateur : "supprimer toutes les lignes en mode
+   liste... remplacer par un menu de 7 cases cliquables", puis "dans le
+   style des encarts événements, avec les abréviations" : mêmes
+   proportions/abréviations que .evdate-badge (dow tout petit, jour en
+   grand et gras, mois abrégé en dessous) plutôt que le style neutre du
+   1er essai. Vert plein (--green) pour le jour sélectionné, comme
+   .wday-head juste en dessous ; anneau vert pour "aujourd'hui" quand ce
+   n'est pas le jour sélectionné (même idée que .rv-day-today, un repère
+   qui ne se confond pas avec la sélection). */
+.wpick-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px;}
+.wpick-cell{background:#fff;border:1.5px solid var(--light);border-radius:8px;
+  padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;}
+.wpick-dow{font-size:8px;font-weight:400;text-transform:uppercase;letter-spacing:.05em;
+  opacity:.7;line-height:1;margin-bottom:2px;color:var(--gray);}
+.wpick-num{font-family:'Jost',sans-serif;font-size:19px;font-weight:700;line-height:1.1;color:var(--dark);}
+.wpick-mon{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
+  line-height:1;margin-top:2px;opacity:.85;color:var(--gray);}
+.wpick-cell.wpick-today{border-color:var(--green);}
+.wpick-cell.on{background:var(--green);border-color:var(--green);}
+.wpick-cell.on .wpick-dow,.wpick-cell.on .wpick-mon{color:rgba(255,255,255,.75);opacity:1;}
+.wpick-cell.on .wpick-num{color:#fff;}
 /* Résumé du jour ("Aujourd'hui, vous avez…", voir renderWeek) — juste sous
    le volet Événements. Cartouche pleine largeur, ton assistant plutôt
    qu'un volet de plus à déplier. Pas de margin-bottom : .week-inner
@@ -2791,7 +2810,12 @@ let settingsPanelOpen={};
 // loadTeamMembers(). Vide par défaut, y compris pour un compte Personnel qui
 // ne charge jamais cette liste (le panneau ne lui est pas montré).
 let teamMembers=[];
-let weekOpenDays=new Set();
+// Jour sélectionné dans le menu à 7 cases (voir selectWeekDay) — un seul
+// jour affiché à la fois, plus l'ancien accordéon à plusieurs volets
+// repliables (retour utilisateur : "supprimer toutes les lignes en mode
+// liste lundi, mardi... remplacer par un menu de 7 cases cliquables, et
+// dès que tu cliques tu retrouves la carte à l'identique").
+let weekOpenDay=null;
 let weekOpenDaysFor=null;
 // État ouvert/fermé des volets à l'intérieur d'un jour (Départs, Arrivées,
 // Ménage, Table d'hôtes, Extras du jour) — sans ça, ces volets retombent à leur
@@ -2802,7 +2826,7 @@ let weekOpenDaysFor=null;
 // booléen collapsed, mémorisé seulement une fois basculé manuellement (voir
 // panelCollapsed/toggleTsecPanel) ; par défaut absent de la Map, on retombe
 // sur l'état calculé habituel (vide → replié, etc.). Réinitialisé avec
-// weekOpenDays au changement de semaine — volontairement pas persistant
+// weekOpenDay au changement de semaine — volontairement pas persistant
 // au-delà.
 let weekPanelState=new Map();
 
@@ -8715,17 +8739,16 @@ function getMondayOf(ds){
 }
 function chWeek(dir){S.wStart=addDays(S.wStart,dir*7);renderWeek();}
 function thisWeek(){S.wStart=getMondayOf(todayISO());renderWeek();}
-// Un seul jour ouvert à la fois : ouvrir un jour referme automatiquement
-// tous les autres, pour une lecture jour par jour plus claire (pas besoin
-// de refermer soi-même les précédents). Cliquer sur le jour déjà ouvert le
-// referme normalement, sans en rouvrir un autre à sa place. Revient
+// Sélection dans le menu à 7 cases (voir renderWeek) : un seul jour affiché
+// à la fois, toujours exactement un (contrairement à l'ancien accordéon, où
+// recliquer le jour ouvert le refermait sans rien rouvrir à sa place — plus
+// cohérent ici avec un sélecteur de jour, jamais vide). Revient
 // volontairement sur aujourd'hui à chaque retour sur la vue Semaine — que
 // ce soit après un simple changement de vue (voir setView, qui remet
 // weekOpenDaysFor à null en la quittant) ou un rechargement complet de la
 // page — comportement normal de cette section, jamais mémorisé.
-function toggleWeekDay(ds){
-  if(weekOpenDays.has(ds)) weekOpenDays.delete(ds);
-  else weekOpenDays=new Set([ds]);
+function selectWeekDay(ds){
+  weekOpenDay=ds;
   renderWeek();
 }
 
@@ -8762,8 +8785,9 @@ function renderWeek(){
   const weekRelLabel=isCurrentWeek?'Cette semaine':isLastWeek?'Semaine dernière':isNextWeek?'Semaine prochaine':'';
   if(weekOpenDaysFor!==S.wStart){
     weekOpenDaysFor=S.wStart;
-    weekOpenDays=new Set();
-    if(today>=S.wStart&&today<wEnd) weekOpenDays.add(today);
+    // Aujourd'hui si la semaine affichée le contient, sinon le lundi —
+    // toujours un jour sélectionné, jamais aucun (voir selectWeekDay).
+    weekOpenDay=(today>=S.wStart&&today<wEnd)?today:S.wStart;
     weekPanelState=new Map();
   }
   const mondayDate=new Date(S.wStart+'T00:00:00');
@@ -8943,8 +8967,28 @@ function renderWeek(){
     <div class="tsec-body">${weekEvs.length?weekEvs.map(evCard).join(''):'<div class="tsec-empty">Aucun</div>'}${weekEvAddBtn}</div>
   </div>`;
 
+  // Menu à 7 cases (Lun → Dim) remplaçant l'ancien accordéon de volets
+  // empilés — retour utilisateur : "supprimer toutes les lignes en mode
+  // liste... remplacer par un menu de 7 cases cliquables, et dès que tu
+  // cliques tu retrouves la carte à l'identique". Un clic sélectionne le
+  // jour (voir selectWeekDay) ; la carte complète du jour sélectionné est
+  // affichée juste en dessous par la boucle ci-après, identique à l'ancien
+  // contenu déplié.
+  h+=`<div class="wpick-row">`+Array.from({length:7},(_,i)=>{
+    const ds=addDays(S.wStart,i);
+    const d=new Date(ds+'T00:00:00');
+    const isToday=ds===today;
+    const isOn=ds===weekOpenDay;
+    return`<div class="wpick-cell${isOn?' on':''}${isToday?' wpick-today':''}" onclick="selectWeekDay('${ds}')">
+      <div class="wpick-dow">${DOW[d.getDay()]}</div>
+      <div class="wpick-num">${d.getDate()}</div>
+      <div class="wpick-mon">${MON3[d.getMonth()]}</div>
+    </div>`;
+  }).join('')+`</div>`;
+
   for(let i=0;i<7;i++){
     const ds=addDays(S.wStart,i);
+    if(ds!==weekOpenDay)continue;
     const d=new Date(ds+'T00:00:00');
     const arrs=S.bookings.filter(b=>b.checkIn===ds);
     const deps=S.bookings.filter(b=>b.checkOut===ds);
@@ -8961,11 +9005,10 @@ function renderWeek(){
       .concat(extDinersDay.map(e=>({ext:e})));
     const isToday=ds===today;
     const dayCleaners=S.cleaning[ds]||[];
-    const dayOpen=weekOpenDays.has(ds);
-    h+=`<div class="wday-card${isToday?' wday-today':''}${dayOpen?'':' collapsed'}" data-ds="${ds}">`;
-    h+=`<div class="wday-head" onclick="toggleWeekDay('${ds}')">
+    h+=`<div class="wday-card${isToday?' wday-today':''}" data-ds="${ds}">`;
+    h+=`<div class="wday-head">
       <div class="wday-name">${isToday?'Aujourd\'hui — ':''}${DAY_NAMES[d.getDay()]}</div>
-      <div class="wday-date">${d.getDate()} ${MON[d.getMonth()]}<span class="wday-chev">▾</span></div>
+      <div class="wday-date">${d.getDate()} ${MON[d.getMonth()]}</div>
     </div>`;
     h+=`<div class="wday-body">`;
     const wMiniChip=(b,timeLabel,showTotal)=>{const g=guest(b.guestId);const rm=room(b.roomId);
