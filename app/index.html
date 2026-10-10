@@ -2879,7 +2879,7 @@ const DEFAULT_SETTINGS={
     // aucun prix nuitée calculé pour cette source, et exclue des calculs
     // comptables des vues Semaine/Mois/Année (ex. échange, compte personnel —
     // pas un vrai client payant).
-    {id:'direct',      label:'Direct',      color:'#7ABF6A',colorOverride:false,noRevenue:false},
+    {id:'direct',      label:'Direct',      color:'#354B38',colorOverride:false,noRevenue:false},
     {id:'plateformes', label:'Plateformes', color:'#9FA8DA',colorOverride:false,noRevenue:false},
     {id:'perso',       label:'Perso',       color:'#8B8B8B',colorOverride:true, noRevenue:true},
   ],
@@ -6792,6 +6792,19 @@ function loadSettings(){
   migrateStructures();
   migrateRoomFields();
   migrateTariffFields();
+  migrateSourceColors();
+}
+// Retour utilisateur : "dans la partie source de réservation, change le vert
+// de direct par un vert des encarts" — l'ancien vert clair (#7ABF6A) de la
+// source "Direct" devient le vert foncé des encarts (#354B38, = --green).
+// Comme S.settings.sources est initialisé une fois pour toutes depuis
+// DEFAULT_SETTINGS puis persisté (localStorage), changer la valeur par
+// défaut ne suffit pas pour les comptes déjà configurés : migration qui ne
+// touche que la couleur encore identique à l'ancien défaut, jamais une
+// couleur personnalisée choisie à la main dans Réglages → Sources.
+function migrateSourceColors(){
+  const d=(S.settings.sources||[]).find(s=>s.id==='direct');
+  if(d&&d.color&&d.color.toLowerCase()==='#7abf6a')d.color='#354B38';
 }
 // Tarif repas personnes extérieures (thExt) : ajouté après coup, distinct du
 // tarif repas des clients en séjour (th) — 30 € par défaut sur les tarifs déjà
