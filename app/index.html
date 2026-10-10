@@ -9762,13 +9762,18 @@ function renderMonth(){
     </div>
   </div>`;
 
+  // Retour utilisateur : "intervertis la ligne charges/marge nette avec la
+  // ligne extras/nuitées/repas en dessous, plus logique d'avoir ces infos
+  // avant de voir les charges et la marge nette" — détail nuitées/extras/
+  // repas affiché en premier, charges/marge nette juste après (inversé par
+  // rapport à avant, où charges/marge suivaient directement le CA/
+  // remplissage).
+  h+=`<div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>`;
+
   // Financial summary (charges + marge) — only if charges configured. Reste
   // global lui aussi (bankCharges couvre déjà toutes les structures) — pas
   // le ménage, comme avant cette refonte (voir cleanCostTotal plus bas,
   // désormais calculé par structure et non plus additionné ici).
-  // Placé juste après le CA/remplissage (au lieu d'après le détail nuitées/
-  // extras/événements) pour rester visuellement proche du chiffre
-  // d'affaires dont charges et marge dérivent directement.
   const bankCharges=variableChargesForMonth(mStart,mEndExact);
   const totalCh=bankCharges.total;
   if(totalCh>0){
@@ -9787,8 +9792,6 @@ function renderMonth(){
       </div>
     </div>`;
   }
-
-  h+=`<div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>`;
 
   // Volet "Événements du mois" — même principe que le volet Événements de la
   // vue Semaine (même carte .evcard, même bouton d'ajout), mais pour tout le
