@@ -768,6 +768,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
 .wsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
+/* Même logique que .mstat-val-strong/-light (voir plus haut) : repérée
+   manquante sur l'encart récapitulatif de la vue Mois ("remplissage, repas
+   nuitée…" restés en 600 alors que le reste de la vue distingue déjà
+   l'important du secondaire). Scopée au bloc .week-summary de renderMonth
+   uniquement — le même bloc existe aussi en vue Semaine (renderWeek), qui
+   n'a pas fait l'objet de cette demande et reste donc inchangé. */
+.wsm-val-strong{font-weight:700;}
+.wsm-val-light{font-weight:400;}
 .wsm-lbl{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wsm-sub{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;}
 .wsm-total{background:var(--green);border-radius:12px;padding:16px 10px 14px;
@@ -945,14 +953,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    les chiffres secondaires (taux d'occupation, nuits plateformes…)" —
    essayé sur Mois et Année. 1ère passe 600 (base) vs 700 (.mstat-val-strong)
    jugée trop proche ; 2e passe avec .mstat-val-light à 400 (Jost Regular)
-   encore jugée "pas assez light, pas assez marquée" : .mstat-val-light
-   passe donc au poids le plus bas chargé par Google Fonts (300, Jost Light)
-   pour maximiser l'écart avec le 700 des chiffres importants.
-   Scopée à ces 2 vues plutôt que de baisser .mstat-val lui-même : la base
-   (600) continue de servir ailleurs (Location) où aucune distinction
-   n'a été demandée, sans y changer quoi que ce soit. */
+   jugée "pas assez light" ; 3e passe à 300 (Jost Light) jugée cette fois
+   "trop light" — retour à 400, qui reste le bon compromis entre 700 et
+   la base 600. Scopée à ces 2 vues plutôt que de baisser .mstat-val
+   lui-même : la base (600) continue de servir ailleurs (Location) où
+   aucune distinction n'a été demandée, sans y changer quoi que ce soit. */
 .mstat-val-strong{font-weight:700;}
-.mstat-val-light{font-weight:300;}
+.mstat-val-light{font-weight:400;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
 .mstat-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mstat-card.mstat-rev .mstat-sub{color:rgba(255,255,255,.75);}
@@ -9461,19 +9468,19 @@ function renderMonth(){
   // volontairement inversé par rapport à l'ancien nuitées→repas→extras→
   // événements.
   const mRevItems=[
-    `<div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>`
+    `<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>`
   ];
   if(eventsRevenue>0){
-    mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${eventsRevenue.toLocaleString('fr-FR')} €</div><div class="wsm-lbl">événements</div></div>`);
+    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${eventsRevenue.toLocaleString('fr-FR')} €</div><div class="wsm-lbl">événements</div></div>`);
   }
-  mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`);
+  mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-sub">/ ${totalPossible} possibles</div></div>`);
   if(dinnerEnabled()){
-    mRevItems.push(`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
+    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalRepas}</div><div class="wsm-lbl">repas / table d'hôtes</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
   }
   h+=`<div class="week-summary">
     <div class="wsm-toprow">
-      <div class="wsm-total"><div class="wsm-val">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux du mois</div></div>
-      <div class="wsm-total wsm-occ"><div class="wsm-val">${occPct}%</div><div class="wsm-lbl">remplissage</div></div>
+      <div class="wsm-total"><div class="wsm-val wsm-val-strong">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux du mois</div></div>
+      <div class="wsm-total wsm-occ"><div class="wsm-val wsm-val-light">${occPct}%</div><div class="wsm-lbl">remplissage</div></div>
     </div>
   </div>`;
 
