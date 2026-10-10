@@ -943,12 +943,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Retour utilisateur : "marquer une petite différence de graisse visible
    entre les chiffres importants (CA, CA projeté, marge nette, charges) et
    les chiffres secondaires (taux d'occupation, nuits plateformes…)" —
-   essayé sur Mois et Année. .mstat-val reste la base (600, déjà la bonne
-   graisse chargée) pour les chiffres secondaires ; .mstat-val-strong
-   passe les chiffres importants en 700 (vrai Jost Bold depuis le commit
-   précédent, pas de gras synthétique). Volontairement discret (même
-   taille, juste la graisse) — "petite différence", pas un gros contraste. */
+   essayé sur Mois et Année. 1ère passe 600 (base) vs 700 (.mstat-val-strong)
+   jugée trop proche ; 2e passe avec .mstat-val-light à 400 (Jost Regular)
+   encore jugée "pas assez light, pas assez marquée" : .mstat-val-light
+   passe donc au poids le plus bas chargé par Google Fonts (300, Jost Light)
+   pour maximiser l'écart avec le 700 des chiffres importants.
+   Scopée à ces 2 vues plutôt que de baisser .mstat-val lui-même : la base
+   (600) continue de servir ailleurs (Location) où aucune distinction
+   n'a été demandée, sans y changer quoi que ce soit. */
 .mstat-val-strong{font-weight:700;}
+.mstat-val-light{font-weight:300;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
 .mstat-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mstat-card.mstat-rev .mstat-sub{color:rgba(255,255,255,.75);}
@@ -9773,7 +9777,7 @@ function renderMonth(){
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
           <div class="mstat-card mstat-rev" style="grid-column:1/-1">
-            <div class="mstat-val">${st.occRate}%</div>
+            <div class="mstat-val mstat-val-light">${st.occRate}%</div>
             <div class="mstat-sub">occupation</div>
             <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
           </div>
@@ -10230,7 +10234,7 @@ function renderYear(){
     const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#1D2820',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
     const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
-          <div class="mstat-val">${st.platNights}</div>
+          <div class="mstat-val mstat-val-light">${st.platNights}</div>
           <div class="mstat-sub">nuits plateformes</div>
           <div class="mstat-detail">/ ${platLimit} autorisées</div>
         </div>`:'';
@@ -10305,7 +10309,7 @@ function renderYear(){
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
           <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
-            <div class="mstat-val">${st.occRate}%</div>
+            <div class="mstat-val mstat-val-light">${st.occRate}%</div>
             <div class="mstat-sub">occupation</div>
             <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
           </div>
@@ -10352,7 +10356,7 @@ function renderYear(){
           <div class="mstat-detail">${projNights} nuits totales</div>
         </div>
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${occRate}%</div>
+          <div class="mstat-val mstat-val-light">${occRate}%</div>
           <div class="mstat-sub">occupation</div>
           <div class="mstat-detail">${totalRooms} chambres</div>
         </div>
