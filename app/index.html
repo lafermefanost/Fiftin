@@ -9573,12 +9573,16 @@ function renderMonth(){
       const oE=bk.checkOut<mEndExact?bk.checkOut:mEndExact;
       return s+daysBetween(oS,oE);
     },0);
-    // Capacité écoulée bornée aux deux côtés (un mois futur donne 0, un mois
-    // passé donne le mois entier) — contrairement à l'année, un mois peut
-    // très bien être entièrement dans le futur, pas seulement l'inverse.
-    const elapsedEnd=today<mStart?mStart:(today<mEndExact?today:mEndExact);
-    const elapsedCap=rooms.length*daysBetween(mStart,elapsedEnd);
-    const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
+    // Occupation alignée sur la même base que "Taux par chambre" ci-dessous
+    // (occBody) : nuits sur le mois complet (passé + à venir) rapportées à
+    // la capacité du mois entier, et non plus aux seuls jours déjà écoulés.
+    // Retour utilisateur : les deux chiffres pouvaient se contredire (ex.
+    // 100% d'occupation "à ce jour" sur une poignée de jours écoulés, vs
+    // 42% de "Taux par chambre" sur le mois complet pour cette même
+    // chambre) — désormais la même logique "mois complet" partout dans
+    // cette carte, cohérente aussi avec CA projeté juste au-dessus.
+    const totalCap=rooms.length*daysInMonth;
+    const occRate=totalCap>0?Math.round(projNights/totalCap*100):0;
     return{rooms,bks:gbks,realCA,realNights,projCA,projNights,occRate};
   }
   function structCleaningCostMonth(gid){
