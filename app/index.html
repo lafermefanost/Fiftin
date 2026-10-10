@@ -222,8 +222,14 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 .tbtn-add{background:var(--yellow);color:var(--green-deep);}
 .vtabs{display:flex;gap:4px;}
 .vtab{padding:4px 12px;border:1px solid var(--light);background:var(--white);
-  border-radius:20px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--gray);}
+  border-radius:20px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--gray);
+  transition:transform .12s;}
 .vtab.on{background:var(--green);color:var(--white);border-color:var(--green);}
+/* Aperçu pendant un glissé (voir enableSwipeSelect) : distinct de .on (vue
+   réellement active) — juste un repère visuel sous le doigt, le
+   changement de vue/jour ne se valide qu'au relâchement. */
+.vtab.swipe-hover,.wpick-cell.swipe-hover{transform:scale(1.08);
+  box-shadow:0 4px 14px rgba(0,0,0,.22);}
 
 /* ─── GRID WRAPPER ─────────────────────────────────────────── */
 #gridWrap{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;position:relative;}
@@ -870,16 +876,24 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    gap de 12px entre le volet Événements juste au-dessus et ce menu
    restait "trop collé au bloc du haut". */
 .wpick-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0 12px;}
-.wpick-cell{background:#fff;border:1.5px solid var(--light);border-radius:8px;
+/* Retour utilisateur : "enlève le contour et sois plutôt sur une ombre qui
+   détache du fond comme les autres cartes" — même recette que .day-chip/
+   .tcard (fond blanc + box-shadow, jamais de border) ; "aujourd'hui"
+   (ex-border-color verte) passe à un anneau vert en inset, superposé à la
+   même ombre, plutôt qu'un vrai contour. */
+.wpick-cell{background:#fff;border-radius:8px;box-shadow:var(--shadow);
   padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  cursor:pointer;}
+  cursor:pointer;transition:transform .12s,box-shadow .12s;}
+.wpick-cell.wpick-today{box-shadow:var(--shadow),inset 0 0 0 1.5px var(--green);}
 .wpick-dow{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
   opacity:.8;line-height:1;margin-bottom:2px;color:var(--gray);}
 .wpick-num{font-family:'Jost',sans-serif;font-size:19px;font-weight:700;line-height:1.1;color:var(--dark);}
-.wpick-mon{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+/* Retour utilisateur : "mets les jours et mois dans la même typo (celle
+   des jours)" — .wpick-mon alignée sur .wpick-dow (600 au lieu de 700,
+   .04em au lieu de .05em), qui reste la référence. */
+.wpick-mon{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
   line-height:1;margin-top:2px;opacity:.9;color:var(--gray);}
-.wpick-cell.wpick-today{border-color:var(--green);}
-.wpick-cell.on{background:var(--green);border-color:var(--green);}
+.wpick-cell.on{background:var(--green);}
 .wpick-cell.on .wpick-dow,.wpick-cell.on .wpick-mon{color:rgba(255,255,255,.75);opacity:1;}
 .wpick-cell.on .wpick-num{color:#fff;}
 /* Résumé du jour ("Aujourd'hui, vous avez…", voir renderWeek) — juste sous
@@ -10290,6 +10304,47 @@ document.addEventListener('keydown',e=>{
   const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
   for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
 });
+
+// Retour utilisateur : "sur les menus bottom et le menu des 7 jours, quand
+// je glisse le doigt sur téléphones, je puisse passer facilement de
+// manière fluide d'un menu à l'autre" — glisser horizontalement sur la
+// barre surligne chaque case sous le doigt au passage (juste un repère
+// visuel, voir .swipe-hover), sans déclencher le changement de vue/jour
+// à chaque case traversée (coûteux : re-rendu complet de la vue) ; seule
+// la dernière case survolée au relâchement du doigt est activée — comme
+// un sélecteur segmenté iOS. Un simple tap (pas de glissé horizontal
+// franc) reste géré normalement par l'onclick de la case, inchangé.
+// Délégué sur un ancêtre stable (jamais recréé par innerHTML, contrairement
+// à .wpick-row qui l'est à chaque renderWeek) pour survivre aux re-rendus.
+function enableSwipeSelect(bar,itemSelector,commit){
+  let dragging=false,hovered=null,startX=0,startY=0;
+  const clearHover=()=>{if(hovered){hovered.classList.remove('swipe-hover');hovered=null;}};
+  bar.addEventListener('touchstart',e=>{
+    const t=e.touches[0];startX=t.clientX;startY=t.clientY;dragging=false;clearHover();
+  },{passive:true});
+  bar.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    const dx=t.clientX-startX,dy=t.clientY-startY;
+    if(!dragging){
+      if(Math.abs(dx)<10||Math.abs(dx)<=Math.abs(dy))return; // pas encore un glissé horizontal franc — on laisse défiler la page verticalement
+      dragging=true;
+    }
+    e.preventDefault();
+    const el=document.elementFromPoint(t.clientX,t.clientY);
+    const item=el&&el.closest(itemSelector);
+    if(item&&bar.contains(item)&&item!==hovered){
+      clearHover();
+      hovered=item;hovered.classList.add('swipe-hover');
+    }
+  },{passive:false});
+  bar.addEventListener('touchend',()=>{
+    if(dragging&&hovered)commit(hovered);
+    clearHover();dragging=false;
+  });
+  bar.addEventListener('touchcancel',()=>{clearHover();dragging=false;});
+}
+enableSwipeSelect(document.querySelector('.vtabs'),'.vtab',el=>el.click());
+enableSwipeSelect(byId('weekWrap'),'.wpick-cell',el=>el.click());
 
 // Anciennement : import automatique, une seule fois par navigateur, de données
 // historiques réelles (clients et réservations) codées en dur ici. Retiré : un
