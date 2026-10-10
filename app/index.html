@@ -653,11 +653,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .vnav-rel{font-size:12px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
 .vnav-title{font-family:'Jost',sans-serif;font-size:30px;font-weight:700;color:var(--dark);}
 .vnav-sub{font-size:12px;color:var(--gray);margin-top:2px;}
-.vnav-now-row{min-height:28px;display:flex;align-items:center;justify-content:center;}
-.vnav-now-btn{background:none;border:1.5px solid var(--green);border-radius:20px;
-  padding:5px 16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--green);
-  cursor:pointer;}
-.vnav-now-btn:hover{background:var(--green);color:#fff;}
+/* Retour utilisateur : "supprimer les boutons 'Ce mois-ci'/'Cette semaine'
+   qui permettent de revenir vers la semaine/le mois/l'année actuel(le) —
+   c'est justement le bouton 'Aujourd'hui' de la barre fixe qui doit
+   ramener, dans chaque vue, vers aujourd'hui/cette semaine/ce mois/cette
+   année" — .vnav-now-row/.vnav-now-btn (Semaine/Mois/Année) et les
+   fonctions thisWeek()/thisYear() qu'ils appelaient seuls, retirés
+   (goToday() couvrait déjà exactement le même rôle ; thisMonth() reste,
+   seule fonction encore utilisée ailleurs — par goToday() elle-même). */
 .tsec-panel{background:var(--white);border-radius:10px;overflow:hidden;margin-bottom:12px;box-shadow:0 2px 8px rgba(0,0,0,.12);}
 /* Padding horizontal aligné sur .tsec-body (10px, pas 14px) : le titre
    d'un volet doit démarrer exactement à la même position que son propre
@@ -8862,7 +8865,6 @@ function getMondayOf(ds){
   return iso(d);
 }
 function chWeek(dir){S.wStart=addDays(S.wStart,dir*7);renderWeek();}
-function thisWeek(){S.wStart=getMondayOf(todayISO());renderWeek();}
 // Sélection dans le menu à 7 cases (voir renderWeek) : un seul jour affiché
 // à la fois, toujours exactement un (contrairement à l'ancien accordéon, où
 // recliquer le jour ouvert le refermait sans rien rouvrir à sa place — plus
@@ -8977,8 +8979,6 @@ function renderWeek(){
     </div>
     <button class="vnav-btn" onclick="chWeek(1)">${chevR}</button>
   </div>`;
-
-  h+=`<div class="vnav-now-row">${!isCurrentWeek?`<button class="vnav-now-btn" onclick="thisWeek()">Cette semaine</button>`:''}</div>`;
 
   // Résumé "Aujourd'hui" — voir .wbrief. Placé avant les encarts verts
   // (semaine dernière : sous le volet Événements) pour donner le repère
@@ -9618,7 +9618,6 @@ function renderMonth(){
     </div>
     <button class="vnav-btn" onclick="chMonth(1)">${chevR}</button>
   </div>`;
-  h+=`<div class="vnav-now-row">${monthDiff!==0?`<button class="vnav-now-btn" onclick="thisMonth()">Ce mois-ci</button>`:''}</div>`;
 
   // Résumé assistant — placé avant les encarts verts pour donner le repère
   // qualitatif avant les chiffres. Pas l'équivalent littéral du "Aujourd'hui,
@@ -10135,12 +10134,6 @@ function setView(v){
 function chYear(d){
   S.year+=d;byId('yrLabel').textContent=S.year;
   renderGrid();
-}
-function thisYear(){
-  S.year=new Date().getFullYear();
-  byId('yrLabel').textContent=S.year;
-  renderGrid();
-  renderYear();
 }
 
 // "Aujourd'hui" ramène sur aujourd'hui SANS changer de vue — chaque vue a
@@ -10666,7 +10659,6 @@ function renderYear(){
       </div>
       <button class="vnav-btn" onclick="chYear(1);renderYear()">${chevR}</button>
     </div>
-    <div class="vnav-now-row">${year!==todayYear?`<button class="vnav-now-btn" onclick="thisYear()">Cette année</button>`:''}</div>
     ${yearBriefHTML}
     ${globalHTML}
     ${structureCardsHTML}
