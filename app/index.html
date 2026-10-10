@@ -258,6 +258,21 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 .grid-zoom-btn:hover{color:var(--green);border-color:var(--green);}
 .grid-zoom-btn.on{background:var(--green);color:var(--white);border-color:var(--green);}
 @media(max-width:599px){.grid-zoom-btn{bottom:66px;}}
+/* Retour utilisateur : "comme la loupe de la vue Grille, mais sur toutes
+   les autres vues, un picto œil qui floute tous les montants en euros —
+   à la manière des banques". Même position/style que .grid-zoom-btn (les
+   deux ne sont jamais visibles ensemble, voir setView) ; .money flouté
+   via une classe sur <body> (même idiome que body.ro-ui ailleurs dans ce
+   fichier) pour n'avoir à toucher aucun re-rendu — bascule instantanée,
+   purement CSS. */
+.money-eye-btn{position:fixed;right:16px;bottom:16px;z-index:90;width:40px;height:40px;
+  border-radius:50%;border:1.5px solid var(--light);background:var(--white);color:var(--gray);
+  display:none;align-items:center;justify-content:center;cursor:pointer;
+  box-shadow:0 2px 8px rgba(0,0,0,.12);transition:all .15s;}
+.money-eye-btn:hover{color:var(--green);border-color:var(--green);}
+.money-eye-btn.on{background:var(--green);color:var(--white);border-color:var(--green);}
+@media(max-width:599px){.money-eye-btn{bottom:66px;}}
+body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15s;}
 
 /* Sticky header */
 .pt thead th{
@@ -2060,6 +2075,11 @@ Gardez la main.</div>
 <button class="grid-zoom-btn" id="gridZoomBtn" onclick="toggleGridZoom()" title="Voir toutes les locations">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
+  </svg>
+</button>
+<button class="money-eye-btn" id="moneyEyeBtn" onclick="toggleMoneyHidden()" title="Masquer les montants">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
   </svg>
 </button>
 
@@ -4817,9 +4837,9 @@ function renderToday(){
   <div class="yr-stats">
     <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
-    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val"><span class="money">${avgMonthlyRevenue.toLocaleString('fr-FR')}</span> €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val"><span class="money">${avgNightRevenue.toLocaleString('fr-FR')}</span> €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong"><span class="money">${Math.round(annualRevenue).toLocaleString('fr-FR')}</span> €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   <div class="rv-calendar">
     <div class="rv-calendar-hd"><span>Calendrier ${year}</span></div>
@@ -4876,8 +4896,8 @@ function buildContractBlocks(bk){
   // Adresse du locataire piochée dans sa fiche client (Réglages → Clients),
   // si elle a été renseignée là-bas.
   const locataireLine=[g.name,g.address,g.phone,g.email].filter(Boolean).join(' — ');
-  const prixText=`Le prix du séjour est fixé à ${total.toLocaleString('fr-FR')} €.`
-    +(tsAmount>0?`\nS'y ajoute la taxe de séjour, collectée pour le compte de la commune, d'un montant de ${tsAmount.toLocaleString('fr-FR')} €.\nTotal à régler : ${grandTotal.toLocaleString('fr-FR')} €.`:'');
+  const prixText=`Le prix du séjour est fixé à <span class="money">${total.toLocaleString('fr-FR')}</span> €.`
+    +(tsAmount>0?`\nS'y ajoute la taxe de séjour, collectée pour le compte de la commune, d'un montant de <span class="money">${tsAmount.toLocaleString('fr-FR')}</span> €.\nTotal à régler : <span class="money">${grandTotal.toLocaleString('fr-FR')}</span> €.`:'');
 
   return{
     title:'Contrat de location saisonnière',
@@ -5119,7 +5139,7 @@ function openEditModal(id,clickedDay){
   byId('prixNet').value=b.prixNet!=null?b.prixNet:'';
   const nights=Math.round((new Date(b.checkOut)-new Date(b.checkIn))/86400000);
   const autoP=nights*getNightlyRate(b)-getBreakfastDeduction(b,b.checkIn,b.checkOut)+getThRevenue(b,b.checkIn,b.checkOut)+getExtrasTotal(b);
-  byId('prixNetHint').textContent=autoP>0?`(auto : ${autoP.toLocaleString('fr-FR')} €)`:'';
+  byId('prixNetHint').textContent=autoP>0?`(auto : <span class="money">${autoP.toLocaleString('fr-FR')}</span> €)`:'';
   refreshBExtrasTotal(b);
   // Le jour cliqué dans la grille (ou la vue jour/semaine) présélectionne
   // l'onglet Consommations correspondant — plutôt que de retomber sur
@@ -9111,11 +9131,11 @@ function renderWeek(){
   }
 
   h+=`<div class="week-summary">
-    <div class="wsm-total"><div class="wsm-val wsm-val-strong">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
+    <div class="wsm-total"><div class="wsm-val wsm-val-strong"><span class="money">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</span></div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
     <div class="wsm-row">
-      <div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
-      ${dinnerEnabled()?`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
-      <div class="wsm-item"><div class="wsm-val">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>
+      <div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub"><span class="money">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</span></div></div>
+      <span class="money">${dinnerEnabled()?`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}</span>
+      <div class="wsm-item"><div class="wsm-val"><span class="money">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</span></div><div class="wsm-lbl">extras</div></div>
     </div>
   </div>`;
 
@@ -9161,7 +9181,7 @@ function renderWeek(){
       <div class="evcard-info">
         <div class="evcard-title">${ev.title}</div>
         ${timeStr?`<div class="evcard-time">${timeStr}</div>`:''}
-        ${ev.prixNet>0?`<div class="evcard-time">${ev.prixNet.toLocaleString('fr-FR')} € générés</div>`:''}
+        <span class="money">${ev.prixNet>0?`<div class="evcard-time">${ev.prixNet.toLocaleString('fr-FR')} € générés</div>`:''}</span>
       </div>
     </div>`;
   };
@@ -9241,7 +9261,7 @@ function renderWeek(){
             <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${rm?rm.short:''}</span>
             ${timeLabel?`<span class="btime">${timeLabel}</span>`:''}
           </div>
-          ${showTotal?`<div class="dep-total-line"><span>Total séjour</span><span>${getStayTotal(b).toLocaleString('fr-FR')} €</span></div>`:''}
+          <span class="money">${showTotal?`<div class="dep-total-line"><span>Total séjour</span><span>${getStayTotal(b).toLocaleString('fr-FR')} €</span></div>`:''}</span>
         </div>
       </div>`;};
     const wpanel=(cls,icon,title,items,renderFn)=>{
@@ -9761,18 +9781,18 @@ function renderMonth(){
   // volontairement inversé par rapport à l'ancien nuitées→repas→extras→
   // événements.
   const mRevItems=[
-    `<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">extras</div></div>`
+    `<div class="wsm-item"><div class="wsm-val wsm-val-light"><span class="money">${totalExtras>0?totalExtras.toLocaleString('fr-FR')+' €':'—'}</span></div><div class="wsm-lbl">extras</div></div>`
   ];
   if(eventsRevenue>0){
-    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${eventsRevenue.toLocaleString('fr-FR')} €</div><div class="wsm-lbl">événements</div></div>`);
+    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light"><span class="money">${eventsRevenue.toLocaleString('fr-FR')}</span> €</div><div class="wsm-lbl">événements</div></div>`);
   }
-  mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
+  mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub"><span class="money">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</span></div></div>`);
   if(dinnerEnabled()){
-    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`);
+    mRevItems.push(`<div class="wsm-item"><div class="wsm-val wsm-val-light">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub"><span class="money">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</span></div></div>`);
   }
   h+=`<div class="week-summary">
     <div class="wsm-toprow">
-      <div class="wsm-total"><div class="wsm-val wsm-val-strong">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux du mois</div></div>
+      <div class="wsm-total"><div class="wsm-val wsm-val-strong"><span class="money">${totalRev>0?totalRev.toLocaleString('fr-FR')+' €':'—'}</span></div><div class="wsm-lbl">revenus totaux du mois</div></div>
       <div class="wsm-total wsm-occ"><div class="wsm-val wsm-val-light">${occPct}%</div><div class="wsm-lbl">occupation</div></div>
     </div>
   </div>`;
@@ -9796,12 +9816,12 @@ function renderMonth(){
     const margeClass=marge>=0?'pos':'neg';
     h+=`<div class="month-fin">
       <div class="mfin-card">
-        <div class="mfin-val mfin-val-strong">${Math.round(totalCh).toLocaleString('fr-FR')} €</div>
+        <div class="mfin-val mfin-val-strong"><span class="money">${Math.round(totalCh).toLocaleString('fr-FR')}</span> €</div>
         <div class="mfin-sub">charges / mois</div>
         <div class="mfin-detail">relevé bancaire</div>
       </div>
       <div class="mfin-card${margeClass==='neg'?' mfin-danger':''}">
-        <div class="mfin-val mfin-val-strong">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</div>
+        <div class="mfin-val mfin-val-strong"><span class="money">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</span></div>
         <div class="mfin-sub">marge nette</div>
         <div class="mfin-detail">${totalRev>0?(marge>=0?'bénéfice estimé':'déficit estimé'):'revenus non renseignés'}</div>
       </div>
@@ -9943,13 +9963,13 @@ function renderMonth(){
         const key=keyPrefix+':'+id;
         let rowHtml=`<div class="mch-row" style="cursor:pointer" onclick="event.stopPropagation();toggleBankCat('${key}')">
           <span style="flex:1;font-size:13px;color:var(--dark)">${v.label}${v.excluded?' <span style="color:#bbb;font-size:10px">(hors charges)</span>':''} <span style="color:var(--gray);font-size:11px">(${v.count})</span></span>
-          <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}">${Math.round(v.total).toLocaleString('fr-FR')} €</span>
+          <span style="font-size:13px;font-weight:600;color:${v.excluded?'#bbb':'var(--dark)'}"><span class="money">${Math.round(v.total).toLocaleString('fr-FR')}</span> €</span>
         </div>`;
         if(bankExpandedCat===key){
           rowHtml+=(txByCat[id]||[]).sort((a,b)=>a.date<b.date?1:-1).map(t=>`<div class="mch-row" style="padding-left:10px;background:#FAFAF8" onclick="event.stopPropagation()">
               <span style="width:70px;font-size:11px;color:var(--gray);flex-shrink:0">${t.date.slice(8,10)}/${t.date.slice(5,7)}</span>
               <span style="flex:1;font-size:12px;color:var(--dark);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.counterparty}${t.description?' — '+t.description:''}</span>
-              <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0">${t.amount.toLocaleString('fr-FR')} €</span>
+              <span style="font-size:12px;font-weight:600;color:var(--dark);flex-shrink:0"><span class="money">${t.amount.toLocaleString('fr-FR')}</span> €</span>
               <select style="font-size:11px;border:1px solid var(--light);border-radius:6px;flex-shrink:0" onchange="setTransactionCategory('${t.id}',this.value)" onclick="event.stopPropagation()">
                 <option value="">Non catégorisé</option>
                 ${cats.map(c=>`<option value="${c.id}" ${c.id===t.categoryId?'selected':''}>${c.label}</option>`).join('')}
@@ -9971,18 +9991,18 @@ function renderMonth(){
       chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
       chargesBody+=clean.rows.length
         ? clean.rows.map(([nm,v])=>`<div class="mch-row">
-            <span style="flex:1;font-size:13px;color:var(--dark)">${nm} <span style="color:var(--gray);font-size:11px">(${v.hours.toLocaleString('fr-FR')} h × ${v.rate} €)</span></span>
-            <span style="font-size:13px;font-weight:600;color:var(--dark)">${v.cost.toLocaleString('fr-FR')} €</span>
+            <span style="flex:1;font-size:13px;color:var(--dark)">${nm} <span style="color:var(--gray);font-size:11px">(${v.hours.toLocaleString('fr-FR')} h × <span class="money">${v.rate}</span> €)</span></span>
+            <span style="font-size:13px;font-weight:600;color:var(--dark)"><span class="money">${v.cost.toLocaleString('fr-FR')}</span> €</span>
           </div>`).join('')
         : `<div style="font-size:12px;color:#bbb;padding:2px 0 6px">Aucune heure enregistrée pour ce mois.</div>`;
-      chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total Ménage</span><span>${clean.total.toLocaleString('fr-FR')} €</span></div>`;
+      chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total Ménage</span><span><span class="money">${clean.total.toLocaleString('fr-FR')}</span> €</span></div>`;
     }
     chargesBody+=`<div class="mch-group-hd">
       <span class="mch-group-name">Ajout manuel</span>
       <button class="btn-s" style="padding:4px 10px;font-size:11px;background:var(--yellow);color:var(--green-deep)" onclick="event.stopPropagation();openChargeAdd('${gid}')">+ Ajouter</button>
     </div>`;
     chargesBody+=catRowsHTML(catRowsManual,gid+':manual',true);
-    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total ajout manuel</span><span>${Math.round(bcManual.total).toLocaleString('fr-FR')} €</span></div>`;
+    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total ajout manuel</span><span><span class="money">${Math.round(bcManual.total).toLocaleString('fr-FR')}</span> €</span></div>`;
     chargesBody+=`<div class="mch-group-hd">
       <span class="mch-group-name">Relevé bancaire</span>
       <div style="display:flex;gap:6px">
@@ -9991,13 +10011,13 @@ function renderMonth(){
       </div>
     </div>`;
     chargesBody+=catRowsHTML(catRows,gid+':bank',false);
-    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total relevé bancaire</span><span>${Math.round(bc.total).toLocaleString('fr-FR')} €</span></div>`;
+    chargesBody+=`<div class="mch-subtotal-row"><span>Sous-total relevé bancaire</span><span><span class="money">${Math.round(bc.total).toLocaleString('fr-FR')}</span> €</span></div>`;
     // Répartition des charges — module séparé (total + camembert), même
     // principe que la vue Année (voir plus bas dans le fichier) plutôt que
     // mêlé au détail Ménage/Relevé bancaire de "Charges réelles" ci-dessus.
     const chargesDonutBody=chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
         <span>Total charges de cette structure</span>
-        <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / mois</span>
+        <span class="mch-total-val"><span class="money">${Math.round(chargesTotal).toLocaleString('fr-FR')}</span> € / mois</span>
       </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>';
 
     // Réservations de cette structure (client par client, comme avant cette
@@ -10038,7 +10058,7 @@ function renderMonth(){
             <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
             <div class="mbk-name">${g?g.name:'?'}</div>
             <div class="mbk-meta">${row.bkCount > 1 ? row.bkCount+' rés · ' : ''}${row.nights}n</div>
-            ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
+            <span class="money">${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}</span>
           </div>`;
         }).join('')
         +`</div>`
@@ -10076,12 +10096,12 @@ function renderMonth(){
       <div class="yr-group-body">
         <div class="yr-stats">
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val mstat-val-strong">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(st.realCA).toLocaleString('fr-FR')}</span> €</div>
             <div class="mstat-sub">CA réalisé</div>
             <div class="mstat-detail">${st.realNights} nuits passées</div>
           </div>
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val mstat-val-strong">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(st.projCA).toLocaleString('fr-FR')}</span> €</div>
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
@@ -10093,7 +10113,7 @@ function renderMonth(){
         </div>
         ${st.rooms.length?subSection('Taux par location',occBody):''}
         ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,clientsBody)}
-        ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceBody,'yr-subhd-plain')}
+        <span class="money">${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceBody,'yr-subhd-plain')}</span>
         ${subSection('Charges réelles',chargesBody)}
         ${subSection('Répartition des charges',chargesDonutBody)}
       </div>
@@ -10109,7 +10129,7 @@ function renderMonth(){
   if(taxeSejourEnabled())h+=`<div class="month-occ">
     <div class="mocc-title">Taxe de séjour</div>
     <div class="mocc-taxe" style="margin-top:0;padding-top:0;border-top:none">
-      <span>Collectée ce mois-ci</span><span>${taxeSejourTotal>0?taxeSejourTotal.toLocaleString('fr-FR')+' €':'—'}</span>
+      <span>Collectée ce mois-ci</span><span><span class="money">${taxeSejourTotal>0?taxeSejourTotal.toLocaleString('fr-FR')+' €':'—'}</span></span>
     </div>
   </div>`;
 
@@ -10194,6 +10214,31 @@ function toggleGridZoom(){
   wrap.scrollLeft=ratioH*maxHAfter;
 }
 
+// Retour utilisateur : "un picto œil en bas à droite sur toutes les autres
+// vues (comme la loupe sur la Grille), pour flouter tous les montants en
+// euros en cliquant dessus, à la manière des banques" — tous les chiffres
+// en euros des vues Location/Semaine/Mois/Année sont déjà enveloppés dans
+// <span class="money"> (voir renderToday/renderWeek/renderMonth/
+// renderYear) ; basculer body.money-hidden suffit donc à tous les flouter
+// d'un coup, sans re-rendu (voir body.money-hidden .money dans le CSS).
+const EYE_SVG=`<circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>`;
+const EYE_OFF_SVG=`<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+let moneyHidden=localStorage.getItem('ff2_moneyHidden')==='1';
+function applyMoneyHidden(){
+  document.body.classList.toggle('money-hidden',moneyHidden);
+  const btn=byId('moneyEyeBtn');
+  if(btn){
+    btn.classList.toggle('on',moneyHidden);
+    btn.title=moneyHidden?'Afficher les montants':'Masquer les montants';
+    btn.querySelector('svg').innerHTML=moneyHidden?EYE_OFF_SVG:EYE_SVG;
+  }
+}
+function toggleMoneyHidden(){
+  moneyHidden=!moneyHidden;
+  localStorage.setItem('ff2_moneyHidden',moneyHidden?'1':'0');
+  applyMoneyHidden();
+}
+
 // Vues autorisées à un compte Personnel (voir applyPersonnelUIRestrictions) —
 // répété ici pour que même un appel direct à setView('year') (ex. valeur
 // restée dans le stockage local depuis avant l'invitation, ou appel depuis
@@ -10223,6 +10268,8 @@ function setView(v){
   });
   const zb=byId('gridZoomBtn');
   if(zb)zb.style.display=v==='grid'?'flex':'none';
+  const eb=byId('moneyEyeBtn');
+  if(eb)eb.style.display=v==='grid'?'none':'flex';
   if(v==='today')renderToday();
   if(v==='week')renderWeek();
   if(v==='month')renderMonth();
@@ -10487,15 +10534,15 @@ function renderYear(){
     return`<div class="yr-gauge">
       <div class="yr-gauge-top">
         <span class="yr-gauge-lbl">${label}</span>
-        <span class="yr-gauge-thr">seuil ${threshold.toLocaleString('fr-FR')} €</span>
+        <span class="yr-gauge-thr">seuil <span class="money">${threshold.toLocaleString('fr-FR')}</span> €</span>
       </div>
       <div class="yr-gauge-bar">
         <div class="yr-gauge-proj" style="width:${projPct}%;background:#8B9D8644"></div>
         <div class="yr-gauge-real" style="width:${realPct}%;background:var(--green2)"></div>
       </div>
       <div class="yr-gauge-bot">
-        <span style="font-size:10px;color:var(--gray)">Réalisé <b>${Math.round(realCA).toLocaleString('fr-FR')} €</b></span>
-        <span style="font-size:10px;color:var(--gray)">Projeté <b>${Math.round(projCA).toLocaleString('fr-FR')} €</b></span>
+        <span style="font-size:10px;color:var(--gray)">Réalisé <b><span class="money">${Math.round(realCA).toLocaleString('fr-FR')}</span> €</b></span>
+        <span style="font-size:10px;color:var(--gray)">Projeté <b><span class="money">${Math.round(projCA).toLocaleString('fr-FR')}</span> €</b></span>
       </div>
     </div>`;
   }
@@ -10631,7 +10678,7 @@ function renderYear(){
           <div class="mbk-dot" style="background:${g?g.color:'#999'}"></div>
           <div class="mbk-name">${g?g.name:'?'}</div>
           <div class="mbk-meta">${row.bkCount > 1 ? row.bkCount+' rés · ' : ''}${row.nights}n</div>
-          ${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}
+          <span class="money">${row.rev>0?`<div class="mbk-rev">${row.rev.toLocaleString('fr-FR')} €</div>`:''}</span>
         </div>`;
       }).join('')
       +`</div>`
@@ -10654,12 +10701,12 @@ function renderYear(){
       <div class="yr-group-body">
         <div class="yr-stats">
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val mstat-val-strong">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(st.realCA).toLocaleString('fr-FR')}</span> €</div>
             <div class="mstat-sub">CA réalisé</div>
             <div class="mstat-detail">${st.realNights} nuits passées</div>
           </div>
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val mstat-val-strong">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(st.projCA).toLocaleString('fr-FR')}</span> €</div>
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
@@ -10673,10 +10720,10 @@ function renderYear(){
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,'var(--green)'))}
         ${subSection(topClientRows.length?`Top ${topClientRows.length} client${topClientRows.length>1?'s':''}`:'Top clients',topClientsBody)}
-        ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}
+        <span class="money">${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}</span>
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
             <span>Total annuel${cleanCost>0?' (banque + ménage)':' (relevé bancaire)'}</span>
-            <span class="mch-total-val">${Math.round(chargesTotal).toLocaleString('fr-FR')} € / an</span>
+            <span class="mch-total-val"><span class="money">${Math.round(chargesTotal).toLocaleString('fr-FR')}</span> € / an</span>
           </div>${buildChargesDonut(chargesEntries)}`:'<div class="yr-chart-nodata">Aucune charge rattachée à cette structure</div>')}
       </div>
     </div>`;
@@ -10701,12 +10748,12 @@ function renderYear(){
     return`<div class="yr-group yr-total">
       <div class="yr-stats">
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val mstat-val-strong">${Math.round(realCA).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(realCA).toLocaleString('fr-FR')}</span> €</div>
           <div class="mstat-sub">CA réalisé</div>
           <div class="mstat-detail">${realNights} nuits passées</div>
         </div>
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val mstat-val-strong">${Math.round(projCA).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(projCA).toLocaleString('fr-FR')}</span> €</div>
           <div class="mstat-sub">CA projeté</div>
           <div class="mstat-detail">${projNights} nuits totales</div>
         </div>
@@ -10716,12 +10763,12 @@ function renderYear(){
           <div class="mstat-detail">${totalRooms} location${totalRooms>1?'s':''}</div>
         </div>
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val mstat-val-strong">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(yearCharges).toLocaleString('fr-FR')}</span> €</div>
           <div class="mstat-sub">charges réelles</div>
           <div class="mstat-detail">relevé bancaire</div>
         </div>
         <div class="mstat-card mstat-rev" style="grid-column:1/-1">
-          <div class="mstat-val mstat-val-strong">${Math.round(netMargin).toLocaleString('fr-FR')} € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
+          <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(netMargin).toLocaleString('fr-FR')}</span> € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
           <div class="mstat-sub">marge nette</div>
           <div class="mstat-detail">CA réalisé − charges</div>
         </div>
@@ -10743,18 +10790,18 @@ function renderYear(){
       const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
       const diffStr=diffPct==null?'':diffPct>=0?` (+${diffPct}% vs. la moyenne)`:` (${diffPct}% vs. la moyenne)`;
       if(rank===1){
-        briefMsg=`🏆 Meilleure année complète enregistrée, avec ${Math.round(rev).toLocaleString('fr-FR')} € de CA${diffStr}.`;
+        briefMsg=`🏆 Meilleure année complète enregistrée, avec <span class="money">${Math.round(rev).toLocaleString('fr-FR')}</span> € de CA${diffStr}.`;
       }else if(total>3&&rank>total-2){
-        briefMsg=`Une année plus calme que les autres (${rank}ᵉ sur ${total} années complètes), avec ${Math.round(rev).toLocaleString('fr-FR')} €. Chaque année suivie aide à mieux anticiper la suivante.`;
+        briefMsg=`Une année plus calme que les autres (${rank}ᵉ sur ${total} années complètes), avec <span class="money">${Math.round(rev).toLocaleString('fr-FR')}</span> €. Chaque année suivie aide à mieux anticiper la suivante.`;
       }else{
-        briefMsg=`Cette année se classe ${rank}ᵉ sur ${total} années complètes suivies, avec ${Math.round(rev).toLocaleString('fr-FR')} €${diffStr}.`;
+        briefMsg=`Cette année se classe ${rank}ᵉ sur ${total} années complètes suivies, avec <span class="money">${Math.round(rev).toLocaleString('fr-FR')}</span> €${diffStr}.`;
       }
     }else if(yearInsight.kind==='projection'){
       const{projected,lastYearFull}=yearInsight;
       const projDiffPct=Math.round((projected-lastYearFull)/lastYearFull*100);
       briefMsg=projDiffPct>=0
-        ?`📈 Au rythme actuel, vous devriez terminer l'année autour de ${projected.toLocaleString('fr-FR')} €, soit ${projDiffPct}% de plus qu'en ${year-1}.`
-        :`Au rythme actuel, vous termineriez l'année autour de ${projected.toLocaleString('fr-FR')} € — ${Math.abs(projDiffPct)}% de moins qu'en ${year-1}, mais il reste du temps pour combler l'écart.`;
+        ?`📈 Au rythme actuel, vous devriez terminer l'année autour de <span class="money">${projected.toLocaleString('fr-FR')}</span> €, soit ${projDiffPct}% de plus qu'en ${year-1}.`
+        :`Au rythme actuel, vous termineriez l'année autour de <span class="money">${projected.toLocaleString('fr-FR')}</span> € — ${Math.abs(projDiffPct)}% de moins qu'en ${year-1}, mais il reste du temps pour combler l'écart.`;
     }else if(yearInsight.kind==='ytd'){
       const{ytdRev,lastYearYtd}=yearInsight;
       const ytdDiffPct=Math.round((ytdRev-lastYearYtd)/lastYearYtd*100);
@@ -10762,7 +10809,7 @@ function renderYear(){
         ?`Vous êtes ${ytdDiffPct}% au-dessus de la même période en ${year-1}.`
         :`${Math.abs(ytdDiffPct)}% en dessous de la même période en ${year-1} pour l'instant, mais l'année n'est pas terminée.`;
     }else if(yearInsight.kind==='first'){
-      briefMsg=`${Math.round(yearInsight.rev).toLocaleString('fr-FR')} € de CA depuis le début de l'année — première année suivie, de quoi bâtir une vraie comparaison l'an prochain.`;
+      briefMsg=`<span class="money">${Math.round(yearInsight.rev).toLocaleString('fr-FR')}</span> € de CA depuis le début de l'année — première année suivie, de quoi bâtir une vraie comparaison l'an prochain.`;
     }
     if(briefMsg)yearBriefHTML=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
   }
@@ -10780,7 +10827,7 @@ function renderYear(){
   const taxeSejourYearHTML=taxeSejourEnabled()?`<div class="yr-section">
     <div class="yr-section-title">Taxe de séjour</div>
     <div class="mocc-taxe" style="margin-top:0;padding-top:0;border-top:none">
-      <span>Collectée sur l'année</span><span>${taxeSejourYearTotal>0?taxeSejourYearTotal.toLocaleString('fr-FR')+' €':'—'}</span>
+      <span>Collectée sur l'année</span><span><span class="money">${taxeSejourYearTotal>0?taxeSejourYearTotal.toLocaleString('fr-FR')+' €':'—'}</span></span>
     </div>
   </div>`:'';
 
@@ -10965,6 +11012,8 @@ function init(){
   renderGrid();
   applyGridZoom();
   byId('gridZoomBtn').style.display=S.view==='grid'?'flex':'none';
+  applyMoneyHidden();
+  byId('moneyEyeBtn').style.display=S.view==='grid'?'none':'flex';
 
   // Auto-scroll to today after render
   setTimeout(()=>byId('row-today')?.scrollIntoView({block:'center'}),150);
