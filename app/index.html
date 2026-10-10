@@ -775,7 +775,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    uniquement — le même bloc existe aussi en vue Semaine (renderWeek), qui
    n'a pas fait l'objet de cette demande et reste donc inchangé. */
 .wsm-val-strong{font-weight:700;}
-.wsm-val-light{font-weight:400;}
+.wsm-val-light{font-weight:500;}
 .wsm-lbl{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wsm-sub{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;}
 .wsm-total{background:var(--green);border-radius:12px;padding:16px 10px 14px;
@@ -953,13 +953,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    les chiffres secondaires (taux d'occupation, nuits plateformes…)" —
    essayé sur Mois et Année. 1ère passe 600 (base) vs 700 (.mstat-val-strong)
    jugée trop proche ; 2e passe avec .mstat-val-light à 400 (Jost Regular)
-   jugée "pas assez light" ; 3e passe à 300 (Jost Light) jugée cette fois
-   "trop light" — retour à 400, qui reste le bon compromis entre 700 et
-   la base 600. Scopée à ces 2 vues plutôt que de baisser .mstat-val
-   lui-même : la base (600) continue de servir ailleurs (Location) où
-   aucune distinction n'a été demandée, sans y changer quoi que ce soit. */
+   jugée "pas assez light" ; 3e passe à 300 (Jost Light) jugée "trop light" ;
+   retour à 400 puis remontée d'un cran à 500 (Jost Medium) sur demande
+   ("une graisse un tout petit peu au-dessus"). Scopée à ces 2 vues plutôt
+   que de baisser .mstat-val lui-même : la base (600) continue de servir
+   ailleurs (Location) où aucune distinction n'a été demandée, sans y
+   changer quoi que ce soit. */
 .mstat-val-strong{font-weight:700;}
-.mstat-val-light{font-weight:400;}
+.mstat-val-light{font-weight:500;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
 .mstat-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mstat-card.mstat-rev .mstat-sub{color:rgba(255,255,255,.75);}
