@@ -518,7 +518,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   width:28px;height:28px;display:flex;align-items:center;justify-content:center;
   cursor:pointer;color:var(--dark);flex-shrink:0;}
 .rv-year-btn:active{filter:brightness(.96);}
-.rv-year-label{font-size:16px;font-weight:700;color:var(--dark);
+/* Retour utilisateur : "j'ai oublié Location aussi c'est pareil, ça doit
+   être similaire sur les 4" — même logique que .vnav-title juste au-dessus
+   (déjà 700, juste agrandi : 16px -> 19px, 1ère passe comme pour les 3
+   autres vues). */
+.rv-year-label{font-size:19px;font-weight:700;color:var(--dark);
   min-width:44px;text-align:center;}
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
   border-top:1.5px solid var(--light);padding:4px 0;}
@@ -605,9 +609,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:flex;align-items:center;justify-content:center;}
 .vnav-btn:hover{background:var(--light);}
 .vnav-center{text-align:center;flex:1;padding:0 8px;}
-.vnav-rel{font-size:11px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
-.vnav-title{font-family:'Jost',sans-serif;font-size:27px;font-weight:500;color:var(--dark);}
-.vnav-sub{font-size:11px;color:var(--gray);margin-top:2px;}
+/* Retour utilisateur : "le texte entre les flèches (2026/nom du mois/…)
+   n'est pas assez gros, il se perd un peu dans la page, pourrait être
+   plus bold. Augmente aussi un peu la taille des éléments au-dessus et
+   en dessous de lui" — 1ère passe, incrément modeste (demande explicite
+   "fais petit à petit et montre-moi") : .vnav-title 27px/500 -> 30px/700,
+   .vnav-rel/.vnav-sub 11px -> 12px. Partagé entre Jour/Semaine/Mois/Année
+   (voir le commentaire de .vnav juste au-dessus) : s'applique aux 4 vues
+   d'un coup. */
+.vnav-rel{font-size:12px;color:var(--green);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.vnav-title{font-family:'Jost',sans-serif;font-size:30px;font-weight:700;color:var(--dark);}
+.vnav-sub{font-size:12px;color:var(--gray);margin-top:2px;}
 .vnav-now-row{min-height:28px;display:flex;align-items:center;justify-content:center;}
 .vnav-now-btn{background:none;border:1.5px solid var(--green);border-radius:20px;
   padding:5px 16px;font-family:'Jost',sans-serif;font-size:12px;font-weight:500;color:var(--green);
