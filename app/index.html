@@ -2052,7 +2052,7 @@ Gardez la main.</div>
     <tbody id="ptBody"></tbody>
   </table>
 </div>
-<button class="grid-zoom-btn" id="gridZoomBtn" onclick="toggleGridZoom()" title="Voir toutes les chambres">
+<button class="grid-zoom-btn" id="gridZoomBtn" onclick="toggleGridZoom()" title="Voir toutes les locations">
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/>
   </svg>
@@ -2141,7 +2141,7 @@ Gardez la main.</div>
         Séjour
       </div>
       <div class="fg">
-        <label class="fl">Chambre / Logement</label>
+        <label class="fl">Location</label>
         <select class="fsel" id="bRoom" onchange="chkConflict();updateModalTotal()">
         </select>
       </div>
@@ -2223,7 +2223,7 @@ Gardez la main.</div>
         <input type="hidden" id="bStatus" value="ok">
       </div>
       <div class="warn" id="conflictWarn" style="display:none">
-        ⚠️ Cette chambre est déjà prise sur ces dates
+        ⚠️ Cette location est déjà prise sur ces dates
       </div>
       <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:12px;padding:10px 12px;"></div>
       <!-- Notes : déplacées ici depuis leur propre section (retour
@@ -2709,7 +2709,7 @@ Gardez la main.</div>
 <div class="overlay" id="modalRoomAdd" style="display:none" onclick="ovClose(event,'modalRoomAdd')">
   <div class="modal">
     <div class="mhead">
-      <div class="mtitle">Nouvelle chambre</div>
+      <div class="mtitle">Nouvelle location</div>
       <button class="mclose" onclick="closeM('modalRoomAdd')">✕</button>
     </div>
     <div id="roomAddBody"></div>
@@ -2731,10 +2731,10 @@ Gardez la main.</div>
 // init()) — gardée en phase avec le contenu générique de DEFAULT_SETTINGS.rooms
 // pour ne pas laisser une liste différente ici, même un court instant.
 let ROOMS = [
-  {id:'ch1',name:'Chambre 1',short:'Ch.1'},
-  {id:'ch2',name:'Chambre 2',short:'Ch.2'},
-  {id:'ch3',name:'Chambre 3',short:'Ch.3'},
-  {id:'ch4',name:'Chambre 4',short:'Ch.4'},
+  {id:'ch1',name:'Location 1',short:'L.1'},
+  {id:'ch2',name:'Location 2',short:'L.2'},
+  {id:'ch3',name:'Location 3',short:'L.3'},
+  {id:'ch4',name:'Location 4',short:'L.4'},
 ];
 
 const DOW = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
@@ -2844,7 +2844,7 @@ const SETTINGS_PANEL_ICONS={
   compte:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   equipe:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   structures:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
-  chambres:'<path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18v2"/><path d="M21 18v2"/><path d="M3 12V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  locations:'<path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18v2"/><path d="M21 18v2"/><path d="M3 12V8a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   tarifs:'<path d="M20 12l-8 8-9-9V4h7l10 10z"/><circle cx="7.5" cy="7.5" r="1.2"/>',
   taxesejour:'<circle cx="12" cy="12" r="9"/><path d="M9.5 15c.4.6 1.2 1 2.3 1 1.3 0 2.2-.6 2.2-1.5 0-2-4.5-.8-4.5-2.9 0-.9.9-1.5 2.2-1.5 1.1 0 1.9.4 2.3 1"/><line x1="12" y1="6" x2="12" y2="7.5"/><line x1="12" y1="16.5" x2="12" y2="18"/>',
   contrat:'<path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3z"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="15" y2="12"/>',
@@ -2937,10 +2937,10 @@ const DEFAULT_SETTINGS={
   dinnerEnabled:true,
   breakfastEnabled:true,
   rooms:[
-    {id:'ch1',name:'Chambre 1',short:'Ch.1',color:'#7A8C65',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Chambre double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
-    {id:'ch2',name:'Chambre 2',short:'Ch.2',color:'#7A8CB5',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Chambre double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
-    {id:'ch3',name:'Chambre 3',short:'Ch.3',color:'#B57A8C',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Chambre double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
-    {id:'ch4',name:'Chambre 4',short:'Ch.4',color:'#8CB57A',maxPersons:4,babyCrib:true,babyCribPrice:15,group:'struct1',description:'Chambre familiale pour 4 personnes, salle de bain privative et lit bébé disponible sur demande.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(4)}]},
+    {id:'ch1',name:'Location 1',short:'L.1',color:'#7A8C65',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Location double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
+    {id:'ch2',name:'Location 2',short:'L.2',color:'#7A8CB5',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Location double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
+    {id:'ch3',name:'Location 3',short:'L.3',color:'#B57A8C',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Location double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
+    {id:'ch4',name:'Location 4',short:'L.4',color:'#8CB57A',maxPersons:4,babyCrib:true,babyCribPrice:15,group:'struct1',description:'Location familiale pour 4 personnes, salle de bain privative et lit bébé disponible sur demande.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(4)}]},
   ],
   // Vide par défaut : une équipe de ménage est propre à chaque établissement,
   // pas d'exemple avec des prénoms de personnes réelles.
@@ -4601,7 +4601,7 @@ function renderToday(){
   const chevL=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>`;
   const chevR=`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
   if(!rooms.length){
-    byId('todayWrap').innerHTML=`<div class="today-inner"><div class="tsec-empty" style="padding:30px 10px">Aucune chambre ni gîte configuré — ajoutez-en un dans Réglages.</div></div>`;
+    byId('todayWrap').innerHTML=`<div class="today-inner"><div class="tsec-empty" style="padding:30px 10px">Aucune location configurée — ajoutez-en une dans Réglages.</div></div>`;
     return;
   }
   if(roomViewIdx>=rooms.length)roomViewIdx=0;
@@ -5326,10 +5326,10 @@ function chkConflict(){
     }
     const free=freeRooms(ci,co,editBid||'__new__');
     if(free.length){
-      html+='<div style="font-size:11px;color:var(--gray);margin-bottom:5px">Chambres libres pour ces dates :</div>'+
+      html+='<div style="font-size:11px;color:var(--gray);margin-bottom:5px">Locations libres pour ces dates :</div>'+
         free.map(r=>`<button class="free-room-btn" onclick="pickFreeRoom('${r.id}')">${r.name}</button>`).join('');
     } else if(!html){
-      html='<div style="font-size:11px;color:var(--danger)">Aucune chambre libre sur ces dates</div>';
+      html='<div style="font-size:11px;color:var(--danger)">Aucune location libre sur ces dates</div>';
     }
     fp.innerHTML=html;
     fp.style.display='block';
@@ -5399,7 +5399,7 @@ function saveBooking(){
   if(!ci||!co){alert('Remplissez les dates');return;}
   if(ci>=co){alert('La date de départ doit être après l\'arrivée');return;}
   const hasConflict=S.bookings.some(b=>b.id!==editBid&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
-  if(hasConflict){alert('Cette chambre est déjà prise sur ces dates. Choisissez une chambre libre.');return;}
+  if(hasConflict){alert('Cette location est déjà prise sur ces dates. Choisissez une location libre.');return;}
 
   let gid=selGid;
   if(newGMode){
@@ -6691,7 +6691,7 @@ function onDrop(newRid,_ds){
   } else {
     // Freed room also has conflicts — show a quick room picker
     const free=freeRooms(bk.checkIn,bk.checkOut,dragBid);
-    showRoomPicker(dragBid,free,'Choisissez une chambre libre pour cette période :');
+    showRoomPicker(dragBid,free,'Choisissez une location libre pour cette période :');
     dragBid=null;
   }
 }
@@ -7555,7 +7555,7 @@ function roomTariffHTML(r){
       <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delRoomTariff('${r.id}','${t.id}')">×</button>
     </div>`;
   });
-  h+=`<button class="set-add" onclick="addRoomTariff('${r.id}')">+ Nouveau tarif pour cette chambre</button>
+  h+=`<button class="set-add" onclick="addRoomTariff('${r.id}')">+ Nouveau tarif pour cette location</button>
   </div>`;
   return h;
 }
@@ -7611,7 +7611,7 @@ function renderSettings(){
 
   // — Structures juridiques, chacune avec ses propres seuils —
   const structsForThr=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
-  let structBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque chambre/gîte est rattaché(e) à l'une de ces structures (réglage dans "Locations" ci-dessous). Dans la vue Année, le total global est toujours affiché en premier, puis chaque structure est calculée indépendamment. Les seuils sont optionnels et propres à chaque structure — laissez-en zéro si non pertinent. Le type détermine les échéances affichées dans le Calendrier fiscal (vue Année).</div>`;
+  let structBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location est rattachée à l'une de ces structures (réglage dans "Locations" ci-dessous). Dans la vue Année, le total global est toujours affiché en premier, puis chaque structure est calculée indépendamment. Les seuils sont optionnels et propres à chaque structure — laissez-en zéro si non pertinent. Le type détermine les échéances affichées dans le Calendrier fiscal (vue Année).</div>`;
   structsForThr.forEach(s=>{
     const thr=(st.structureThresholds&&st.structureThresholds[s.id])||[];
     const canDelS=structsForThr.length>1;
@@ -7655,17 +7655,17 @@ function renderSettings(){
 
   // — Chambres / gîtes, avec tarif nuitée propre à chacun(e) —
   const structs=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
-  let roomsBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque chambre a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
+  let roomsBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
   (st.rooms||[]).forEach(r=>{
     roomsBody+=`<div class="set-card">
       <div class="set-card-top">
-        <input class="set-fi" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Nom de la chambre" onblur="updateRoom('${r.id}','name',this.value)">
+        <input class="set-fi" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Nom de la location" onblur="updateRoom('${r.id}','name',this.value)">
         <button class="set-del" onclick="delRoom('${r.id}')">×</button>
       </div>
       <div class="set-card-grid">
         <div class="sc-field">
           <label title="Nom abrégé affiché dans les en-têtes de la grille">Code</label>
-          <div class="sc-input-wrap"><input class="set-fi" style="padding:5px 0;width:100%;min-width:0" value="${r.short.replace(/"/g,'&quot;')}" placeholder="Ch.1" title="Nom abrégé affiché dans les en-têtes de la grille" onblur="updateRoom('${r.id}','short',this.value)"></div>
+          <div class="sc-input-wrap"><input class="set-fi" style="padding:5px 0;width:100%;min-width:0" value="${r.short.replace(/"/g,'&quot;')}" placeholder="L.1" title="Nom abrégé affiché dans les en-têtes de la grille" onblur="updateRoom('${r.id}','short',this.value)"></div>
         </div>
         <div class="sc-field">
           <label>Capacité max</label>
@@ -7685,8 +7685,8 @@ function renderSettings(){
       ${roomTariffHTML(r)}
     </div>`;
   });
-  roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une chambre</button>`;
-  h+=settingsPanel('chambres','Locations',roomsBody);
+  roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une location</button>`;
+  h+=settingsPanel('locations','Locations',roomsBody);
 
   // — Services : table d'hôte + petit-déjeuner (interrupteurs globaux) + tarifs —
   let tarifsBody=`<div class="set-card set-card-row">
@@ -7703,7 +7703,7 @@ function renderSettings(){
       </label>
     </div>
     <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez pour les hébergements sans prestation petit-déjeuner (ex : gîtes) : masque l'option dans les réservations. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Tarifs communs à toutes les chambres, appliqués selon la date de début du séjour. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque chambre) n'est utilisé que si le petit-déjeuner est activé.</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Tarifs communs à toutes les locations, appliqués selon la date de début du séjour. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque location) n'est utilisé que si le petit-déjeuner est activé.</div>
     <div class="set-card">
     <div class="set-tariff-hd" style="grid-template-columns:1fr 48px 48px 48px 24px">
       <span>À partir du</span><span>Repas €</span><span>Repas ext. €</span><span>P-déj €</span><span></span>
@@ -7979,7 +7979,7 @@ function exportClientsCSV(){
 }
 
 function exportBookingsCSV(){
-  const rows=[['Client','Chambre','Arrivée','Départ','Nuits','Personnes','Statut','Source','Paiement','Acompte (€)','Prix personnalisé (€)','Repas (nuits)','Total séjour (€)','Notes']];
+  const rows=[['Client','Location','Arrivée','Départ','Nuits','Personnes','Statut','Source','Paiement','Acompte (€)','Prix personnalisé (€)','Repas (nuits)','Total séjour (€)','Notes']];
   [...S.bookings].sort((a,b)=>a.checkIn.localeCompare(b.checkIn)).forEach(bk=>{
     const g=guest(bk.guestId);
     const rm=room(bk.roomId);
@@ -8189,9 +8189,9 @@ function roomAddChoiceEntries(){
 function openRoomAddChoice(entries){
   const body=byId('roomAddBody');
   body.innerHTML =
-    '<p style="padding:0 2px 12px;color:var(--gray);font-size:13px">Chambres déposées sur Fiftin Séjours pas encore reliées à votre planning — reprendre l\'une d\'elles, ou repartir d\'une chambre vierge :</p>'+
+    '<p style="padding:0 2px 12px;color:var(--gray);font-size:13px">Locations déposées sur Fiftin Séjours pas encore reliées à votre planning — reprendre l\'une d\'elles, ou repartir d\'une location vierge :</p>'+
     entries.map(e=>`<button type="button" class="set-card set-card-row" style="width:100%;text-align:left;cursor:pointer" onclick="addRoomFromListingUnit('${e.listingId}','${e.unit.id}')"><div><b>${escHtml(e.unit.name||'(sans nom)')}</b><div style="font-size:12px;color:var(--gray)">${escHtml(e.listingName)}${e.unit.maxPersons?' · '+e.unit.maxPersons+' pers':''}</div></div></button>`).join('')+
-    '<button type="button" class="set-add" style="width:100%;margin-top:8px" onclick="closeM(\'modalRoomAdd\');addRoomBlank();">+ Chambre vierge</button>';
+    '<button type="button" class="set-add" style="width:100%;margin-top:8px" onclick="closeM(\'modalRoomAdd\');addRoomBlank();">+ Location vierge</button>';
   openM('modalRoomAdd');
 }
 
@@ -8204,7 +8204,7 @@ function addRoom(){
 function addRoomBlank(){
   const n=S.settings.rooms.length+1;
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
-  S.settings.rooms.push({id:uid(),name:'Chambre '+n,short:'C'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
+  S.settings.rooms.push({id:uid(),name:'Location '+n,short:'L'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
 }
@@ -8219,7 +8219,7 @@ function addRoomFromListingUnit(listingId,unitId){
   const prices=defaultRoomPrices(max);
   if(unit.price) prices[max]=Number(unit.price);
   const newRoomId=uid();
-  S.settings.rooms.push({id:newRoomId,name:(unit.name||'Chambre '+n).trim()||('Chambre '+n),short:'C'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
+  S.settings.rooms.push({id:newRoomId,name:(unit.name||'Location '+n).trim()||('Location '+n),short:'L'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
   writeBackSejoursLink(listingId,unitId,newRoomId);
@@ -8250,8 +8250,8 @@ function delRoom(id){
   // elles une fois la chambre supprimée.
   const nb=S.bookings.filter(b=>b.roomId===id).length;
   const msg=nb
-    ?`${nb} réservation(s) utilisent cette chambre. Elles ne seront pas supprimées. Supprimer quand même ?`
-    :'Supprimer cette chambre ?';
+    ?`${nb} réservation(s) utilisent cette location. Elles ne seront pas supprimées. Supprimer quand même ?`
+    :'Supprimer cette location ?';
   if(!confirm(msg))return;
   S.settings.rooms=S.settings.rooms.filter(r=>r.id!==id);
   saveSettings();applySettings();renderSettings();renderGrid();
@@ -8434,7 +8434,7 @@ function delStructure(id){
   // existante et disparaîtraient silencieusement de toute répartition
   // filtrée par structure (Charges réelles par structure, vue Mois/Année).
   const usedByTx=(S.transactions||[]).filter(t=>t.group===id);
-  if((usedBy.length||usedByTx.length)&&!confirm(`${usedBy.length} chambre(s)/gîte(s) et ${usedByTx.length} transaction(s) sont rattaché(e)s à cette structure. Elles seront réaffectées à la première structure restante. Continuer ?`))return;
+  if((usedBy.length||usedByTx.length)&&!confirm(`${usedBy.length} location(s) et ${usedByTx.length} transaction(s) sont rattachée(s) à cette structure. Elles seront réaffectées à la première structure restante. Continuer ?`))return;
   S.settings.structures=S.settings.structures.filter(s=>s.id!==id);
   delete S.settings.structureThresholds[id];
   const fallback=S.settings.structures[0].id;
@@ -10083,10 +10083,10 @@ function renderMonth(){
           <div class="mstat-card mstat-rev" style="grid-column:1/-1">
             <div class="mstat-val mstat-val-light">${st.occRate}%</div>
             <div class="mstat-sub">occupation</div>
-            <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
+            <div class="mstat-detail">${st.rooms.length} location${st.rooms.length>1?'s':''}</div>
           </div>
         </div>
-        ${st.rooms.length?subSection('Taux par chambre',occBody):''}
+        ${st.rooms.length?subSection('Taux par location',occBody):''}
         ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,clientsBody)}
         ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceBody,'yr-subhd-plain')}
         ${subSection('Charges réelles',chargesBody)}
@@ -10167,7 +10167,7 @@ function applyGridZoom(){
   const btn=byId('gridZoomBtn');
   if(btn){
     btn.classList.toggle('on',gridZoomed);
-    btn.title=gridZoomed?'Revenir à la taille normale':'Voir toutes les chambres';
+    btn.title=gridZoomed?'Revenir à la taille normale':'Voir toutes les locations';
   }
 }
 function toggleGridZoom(){
@@ -10661,7 +10661,7 @@ function renderYear(){
           <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
             <div class="mstat-val mstat-val-light">${st.occRate}%</div>
             <div class="mstat-sub">occupation à ce jour</div>
-            <div class="mstat-detail">${st.rooms.length} chambre${st.rooms.length>1?'s':''}</div>
+            <div class="mstat-detail">${st.rooms.length} location${st.rooms.length>1?'s':''}</div>
           </div>
           ${platStatHTML}
         </div>
@@ -10708,7 +10708,7 @@ function renderYear(){
         <div class="mstat-card mstat-rev">
           <div class="mstat-val mstat-val-light">${occRate}%</div>
           <div class="mstat-sub">occupation à ce jour</div>
-          <div class="mstat-detail">${totalRooms} chambres</div>
+          <div class="mstat-detail">${totalRooms} location${totalRooms>1?'s':''}</div>
         </div>
         <div class="mstat-card mstat-rev">
           <div class="mstat-val mstat-val-strong">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
