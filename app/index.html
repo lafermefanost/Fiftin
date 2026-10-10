@@ -9364,13 +9364,19 @@ function yearRevenueInsight(year){
 // principe que yearOpenGroups pour la vue Année : mémorisé par gid, remis à
 // zéro au changement de mois plutôt que jamais, pour ne pas garder replié un
 // onglet d'un mois qu'on ne regarde plus.
+// Retour utilisateur : "quand les gens ont plusieurs structures... les menus
+// déroulants des structures sur les vues mois et année soient fermés
+// d'office. C'est au client de les ouvrir" — fermés par défaut dès que
+// plusieurs structures existent (multiStruct) ; avec une seule structure,
+// repliée par défaut n'aurait fait que masquer le seul détail disponible,
+// donc reste ouverte.
 let monthOpenGroups=new Map();
 let monthOpenGroupsFor=null;
-function monthGroupCollapsed(gid){
-  return monthOpenGroups.has(gid)?monthOpenGroups.get(gid):false;
+function monthGroupCollapsed(gid,multiStruct){
+  return monthOpenGroups.has(gid)?monthOpenGroups.get(gid):!!multiStruct;
 }
-function toggleMonthGroup(gid){
-  monthOpenGroups.set(gid,!monthGroupCollapsed(gid));
+function toggleMonthGroup(gid,multiStruct){
+  monthOpenGroups.set(gid,!monthGroupCollapsed(gid,multiStruct));
   renderMonth();
 }
 // Volet "Événements du mois" (voir renderMonth) — un seul volet collectif,
@@ -9617,7 +9623,7 @@ function renderMonth(){
     return sd.filter(s=>!s.noRevenue&&bySrc[s.id]>0).map(s=>({label:s.label,val:bySrc[s.id],color:s.color}));
   }
   function groupCardMonth(gid,name,color){
-    const collapsed=monthGroupCollapsed(gid);
+    const collapsed=monthGroupCollapsed(gid,structs.length>1);
     const st=groupStatsMonth(gid);
     const clean=structCleaningCostMonth(gid);
     // Relevé bancaire (CSV importé) et Ajout manuel (bouton "+ Ajouter",
@@ -9778,7 +9784,7 @@ function renderMonth(){
     }).join('');
 
     return`<div class="yr-group${collapsed?' collapsed':''}">
-      <div class="yr-group-hd" onclick="toggleMonthGroup('${gid}')">
+      <div class="yr-group-hd" onclick="toggleMonthGroup('${gid}',${structs.length>1})">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
         <span class="yr-group-count">${st.rooms.length}</span>
         <span class="yr-group-chev">▾</span>
@@ -10041,17 +10047,18 @@ document.addEventListener('keydown',e=>{
 //  YEAR VIEW
 // ═══════════════════════════════════════════════════════════════
 // État ouvert/fermé des cartouches structure (SASU, LMNP…) — même principe
-// que weekPanelState pour la vue Semaine : ouvert par défaut (absent de la
-// Map), mémorisé seulement une fois replié/déplié à la main. Remis à zéro
+// que weekPanelState pour la vue Semaine : fermé par défaut dès que
+// plusieurs structures existent (voir monthGroupCollapsed, même logique),
+// mémorisé seulement une fois replié/déplié à la main. Remis à zéro
 // au changement d'année plutôt que jamais, pour ne pas garder replié un
 // onglet d'une année qu'on ne regarde plus.
 let yearOpenGroups=new Map();
 let yearOpenGroupsFor=null;
-function yearGroupCollapsed(gid){
-  return yearOpenGroups.has(gid)?yearOpenGroups.get(gid):false;
+function yearGroupCollapsed(gid,multiStruct){
+  return yearOpenGroups.has(gid)?yearOpenGroups.get(gid):!!multiStruct;
 }
-function toggleYearGroup(gid){
-  yearOpenGroups.set(gid,!yearGroupCollapsed(gid));
+function toggleYearGroup(gid,multiStruct){
+  yearOpenGroups.set(gid,!yearGroupCollapsed(gid,multiStruct));
   renderYear();
 }
 function renderYear(){
@@ -10244,7 +10251,7 @@ function renderYear(){
   // thresholdConfigs : liste libre de seuils pour cette structure, de type 'revenue' (jauge
   // CA réalisé/projeté vs montant) ou 'nights' (jauge nuits plateformes vs limite). 0, 1 ou N.
   function groupCard(gid,name,thresholdConfigs,color){
-    const collapsed=yearGroupCollapsed(gid);
+    const collapsed=yearGroupCollapsed(gid,structs.length>1);
     const st=groupStats(gid);
     const revenueThr=(thresholdConfigs||[]).filter(t=>t.type==='revenue');
     const nightsThr=(thresholdConfigs||[]).filter(t=>t.type==='nights');
@@ -10310,7 +10317,7 @@ function renderYear(){
     // que "Revenus par mois" etc. sans avoir à le déplier pour comprendre.
     const gaugesCardHTML=gaugesHTML?subSection('Seuils',gaugesHTML):'';
     return`<div class="yr-group${collapsed?' collapsed':''}">
-      <div class="yr-group-hd" onclick="toggleYearGroup('${gid}')">
+      <div class="yr-group-hd" onclick="toggleYearGroup('${gid}',${structs.length>1})">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
         <span class="yr-group-count">${st.rooms.length}</span>
         <span class="yr-group-chev">▾</span>
