@@ -515,7 +515,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* ─── TODAY VIEW ─────────────────────────────────────────────── */
 #todayWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
-.today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+/* Retour utilisateur : "réduis un tout petit peu la marge entre tous les
+   blocs sur toutes les vues à part grille — c'est une marge générale non ?"
+   — oui : .today-inner/.week-inner/.month-inner/.yr-inner partagent
+   exactement le même gap:12px (conteneur flex-column empilant vnav,
+   encarts verts, panneaux...), resserré ensemble à 10px sur les 4. */
+.today-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
 /* Vue Location — calendrier annuel d'un seul logement : liste de 12
    mini-calendriers (un seul par ligne — retour utilisateur : deux par
    ligne restait peu lisible), chacun avec ses vraies semaines
@@ -818,7 +823,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-weight:600;cursor:pointer;}
 #weekWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
-.week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.week-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
 .week-summary{display:flex;flex-direction:column;gap:10px;}
 .wsm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 /* Retour utilisateur : "baisse un peu l'interlignage pour que les écarts
@@ -1049,7 +1054,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* ─── MONTH VIEW ─────────────────────────────────────────────── */
 #monthWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
-.month-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.month-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
 .mstat-card{background:#fff;border-radius:12px;padding:11px 14px 9px;
   border:1.5px solid var(--light);text-align:center;}
 .mstat-card.mstat-rev{background:var(--green);border-color:var(--green);}
@@ -1784,7 +1789,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 /* ── Year view ── */
 #yearWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
-.yr-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:12px;}
+.yr-inner{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:10px;}
 .yr-group{background:#fff;border-radius:12px;padding:12px 14px;border:1.5px solid var(--light);}
 /* "Activité globale" (voir globalCard dans renderYear) : sort du cartouche
    blanc — on comprend que c'est le total en voyant ensuite les encarts par
