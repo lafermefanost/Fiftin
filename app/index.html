@@ -804,7 +804,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    style des encarts événements, avec les abréviations" : mêmes
    proportions/abréviations que .evdate-badge (dow tout petit, jour en
    grand et gras, mois abrégé en dessous) plutôt que le style neutre du
-   1er essai. Vert plein (--green) pour le jour sélectionné, comme
+   1er essai. Dow/mois remontés à 10px (8px d'origine comme .evdate-dow/
+   -mon jugé "manque de lisibilité" une fois à l'échelle de 7 cases plus
+   petites que l'encart événement d'origine). Vert plein (--green) pour
+   le jour sélectionné, comme
    .wday-head juste en dessous ; anneau vert pour "aujourd'hui" quand ce
    n'est pas le jour sélectionné (même idée que .rv-day-today, un repère
    qui ne se confond pas avec la sélection). */
@@ -812,11 +815,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wpick-cell{background:#fff;border:1.5px solid var(--light);border-radius:8px;
   padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;
   cursor:pointer;}
-.wpick-dow{font-size:8px;font-weight:400;text-transform:uppercase;letter-spacing:.05em;
-  opacity:.7;line-height:1;margin-bottom:2px;color:var(--gray);}
+.wpick-dow{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
+  opacity:.8;line-height:1;margin-bottom:2px;color:var(--gray);}
 .wpick-num{font-family:'Jost',sans-serif;font-size:19px;font-weight:700;line-height:1.1;color:var(--dark);}
-.wpick-mon{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
-  line-height:1;margin-top:2px;opacity:.85;color:var(--gray);}
+.wpick-mon{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
+  line-height:1;margin-top:2px;opacity:.9;color:var(--gray);}
 .wpick-cell.wpick-today{border-color:var(--green);}
 .wpick-cell.on{background:var(--green);border-color:var(--green);}
 .wpick-cell.on .wpick-dow,.wpick-cell.on .wpick-mon{color:rgba(255,255,255,.75);opacity:1;}
