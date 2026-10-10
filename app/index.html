@@ -541,6 +541,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    d'année locale, redondante avec la barre fixe qui pilote le même S.year
    partout) retirés avec chLocYear() qui les pilotait, voir ce commentaire
    sur chYear() plus bas. */
+/* Retour utilisateur : "mettre un encart vert (entête de carte) avec
+   marqué calendrier 2026, comme sur la vue semaine" — même idiome que
+   .wday-head (marges négatives égales au padding du parent pour que le
+   bandeau morde jusqu'aux bords arrondis de la carte). */
+.rv-calendar-hd{background:var(--green);margin:-16px -31px 14px;
+  padding:12px 14px;border-radius:14px 14px 0 0;
+  display:flex;align-items:center;justify-content:center;}
+.rv-calendar-hd span{font-weight:600;font-size:12px;color:#fff;
+  letter-spacing:.03em;text-transform:uppercase;}
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
   border-top:1.5px solid var(--light);padding:4px 0;}
 .rv-month-block:first-child{border-top:none;}
@@ -565,7 +574,25 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   flex-shrink:0;transition:transform .18s ease;}
 .rv-month-block.collapsed .rv-month-chevron{transform:rotate(-90deg);}
 .rv-month-block.collapsed .rv-dow-hd,
-.rv-month-block.collapsed .rv-monthgrid-wrap{display:none;}
+.rv-month-block.collapsed .rv-monthgrid-wrap,
+.rv-month-block.collapsed .rv-year-mosaic{display:none;}
+/* Volet "Année complète" (13e volet, après décembre) — 12 mini-calendriers
+   d'un coup, 2 par ligne (voir le commentaire plus bas sur dayCellMini :
+   un essai précédent à 2/ligne avec les cases détaillées .rv-day-cell
+   était jugé "peu lisible" ; ces cases simplifiées (couleur + numéro,
+   sans segment) restent lisibles à cette densité). */
+.rv-year-mosaic{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 10px;padding-top:4px;}
+.rvm-month-label{font-size:10.5px;font-weight:700;color:var(--gray);
+  text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;text-align:center;}
+.rvm-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1.5px;}
+.rvm-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  font-size:7.5px;font-weight:600;border-radius:2.5px;background:var(--light);
+  color:var(--dark);cursor:pointer;}
+.rvm-day.blank{visibility:hidden;cursor:default;}
+.rvm-day.opt{background-image:repeating-linear-gradient(
+  45deg,transparent,transparent 2px,rgba(255,255,255,.3) 2px,rgba(255,255,255,.3) 4px);}
+.rvm-day.canc{opacity:.35;}
+.rvm-day.today{box-shadow:inset 0 0 0 1.3px var(--green-deep);}
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
 .rv-dow-hd span{font-size:8px;font-weight:700;color:var(--gray);opacity:.5;
   text-align:center;text-transform:uppercase;}
@@ -4606,6 +4633,16 @@ function renderToday(){
   // opacité réduite = annulée) pour rester cohérent, sans jamais afficher de
   // nom de client.
   const DOW_LETTERS_MON=['L','M','M','J','V','S','D']; // lundi→dimanche
+  // Couleur d'affichage d'une réservation — partagée entre le mini-calendrier
+  // détaillé (dayCellHtml) et l'aperçu compact "Année complète" (dayCellMini,
+  // voir plus bas) pour que les deux restent toujours cohérents entre eux.
+  const bookingDispColor=(bk)=>{
+    const g=guest(bk.guestId);const col=g?g.color:'#999';
+    const isPaid=bk.payment==='paid';
+    const isPending=bk.payment==='pending';
+    const bSrc=getSource(bk.source);
+    return bSrc.colorOverride?bSrc.color:isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
+  };
   const dayCellHtml=(m,day)=>{
     const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
     const dObj=new Date(year,m,day);
@@ -4614,11 +4651,8 @@ function renderToday(){
     const bk=roomBookings.find(b=>activeOn(b,ds));
     let seg='',numCol='';
     if(bk){
-      const g=guest(bk.guestId);const col=g?g.color:'#999';
-      const isPaid=bk.payment==='paid';
-      const isPending=bk.payment==='pending';
-      const bSrc=getSource(bk.source);
-      const dispCol=bSrc.colorOverride?bSrc.color:isPending?'var(--pending-red)':isPaid?'#A0A0A0':col;
+      const g=guest(bk.guestId);
+      const dispCol=bookingDispColor(bk);
       const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
       const isCin=ds===bk.checkIn;
       const isCout=addDays(ds,1)===bk.checkOut;
@@ -4689,6 +4723,48 @@ function renderToday(){
   let monthsHtml='';
   for(let m=0;m<12;m++)monthsHtml+=monthBlock(m);
 
+  // Retour utilisateur : "juste après le mois de décembre, la vue complète
+  // de l'année où tu reprends tous les calendriers mais visible sur un
+  // écran l'année entière" — un 13e volet, après les 12 mois, avec les 12
+  // mini-calendriers d'un coup (2 par ligne) plutôt qu'un seul à la fois.
+  // Cases simplifiées (couleur pleine + numéro, sans le segment arrondi
+  // début/fin de .rv-seg) : à cette échelle, le détail du segment par
+  // réservation n'apporte rien et nuirait à la lisibilité — seul l'aperçu
+  // "occupé/libre, de quelle couleur" compte ici. Toujours interactif
+  // (ouvre la réservation / démarre une sélection), mêmes couleurs que le
+  // calendrier détaillé (voir bookingDispColor, partagée avec dayCellHtml).
+  const dayCellMini=(m,day)=>{
+    const ds=`${year}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const dObj=new Date(year,m,day);
+    const wTitle=`${DAY_NAMES_FULL[dObj.getDay()]} ${day} ${MON[m].toLowerCase()} ${year}`;
+    const bk=roomBookings.find(b=>activeOn(b,ds));
+    const isToday=ds===todayIso;
+    if(bk){
+      const dispCol=bookingDispColor(bk);
+      const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
+      const numCol=light(dispCol)?'#2C2C2C':'var(--cream)';
+      return`<div class="rvm-day${sc}${isToday?' today':''}" style="background:${dispCol};color:${numCol}" title="${wTitle}" onclick="openEditModal('${bk.id}')">${day}</div>`;
+    }
+    return`<div class="rvm-day${isToday?' today':''}" title="${wTitle} — cliquer pour réserver" onclick="startOrExtendRange('${rm.id}','${ds}')">${day}</div>`;
+  };
+  const monthMosaic=(m)=>{
+    const dim=new Date(year,m+1,0).getDate();
+    const firstDow=(new Date(year,m,1).getDay()+6)%7;
+    let cells='';
+    for(let i=0;i<firstDow;i++)cells+='<div class="rvm-day blank"></div>';
+    for(let d=1;d<=dim;d++)cells+=dayCellMini(m,d);
+    return`<div class="rvm-month"><div class="rvm-month-label">${MON[m]}</div><div class="rvm-grid">${cells}</div></div>`;
+  };
+  let mosaicHtml='';
+  for(let m=0;m<12;m++)mosaicHtml+=monthMosaic(m);
+  const yearMosaicHtml=`<div class="rv-month-block">
+    <button type="button" class="rv-month-label" onclick="toggleRvMonth(this)">
+      <span>Année complète</span>
+      <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="rv-year-mosaic">${mosaicHtml}</div>
+  </div>`;
+
   // Retour utilisateur : "les encarts verts récapitulatifs doivent être
   // en premier comme sur toutes les autres vues" — déplacés avant
   // .rv-calendar (anciens en dernier), même ordre que Semaine/Mois/Année.
@@ -4710,7 +4786,9 @@ function renderToday(){
     <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   <div class="rv-calendar">
+    <div class="rv-calendar-hd"><span>Calendrier ${year}</span></div>
     ${monthsHtml}
+    ${yearMosaicHtml}
   </div>
   </div>`;
   byId('todayWrap').innerHTML=h;
