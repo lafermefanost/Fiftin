@@ -255,7 +255,12 @@ a{color:inherit; text-decoration:none;}
   color:var(--cream); margin:0;}
 #hero .hero-tagline{font-family:'Jost',sans-serif; font-weight:700; font-size:27px; line-height:1.25;
   letter-spacing:-0.01em; color:var(--cream); max-width:320px; margin:0;}
-#hero .hero-tagline em{font-style:italic; font-weight:700;}
+/* Retour utilisateur : "ne mets pas en italique la partie qui est
+   maintenant en italique" — <em> gardait le style "citation" par défaut
+   du navigateur (italique) en plus de son sens sémantique ; neutralisé en
+   plus du gras déjà fixé ici, pour matcher visuellement le reste de
+   .hero-tagline (non italique). */
+#hero .hero-tagline em{font-style:normal; font-weight:700;}
 #hero .hero-scroll{position:absolute; bottom:calc(28px + env(safe-area-inset-bottom,0px)); left:0; right:0; z-index:2;
   display:flex; flex-direction:column; align-items:center; gap:8px; background:none; border:none;
   color:rgba(239,238,234,.8); font-family:'Jost',sans-serif; font-size:11px; text-transform:uppercase;
