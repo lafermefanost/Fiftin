@@ -3854,6 +3854,7 @@ function applyRemoteData(d,meta){
     migrateStructures();
     migrateRoomFields();
     migrateTariffFields();
+    migrateSourceColors();
     localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
     applySettings();
   }
@@ -6839,6 +6840,12 @@ function loadSettings(){
 // défaut ne suffit pas pour les comptes déjà configurés : migration qui ne
 // touche que la couleur encore identique à l'ancien défaut, jamais une
 // couleur personnalisée choisie à la main dans Réglages → Sources.
+// Appelée ici (loadSettings, boot local) ET dans applyRemoteData (synchro
+// temps réel Firestore) — oubliée dans ce 2e appel au premier passage, d'où
+// le vert resté clair en usage réel malgré ce correctif : applyRemoteData
+// reconstruit S.settings depuis le document distant à chaque synchro et
+// annulait silencieusement la migration faite par loadSettings quelques
+// instants plus tôt.
 function migrateSourceColors(){
   const d=(S.settings.sources||[]).find(s=>s.id==='direct');
   if(d&&d.color&&d.color.toLowerCase()==='#7abf6a')d.color='#354B38';
@@ -9880,7 +9887,7 @@ function renderMonth(){
         </div>
         ${st.rooms.length?subSection('Taux par chambre',occBody):''}
         ${subSection(`${st.bks.length} réservation${st.bks.length>1?'s':''}`,clientsBody)}
-        ${subSection(`Sources de réservations${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceBody,'yr-subhd-plain')}
+        ${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceBody,'yr-subhd-plain')}
         ${subSection('Charges réelles',chargesBody)}
         ${subSection('Répartition des charges',chargesDonutBody)}
       </div>
