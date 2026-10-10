@@ -767,24 +767,23 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .wsm-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .wsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
-.wsm-val{font-size:26px;font-weight:600;line-height:1;color:#fff;}
-/* Même logique que .mstat-val-strong/-light (voir plus haut) : repérée
-   manquante sur l'encart récapitulatif de la vue Mois ("remplissage, repas
-   nuitée…" restés en 600 alors que le reste de la vue distingue déjà
-   l'important du secondaire). Scopée au bloc .week-summary de renderMonth
-   uniquement — le même bloc existe aussi en vue Semaine (renderWeek), qui
-   n'a pas fait l'objet de cette demande et reste donc inchangé. */
+.wsm-val{font-size:26px;font-weight:500;line-height:1;color:#fff;}
+/* Même logique que .mstat-val (voir plus haut), étendue à .wsm-val :
+   500 par défaut (chiffres secondaires), .wsm-val-strong (700) pour les
+   chiffres importants — appliqué maintenant aussi en vue Semaine
+   (revenus totaux), pas seulement Mois, pour l'homogénéité demandée sur
+   les 4 vues. Taille aussi unifiée à 26px partout : l'ancien 30px sur
+   .wsm-total (revenus totaux) le démarquait des autres encarts verts,
+   supprimé pour que "même corps de texte partout". */
 .wsm-val-strong{font-weight:700;}
 .wsm-val-light{font-weight:500;}
 .wsm-lbl{font-size:10px;color:rgba(255,255,255,.8);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;text-align:center;}
 .wsm-sub{font-size:11px;color:rgba(255,255,255,.85);font-weight:500;margin-top:2px;}
 .wsm-total{background:var(--green);border-radius:12px;padding:16px 10px 14px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
-.wsm-total .wsm-val{font-size:30px;}
 .wsm-total .wsm-lbl{font-size:11px;}
 .wsm-toprow{display:grid;grid-template-columns:2fr 1fr;gap:10px;}
 .wsm-toprow .wsm-total{padding:16px 10px 14px;}
-.wsm-toprow .wsm-occ .wsm-val{font-size:26px;}
 .today-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .tsm-item{background:var(--green);border-radius:12px;padding:14px 10px 12px;
   display:flex;flex-direction:column;align-items:center;text-align:center;}
@@ -947,18 +946,21 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mstat-card{background:#fff;border-radius:12px;padding:14px 14px 12px;
   border:1.5px solid var(--light);text-align:center;}
 .mstat-card.mstat-rev{background:var(--green);border-color:var(--green);}
-.mstat-val{font-size:26px;font-weight:600;color:var(--green);line-height:1.1;}
 /* Retour utilisateur : "marquer une petite différence de graisse visible
    entre les chiffres importants (CA, CA projeté, marge nette, charges) et
    les chiffres secondaires (taux d'occupation, nuits plateformes…)" —
-   essayé sur Mois et Année. 1ère passe 600 (base) vs 700 (.mstat-val-strong)
-   jugée trop proche ; 2e passe avec .mstat-val-light à 400 (Jost Regular)
-   jugée "pas assez light" ; 3e passe à 300 (Jost Light) jugée "trop light" ;
-   retour à 400 puis remontée d'un cran à 500 (Jost Medium) sur demande
-   ("une graisse un tout petit peu au-dessus"). Scopée à ces 2 vues plutôt
-   que de baisser .mstat-val lui-même : la base (600) continue de servir
-   ailleurs (Location) où aucune distinction n'a été demandée, sans y
-   changer quoi que ce soit. */
+   essayé d'abord sur Mois/Année via un modificateur .mstat-val-light en plus
+   de la base 600 (1ère passe 700 jugée trop proche de 600 ; 400 puis 300
+   jugés trop light ; 500 retenu). Demande étendue ensuite à l'homogénéité
+   des 4 vues ("les chiffres sont soit en 500 soit en 700 selon
+   l'importance") : la base .mstat-val passe donc elle-même à 500 (ce
+   qu'était .mstat-val-light), qui devient l'état par défaut implicite pour
+   toute nouvelle valeur secondaire (Location y compris, jusqu'ici jamais
+   traitée) ; .mstat-val-strong (700) reste l'exception explicite pour les
+   chiffres importants. .mstat-val-light est conservée (= 500, donc
+   redondante avec la base) uniquement pour ne pas devoir retoucher le HTML
+   déjà écrit avec cette classe. */
+.mstat-val{font-size:26px;font-weight:500;color:var(--green);line-height:1.1;}
 .mstat-val-strong{font-weight:700;}
 .mstat-val-light{font-weight:500;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
@@ -1042,7 +1044,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Financial cards row */
 .month-fin{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .mfin-card{background:var(--green);border-radius:12px;padding:14px 14px 12px;border:1.5px solid var(--green);}
-.mfin-val{font-size:26px;font-weight:600;line-height:1.1;color:#fff;}
+.mfin-val{font-size:26px;font-weight:500;line-height:1.1;color:#fff;}
+/* Charges/mois et marge nette sont les deux seules valeurs de cet encart et
+   sont toutes deux "importantes" (équivalent des charges réelles/marge
+   nette en 700 côté Année) — donc .mfin-val-strong sur les deux plutôt
+   qu'un couple strong/light ici. */
+.mfin-val-strong{font-weight:700;}
 .mfin-sub{font-size:10px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mfin-detail{font-size:11px;color:rgba(255,255,255,.5);margin-top:2px;}
 /* Marge négative : cartouche en rouge d'alerte plutôt qu'en vert — un
@@ -4636,7 +4643,7 @@ function renderToday(){
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
-    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   </div>`;
   byId('todayWrap').innerHTML=h;
@@ -8842,7 +8849,7 @@ function renderWeek(){
   }
 
   h+=`<div class="week-summary">
-    <div class="wsm-total"><div class="wsm-val">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
+    <div class="wsm-total"><div class="wsm-val wsm-val-strong">${totalRevAll>0?totalRevAll.toLocaleString('fr-FR')+' €':'—'}</div><div class="wsm-lbl">revenus totaux de la semaine</div></div>
     <div class="wsm-row">
       <div class="wsm-item"><div class="wsm-val">${totalNights}</div><div class="wsm-lbl">nuitées</div><div class="wsm-sub">${nightsRevenue>0?nightsRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>
       ${dinnerEnabled()?`<div class="wsm-item"><div class="wsm-val">${totalRepas}</div><div class="wsm-lbl">repas</div><div class="wsm-sub">${repasRevenue>0?repasRevenue.toLocaleString('fr-FR')+' €':'—'}</div></div>`:''}
@@ -9499,12 +9506,12 @@ function renderMonth(){
     const margeClass=marge>=0?'pos':'neg';
     h+=`<div class="month-fin">
       <div class="mfin-card">
-        <div class="mfin-val">${Math.round(totalCh).toLocaleString('fr-FR')} €</div>
+        <div class="mfin-val mfin-val-strong">${Math.round(totalCh).toLocaleString('fr-FR')} €</div>
         <div class="mfin-sub">charges / mois</div>
         <div class="mfin-detail">relevé bancaire</div>
       </div>
       <div class="mfin-card${margeClass==='neg'?' mfin-danger':''}">
-        <div class="mfin-val">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</div>
+        <div class="mfin-val mfin-val-strong">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</div>
         <div class="mfin-sub">marge nette</div>
         <div class="mfin-detail">${totalRev>0?(marge>=0?'bénéfice estimé':'déficit estimé'):'revenus non renseignés'}</div>
       </div>
