@@ -12,7 +12,14 @@
 <meta name="apple-mobile-web-app-title" content="Fiftin">
 <meta name="theme-color" content="#8B9D86">
 <link rel="manifest" href="manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Retour utilisateur : "même typo que fiftin séjours ?" — en vérifiant,
+     seuls les graisses 300-600 étaient chargées ici (fiftin.fr charge
+     aussi 700/800, voir son <link> équivalent). .vnav-title/.rv-year-label
+     passés en font-weight:700 plus tôt dans ce chantier s'affichaient donc
+     en gras SYNTHÉTIQUE (le navigateur étire artificiellement le 600,
+     jamais aussi net que le vrai dessin Bold) faute de disposer du poids
+     700. Ajouté ici pour que ce 700 soit le vrai Jost Bold. -->
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 /* ─── RESET ─────────────────────────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0;}
