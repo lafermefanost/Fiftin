@@ -1035,10 +1035,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mch-pie-val{font-weight:700;color:var(--dark);flex-shrink:0;width:64px;text-align:right;}
 .mch-group-hd{display:flex;align-items:center;justify-content:space-between;margin:14px 0 4px;padding-top:10px;border-top:1px dashed var(--light);}
 .mch-group-hd:first-of-type{margin-top:0;padding-top:0;border-top:none;}
-/* Pilule vert pâle plutôt qu'un simple libellé gris nu — plus lisible pour
-   distinguer Ménage / Ajout manuel / Relevé bancaire les uns des autres. */
+/* Vert plein (encarts) + typo blanche plutôt qu'un simple libellé gris nu —
+   plus lisible pour distinguer Ménage / Ajout manuel / Relevé bancaire les
+   uns des autres. Bords alignés sur .btn-s (8px, "Importer CSV"/"+ Ajouter"
+   juste à côté) plutôt que la pilule pleinement arrondie d'origine, pour
+   que les deux cartouches de la même ligne aient le même langage visuel. */
 .mch-group-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
-  color:var(--green-deep);background:var(--green2-bg);padding:3px 10px;border-radius:10px;
+  color:#fff;background:var(--green);padding:3px 10px;border-radius:8px;
   display:inline-block;}
 .mch-subtotal-row{display:flex;justify-content:space-between;font-size:11px;color:var(--gray);padding:4px 0 0;}
 /* Financial cards row */
@@ -9694,7 +9697,9 @@ function renderMonth(){
 
     // Charges de cette structure : ménage, ajout manuel, puis relevé
     // bancaire importé — trois groupes distincts (chacun son libellé en
-    // pilule vert sauge), plutôt que l'ajout manuel mêlé au relevé bancaire.
+    // cartouche vert plein, même langage que les boutons "+ Ajouter"/
+    // "Importer CSV" juste à côté), plutôt que l'ajout manuel mêlé au
+    // relevé bancaire.
     let chargesBody='';
     if(CLEANERS.length){
       chargesBody+=`<div class="mch-group-hd"><span class="mch-group-name">Ménage</span></div>`;
