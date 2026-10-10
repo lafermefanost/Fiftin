@@ -2283,11 +2283,13 @@ body.map-fullscreen{overflow:hidden;}
    en ont un (voir planCardHtml()) — jamais sur la formule déjà active. */
 .plan-card-cta{flex-basis:100%; width:100%; margin-top:2px; padding:12px; font-size:13px;}
 /* Effet "verre liquide" retiré (retour utilisateur précédent) mais la
-   formule active doit "sortir du lot" quand même, en vert principal uni
-   (retour utilisateur) — --sauge (#354B38), le même vert "propriétaire"
-   que .switch-tile.voyageur/la carte Profil voyageur, pas de dégradé ni de
-   backdrop-filter cette fois, juste un fond plein. */
-.plan-card.active{background:var(--sauge); border:none;}
+   formule active doit "sortir du lot" quand même, fond plein uni (retour
+   utilisateur). Retour utilisateur ultérieur : "mets l'encart du prix de
+   l'abonnement dans le même bleu que l'encart profil hôte" — --lavender-
+   deep (#4E67BC), la couleur de .switch-tile.hotes (tuile "Espace hôtes"
+   du Profil, voir plus haut) ; était --sauge (le vert "propriétaire") à
+   l'origine. */
+.plan-card.active{background:var(--lavender-deep); border:none;}
 .plan-card.active .plan-card-name,
 .plan-card.active .plan-card-price,
 .plan-card.active .plan-card-per,
