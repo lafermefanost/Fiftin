@@ -642,9 +642,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    sur demande explicite. Vérifié à l'écran : blanc sur l'ancien fond pâle
    (--light) était illisible (le "0" des cartouches Départs/Arrivées
    disparaissait quasiment) — fond repassé en --gray ("gris moyen", tel que
-   décrit) pour que le blanc reste lisible, plutôt que de garder --light et
-   un texte invisible. */
-.tsec-hd{background:var(--gray);color:#fff;}
+   décrit), puis retour utilisateur ("un gris plus léger pour les encarts
+   qui n'ont pas de données") : #949494 plutôt que --gray (#6B6B6B),
+   contraste blanc ~3:1, du même ordre que .tsec-hd.has-items (--green2,
+   ~2.9:1, déjà accepté ci-dessous) — assez clair pour alléger le bandeau
+   sans retomber sur l'ancien --light illisible. */
+.tsec-hd{background:#949494;color:#fff;}
 /* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire).
    Texte blanc sur demande explicite (contraste réel ~2.9:1 sur ce fond
    clair --green2, sous le seuil AA pour du texte de cette taille — à
@@ -861,8 +864,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    Placé à gauche du libellé (accolé), plus à droite façon space-between.
    Texte toujours blanc, y compris à 0 — même correctif de fond que
    .tsec-hd (voir son commentaire : --light pâle rendait le blanc illisible,
-   repassé en --gray). */
-.dep-arr-num{background:var(--gray);color:#fff;font-size:18px;font-weight:700;
+   repassé en --gray puis éclairci en #949494 sur retour utilisateur). */
+.dep-arr-num{background:#949494;color:#fff;font-size:18px;font-weight:700;
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
