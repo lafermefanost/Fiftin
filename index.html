@@ -2173,17 +2173,6 @@ body.map-fullscreen{overflow:hidden;}
    currentColor pour suivre le texte du bouton (--sauge-deep), pas le gris
    discret de svg.ext sur fond blanc, illisible ici sur fond jaune. */
 .cal-add-pill svg.ext{width:12px; height:12px; flex-shrink:0;}
-/* Déplacée DANS .cal-card, au-dessus de la grille des mois — même
-   emplacement que .rv-year-nav côté app/ (grid-column:1/-1 en haut de
-   .rv-calendar) — plutôt que dans .cal-top-row où elle partageait la ligne
-   avec Aujourd'hui/Ajouter-modifier : centrée sur toute la largeur de la
-   carte blanche, elle est maintenant vraiment centrée sur la page. */
-.cal-year-nav{display:flex; align-items:center; justify-content:center; gap:18px; margin:0 0 14px;}
-/* Même bouton carré bordé que ci-dessus, gabarit un cran plus petit — reprend
-   .rv-year-btn de l'app (année précédente/suivante de la vue Location). */
-.cal-year-nav button{background:none; border:1.5px solid var(--line); border-radius:8px; width:28px; height:28px; color:var(--sauge-deep); display:flex; align-items:center; justify-content:center; padding:0;}
-.cal-year-nav button svg{width:16px; height:16px;}
-.cal-year-nav b{font-size:16px; min-width:46px; text-align:center;}
 /* Carte blanche enveloppant planning associé + bouton Ajouter/modifier +
    grille des 12 mois — même principe que .rv-calendar côté app/
    (background:#fff, padding), pour que le calendrier se détache du fond
@@ -4331,7 +4320,7 @@ function priceFilterValueToPos(val){
    rechargement de page. `null` par défaut (aucun repère posé, origine =
    position du voyageur ou DEFAULT_ORIGIN, comme avant ce chantier). */
 var state = {tab:"explore", filters:{q:"", regionName:"", deptName:"", distance:null, zoneOrigin:null, price:null, capacity:null, amen:[], dateIn:null, dateOut:null}, sort:"reco", loading:true,
-  hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null, hostCalYear:(new Date()).getFullYear(),
+  hostMode:false, hostTab:"listings", hostListingId:null, hostUnitId:null,
   detailListingId:null, detailTab:"overview", likesView:"favoris", likesCollectionId:null, likesLayout:"grid",
   geoOrigin:null}; // position réelle du voyageur (lat/lng) une fois "Utiliser ma position" activée — jamais persistée (voir persist()), redemandée à chaque session pour rester respectueux de la vie privée.
 // likesCollectionId : collection actuellement ouverte dans Mes séjours ->
@@ -10644,14 +10633,20 @@ function monthMiniHtml(year, monthIdx, occMap, todayStr){
       dayCounter++;
     }
   }
-  /* Comparé à la vraie date du jour (todayStr), pas à l'année affichée :
-     un mois passé de l'année en cours est replié, mais aussi bien tout
-     mois d'une année entièrement passée que, à l'inverse, tout mois d'une
-     année future reste déplié — voir le commentaire CSS de .cal-mini. */
+  /* Retour utilisateur : "uniquement 2 mois ouverts par principe à
+     l'ouverture : le mois en cours et le mois suivant... les autres sont
+     fermés et à ouvrir manuellement" (même règle côté app/index.html,
+     voir son commentaire) — avant, tout mois futur restait déplié.
+     Comparé à la vraie date du jour (todayStr), pas à l'année affichée :
+     une année entièrement passée ou entièrement future (hors mois en
+     cours/suivant) se retrouve donc tout entière repliée. */
   var todayY = Number(todayStr.slice(0,4)), todayM = Number(todayStr.slice(5,7))-1;
+  var nextMonM = (todayM+1) % 12;
+  var nextMonY = todayM===11 ? todayY+1 : todayY;
   var isCurrent = (year===todayY && monthIdx===todayM);
-  var isPast = (year<todayY) || (year===todayY && monthIdx<todayM);
-  return '<div class="cal-mini'+(isPast?' collapsed':'')+(isCurrent?' current-month':'')+'">'+
+  var isNextMonth = (year===nextMonY && monthIdx===nextMonM);
+  var defaultOpen = isCurrent || isNextMonth;
+  return '<div class="cal-mini'+(defaultOpen?'':' collapsed')+(isCurrent?' current-month':'')+'">'+
     '<button type="button" class="cal-mini-head" data-cal-toggle>'+
       '<span>'+CAL_MONTH_NAMES[monthIdx]+(isCurrent ? '<span class="cal-mini-current-tag">Ce mois-ci</span>' : '')+'</span>'+
       '<svg class="cal-mini-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>'+
@@ -10758,8 +10753,15 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
   if(!panel) return;
   var units = listing.units || [];
   var occ = occupiedDatesFromBookings(bookings);
-  var year = state.hostCalYear;
   var now = new Date();
+  // Retour utilisateur : "le choix de l'année doit disparaître ici. On
+  // choisit son année soit dans la vue grille, soit dans la vue année
+  // [de l'app de gestion], mais ce choix impacte toutes les vues" — ce
+  // calendrier simplifié côté Séjours n'a pas d'équivalent à ce choix
+  // centralisé, donc plus de navigation d'année propre à lui (ancien
+  // state.hostCalYear/.cal-year-nav, retirés) : toujours l'année réelle
+  // en cours.
+  var year = now.getFullYear();
   var todayStr = isoDate(now.getFullYear(), now.getMonth(), now.getDate());
   var months = "";
   for(var m=0;m<12;m++) months += monthMiniHtml(year, m, occ, todayStr);
@@ -10849,11 +10851,6 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
           actionPillHtml+
         '</div>'+
       '</div>'+
-      '<div class="cal-year-nav">'+
-        '<button type="button" id="cal-year-prev" aria-label="Année précédente"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>'+
-        '<b>'+year+'</b>'+
-        '<button type="button" id="cal-year-next" aria-label="Année suivante"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>'+
-      '</div>'+
       '<div class="cal-year-grid">'+months+'</div>'+
     '</div>';
 
@@ -10872,8 +10869,6 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
     hostRoomLinkContext = {listing:listing, unit:unit, rooms:rooms, linkedRoomId:linkedRoomId};
     openSheet("roomlink");
   });
-  document.getElementById("cal-year-prev").addEventListener("click", function(){ state.hostCalYear--; renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings); });
-  document.getElementById("cal-year-next").addEventListener("click", function(){ state.hostCalYear++; renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, bookings); });
   var addBtn = document.getElementById("cal-add-btn");
   if(addBtn) addBtn.addEventListener("click", function(){
     hostBookingContext = {mode:"add", listing:listing, unit:unit, isGestion:false, date:null};

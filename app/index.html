@@ -520,7 +520,21 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    repérer le mois actuel d'un coup d'œil sans que les mois passés,
    généralement sans intérêt, n'encombrent l'écran. Le numéro de semaine
    ISO figure dans la marge gauche de chaque mini-calendrier. */
-.rv-calendar{background:#fff;border-radius:14px;padding:16px 14px;
+/* Retour utilisateur : "j'aimerais que les calendriers et les mois
+   fassent exactement la même taille sur l'app de gestion et sur fiftin
+   séjours : la réf est fiftin séjour, c'est plus lisible, plus petit" —
+   diagnostic : la grille elle-même (.rv-monthgrid-wrap, grid-template-
+   columns 14px+7×1fr) est strictement identique aux deux endroits, donc
+   la case carrée (aspect-ratio:1) dépend entièrement de la largeur
+   disponible, elle-même fixée par le cumul des PADDINGS horizontaux des
+   ancêtres (pas une histoire de marge) : #todayWrap(12px)+.rv-calendar
+   donnait 26px de chaque côté ici, contre #feed(18px)+.admin-card(12px)+
+   .cal-card(12px)=42px côté Séjours — d'où des cases visiblement plus
+   grandes ici (mesuré : ~44px contre ~40px sur un viewport identique).
+   Padding horizontal de .rv-calendar remonté à 31px (12+31=43, aligné sur
+   les 42px cumulés côté Séjours) pour retrouver la même taille de case
+   (vérifié : ~39.4px ici contre ~39.7px côté Séjours). */
+.rv-calendar{background:#fff;border-radius:14px;padding:16px 31px;
   display:flex;flex-direction:column;}
 /* Navigation d'année, au-dessus des mois — même S.year que le sélecteur
    d'année de la barre du haut (#yrLabel) et la vue Année, voir chLocYear. */
@@ -4563,6 +4577,12 @@ function renderToday(){
   const todayIso=todayISO();
   const todayY=parseInt(todayIso.slice(0,4),10);
   const todayM=parseInt(todayIso.slice(5,7),10)-1;
+  // Mois suivant le mois réel (voir monthBlock) — avec son propre
+  // débordement d'année (décembre → janvier de l'année d'après), retour
+  // utilisateur : "uniquement 2 mois ouverts par principe à l'ouverture :
+  // le mois en cours et le mois suivant".
+  const nextMonM=(todayM+1)%12;
+  const nextMonY=todayM===11?todayY+1:todayY;
   // Comme la Grille et les vues Mois/Année : on ne filtre pas les annulées ici,
   // elles restent visibles sur le calendrier (fondues via .rv-seg.canc) plutôt
   // que d'être masquées — même convention partout dans l'app.
@@ -4656,12 +4676,16 @@ function renderToday(){
       }
     }
     const isCurMonth=year===todayY&&m===todayM;
-    // Passé = replié par défaut, comparé à la vraie date du jour et non à
-    // l'année affichée (voir le commentaire CSS de .rv-calendar) : une
-    // année entièrement passée s'ouvre donc tout entière repliée, une
-    // année future tout entière dépliée.
-    const isPastMonth=year<todayY||(year===todayY&&m<todayM);
-    return`<div class="rv-month-block${isPastMonth?' collapsed':''}">
+    const isNextMonth=year===nextMonY&&m===nextMonM;
+    // Retour utilisateur : "uniquement 2 mois ouverts par principe à
+    // l'ouverture : le mois en cours et le mois suivant... les autres sont
+    // fermés et à ouvrir manuellement" — avant, tout mois futur restait
+    // déplié (pas seulement le suivant). Comparé à la vraie date du jour et
+    // non à l'année affichée (voir le commentaire CSS de .rv-calendar) :
+    // une année entièrement passée ou entièrement future (hors mois en
+    // cours/suivant) s'ouvre donc tout entière repliée.
+    const defaultOpen=isCurMonth||isNextMonth;
+    return`<div class="rv-month-block${defaultOpen?'':' collapsed'}">
       <button type="button" class="rv-month-label${isCurMonth?' rv-month-cur':''}" onclick="toggleRvMonth(this)">
         <span>${MON[m]}${isCurMonth?'<span class="rv-month-cur-tag">Ce mois-ci</span>':''}</span>
         <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
