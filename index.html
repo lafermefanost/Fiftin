@@ -2206,6 +2206,13 @@ body.map-fullscreen{overflow:hidden;}
    tout premier mois. */
 .cal-mini{padding:2px 0; border-top:1px solid var(--line);}
 .cal-mini:first-child{border-top:none;}
+/* Retour utilisateur : "les mois fermés prennent moins de place
+   verticalement pour accéder plus vite aux mois ouverts" — padding réduit
+   seulement à l'état replié (même traitement que .rv-month-block côté
+   app/index.html, voir son commentaire), le mois ouvert garde sa cible
+   tactile normale. */
+.cal-mini.collapsed{padding:0;}
+.cal-mini.collapsed .cal-mini-head{padding:5px 2px;}
 .cal-mini-head{display:flex; align-items:center; justify-content:space-between; width:100%;
   background:none; border:none; padding:10px 2px; font-family:'Jost',sans-serif;
   font-size:13px; font-weight:800; text-align:left; text-transform:uppercase; letter-spacing:.03em;

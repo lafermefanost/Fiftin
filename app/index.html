@@ -539,6 +539,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-month-block{display:flex;flex-direction:column;gap:6px;min-width:0;
   border-top:1.5px solid var(--light);padding:4px 0;}
 .rv-month-block:first-child{border-top:none;}
+/* Retour utilisateur : "les mois fermés prennent moins de place
+   verticalement pour accéder plus vite aux mois ouverts" — padding réduit
+   seulement à l'état replié (le mois ouvert garde sa cible tactile
+   normale), pour défiler plus vite jusqu'au mois recherché sans que les
+   mois passés/repliés n'encombrent l'écran. */
+.rv-month-block.collapsed{padding:0;}
+.rv-month-block.collapsed .rv-month-label{padding:4px 2px;}
 .rv-month-label{display:flex;align-items:center;justify-content:space-between;width:100%;
   background:none;border:none;padding:8px 2px;font-family:inherit;
   font-size:13.5px;font-weight:700;color:var(--gray);
@@ -4666,6 +4673,9 @@ function renderToday(){
   let monthsHtml='';
   for(let m=0;m<12;m++)monthsHtml+=monthBlock(m);
 
+  // Retour utilisateur : "les encarts verts récapitulatifs doivent être
+  // en premier comme sur toutes les autres vues" — déplacés avant
+  // .rv-calendar (anciens en dernier), même ordre que Semaine/Mois/Année.
   let h=`<div class="today-inner">
   <div class="vnav">
     <button class="vnav-btn" onclick="chRoomView(-1)">${chevL}</button>
@@ -4676,6 +4686,13 @@ function renderToday(){
     </div>
     <button class="vnav-btn" onclick="chRoomView(1)">${chevR}</button>
   </div>
+  <div class="yr-stats">
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
+  </div>
   <div class="rv-calendar">
     <div class="rv-year-nav">
       <button class="rv-year-btn" onclick="chLocYear(-1)">${chevL}</button>
@@ -4683,13 +4700,6 @@ function renderToday(){
       <button class="rv-year-btn" onclick="chLocYear(1)">${chevR}</button>
     </div>
     ${monthsHtml}
-  </div>
-  <div class="yr-stats" style="margin-top:14px">
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div><div class="mstat-detail">${stayLengths.length} séjour${stayLengths.length>1?'s':''} en ${year}</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgMonthlyRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu mensuel moyen</div></div>
-    <div class="mstat-card mstat-rev"><div class="mstat-val">${avgNightRevenue.toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu moyen / nuit occupée</div></div>
-    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val mstat-val-strong">${Math.round(annualRevenue).toLocaleString('fr-FR')} €</div><div class="mstat-sub">Revenu annuel</div></div>
   </div>
   </div>`;
   byId('todayWrap').innerHTML=h;
