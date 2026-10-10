@@ -940,6 +940,15 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border:1.5px solid var(--light);text-align:center;}
 .mstat-card.mstat-rev{background:var(--green);border-color:var(--green);}
 .mstat-val{font-size:26px;font-weight:600;color:var(--green);line-height:1.1;}
+/* Retour utilisateur : "marquer une petite différence de graisse visible
+   entre les chiffres importants (CA, CA projeté, marge nette, charges) et
+   les chiffres secondaires (taux d'occupation, nuits plateformes…)" —
+   essayé sur Mois et Année. .mstat-val reste la base (600, déjà la bonne
+   graisse chargée) pour les chiffres secondaires ; .mstat-val-strong
+   passe les chiffres importants en 700 (vrai Jost Bold depuis le commit
+   précédent, pas de gras synthétique). Volontairement discret (même
+   taille, juste la graisse) — "petite différence", pas un gros contraste. */
+.mstat-val-strong{font-weight:700;}
 .mstat-card.mstat-rev .mstat-val{color:#fff;}
 .mstat-sub{font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:.06em;margin-top:4px;}
 .mstat-card.mstat-rev .mstat-sub{color:rgba(255,255,255,.75);}
@@ -9754,12 +9763,12 @@ function renderMonth(){
       <div class="yr-group-body">
         <div class="yr-stats">
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
             <div class="mstat-sub">CA réalisé</div>
             <div class="mstat-detail">${st.realNights} nuits passées</div>
           </div>
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
@@ -10286,12 +10295,12 @@ function renderYear(){
       <div class="yr-group-body">
         <div class="yr-stats">
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong">${Math.round(st.realCA).toLocaleString('fr-FR')} €</div>
             <div class="mstat-sub">CA réalisé</div>
             <div class="mstat-detail">${st.realNights} nuits passées</div>
           </div>
           <div class="mstat-card mstat-rev">
-            <div class="mstat-val">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
+            <div class="mstat-val mstat-val-strong">${Math.round(st.projCA).toLocaleString('fr-FR')} €</div>
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
@@ -10333,12 +10342,12 @@ function renderYear(){
     return`<div class="yr-group yr-total">
       <div class="yr-stats">
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(realCA).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong">${Math.round(realCA).toLocaleString('fr-FR')} €</div>
           <div class="mstat-sub">CA réalisé</div>
           <div class="mstat-detail">${realNights} nuits passées</div>
         </div>
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(projCA).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong">${Math.round(projCA).toLocaleString('fr-FR')} €</div>
           <div class="mstat-sub">CA projeté</div>
           <div class="mstat-detail">${projNights} nuits totales</div>
         </div>
@@ -10348,12 +10357,12 @@ function renderYear(){
           <div class="mstat-detail">${totalRooms} chambres</div>
         </div>
         <div class="mstat-card mstat-rev">
-          <div class="mstat-val">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
+          <div class="mstat-val mstat-val-strong">${Math.round(yearCharges).toLocaleString('fr-FR')} €</div>
           <div class="mstat-sub">charges réelles</div>
           <div class="mstat-detail">relevé bancaire</div>
         </div>
         <div class="mstat-card mstat-rev" style="grid-column:1/-1">
-          <div class="mstat-val">${Math.round(netMargin).toLocaleString('fr-FR')} € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
+          <div class="mstat-val mstat-val-strong">${Math.round(netMargin).toLocaleString('fr-FR')} € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
           <div class="mstat-sub">marge nette</div>
           <div class="mstat-detail">CA réalisé − charges</div>
         </div>
