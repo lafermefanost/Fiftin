@@ -7256,6 +7256,14 @@ function addChargeCategory(){
   saveSettings();renderSettings();
 }
 function removeChargeCategory(id){
+  // Garde-fou (même esprit que delGuest/delSource) : une transaction dont
+  // categoryId ne correspond plus à aucune catégorie retombe dans "Non
+  // catégorisé" (voir variableChargesForMonth), qui est exclu par défaut du
+  // total — sans ça, supprimer une catégorie utilisée fait silencieusement
+  // disparaître ses transactions des charges réelles/marge nette.
+  const cat=S.settings.chargeCategories.find(c=>c.id===id);
+  const nb=(S.transactions||[]).filter(t=>t.categoryId===id).length;
+  if(nb&&!confirm(`${nb} transaction(s) sont classées dans "${cat?cat.label||'cette catégorie':'cette catégorie'}". Une fois supprimée, elles basculeront en "Non catégorisé" et sortiront du total des charges réelles. Supprimer quand même ?`))return;
   S.settings.chargeCategories=S.settings.chargeCategories.filter(c=>c.id!==id);
   saveSettings();renderSettings();renderMonth();
 }
@@ -8099,7 +8107,14 @@ function writeBackSejoursLink(listingId,unitId,roomId){
   }).catch(err=>console.error('[sejours-link] échec de l\'écriture retour',err));
 }
 function delRoom(id){
-  if(!confirm('Supprimer cette chambre ? Les réservations associées ne seront pas supprimées.'))return;
+  // Nombre de réservations concernées ajouté au message existant (même
+  // esprit que delGuest/delSource) — room(id) renverra undefined pour
+  // elles une fois la chambre supprimée.
+  const nb=S.bookings.filter(b=>b.roomId===id).length;
+  const msg=nb
+    ?`${nb} réservation(s) utilisent cette chambre. Elles ne seront pas supprimées. Supprimer quand même ?`
+    :'Supprimer cette chambre ?';
+  if(!confirm(msg))return;
   S.settings.rooms=S.settings.rooms.filter(r=>r.id!==id);
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
@@ -8274,12 +8289,24 @@ function refreshYearMaybe(){
 function delStructure(id){
   if(!S.settings.structures||S.settings.structures.length<=1)return;
   const usedBy=(S.settings.rooms||[]).filter(r=>r.group===id);
-  if(usedBy.length&&!confirm(`${usedBy.length} chambre(s)/gîte(s) sont rattaché(e)s à cette structure. Elles seront réaffectées à la première structure restante. Continuer ?`))return;
+  // Transactions avec un t.group explicite sur cette structure — distinct
+  // d'un t.group vide, qui retombe déjà dynamiquement sur defaultStructureId()
+  // (voir variableChargesForMonth) et n'a donc pas besoin d'être réaffecté.
+  // Sans ce réaffectation, elles ne correspondraient plus à aucune structure
+  // existante et disparaîtraient silencieusement de toute répartition
+  // filtrée par structure (Charges réelles par structure, vue Mois/Année).
+  const usedByTx=(S.transactions||[]).filter(t=>t.group===id);
+  if((usedBy.length||usedByTx.length)&&!confirm(`${usedBy.length} chambre(s)/gîte(s) et ${usedByTx.length} transaction(s) sont rattaché(e)s à cette structure. Elles seront réaffectées à la première structure restante. Continuer ?`))return;
   S.settings.structures=S.settings.structures.filter(s=>s.id!==id);
   delete S.settings.structureThresholds[id];
   const fallback=S.settings.structures[0].id;
   (S.settings.rooms||[]).forEach(r=>{if(r.group===id)r.group=fallback;});
+  (S.transactions||[]).forEach(t=>{if(t.group===id)t.group=fallback;});
   saveSettings();applySettings();renderSettings();renderGrid();
+  // S.transactions n'est pas couvert par saveSettings() (qui ne persiste que
+  // S.settings) — persist() nécessaire pour que la réaffectation ci-dessus
+  // survive au prochain rechargement/synchro.
+  if(usedByTx.length)persist();
   refreshYearMaybe();
   // refreshYearMaybe() ne couvre que la Vue Année (différé exprès, voir son
   // commentaire) — la Vue Mois affiche aussi le nom de chaque structure
@@ -8382,6 +8409,16 @@ function addCleaner(){
   if(S.view==='week')renderWeek();
 }
 function delCleaner(i){
+  const c=S.settings.cleaners[i];
+  if(!c)return;
+  // Les entrées de ménage stockent le nom en clair (pas un id) et gardent
+  // leurs heures telles quelles — mais le coût est recalculé à l'affichage
+  // via CLEANERS.find(cl=>cl.name===c.name)?.rate??15 : une fois ce membre
+  // supprimé, son vrai taux horaire disparaît et 15 €/h (valeur par défaut)
+  // s'applique silencieusement à la place sur tout son historique.
+  let nb=0;
+  Object.values(S.cleaning||{}).forEach(list=>{nb+=(list||[]).filter(e=>e.name===c.name).length;});
+  if(nb&&!confirm(`${nb} entrée(s) de ménage enregistrée(s) pour ${c.name}. Les heures resteront, mais son taux (${c.rate} €/h) ne sera plus appliqué (retombe sur 15 €/h par défaut). Supprimer quand même ?`))return;
   S.settings.cleaners.splice(i,1);
   saveSettings();applySettings();renderSettings();
   if(S.view==='today')renderToday();
@@ -8449,7 +8486,24 @@ function addCatalogItem(){
   if(S.view==='week')renderWeek();
 }
 function delCatalogItem(id){
-  if(!confirm('Supprimer cet article ?'))return;
+  // Les extras consommés stockent la quantité par id d'article (bk.extras[ds][id],
+  // e.extras[id] pour les dîners extérieurs) — getExtrasDayTotal/l'équivalent
+  // dîners retombent sur un prix de 0 dès que l'article n'existe plus (item
+  // introuvable dans S.catalog) : la quantité reste, mais son revenu
+  // disparaît silencieusement des totaux déjà enregistrés.
+  const item=S.catalog.find(c=>c.id===id);
+  let nb=0;
+  S.bookings.forEach(bk=>{
+    if(!bk.extras)return;
+    Object.values(bk.extras).forEach(dayX=>{if(dayX[id])nb+=dayX[id];});
+  });
+  Object.values(S.extDiners||{}).forEach(list=>{
+    (list||[]).forEach(e=>{if(e.extras&&e.extras[id])nb+=e.extras[id];});
+  });
+  const msg=nb
+    ?`${nb} unité(s) de "${item?item.label:'cet article'}" déjà vendue(s). Leur revenu disparaîtra des totaux une fois l'article supprimé. Supprimer quand même ?`
+    :'Supprimer cet article ?';
+  if(!confirm(msg))return;
   S.catalog=S.catalog.filter(c=>c.id!==id);
   saveCatalog();
   if(db)pushToFirebase();
