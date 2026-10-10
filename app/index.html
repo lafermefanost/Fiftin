@@ -843,7 +843,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Plus de contour vert sur la carte du jour/mois en cours (vue Semaine,
    volet Événements) — le préfixe "Aujourd'hui — "/"Ce mois-ci — " dans
    .wday-name suffit déjà à la repérer, le contour en plus alourdissait. */
-.wday-head{display:flex;justify-content:space-between;align-items:baseline;
+/* Retour utilisateur : "l'en-tête devrait avoir le texte centré aussi :
+   aujourd'hui - samedi 10 octobre, ce serait plus simple" — jour + date
+   fusionnés dans un seul .wday-name centré (voir renderWeek), au lieu de
+   deux blocs .wday-name/.wday-date écartés par justify-content:space-between. */
+.wday-head{display:flex;justify-content:center;align-items:center;
   background:var(--green);margin:-12px -14px 12px;padding:10px 14px;border-radius:10px 10px 0 0;}
 .wday-name{font-weight:600;font-size:12px;color:#fff;letter-spacing:.03em;text-transform:uppercase;}
 .wday-date{font-size:12px;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:6px;}
@@ -4757,7 +4761,10 @@ function renderToday(){
   };
   let mosaicHtml='';
   for(let m=0;m<12;m++)mosaicHtml+=monthMosaic(m);
-  const yearMosaicHtml=`<div class="rv-month-block">
+  // Retour utilisateur : "fais ce volet fermé à l'ouverture, c'est au
+  // client de l'ouvrir s'il veut" — repliée par défaut (collapsed), contrairement
+  // aux mois en cours/suivant qui restent ouverts, eux.
+  const yearMosaicHtml=`<div class="rv-month-block collapsed">
     <button type="button" class="rv-month-label" onclick="toggleRvMonth(this)">
       <span>Année complète</span>
       <svg class="rv-month-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
@@ -9193,8 +9200,7 @@ function renderWeek(){
     const dayCleaners=S.cleaning[ds]||[];
     h+=`<div class="wday-card${isToday?' wday-today':''}" data-ds="${ds}">`;
     h+=`<div class="wday-head">
-      <div class="wday-name">${isToday?'Aujourd\'hui — ':''}${DAY_NAMES[d.getDay()]}</div>
-      <div class="wday-date">${d.getDate()} ${MON[d.getMonth()]}</div>
+      <div class="wday-name">${isToday?'Aujourd\'hui — ':''}${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MON[d.getMonth()]}</div>
     </div>`;
     h+=`<div class="wday-body">`;
     const wMiniChip=(b,timeLabel,showTotal)=>{const g=guest(b.guestId);const rm=room(b.roomId);
