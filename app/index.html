@@ -1692,6 +1692,16 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    (retour utilisateur : "fais plutôt couleur vert du header plutôt que le
    vert sauge") — texte clair assorti, même --cream que .mhead. */
 .evfilter-btn.on{background:var(--green);color:var(--cream);border-color:var(--green);}
+/* Tri Clients (voir renderGList/setGSort) : choix binaire alphabétique/
+   nombre de séjours, même recette que .evfilter-btn (pilule, vert plein
+   à l'actif) mais 2 pilules pleine largeur plutôt que 4 carrés — pas
+   besoin de picto pour un tri, juste un libellé clair. */
+.gsort-row{display:flex;gap:6px;margin-bottom:10px;}
+.gsort-btn{flex:1;padding:7px 10px;border:1.5px solid var(--light);border-radius:20px;
+  font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
+  color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;text-align:center;}
+.gsort-btn:hover{border-color:#aaa;color:var(--dark);}
+.gsort-btn.on{background:var(--green);color:var(--cream);border-color:var(--green);}
 /* Un encart par mois (voir renderEvList), dans les filtres Pro/Perso/Tout
    — retour utilisateur : "je n'aime plus la présentation en menus
    déroulants, ça empêche d'avoir une vision globale, je préférerais que
@@ -2386,6 +2396,14 @@ Gardez la main.</div>
     </button>
     <input class="fi" id="gListSearch" placeholder="Rechercher un client…" autocomplete="off"
       style="margin-bottom:10px" oninput="renderGList(this.value)">
+    <!-- Retour utilisateur : "2 formes de classement : par lettre comme
+         aujourd'hui, et par nombre de séjours (du plus important au plus
+         faible)" — choix binaire, même recette que .pay-chip (pilule,
+         vert plein à l'actif comme .evfilter-btn.on). -->
+    <div class="gsort-row">
+      <button type="button" class="gsort-btn" id="gsort-alpha" onclick="setGSort('alpha')">A → Z</button>
+      <button type="button" class="gsort-btn" id="gsort-stays" onclick="setGSort('stays')">Nb de séjours</button>
+    </div>
     <div class="modal-scrollarea"><div id="gList"></div></div>
   </div>
 </div>
@@ -5595,23 +5613,42 @@ function openGuestsModal(){
   renderGList();openM('modalGuests');
 }
 
+// Retour utilisateur : "2 formes de classement : par lettre comme
+// aujourd'hui, et par nombre de séjours (du plus important au plus
+// faible)" — mémorisé au niveau module pour survivre aux re-rendus
+// (recherche, ajout/suppression d'un client) pendant que la modale reste
+// ouverte, même principe que evFilter pour les Événements.
+let gSortMode='alpha';
+function setGSort(mode){
+  gSortMode=mode;
+  renderGList(byId('gListSearch').value);
+}
 function renderGList(term){
   term=(term||'').trim().toLowerCase();
-  let sorted=[...S.guests].sort((a,b)=>a.name.localeCompare(b.name));
-  if(term)sorted=sorted.filter(g=>g.name.toLowerCase().includes(term));
+  ['alpha','stays'].forEach(m=>byId('gsort-'+m)?.classList.toggle('on',gSortMode===m));
+  const withCounts=S.guests.map(g=>({g,n:S.bookings.filter(b=>b.guestId===g.id).length}));
+  // Nombre de séjours décroissant ; à égalité, ordre alphabétique (sinon
+  // l'ordre entre deux clients à égalité dépendrait de l'ordre d'arrivée
+  // dans S.guests, imprévisible pour l'utilisateur).
+  let sorted=gSortMode==='stays'
+    ? withCounts.sort((a,b)=>b.n-a.n||a.g.name.localeCompare(b.g.name))
+    : withCounts.sort((a,b)=>a.g.name.localeCompare(b.g.name));
+  if(term)sorted=sorted.filter(x=>x.g.name.toLowerCase().includes(term));
   if(!sorted.length){
     byId('gList').innerHTML='<p style="text-align:center;color:var(--gray);padding:20px">Aucun client</p>';return;
   }
-  // Petit repère de lecture par initiale (A, B, C…) — le tri alphabétique
-  // existait déjà, ça ne fait qu'aider l'œil à repérer où commence chaque
-  // lettre dans une liste qui peut vite s'allonger. Diacritiques ignorés
+  // Petit repère de lecture par initiale (A, B, C…) — seulement en tri
+  // alphabétique : par nombre de séjours, l'ordre ne suit plus les
+  // lettres, un repère par initiale n'aurait plus de sens (répété au
+  // hasard plutôt qu'une seule fois par groupe). Diacritiques ignorés
   // (Émile groupe avec Emile) pour rester cohérent avec le tri lui-même.
   let lastLetter=null;
-  byId('gList').innerHTML=sorted.map(g=>{
-    const n=S.bookings.filter(b=>b.guestId===g.id).length;
-    const letter=g.name.trim().charAt(0).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+  byId('gList').innerHTML=sorted.map(({g,n})=>{
     let sep='';
-    if(letter&&letter!==lastLetter){sep=`<div class="glist-sep">${letter}</div>`;lastLetter=letter;}
+    if(gSortMode==='alpha'){
+      const letter=g.name.trim().charAt(0).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
+      if(letter&&letter!==lastLetter){sep=`<div class="glist-sep">${letter}</div>`;lastLetter=letter;}
+    }
     return sep+`<div class="gline" onclick="openGuestEdit('${g.id}')">
       <div class="cswatch" style="background:${g.color}"></div>
       <div class="gline-info">
