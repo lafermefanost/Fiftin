@@ -1438,7 +1438,11 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .fi,.fsel{width:100%;min-width:0;padding:9px 11px;border:1px solid var(--light);border-radius:6px;
   font-family:'Jost',sans-serif;font-size:13px;color:var(--dark);background:var(--white);
   outline:none;transition:border-color .15s;}
-input[type="date"].fi{-webkit-appearance:none;appearance:none;}
+/* Même correctif que les champs date : sans ce reset, le widget natif
+   "heure" iOS garde son chrome par défaut, plus large que ce que prévoit
+   .fi (width:100%) — déborde du cartouche dans .frow (2 colonnes 1fr),
+   repéré sur Heure d'arrivée/Heure de fin du formulaire événement. */
+input[type="date"].fi,input[type="time"].fi{-webkit-appearance:none;appearance:none;}
 .fi:focus,.fsel:focus{border-color:var(--green2);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 /* Aligne les deux champs d'une rangée sur leur INPUT plutôt que sur le haut
