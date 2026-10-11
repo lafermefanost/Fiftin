@@ -932,36 +932,43 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    espace déjà ses enfants directs via son gap (12px) — en ajouter un ici
    doublerait l'écart avec le bloc suivant (idem .tsec-panel juste
    au-dessus, neutralisé plus bas pour la même raison). */
-.wbrief{display:flex;align-items:flex-start;gap:10px;background:var(--lavender-bg);
+/* Bulle assistant dynamique (voir briefHTML/BRIEF_ICON) — un seul élément
+   qui se transforme (pas un picto séparé + une bulle à côté, qui donnait
+   l'impression de 2 étoiles) : replié, c'est un petit rond centré avec
+   juste le picto ; cliqué, il se déplie en bulle pleine largeur avec le
+   texte. Clic = bascule (ouvre si replié, referme si déplié). S'ouvre
+   seul une fois par jour et par vue, se referme seul après 10s (voir
+   briefArm/toggleBrief) — reste cliquable ensuite pour rouvrir. Seules
+   width/padding/border-radius/gap sont transitionnées (jamais height,
+   qu'on ne peut pas animer depuis/vers "auto" en CSS) : la hauteur suit
+   silencieusement ces valeurs à chaque image, ce qui donne un
+   redimensionnement perçu comme fluide sans à-coup ; .wbrief-wrap centre
+   l'élément dans sa ligne, donc le rétrécissement/agrandissement se fait
+   bien depuis le centre et non depuis un bord. Courbe d'easing en
+   décélération pure (sans rebond/ressort) pour un mouvement fluide plutôt
+   que mécanique. */
+.wbrief-wrap{display:flex;justify-content:center;width:100%;}
+.wbrief{display:flex;align-items:center;gap:10px;background:var(--lavender-bg);
   border:1.5px solid var(--lavender-strong);
   color:var(--earth);border-radius:12px;padding:14px 16px;
-  font-size:13px;line-height:1.45;}
-.wbrief svg{margin-top:1px;color:var(--green);}
-/* Bulle assistant dynamique (voir briefHTML/BRIEF_ICON) — l'encart .wbrief
-   ci-dessus ne reste plus affiché en permanence : il s'ouvre seul une fois
-   par jour par vue (animation façon popup iOS, ressort léger) puis se
-   referme seul après 10s, ne laissant qu'un picto étoile permanent
-   au-dessus des encarts verts pour le rouvrir à la demande. Le but :
-   garder l'info accessible sans jamais gêner la lecture des chiffres au
-   quotidien. grid-template-rows 0fr→1fr anime la hauteur à 0 sans avoir à
-   calculer/transiter une hauteur en pixels (classique pour un collapse
-   animé en CSS pur) ; min-height:0 sur .wbrief est nécessaire sinon la
-   taille intrinsèque du contenu empêche la ligne de grille de vraiment
-   revenir à 0. */
-.wbrief-wrap{display:flex;flex-direction:column;align-items:flex-start;}
-.wbrief-star{width:32px;height:32px;border-radius:50%;flex-shrink:0;
-  background:var(--lavender-bg);border:1.5px solid var(--lavender-strong);
-  color:var(--green);display:flex;align-items:center;justify-content:center;
-  padding:0;cursor:pointer;transition:transform .15s;}
-.wbrief-star:active{transform:scale(.88);}
-.wbrief-star svg{margin:0;}
-.wbrief-collapse{display:grid;grid-template-rows:0fr;opacity:0;width:100%;
-  transform:scale(.9);transform-origin:top left;overflow:hidden;pointer-events:none;
-  transition:grid-template-rows .4s cubic-bezier(.34,1.56,.64,1),
-    opacity .25s ease,transform .35s cubic-bezier(.34,1.56,.64,1);}
-.wbrief-collapse.open{grid-template-rows:1fr;opacity:1;transform:scale(1);
-  pointer-events:auto;margin-top:8px;}
-.wbrief-collapse>.wbrief{min-height:0;}
+  font-size:13px;line-height:1.45;cursor:pointer;width:100%;box-sizing:border-box;
+  overflow:hidden;
+  transition:width .5s cubic-bezier(.16,1,.3,1),padding .5s cubic-bezier(.16,1,.3,1),
+    border-radius .5s cubic-bezier(.16,1,.3,1),gap .5s cubic-bezier(.16,1,.3,1);}
+.wbrief svg{flex-shrink:0;color:var(--green);}
+/* white-space:nowrap par défaut (retiré seulement une fois .settled, voir
+   briefOpenEl) : le texte ne doit jamais passer en retour à la ligne
+   libre tant que la largeur anime encore, sinon il se retrouve forcé sur
+   des dizaines de lignes pendant la transition (largeur déjà réduite mais
+   texte encore considéré "normal") — observé en test, corrigé ainsi
+   plutôt qu'en acceptant le flash visuel. */
+.wbrief-text{display:inline-block;white-space:nowrap;max-width:600px;opacity:1;
+  transition:opacity .3s ease .15s,max-width .5s cubic-bezier(.16,1,.3,1);}
+.wbrief.settled .wbrief-text{white-space:normal;}
+.wbrief.collapsed{width:36px;padding:10px;border-radius:50%;
+  justify-content:center;gap:0;line-height:1;}
+.wbrief.collapsed .wbrief-text{opacity:0;max-width:0;
+  transition:opacity .15s ease,max-width .4s cubic-bezier(.16,1,.3,1) .05s;}
 /* .tsec-panel a son propre margin-bottom (12px, pour les cas où il n'est
    pas dans un conteneur à gap) — en trop ici puisque .tsec-panel.ev est un
    enfant direct de .week-inner/.month-inner, qui espacent déjà via leur
@@ -2976,14 +2983,14 @@ const RECIPE_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none
 // Pictogramme étincelle (résumé du jour, voir renderWeek → wbrief) — ton
 // "assistant" plutôt qu'une simple icône de planning.
 const BRIEF_ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;flex-shrink:0"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.287L3 12l5.8 1.9a2 2 0 0 1 1.287 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.287L21 12l-5.8-1.9a2 2 0 0 1-1.287-1.287L12 3Z"/></svg>';
-// Bulle assistant dynamique — voir .wbrief-wrap/.wbrief-collapse pour
-// l'animation. Chaque vue (today/week/month/year) a sa propre clé : la
-// bulle s'ouvre seule la première fois qu'on affiche cette vue un jour
-// donné (horodatage localStorage daté du jour, pas d'un simple booléen,
-// pour que ça se réarme automatiquement le lendemain), puis se referme
-// seule après 10s. Le marquage "vu aujourd'hui" a lieu dès l'ouverture
-// auto, pas à la fermeture, pour qu'une réouverture manuelle via le picto
-// étoile le même jour (voir openBrief) ne redéclenche jamais l'auto-open.
+// Bulle assistant dynamique — voir .wbrief-wrap/.wbrief pour l'animation.
+// Chaque vue (today/week/month/year) a sa propre clé : la bulle s'ouvre
+// seule la première fois qu'on affiche cette vue un jour donné
+// (horodatage localStorage daté du jour, pas d'un simple booléen, pour que
+// ça se réarme automatiquement le lendemain), puis se referme seule après
+// 10s. Le marquage "vu aujourd'hui" a lieu dès l'ouverture auto, pas à la
+// fermeture, pour qu'une réouverture manuelle (clic, voir toggleBrief) le
+// même jour ne redéclenche jamais l'auto-open.
 const briefTimers={};
 function briefSeenToday(viewKey){
   return localStorage.getItem('ff2_briefSeen_'+viewKey)===todayISO();
@@ -2991,41 +2998,79 @@ function briefSeenToday(viewKey){
 function briefMarkSeenToday(viewKey){
   localStorage.setItem('ff2_briefSeen_'+viewKey,todayISO());
 }
-// Construit le picto étoile permanent + la bulle (ouverte ou repliée selon
-// briefSeenToday) pour une vue donnée — appelé par chaque render*() à la
-// place de l'ancien <div class="wbrief"> fixe. Retourne '' si pas de
-// message (ex. historique trop court), comme avant.
+// Construit la bulle (dépliée ou repliée en rond selon briefSeenToday)
+// pour une vue donnée — appelé par chaque render*() à la place de
+// l'ancien <div class="wbrief"> fixe. Retourne '' si pas de message (ex.
+// historique trop court), comme avant.
+// L'ouverture automatique au premier rendu n'anime rien (la bulle naît
+// déjà dépliée) : .settled peut donc être posé tout de suite, contrairement
+// à une ouverture manuelle où .settled n'est ajouté qu'à la fin réelle de
+// la transition de largeur (voir briefOpenEl).
 function briefHTML(viewKey,msgHTML){
   if(!msgHTML)return'';
   const autoOpen=!briefSeenToday(viewKey);
   if(autoOpen)briefMarkSeenToday(viewKey);
   return`<div class="wbrief-wrap">
-    <button type="button" class="wbrief-star" onclick="openBrief('${viewKey}')" title="Astuce du jour" aria-label="Astuce du jour">${BRIEF_ICON}</button>
-    <div class="wbrief-collapse${autoOpen?' open':''}" id="wbriefCollapse-${viewKey}"><div class="wbrief">${BRIEF_ICON}<span>${msgHTML}</span></div></div>
+    <div class="wbrief${autoOpen?' settled':' collapsed'}" id="wbrief-${viewKey}" onclick="toggleBrief('${viewKey}')" role="button" tabindex="0" title="Astuce du jour" aria-label="Astuce du jour">${BRIEF_ICON}<span class="wbrief-text">${msgHTML}</span></div>
   </div>`;
 }
+// Replie la bulle — retire .settled immédiatement (sinon le texte reste en
+// "white-space:normal" pendant que la largeur rétrécit, et se retrouve
+// forcé sur des dizaines de lignes avant que max-width ne le masque).
+function briefCollapseEl(el){
+  el.classList.remove('settled');
+  el.classList.add('collapsed');
+}
+// Déplie la bulle — .settled (qui autorise le texte à revenir à la ligne
+// normalement) n'est posé qu'au vrai terme de la transition de largeur
+// (transitionend sur 'width'), jamais au clic lui-même : le poser trop tôt
+// reproduirait le même bug que ci-dessus mais à l'ouverture (texte qui
+// essaie de tenir sur toute sa largeur finale alors que la bulle est
+// encore étroite). Le garde `!collapsed` évite qu'un second clic rapide
+// (fermeture avant la fin de l'ouverture) ne pose .settled après coup sur
+// une bulle entre-temps repliée.
+function briefOpenEl(el,viewKey){
+  el.classList.remove('collapsed');
+  // Pas {once:true} : transitionend bubble aussi depuis .wbrief-text (son
+  // opacity transitionne en premier) — un {once:true} sur l'élément
+  // consommerait l'écouteur sur cet événement-enfant avant que le vrai
+  // transitionend 'width' de .wbrief n'arrive. Désabonnement manuel
+  // seulement sur le bon événement.
+  el.addEventListener('transitionend',function onEnd(e){
+    if(e.target!==el||e.propertyName!=='width')return;
+    el.removeEventListener('transitionend',onEnd);
+    if(!el.classList.contains('collapsed'))el.classList.add('settled');
+  });
+  briefArm(viewKey);
+}
 // Programme/reprogramme la fermeture auto 10s après une ouverture (auto ou
-// manuelle via le picto étoile).
+// manuelle).
 function briefArm(viewKey){
   clearTimeout(briefTimers[viewKey]);
   briefTimers[viewKey]=setTimeout(()=>{
-    const el=byId('wbriefCollapse-'+viewKey);
-    if(el)el.classList.remove('open');
+    const el=byId('wbrief-'+viewKey);
+    if(el)briefCollapseEl(el);
   },10000);
 }
 // À appeler juste après avoir injecté le HTML d'une vue dans le DOM : arme
 // le minuteur de fermeture seulement si cette bulle vient de s'auto-ouvrir
 // (sinon rien à fermer).
 function briefAutoArm(viewKey){
-  const el=byId('wbriefCollapse-'+viewKey);
-  if(el&&el.classList.contains('open'))briefArm(viewKey);
+  const el=byId('wbrief-'+viewKey);
+  if(el&&!el.classList.contains('collapsed'))briefArm(viewKey);
 }
-// Réouverture manuelle via le picto étoile — ne touche pas au marquage
+// Clic sur la bulle — bascule : ouvre si repliée (et arme la fermeture
+// auto 10s), referme immédiatement si dépliée. Ne touche pas au marquage
 // "vu aujourd'hui" (déjà fait à l'auto-open, voir briefHTML).
-function openBrief(viewKey){
-  const el=byId('wbriefCollapse-'+viewKey);
-  if(el)el.classList.add('open');
-  briefArm(viewKey);
+function toggleBrief(viewKey){
+  const el=byId('wbrief-'+viewKey);
+  if(!el)return;
+  if(el.classList.contains('collapsed')){
+    briefOpenEl(el,viewKey);
+  }else{
+    briefCollapseEl(el);
+    clearTimeout(briefTimers[viewKey]);
+  }
 }
 
 const PALETTE = [
