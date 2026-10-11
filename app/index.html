@@ -937,6 +937,31 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   color:var(--earth);border-radius:12px;padding:14px 16px;
   font-size:13px;line-height:1.45;}
 .wbrief svg{margin-top:1px;color:var(--green);}
+/* Bulle assistant dynamique (voir briefHTML/BRIEF_ICON) — l'encart .wbrief
+   ci-dessus ne reste plus affiché en permanence : il s'ouvre seul une fois
+   par jour par vue (animation façon popup iOS, ressort léger) puis se
+   referme seul après 10s, ne laissant qu'un picto étoile permanent
+   au-dessus des encarts verts pour le rouvrir à la demande. Le but :
+   garder l'info accessible sans jamais gêner la lecture des chiffres au
+   quotidien. grid-template-rows 0fr→1fr anime la hauteur à 0 sans avoir à
+   calculer/transiter une hauteur en pixels (classique pour un collapse
+   animé en CSS pur) ; min-height:0 sur .wbrief est nécessaire sinon la
+   taille intrinsèque du contenu empêche la ligne de grille de vraiment
+   revenir à 0. */
+.wbrief-wrap{display:flex;flex-direction:column;align-items:flex-start;}
+.wbrief-star{width:32px;height:32px;border-radius:50%;flex-shrink:0;
+  background:var(--lavender-bg);border:1.5px solid var(--lavender-strong);
+  color:var(--green);display:flex;align-items:center;justify-content:center;
+  padding:0;cursor:pointer;transition:transform .15s;}
+.wbrief-star:active{transform:scale(.88);}
+.wbrief-star svg{margin:0;}
+.wbrief-collapse{display:grid;grid-template-rows:0fr;opacity:0;width:100%;
+  transform:scale(.9);transform-origin:top left;overflow:hidden;pointer-events:none;
+  transition:grid-template-rows .4s cubic-bezier(.34,1.56,.64,1),
+    opacity .25s ease,transform .35s cubic-bezier(.34,1.56,.64,1);}
+.wbrief-collapse.open{grid-template-rows:1fr;opacity:1;transform:scale(1);
+  pointer-events:auto;margin-top:8px;}
+.wbrief-collapse>.wbrief{min-height:0;}
 /* .tsec-panel a son propre margin-bottom (12px, pour les cas où il n'est
    pas dans un conteneur à gap) — en trop ici puisque .tsec-panel.ev est un
    enfant direct de .week-inner/.month-inner, qui espacent déjà via leur
@@ -2951,6 +2976,57 @@ const RECIPE_ICON_SM='<svg width="10" height="10" viewBox="0 0 24 24" fill="none
 // Pictogramme étincelle (résumé du jour, voir renderWeek → wbrief) — ton
 // "assistant" plutôt qu'une simple icône de planning.
 const BRIEF_ICON='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px;flex-shrink:0"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.287L3 12l5.8 1.9a2 2 0 0 1 1.287 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.287L21 12l-5.8-1.9a2 2 0 0 1-1.287-1.287L12 3Z"/></svg>';
+// Bulle assistant dynamique — voir .wbrief-wrap/.wbrief-collapse pour
+// l'animation. Chaque vue (today/week/month/year) a sa propre clé : la
+// bulle s'ouvre seule la première fois qu'on affiche cette vue un jour
+// donné (horodatage localStorage daté du jour, pas d'un simple booléen,
+// pour que ça se réarme automatiquement le lendemain), puis se referme
+// seule après 10s. Le marquage "vu aujourd'hui" a lieu dès l'ouverture
+// auto, pas à la fermeture, pour qu'une réouverture manuelle via le picto
+// étoile le même jour (voir openBrief) ne redéclenche jamais l'auto-open.
+const briefTimers={};
+function briefSeenToday(viewKey){
+  return localStorage.getItem('ff2_briefSeen_'+viewKey)===todayISO();
+}
+function briefMarkSeenToday(viewKey){
+  localStorage.setItem('ff2_briefSeen_'+viewKey,todayISO());
+}
+// Construit le picto étoile permanent + la bulle (ouverte ou repliée selon
+// briefSeenToday) pour une vue donnée — appelé par chaque render*() à la
+// place de l'ancien <div class="wbrief"> fixe. Retourne '' si pas de
+// message (ex. historique trop court), comme avant.
+function briefHTML(viewKey,msgHTML){
+  if(!msgHTML)return'';
+  const autoOpen=!briefSeenToday(viewKey);
+  if(autoOpen)briefMarkSeenToday(viewKey);
+  return`<div class="wbrief-wrap">
+    <button type="button" class="wbrief-star" onclick="openBrief('${viewKey}')" title="Astuce du jour" aria-label="Astuce du jour">${BRIEF_ICON}</button>
+    <div class="wbrief-collapse${autoOpen?' open':''}" id="wbriefCollapse-${viewKey}"><div class="wbrief">${BRIEF_ICON}<span>${msgHTML}</span></div></div>
+  </div>`;
+}
+// Programme/reprogramme la fermeture auto 10s après une ouverture (auto ou
+// manuelle via le picto étoile).
+function briefArm(viewKey){
+  clearTimeout(briefTimers[viewKey]);
+  briefTimers[viewKey]=setTimeout(()=>{
+    const el=byId('wbriefCollapse-'+viewKey);
+    if(el)el.classList.remove('open');
+  },10000);
+}
+// À appeler juste après avoir injecté le HTML d'une vue dans le DOM : arme
+// le minuteur de fermeture seulement si cette bulle vient de s'auto-ouvrir
+// (sinon rien à fermer).
+function briefAutoArm(viewKey){
+  const el=byId('wbriefCollapse-'+viewKey);
+  if(el&&el.classList.contains('open'))briefArm(viewKey);
+}
+// Réouverture manuelle via le picto étoile — ne touche pas au marquage
+// "vu aujourd'hui" (déjà fait à l'auto-open, voir briefHTML).
+function openBrief(viewKey){
+  const el=byId('wbriefCollapse-'+viewKey);
+  if(el)el.classList.add('open');
+  briefArm(viewKey);
+}
 
 const PALETTE = [
   '#5B8DB5','#6B9E60','#A8956A','#8B7DB0','#C09A4A','#5B9E94',
@@ -4715,6 +4791,26 @@ function renderToday(){
   const avgNightRevenue=totalNights>0?Math.round(annualRevenue/totalNights):0;
   const avgStayLength=stayLengths.length?stayLengths.reduce((a,b)=>a+b,0)/stayLengths.length:0;
 
+  // Résumé assistant — voir roomRevenueRank : où se situe cette location
+  // par rapport aux autres par revenus cette année, même esprit que le
+  // classement de la vue Mois. Absent avec une seule location (rien à
+  // comparer, voir roomRevenueRank).
+  const roomCmp=roomRevenueRank(year,rm.id);
+  let roomBriefMsg=null;
+  if(roomCmp){
+    const{rank,total,rev,avg}=roomCmp;
+    const diffPct=avg>0?Math.round((rev-avg)/avg*100):null;
+    const diffStr=diffPct==null?'':diffPct>=0?` — ${diffPct}% au-dessus de la moyenne de vos locations`:` — ${Math.abs(diffPct)}% en dessous de la moyenne de vos locations`;
+    const revStr=rev>0?`<span class="money">${rev.toLocaleString('fr-FR')}</span> €`:'—';
+    if(rank===1){
+      roomBriefMsg=`🏆 Votre location la plus rentable cette année, avec ${revStr} de revenus (sur ${total} locations suivies)${diffStr}.`;
+    }else if(total>2&&rank===total){
+      roomBriefMsg=`La location la moins rentable cette année (${rank}ᵉ sur ${total}), avec ${revStr}${diffStr}. De quoi repérer une marge de progression.`;
+    }else{
+      roomBriefMsg=`Cette location se classe ${rank}ᵉ sur ${total} par revenus cette année, avec ${revStr}${diffStr}.`;
+    }
+  }
+
   // --- calendrier annuel : grille de 12 mini-calendriers (3 par ligne),
   // chacun avec ses vraies semaines (lundi→dimanche) en lignes — le format
   // "mini-calendrier" habituel, plutôt qu'une bande de 31 colonnes par mois :
@@ -4872,6 +4968,7 @@ function renderToday(){
     </div>
     <button class="vnav-btn" onclick="chRoomView(1)">${chevR}</button>
   </div>
+  ${briefHTML('today',roomBriefMsg)}
   <div class="yr-stats">
     <div class="mstat-card mstat-rev"><div class="mstat-val">${occRate}%</div><div class="mstat-sub">Taux d'occupation</div><div class="mstat-detail">${totalNights} nuits / ${daysInYear}</div></div>
     <div class="mstat-card mstat-rev"><div class="mstat-val">${avgStayLength?avgStayLength.toFixed(1).replace('.0',''):'—'}</div><div class="mstat-sub">Durée moyenne de séjour (nuits)</div></div>
@@ -4886,6 +4983,7 @@ function renderToday(){
   </div>
   </div>`;
   byId('todayWrap').innerHTML=h;
+  briefAutoArm('today');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -9171,7 +9269,7 @@ function renderWeek(){
       const last=briefParts.pop();
       briefMsg=`Aujourd'hui, vous avez ${briefParts.join(', ')} et ${last}.`;
     }
-    h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+    h+=briefHTML('week',briefMsg);
   }
 
   h+=`<div class="week-summary">
@@ -9506,6 +9604,7 @@ function renderWeek(){
   }
   h+='</div>';
   byId('weekWrap').innerHTML=h;
+  briefAutoArm('week');
   if(openExtrasId){const p=document.getElementById('xe-'+openExtrasId);if(p)p.style.display='block';}
 }
 
@@ -9597,6 +9696,36 @@ function getMonthStats(y,m){
   return{y,m,daysInMonth,mStart,mEndExact,bks,totalPossible,totalNights,periodRevTotal,
     totalExtras,totalRepas,repasRevenueFromBookings,taxeSejourTotal,extDinersRevenueTotal,
     nightsRevenue,repasRevenue,eventsRevenue,totalRev,occPct};
+}
+// Classement d'une location par revenus annuels parmi les autres locations
+// — pour la vue Location (voir renderToday), même esprit que
+// monthRevenueRank pour la vue Mois : où se situe cette location par
+// rapport aux autres plutôt qu'un chiffre isolé déjà affiché dans les
+// encarts verts. N'a de sens qu'avec au moins 2 locations à comparer
+// (seuil plus bas que monthRevenueRank : le nombre de locations reste
+// généralement faible, pas besoin d'attendre un grand historique).
+function roomRevenueRank(year,roomId){
+  if(ROOMS.length<2)return null;
+  const yStart=`${year}-01-01`,yEnd=`${year+1}-01-01`;
+  const revByRoom=ROOMS.map(r=>{
+    let rev=0;
+    S.bookings.filter(b=>b.roomId===r.id).forEach(bk=>{
+      rev+=getBookingRevForPeriod(bk,yStart,yEnd);
+      if(bk.extras){
+        Object.keys(bk.extras).forEach(eds=>{
+          if(eds>=yStart&&eds<yEnd)rev+=getExtrasDayTotal(bk,eds);
+        });
+      }
+    });
+    return{id:r.id,rev};
+  });
+  if(!revByRoom.some(x=>x.rev>0))return null;
+  const sorted=[...revByRoom].sort((a,b)=>b.rev-a.rev);
+  const rank=sorted.findIndex(x=>x.id===roomId)+1;
+  const total=sorted.length;
+  const thisRev=revByRoom.find(x=>x.id===roomId).rev;
+  const avg=revByRoom.reduce((s,x)=>s+x.rev,0)/total;
+  return{rank,total,rev:thisRev,avg};
 }
 // Classement d'un mois par revenus totaux parmi tous les mois suivis (du
 // premier mois avec une réservation jusqu'au mois réel en cours) — pour la
@@ -9814,7 +9943,7 @@ function renderMonth(){
       }else{
         briefMsg=`Ce mois se classe ${rank}ᵉ sur ${total} mois suivis, avec ${revStr}${diffStr}.`;
       }
-      h+=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+      h+=briefHTML('month',briefMsg);
     }
   }
 
@@ -10179,6 +10308,7 @@ function renderMonth(){
 
   h+='</div>';
   byId('monthWrap').innerHTML=h;
+  briefAutoArm('month');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -10855,7 +10985,7 @@ function renderYear(){
     }else if(yearInsight.kind==='first'){
       briefMsg=`<span class="money">${Math.round(yearInsight.rev).toLocaleString('fr-FR')}</span> € de CA depuis le début de l'année — première année suivie, de quoi bâtir une vraie comparaison l'an prochain.`;
     }
-    if(briefMsg)yearBriefHTML=`<div class="wbrief">${BRIEF_ICON}<span>${briefMsg}</span></div>`;
+    if(briefMsg)yearBriefHTML=briefHTML('year',briefMsg);
   }
 
   // Total taxe de séjour de l'année — même prorata que le CA par mois,
@@ -10906,6 +11036,7 @@ function renderYear(){
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
   </div>`;
+  briefAutoArm('year');
 }
 
 // ═══════════════════════════════════════════════════════════════
