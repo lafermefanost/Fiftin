@@ -1715,19 +1715,22 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    pour le texte, recolorées ici en sombre (ces classes sont par ailleurs
    toujours en texte blanc, pensées pour un fond foncé comme .wday-head). */
 /* Retour utilisateur : "petit défaut disgracieux, les cartes d'événement
-   visibles derrière le mois en top" — un position:sticky;top:0 avec une
-   margin-top (12px avant) laisse une bande transparente AU-DESSUS de
-   l'encart une fois collé (le point d'ancrage "top:0" se mesure au bord
-   EXTÉRIEUR de la margin, pas de la boîte visible) : le contenu déjà
-   défilé restait visible par cette bande. Fond de l'encart jamais recollé
-   pile en haut tant que margin-top>0. Fix : margin-top supprimée (l'encart
-   colle sans aucune bande transparente au-dessus), l'espacement avant
-   chaque encart de mois vient maintenant du padding-bottom de
-   .ev-month-body du mois précédent (16px, contenu dans le flux normal —
-   jamais un souci pour un élément non sticky). */
-.ev-month-label{position:sticky; top:0; z-index:5;
-  display:flex; justify-content:space-between; align-items:center;
-  background:#E3E3E3; border-radius:10px; margin:0 0 8px; padding:10px 16px;}
+   visibles derrière le mois en top" — persistait même après avoir corrigé
+   la margin-top (voir historique) : seconde cause, indépendante — avec
+   border-radius, un fond opaque ne peint QUE la forme arrondie ; les 4
+   coins de sa boîte, hors de la courbe, restent transparents et laissent
+   voir ce qui défile juste derrière (une carte au coin carré, au pixel
+   près au même endroit que le coin arrondi de l'encart). Capture à
+   l'appui : coin sombre d'une carte visible dans le coin arrondi de
+   l'encart "MARS". Fix : l'encart arrondi (.ev-month-label, inchangé
+   visuellement) est maintenant posé SUR un conteneur rectangulaire opaque
+   (.ev-month-sticky, mêmes dimensions, jamais arrondi) qui, lui, porte le
+   position:sticky — un rectangle n'a aucun coin "manquant", il masque
+   donc tout ce qui défile derrière sur toute sa surface, y compris sous
+   les coins arrondis du pavé gris posé dessus. */
+.ev-month-sticky{position:sticky; top:0; z-index:5; background:var(--white); margin:0 0 8px;}
+.ev-month-label{display:flex; justify-content:space-between; align-items:center;
+  background:#E3E3E3; border-radius:10px; padding:10px 16px;}
 .ev-month-label .wday-name{color:var(--dark);}
 .ev-month-label .wday-date{color:var(--gray); font-weight:500;}
 .ev-month-body{padding-bottom:16px;}
@@ -5896,18 +5899,20 @@ function renderEvList(term){
     if(!markInserted) h+='<div class="ev-today-mark"><span>Aujourd\'hui</span></div>';
     return h;
   };
-  // id="evmonth-{key}" sur le bandeau lui-même (pas un wrapper séparé) :
-  // sert de cible à scrollIntoView juste en dessous, pour atterrir
-  // directement sur evScrollKey (mois en cours, ou le mois demandé par
-  // openDayEvent) plutôt qu'en haut de toute la liste.
+  // id="evmonth-{key}" sur le conteneur sticky (.ev-month-sticky, voir son
+  // commentaire CSS) : sert de cible à scrollIntoView juste en dessous,
+  // pour atterrir directement sur evScrollKey (mois en cours, ou le mois
+  // demandé par openDayEvent) plutôt qu'en haut de toute la liste.
   const monthSectionHTML=g=>{
     const isCur=g.key===todayKey;
     const m=((g.key%12)+12)%12, y=Math.floor(g.key/12);
     const label=MON[m]+(y!==curYear?` ${y}`:'');
     const count=g.events.length;
-    return`<div class="ev-month-label" id="evmonth-${g.key}">
-        <div class="wday-name">${isCur?'Ce mois-ci — ':''}${label}</div>
-        <div class="wday-date">${count} événement${count>1?'s':''}</div>
+    return`<div class="ev-month-sticky" id="evmonth-${g.key}">
+        <div class="ev-month-label">
+          <div class="wday-name">${isCur?'Ce mois-ci — ':''}${label}</div>
+          <div class="wday-date">${count} événement${count>1?'s':''}</div>
+        </div>
       </div>
       <div class="ev-month-body">${monthBodyHTML(g)}</div>`;
   };
