@@ -3027,13 +3027,26 @@ function briefHTML(viewKey,msgHTML){
 // on relit la géométrie du vrai élément juste après avoir basculé sa
 // classe, même après un reflow forcé — bug constaté en test. Le clone,
 // lui, n'a jamais été rendu avec une transition en cours, donc sa mesure
-// est fiable.
+// est fiable — à condition de lui donner la bonne largeur : en
+// position:absolute sur <body>, son "width:100%" (hérité de .wbrief en
+// état déplié) se résout contre le viewport et non contre le vrai
+// conteneur (~366px) puisqu'aucun ancêtre positionné ne le contraint.
+// Résultat observé : une largeur de mesure trop généreuse, un texte qui
+// tient sur moins de lignes que dans la vraie mise en page, donc une
+// hauteur cible sous-estimée — d'où ce petit saut final une fois que
+// .style.height repasse à "auto" et que le texte, cette fois dans son
+// vrai conteneur étroit, prend réellement une ligne de plus (repéré sur
+// la vue Mois, dont le texte tombait pile sur cette limite — la vue
+// Année, avec un texte différent, n'était pas concernée par hasard).
+// Fixé en forçant explicitement la largeur du clone à celle du vrai
+// conteneur (son parent, dont la largeur ne dépend pas de l'état de .wbrief).
 function briefAnimateHeight(el,collapsing){
   const startH=el.getBoundingClientRect().height;
+  const targetWidth=collapsing?36:el.parentNode.getBoundingClientRect().width;
   const clone=el.cloneNode(true);
   clone.removeAttribute('id');
   clone.classList.toggle('collapsed',collapsing);
-  clone.style.cssText+=';position:absolute;visibility:hidden;top:-9999px;left:-9999px;pointer-events:none;transition:none;';
+  clone.style.cssText+=`;position:absolute;visibility:hidden;top:-9999px;left:-9999px;pointer-events:none;transition:none;width:${targetWidth}px;`;
   document.body.appendChild(clone);
   const endH=clone.getBoundingClientRect().height;
   document.body.removeChild(clone);
