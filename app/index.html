@@ -1443,6 +1443,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    .fi (width:100%) — déborde du cartouche dans .frow (2 colonnes 1fr),
    repéré sur Heure d'arrivée/Heure de fin du formulaire événement. */
 input[type="date"].fi,input[type="time"].fi{-webkit-appearance:none;appearance:none;}
+/* Effet de bord du correctif ci-dessus, repéré ensuite : sans valeur,
+   iOS ne dessine plus le moindre segment interne ("--:--") une fois le
+   chrome natif retiré, et la case s'affaisse à une hauteur minimale —
+   revient à la normale dès qu'une heure est saisie. Hauteur fixée en dur
+   (plutôt que laissée dépendre du contenu) pour rester identique vide ou
+   remplie — même valeur que la hauteur naturelle des autres champs .fi. */
+input[type="time"].fi{height:35px;}
 .fi:focus,.fsel:focus{border-color:var(--green2);}
 .frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 /* Aligne les deux champs d'une rangée sur leur INPUT plutôt que sur le haut
