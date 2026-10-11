@@ -28,21 +28,26 @@ html,body{height:100%;overflow:hidden;}
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
   --cream:#EFEEEA; --earth:#1D2820; --green:#354B38; --green-deep:#1D2820; --dark:#2C2C2C;
-  /* Lavande : réservé à la fenêtre assistant (.wbrief) et aux onglets/menus
-     déroulants liés aux événements (filtre Pro/Perso/Fiscal, onglets de
-     jour des consommations d'un événement, bandeau "Événements") — plus
-     aucun autre usage (voir --green2 ci-dessous pour tout le reste). */
+  /* Lavande : réservé à la fenêtre assistant (.wbrief), aux onglets de jour
+     des consommations d'un événement, et — depuis la refonte du code
+     couleur par catégorie — au code couleur des événements personnels
+     (voir evCategoryColor : pro en --green, perso en --lavender, fiscal
+     en --lavender-deep) — plus aucun autre usage (voir --green2
+     ci-dessous pour tout le reste). */
   --lavender:#B2BBDA; --lavender-bg:#E7E9F1;
   /* Contour de .wbrief : même teinte que --lavender, nettement plus saturé
      pour rester visible en simple contour (le fond, lui, reste --lavender-bg
      inchangé). */
   --lavender-strong:#7B94E8;
   /* Lavande foncé, distinct de --lavender-strong ci-dessus (réservé
-     .wbrief/filtres événements) : seul usage, le bouton #backToSejoursBtn
-     du header (retour vers Fiftin Séjours) — même teinte que
-     --lavender-deep côté sejours/index.html (.switch-tile.hotes), pour
-     que la couleur de "vous êtes dans Fiftin app" / "revenir à Séjours"
-     soit cohérente entre les deux sites. */
+     .wbrief) : le bouton #backToSejoursBtn du header (retour vers Fiftin
+     Séjours) — même teinte que --lavender-deep côté sejours/index.html
+     (.switch-tile.hotes), pour que la couleur de "vous êtes dans Fiftin
+     app" / "revenir à Séjours" soit cohérente entre les deux sites — et,
+     depuis la refonte du code couleur par catégorie, le code couleur des
+     événements fiscaux (voir evCategoryColor), pour rester dans la même
+     famille lavande que les événements personnels (--lavender) tout en
+     restant visuellement distinct. */
   --lavender-deep:#4E67BC;
   /* Nouveau vert (vert sauge) : accent des volets secondaires et des petits
      éléments graphiques qui ponctuent l'appli (pictos chiffrés départs/
@@ -459,11 +464,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #pay-paid.on{background:#E8F3E5;color:#2E5C28;border-color:#7ABF6A;}
 #ts-chip.on{background:#E8F3E5;color:#2E5C28;border-color:#7ABF6A;}
 #ts-chip.on::before{content:'✓ ';}
-/* Type d'événement (Pro/Perso, voir setEvCategory) — même lavande "actif"
-   que .evfilter-btn.on (menus/onglets liés aux événements) plutôt qu'une
-   couleur par statut : ici un simple choix binaire, pas plusieurs états
-   sémantiques distincts comme le paiement. */
-#evcat-pro.on,#evcat-perso.on,#evcat-fiscal.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
+/* Type d'événement (Pro/Perso/Fiscal, voir setEvCategory) — même couleur
+   que le code couleur de la catégorie partout ailleurs (voir
+   evCategoryColor) plutôt qu'un simple "actif" neutre : on apprend
+   l'association couleur↔catégorie dès qu'on la choisit ici. */
+#evcat-pro.on{background:var(--green);color:#fff;border-color:var(--green);}
+#evcat-perso.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
+#evcat-fiscal.on{background:var(--lavender-deep);color:#fff;border-color:var(--lavender-deep);}
 .src-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .src-chip{padding:5px 12px;border:1.5px solid var(--light);border-radius:20px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
@@ -724,25 +731,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire).
    Texte blanc sur demande explicite (contraste réel ~2.9:1 sur ce fond
    clair --green2, sous le seuil AA pour du texte de cette taille — à
-   surveiller si la lisibilité pose problème en usage réel). Événements
-   reste en lavande ci-dessous (onglet lié aux événements, catégorie à
-   part — voir tokens). */
+   surveiller si la lisibilité pose problème en usage réel). "Événements
+   du mois"/"de la semaine" repassé au même vert sur demande explicite
+   ("comme les encarts") — avait été mis en lavande lors de la refonte du
+   calendrier fiscal, mais la lavande sert maintenant de code couleur par
+   catégorie d'événement (voir evCategoryColor) : plus de raison de
+   distinguer ce bandeau des autres volets secondaires. */
 .tsec-hd.has-items{background:var(--green2);color:#fff;}
-.tsec-panel.ev>.tsec-hd.has-items{background:var(--lavender);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
 .tsec-count{margin-left:auto;background:#fff;color:var(--dark)!important;border-radius:12px;padding:4px 13px;font-size:15px;font-weight:700;}
-/* "Événements du mois"/"de la semaine" : chiffre en lavande plutôt que
-   noir/gris foncé, pour rester dans la même famille de couleur que le
-   fond lavande de son bandeau (.tsec-hd.has-items) plutôt qu'un simple
-   badge neutre comme les autres volets (Ménage, Table d'hôtes…). */
-.tsec-panel.ev .tsec-count{color:var(--lavender)!important;}
 .tsec-count span{color:var(--dark);}
-/* Le chiffre affiché est dans ce <span> imbriqué (voir tsec-count span
-   ci-dessus) — sa propre couleur explicite ignorait sinon celle posée
-   sur .tsec-count parent, qui ne s'hérite pas à travers une règle
-   directe comme celle-ci. */
-.tsec-panel.ev .tsec-count span{color:var(--lavender)!important;}
 .tsec-chev{font-size:11px;opacity:.6;transition:transform .2s;margin-left:4px;}
 .tsec-panel.collapsed>.tsec-hd .tsec-chev{transform:rotate(-90deg);}
 .tsec-body{background:var(--white);padding:10px 10px 6px;}
@@ -2630,10 +2629,6 @@ Gardez la main.</div>
           <input type="time" class="fi" id="evEndTime">
         </div>
       </div>
-      <div class="fg">
-        <label class="fl">Couleur</label>
-        <input type="color" class="fi" id="evColor" style="height:42px;padding:3px;" value="#A8C5A0">
-      </div>
     </div>
 
     <!-- ── Paiement ── -->
@@ -2854,23 +2849,23 @@ const MON3 = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov
 //  du code de commerce — à recouper avec votre expert-comptable, ces
 //  délais dépendent aussi de la date de clôture réelle de l'exercice.
 const FISCAL_CALENDAR=[
-  {m:3, d:15,title:'1ᵉʳ acompte d\'IS',                  desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
-  {m:3, d:31,title:'Option régime fiscal (IR)',          desc:'Notifier avant fin mars si changement IR/IS souhaité pour l\'exercice en cours (option valable 5 ans)', color:'#1D2820', types:['sasu']},
-  {m:5, d:15,title:'Solde de l\'impôt sur les sociétés',  desc:'Formulaire 2572, télépaiement obligatoire — régularise l\'IS dû sur l\'exercice clos après déduction des acomptes déjà versés', color:'#C0392B', types:['sasu']},
-  {m:5, d:20,title:'Déclaration de résultat professionnel', desc:'Formulaire 2031 (BIC, EI) ou 2035 (BNC) — bilan de l\'activité en régime réel, télétransmission EDI (+15 jours vs dépôt papier)', color:'#354B38', types:['ei_reel','lmnp_reel']},
-  {m:6, d:5, title:'Déclaration de revenus (IR)',        desc:'Date limite en ligne — variable selon votre département, début-fin juin : vérifier sur impots.gouv.fr. Inclut vos revenus micro-BIC (LMNP, auto-entrepreneur) et, pour un président de SASU, sa rémunération', color:'#354B38', approx:true, types:null},
-  {m:6, d:15,title:'2ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
-  {m:6, d:15,title:'Acompte CFE',                        desc:'Si cotisation N-1 ≥ 3 000 € — règlement de 50 % de l\'acompte prévisionnel', color:'#B57A7A', cond:true, types:null},
-  {m:6, d:30,title:'Déclaration d\'occupation (GMBI)',   desc:'Mise à jour foncière obligatoire si changement d\'occupant ou d\'usage du bien', color:'#7A8CB5', types:null},
-  {m:6, d:30,title:'Approbation des comptes (PV d\'AG)', desc:'Assemblée générale ordinaire d\'approbation des comptes annuels — dans les 6 mois suivant la clôture de l\'exercice, sous peine de sanctions', color:'#1D2820', types:['sasu']},
-  {m:8, d:31,title:'Dépôt des comptes annuels (bilan)',  desc:'Au greffe (guichet unique INPI), après approbation en AG — 1 mois en dépôt papier (31 juillet), 2 mois en dépôt électronique', color:'#9E7A5C', types:['sasu']},
-  {m:9, d:15,title:'3ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
-  {m:9, d:15,title:'Solde IR / acompte',                 desc:'Versement d\'un acompte ou solde d\'impôt sur le revenu selon situation fiscale', color:'#1D2820', cond:true, types:null},
-  {m:10,d:15,title:'Paiement taxe foncière',             desc:'Règlement pour chaque bien possédé — mi-octobre (prélèvement/paiement en ligne : quelques jours de plus)', color:'#9E7A5C', approx:true, types:null},
-  {m:11,d:1, title:'Avis de CFE disponibles',            desc:'Mise en ligne des avis de cotisation foncière — vérifier le montant par établissement', color:'#7A8800', types:null},
-  {m:11,d:15,title:'Paiement taxe d\'habitation (résidences secondaires)', desc:'Concerne les logements loués qui ne sont pas votre résidence principale — mi-novembre (paiement en ligne : quelques jours de plus)', color:'#6B8A9E', approx:true, cond:true, types:null},
-  {m:12,d:15,title:'4ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', color:'#B57A7A', cond:true, types:['sasu']},
-  {m:12,d:15,title:'Paiement CFE',                       desc:'Règlement de la CFE pour chaque établissement/structure', color:'#B57A7A', types:null},
+  {m:3, d:15,title:'1ᵉʳ acompte d\'IS',                  desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', cond:true, types:['sasu']},
+  {m:3, d:31,title:'Option régime fiscal (IR)',          desc:'Notifier avant fin mars si changement IR/IS souhaité pour l\'exercice en cours (option valable 5 ans)', types:['sasu']},
+  {m:5, d:15,title:'Solde de l\'impôt sur les sociétés',  desc:'Formulaire 2572, télépaiement obligatoire — régularise l\'IS dû sur l\'exercice clos après déduction des acomptes déjà versés', types:['sasu']},
+  {m:5, d:20,title:'Déclaration de résultat professionnel', desc:'Formulaire 2031 (BIC, EI) ou 2035 (BNC) — bilan de l\'activité en régime réel, télétransmission EDI (+15 jours vs dépôt papier)', types:['ei_reel','lmnp_reel']},
+  {m:6, d:5, title:'Déclaration de revenus (IR)',        desc:'Date limite en ligne — variable selon votre département, début-fin juin : vérifier sur impots.gouv.fr. Inclut vos revenus micro-BIC (LMNP, auto-entrepreneur) et, pour un président de SASU, sa rémunération', approx:true, types:null},
+  {m:6, d:15,title:'2ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', cond:true, types:['sasu']},
+  {m:6, d:15,title:'Acompte CFE',                        desc:'Si cotisation N-1 ≥ 3 000 € — règlement de 50 % de l\'acompte prévisionnel', cond:true, types:null},
+  {m:6, d:30,title:'Déclaration d\'occupation (GMBI)',   desc:'Mise à jour foncière obligatoire si changement d\'occupant ou d\'usage du bien', types:null},
+  {m:6, d:30,title:'Approbation des comptes (PV d\'AG)', desc:'Assemblée générale ordinaire d\'approbation des comptes annuels — dans les 6 mois suivant la clôture de l\'exercice, sous peine de sanctions', types:['sasu']},
+  {m:8, d:31,title:'Dépôt des comptes annuels (bilan)',  desc:'Au greffe (guichet unique INPI), après approbation en AG — 1 mois en dépôt papier (31 juillet), 2 mois en dépôt électronique', types:['sasu']},
+  {m:9, d:15,title:'3ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', cond:true, types:['sasu']},
+  {m:9, d:15,title:'Solde IR / acompte',                 desc:'Versement d\'un acompte ou solde d\'impôt sur le revenu selon situation fiscale', cond:true, types:null},
+  {m:10,d:15,title:'Paiement taxe foncière',             desc:'Règlement pour chaque bien possédé — mi-octobre (prélèvement/paiement en ligne : quelques jours de plus)', approx:true, types:null},
+  {m:11,d:1, title:'Avis de CFE disponibles',            desc:'Mise en ligne des avis de cotisation foncière — vérifier le montant par établissement', types:null},
+  {m:11,d:15,title:'Paiement taxe d\'habitation (résidences secondaires)', desc:'Concerne les logements loués qui ne sont pas votre résidence principale — mi-novembre (paiement en ligne : quelques jours de plus)', approx:true, cond:true, types:null},
+  {m:12,d:15,title:'4ᵉ acompte d\'IS',                    desc:'25 % de l\'IS estimé de l\'exercice — uniquement si l\'IS dû l\'an dernier dépassait 3 000 €', cond:true, types:['sasu']},
+  {m:12,d:15,title:'Paiement CFE',                       desc:'Règlement de la CFE pour chaque établissement/structure', types:null},
 ];
 // Types de structure reconnus par le calendrier fiscal (voir Réglages →
 // Structures juridiques). Une structure sans type assigné ('autre' ou
@@ -3618,7 +3613,7 @@ function ensureFiscalEvents(){
       if(!S.events.some(e=>e.id===id)){
         const tag=(f.approx?' (date approx.)':'')+(f.cond?' (si applicable)':'');
         S.events.push({id,title:f.title+tag,startDate:`${year}-${p(f.m)}-${p(f.d)}`,endDate:`${year}-${p(f.m)}-${p(f.d)}`,
-          startTime:null,endTime:null,color:f.color,guestId:null,category:'fiscal',
+          startTime:null,endTime:null,guestId:null,category:'fiscal',
           payment:null,depositAmount:0,source:'direct',ghost:false,prixNet:0,notes:f.desc,isFiscal:true,extras:{}});
       }
     });
@@ -4565,14 +4560,14 @@ function renderGrid(){
     // seule), avec la couleur propre à l'échéance plutôt que le gris neutre
     // des jours fériés — pour la distinguer au premier coup d'œil.
     if(dayEvs.length){
-      const ec=dayEvs[0].color||'#A8C5A0';
+      const ec=evCategoryColor(dayEvs[0]);
       const lc=light(ec);
       const evTitles=dayEvs.map(ev=>ev.title).join(', ');
       dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:${lc?'#2C2C2C':'#fff'}" title="${evTitles}">${date.getDate()}</div>`;
     } else if(holidayName){
       dayTd.innerHTML=`<div class="holiday-daynum" title="${holidayName}">${date.getDate()}</div>`;
     } else if(fiscalEv){
-      dayTd.innerHTML=`<div class="holiday-daynum" style="background:${fiscalEv.color}" title="${fiscalEv.title}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="holiday-daynum" style="background:${evCategoryColor(fiscalEv)}" title="${fiscalEv.title}">${date.getDate()}</div>`;
     } else {
       dayTd.innerHTML=date.getDate();
     }
@@ -4699,8 +4694,9 @@ function renderGrid(){
     // fiche — jusqu'ici rien n'était cliquable ici du tout (contrairement à
     // la pastille du numéro de jour, qui ouvre déjà openDayEvent).
     let evTdHtml=evs.length?evs.map(ev=>{
-      const lc=light(ev.color||'#E2DFD8');
-      return`<span class="etag" style="background:${ev.color||'#E2DFD8'};color:${lc?'#2C2C2C':'#FFF'}" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
+      const col=evCategoryColor(ev);
+      const lc=light(col);
+      return`<span class="etag" style="background:${col};color:${lc?'#2C2C2C':'#FFF'}" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
     }).join(' '):(holidayName?`<span class="holiday-tag">${holidayName}</span>`:'');
     evTd.innerHTML=evTdHtml;
     tr.appendChild(evTd);
@@ -6007,7 +6003,7 @@ const evBadge=(ds,col)=>{
 // de différence" : seul le jour férié garde sa carte à part (jamais un
 // vrai événement, purement informatif, voir getHolidayPseudoEvents).
 function evCardHTML(ev){
-  const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
+  const col=ev.isHoliday?'#6B6B6B':evCategoryColor(ev);
   const isSingle=ev.startDate===ev.endDate;
   const dateHtml=isSingle
     ? evBadge(ev.startDate,col)
@@ -6147,7 +6143,6 @@ function openEventEdit(id,prefillDate,prefillCategory){
   byId('evEnd').value=ev?ev.endDate:def;
   byId('evStartTime').value=ev?ev.startTime||'':'';
   byId('evEndTime').value=ev?ev.endTime||'':'';
-  byId('evColor').value=ev?ev.color:'#A8C5A0';
   byId('evPrixNet').value=ev&&ev.prixNet?ev.prixNet:'';
   byId('evNotes').value=ev?ev.notes||'':'';
   byId('evDelBtn').style.display=ev?'block':'none';
@@ -6238,7 +6233,7 @@ function saveEvent(){
     }
   }
 
-  const data={title:t,startDate:sd,endDate:ed,startTime:st,endTime:et,color:byId('evColor').value,
+  const data={title:t,startDate:sd,endDate:ed,startTime:st,endTime:et,
     guestId:gid,category:evCategory,
     payment:pay,depositAmount:depositAmt,source,ghost,prixNet,notes};
   if(editEvid){
@@ -6361,6 +6356,19 @@ function setEvCategory(v){
 // pour ceux créés avant ce champ — utilisé à la fois par renderEvList (pour
 // grouper) et openDayEvent (pour ouvrir le bon filtre).
 const evCategoryOf=ev=>ev.category||'pro';
+// Couleur d'un événement dérivée uniquement de sa catégorie — remplace
+// l'ancien choix de couleur libre par événement (retiré du formulaire,
+// retour utilisateur : "je n'ai pas du tout besoin d'un code couleur par
+// événement, j'ai besoin d'un code couleur par type"). Mêmes teintes que
+// --green/--lavender/--lavender-deep (voir tokens en tête de fichier) en
+// hex brut plutôt qu'en var() : ces couleurs alimentent aussi light(hex)
+// pour choisir un texte clair/sombre lisible par-dessus, qui a besoin
+// d'un vrai hex à décomposer, pas d'une chaîne CSS var(). À garder en
+// synchronisation avec les tokens si leurs valeurs changent.
+const EV_CATEGORY_COLOR={pro:'#354B38',perso:'#B2BBDA',fiscal:'#4E67BC'};
+function evCategoryColor(ev){
+  return EV_CATEGORY_COLOR[evCategoryOf(ev)]||EV_CATEGORY_COLOR.pro;
+}
 
 // ── Paiement de l'événement — dupliqué de setPayment/setSource/resetPaymentUI
 // (evPayment/evSource au lieu de bkPayment/bkSource) pour les mêmes raisons
@@ -9363,7 +9371,7 @@ function renderWeek(){
     </div>`;
   };
   const evCard=ev=>{
-    const col=ev.isHoliday?'#6B6B6B':ev.isFiscal?ev.color:(ev.color||'#A8C5A0');
+    const col=ev.isHoliday?'#6B6B6B':evCategoryColor(ev);
     const isSingle=ev.startDate===ev.endDate;
     const dateHtml=isSingle
       ? evDayBadge(ev.startDate,col)
