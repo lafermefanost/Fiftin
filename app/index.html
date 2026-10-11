@@ -463,7 +463,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    que .evfilter-btn.on (menus/onglets liés aux événements) plutôt qu'une
    couleur par statut : ici un simple choix binaire, pas plusieurs états
    sémantiques distincts comme le paiement. */
-#evcat-pro.on,#evcat-perso.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
+#evcat-pro.on,#evcat-perso.on,#evcat-fiscal.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
 .src-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .src-chip{padding:5px 12px;border:1.5px solid var(--light);border-radius:20px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
@@ -1669,15 +1669,21 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 }
 
 /* Events modal */
-/* Filtre Pro/Perso/Fiscal (voir renderEvList/setEvFilter) : chaque
-   événement créé porte un evCategory ('pro' ou 'perso', voir modalEventEdit)
-   — Pro et Perso montrent chacun leurs volets mois (voir plus bas), Fiscal
-   remplace tout par la liste du calendrier fiscal. Rangée fixe, avant
-   .modal-scrollarea, comme le reste des contrôles de la modale. */
-.evfilter-row{display:flex;gap:6px;margin-bottom:10px;}
-.evfilter-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;
-  padding:8px 6px;border:1.5px solid var(--light);border-radius:8px;
-  font-family:'Jost',sans-serif;font-size:12px;font-weight:600;text-transform:uppercase;
+/* Filtre Pro/Perso/Fiscal/Tout (voir renderEvList/setEvFilter) : chaque
+   événement créé porte un evCategory ('pro'/'perso'/'fiscal', voir
+   modalEventEdit) — les quatre filtres traités à l'identique depuis le
+   retour utilisateur "traite les 4 onglets de la même manière, avec
+   picto+texte comme le fiscal" (avant : Fiscal seul avait un picto, les
+   trois autres du texte seul en pilule horizontale). Rangée fixe, avant
+   .modal-scrollarea, comme le reste des contrôles de la modale. 4 cases
+   carrées (grid plutôt que flex:1, pour une vraie grille 1/4/1/4 au lieu
+   de largeurs qui dépendent du texte) avec le picto empilé au-dessus du
+   texte (retour utilisateur : "4 onglets carrés bords arrondis avec picto
+   en haut et texte en dessous"). */
+.evfilter-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;}
+.evfilter-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  aspect-ratio:1;padding:8px 4px;border:1.5px solid var(--light);border-radius:12px;
+  font-family:'Jost',sans-serif;font-size:10px;font-weight:600;text-transform:uppercase;
   letter-spacing:.03em;color:var(--gray);background:#fff;cursor:pointer;transition:all .15s;
   text-align:center;}
 .evfilter-btn svg{flex-shrink:0;}
@@ -1708,12 +1714,23 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
    (rien à déplier) : .wday-name/.wday-date réutilisées telles quelles
    pour le texte, recolorées ici en sombre (ces classes sont par ailleurs
    toujours en texte blanc, pensées pour un fond foncé comme .wday-head). */
+/* Retour utilisateur : "petit défaut disgracieux, les cartes d'événement
+   visibles derrière le mois en top" — un position:sticky;top:0 avec une
+   margin-top (12px avant) laisse une bande transparente AU-DESSUS de
+   l'encart une fois collé (le point d'ancrage "top:0" se mesure au bord
+   EXTÉRIEUR de la margin, pas de la boîte visible) : le contenu déjà
+   défilé restait visible par cette bande. Fond de l'encart jamais recollé
+   pile en haut tant que margin-top>0. Fix : margin-top supprimée (l'encart
+   colle sans aucune bande transparente au-dessus), l'espacement avant
+   chaque encart de mois vient maintenant du padding-bottom de
+   .ev-month-body du mois précédent (16px, contenu dans le flux normal —
+   jamais un souci pour un élément non sticky). */
 .ev-month-label{position:sticky; top:0; z-index:5;
   display:flex; justify-content:space-between; align-items:center;
-  background:#E3E3E3; border-radius:10px; margin:12px 0 8px; padding:10px 16px;}
+  background:#E3E3E3; border-radius:10px; margin:0 0 8px; padding:10px 16px;}
 .ev-month-label .wday-name{color:var(--dark);}
 .ev-month-label .wday-date{color:var(--gray); font-weight:500;}
-.ev-month-body{padding-bottom:10px;}
+.ev-month-body{padding-bottom:16px;}
 /* Repère "Aujourd'hui" dans la liste du mois en cours, même sans événement
    ce jour-là (voir renderEvList) — un simple filet avec libellé, pas une
    carte de plus à lire. */
@@ -1909,20 +1926,6 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-bar-col.yr-cur .yr-bar-sasu{background:#5A8C4A;}
 .yr-bar-col.yr-cur .yr-bar-lmnp{background:#AEBFA9;}
 .yr-chart-nodata{font-size:12px;color:var(--gray);text-align:center;padding:16px 0;}
-.yr-fiscal{display:flex;flex-direction:column;gap:8px;}
-.yr-fiscal-item{display:flex;align-items:center;gap:10px;background:#fff;border-radius:10px;
-  padding:10px 12px;border:1.5px solid var(--light);border-left-width:4px;transition:opacity .15s;}
-.yr-fiscal-item.past{opacity:.4;}
-.yr-fiscal-item.soon{background:#FFFAF5;}
-.yr-fiscal-stamp{width:40px;min-width:40px;border-radius:7px;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:5px 2px;text-align:center;align-self:stretch;}
-.yr-fiscal-day{font-size:18px;font-weight:700;color:#fff;line-height:1.1;}
-.yr-fiscal-mon{font-size:9px;color:rgba(255,255,255,.75);text-transform:uppercase;letter-spacing:.05em;}
-.yr-fiscal-body{flex:1;min-width:0;}
-.yr-fiscal-title{font-weight:600;font-size:12px;color:var(--dark);line-height:1.3;}
-.yr-fiscal-desc{font-size:10px;color:var(--gray);margin-top:2px;line-height:1.4;}
-.yr-fiscal-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;color:#fff;
-  float:right;margin-left:6px;}
 .yr-chart-legend{display:flex;gap:12px;font-size:10px;color:var(--gray);}
 .yr-legend-dot{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px;}
 .yr-regl-body{display:none;}
@@ -2460,8 +2463,14 @@ Gardez la main.</div>
     <input class="fi" id="evListSearch" placeholder="Rechercher un événement…" autocomplete="off"
       style="margin-bottom:10px" oninput="renderEvList(this.value)">
     <div class="evfilter-row">
-      <button type="button" class="evfilter-btn" id="evfilter-pro" onclick="setEvFilter('pro')">Pro</button>
-      <button type="button" class="evfilter-btn" id="evfilter-perso" onclick="setEvFilter('perso')">Perso</button>
+      <button type="button" class="evfilter-btn" id="evfilter-pro" onclick="setEvFilter('pro')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        <span>Pro</span>
+      </button>
+      <button type="button" class="evfilter-btn" id="evfilter-perso" onclick="setEvFilter('perso')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Perso</span>
+      </button>
       <button type="button" class="evfilter-btn" id="evfilter-fiscal" onclick="setEvFilter('fiscal')">
         <!-- Calendrier repris tel quel de l'icône Événements (voir .mtitle
              plus haut) avec un signe % à la place de la ligne du haut — pour
@@ -2469,14 +2478,19 @@ Gardez la main.</div>
              clairement du calendrier générique déjà affiché juste au-dessus
              dans l'en-tête de cette modale, plus représentatif d'échéances
              fiscales qu'un simple calendrier. -->
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="8.5" y1="17" x2="15.5" y2="12.5"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="16.5" r="1.3"/></svg> Fiscal
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="8.5" y1="17" x2="15.5" y2="12.5"/><circle cx="9" cy="13" r="1.3"/><circle cx="15" cy="16.5" r="1.3"/></svg>
+        <span>Fiscal</span>
       </button>
       <!-- Retour utilisateur : "en plus de pro perso et fiscal un encart
-           tout pour voir l'ensemble classé à la suite" — Pro+Perso
-           fusionnés et triés ensemble (voir catEvents dans renderEvList),
-           Fiscal reste à part (nature différente : échéances légales
-           calculées, pas des événements saisis par l'hôte). -->
-      <button type="button" class="evfilter-btn" id="evfilter-tous" onclick="setEvFilter('tous')">Tout</button>
+           tout pour voir l'ensemble classé à la suite" — toutes les
+           catégories fusionnées et triées ensemble, Fiscal compris (voir
+           catEvents dans renderEvList) : plus aucune catégorie à part
+           depuis que les échéances fiscales sont de vrais événements
+           (voir ensureFiscalEvents). -->
+      <button type="button" class="evfilter-btn" id="evfilter-tous" onclick="setEvFilter('tous')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        <span>Tout</span>
+      </button>
     </div>
     <div class="modal-scrollarea"><div id="evList"></div></div>
   </div>
@@ -2525,6 +2539,7 @@ Gardez la main.</div>
         <div class="pay-row">
           <button type="button" class="pay-chip" id="evcat-pro" onclick="setEvCategory('pro')">Professionnel</button>
           <button type="button" class="pay-chip" id="evcat-perso" onclick="setEvCategory('perso')">Personnel</button>
+          <button type="button" class="pay-chip" id="evcat-fiscal" onclick="setEvCategory('fiscal')">Fiscal</button>
         </div>
       </div>
       <div class="frow">
@@ -2971,6 +2986,11 @@ const DEFAULT_SETTINGS={
   name:'Planning',
   dinnerEnabled:true,
   breakfastEnabled:true,
+  // Retour utilisateur : "le calendrier fiscal doit devenir de vrais
+  // événements, supprimables/ajoutables comme les autres" — voir
+  // ensureFiscalEvents() : années déjà "semées" dans S.events, pour ne
+  // jamais recréer une échéance que l'hôte a supprimée.
+  fiscalSeedYears:[],
   rooms:[
     {id:'ch1',name:'Location 1',short:'L.1',color:'#7A8C65',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Location double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
     {id:'ch2',name:'Location 2',short:'L.2',color:'#7A8CB5',maxPersons:2,babyCrib:false,babyCribPrice:15,group:'struct1',description:'Location double avec salle de bain privative, literie 160×200 et vue sur le jardin.',tariffHistory:[{id:'rt0',from:'2000-01-01',prices:defaultRoomPrices(2)}]},
@@ -3404,73 +3424,54 @@ function getHolidayPseudoEvents(){
   });
   return list;
 }
-// Même principe que getHolidayPseudoEvents, pour les échéances du calendrier
-// fiscal (voir FISCAL_CALENDAR/relevantFiscalCalendar) : lecture seule,
-// jamais dans S.events, pour qu'elles apparaissent aussi dans la Grille, la
-// vue Semaine et la liste des Événements — pas seulement dans le panneau
-// dédié de la vue Année.
-function getFiscalPseudoEvents(){
+// Retour utilisateur : "le calendrier fiscal doit devenir de vrais
+// événements, traités exactement comme les autres, supprimables/
+// ajoutables comme sur les autres onglets — ne fais plus de différence."
+// Avant : échéances recalculées à la volée depuis FISCAL_CALENDAR,
+// jamais stockées, affichées en lecture seule via fiscalItemHTML/
+// buildEventsFiscalHTML (désormais supprimées). Maintenant : de vrais
+// S.events, catégorie 'fiscal' (voir evCategoryOf, déjà générique) —
+// "semés" une fois par année (année en cours + suivante) dans
+// ensureFiscalEvents(), avec un id déterministe (fiscal-{année}-{index})
+// pour ne jamais les dupliquer. S.settings.fiscalSeedYears retient les
+// années déjà semées : une échéance supprimée par l'hôte ne revient
+// jamais, même si ensureFiscalEvents() est rappelée (idempotente).
+// Jamais appelée pour un compte Personnel (voir applySharedOpsData, qui
+// ne reçoit de toute façon aucun réglage fiscal du propriétaire).
+function ensureFiscalEvents(){
+  if(currentRole==='personnel')return;
+  if(!S.settings.fiscalSeedYears)S.settings.fiscalSeedYears=[];
+  const seeded=S.settings.fiscalSeedYears;
   const y=new Date().getFullYear();
-  const list=[];
   const items=relevantFiscalCalendar();
+  let changed=false;
   [y,y+1].forEach(year=>{
+    if(seeded.includes(year))return;
     items.forEach((f,i)=>{
-      const ds=`${year}-${p(f.m)}-${p(f.d)}`;
-      list.push({id:'fiscal-'+year+'-'+i,title:f.title,startDate:ds,endDate:ds,isFiscal:true,color:f.color});
+      const id='fiscal-'+year+'-'+i;
+      if(!S.events.some(e=>e.id===id)){
+        const tag=(f.approx?' (date approx.)':'')+(f.cond?' (si applicable)':'');
+        S.events.push({id,title:f.title+tag,startDate:`${year}-${p(f.m)}-${p(f.d)}`,endDate:`${year}-${p(f.m)}-${p(f.d)}`,
+          startTime:null,endTime:null,color:f.color,guestId:null,category:'fiscal',
+          payment:null,depositAmount:0,source:'direct',ghost:false,prixNet:0,notes:f.desc,isFiscal:true,extras:{}});
+      }
     });
+    seeded.push(year);
+    changed=true;
   });
-  return list;
+  if(changed){
+    localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+    persist();
+  }
+}
+// Même principe que getHolidayPseudoEvents, pour les échéances fiscales —
+// désormais de vraies entrées S.events (voir ensureFiscalEvents), simple
+// filtre par catégorie plutôt qu'un calcul à la volée.
+function getFiscalPseudoEvents(){
+  return S.events.filter(ev=>ev.category==='fiscal');
 }
 function getFiscalName(ds){
   return getFiscalPseudoEvents().find(f=>f.startDate===ds)?.title||null;
-}
-// Carte d'une échéance fiscale (.yr-fiscal-item) — partagée entre le volet
-// "Calendrier fiscal" de la vue Année et l'onglet "Fiscal" de la liste des
-// Événements (voir renderYear/renderEvList), pour un rendu identique aux
-// deux endroits. `f` vient de relevantFiscalCalendar(), `ds` est sa date
-// pour l'année considérée, `today` sert au calcul "passé/bientôt/urgent".
-function fiscalItemHTML(f,ds,today){
-  const diff=daysBetween(today,ds);
-  const isPast=ds<today;
-  const isSoon=!isPast&&diff<=30;
-  const isUrgent=!isPast&&diff<=7;
-  let badge='';
-  if(isUrgent) badge=`<span class="yr-fiscal-badge" style="background:#C0392B">J-${diff}</span>`;
-  else if(isSoon) badge=`<span class="yr-fiscal-badge" style="background:#1D2820">J-${diff}</span>`;
-  const stampColor=isPast?'#BFBAB4':f.color;
-  const tag=(f.approx?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> ≈</span>':'')
-           +(f.cond?'<span style="font-size:9px;font-weight:400;color:var(--gray)"> si applicable</span>':'');
-  const d=new Date(ds+'T00:00:00');
-  return`<div class="yr-fiscal-item${isPast?' past':''}${isSoon?' soon':''}" style="border-left-color:${f.color}">
-    <div class="yr-fiscal-stamp" style="background:${stampColor}">
-      <div class="yr-fiscal-day">${d.getDate()}</div>
-      <div class="yr-fiscal-mon">${MON3[d.getMonth()]}</div>
-    </div>
-    <div class="yr-fiscal-body">
-      <div class="yr-fiscal-title">${badge}${f.title}${tag}</div>
-      <div class="yr-fiscal-desc">${f.desc}</div>
-    </div>
-  </div>`;
-}
-// Toutes les échéances fiscales à venir/récentes (année en cours + suivante,
-// même portée que getFiscalPseudoEvents), triées, pour le filtre "Fiscal" de
-// la liste des Événements — les voir toutes d'un coup plutôt que dispersées
-// mois par mois parmi les événements. `term` (optionnel, déjà en
-// minuscules) filtre par titre — utilisé quand ce filtre est actif pendant
-// une recherche dans la liste.
-function buildEventsFiscalHTML(term){
-  const today=todayISO();
-  const y=new Date().getFullYear();
-  const items=relevantFiscalCalendar();
-  const all=[];
-  [y,y+1].forEach(year=>{
-    items.forEach(f=>all.push({f,ds:`${year}-${p(f.m)}-${p(f.d)}`}));
-  });
-  all.sort((a,b)=>a.ds.localeCompare(b.ds));
-  const filtered=term?all.filter(x=>x.f.title.toLowerCase().includes(term)):all;
-  return filtered.length
-    ?`<div class="yr-fiscal">${filtered.map(x=>fiscalItemHTML(x.f,x.ds,today)).join('')}</div>`
-    :'<p style="text-align:center;color:var(--gray);padding:20px">Aucune échéance</p>';
 }
 
 function light(hex){
@@ -3975,6 +3976,7 @@ function applyRemoteData(d,meta){
     restoreDirectSource();
     localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
     applySettings();
+    ensureFiscalEvents();
   }
   renderGrid();
   if(S.view==='today') renderToday();
@@ -5773,15 +5775,14 @@ function openEventsModal(presetKey,presetCategory){
   openM('modalEvents');
 }
 // Changement de filtre : revient systématiquement défiler sur le mois en
-// cours (sans objet pour Fiscal, qui n'a pas de mois) — une nouvelle vue à
-// chaque changement de filtre plutôt que de garder une position qui
-// pourrait n'exister dans aucun des deux filtres.
+// cours — une nouvelle vue à chaque changement de filtre plutôt que de
+// garder une position qui pourrait n'exister dans aucun des filtres.
+// Fiscal suit désormais la même logique que les autres (vrais événements
+// groupés par mois, voir ensureFiscalEvents/getFiscalPseudoEvents).
 function setEvFilter(f){
   evFilter=f;
-  if(f!=='fiscal'){
-    const todayD=new Date(todayISO()+'T00:00:00');
-    evScrollKey=todayD.getFullYear()*12+todayD.getMonth();
-  }
+  const todayD=new Date(todayISO()+'T00:00:00');
+  evScrollKey=todayD.getFullYear()*12+todayD.getMonth();
   renderEvList(byId('evListSearch').value);
 }
 const evBadge=(ds,col)=>{
@@ -5794,8 +5795,10 @@ const evBadge=(ds,col)=>{
   </div>`;
 };
 // Carte d'un événement/jour férié (voir renderEvList) — une échéance
-// fiscale a sa propre carte dédiée (fiscalItemHTML) : elle vit dans
-// l'onglet "Fiscal", plus mélangée mois par mois avec le reste.
+// fiscale (ev.category==='fiscal', voir ensureFiscalEvents) est un vrai
+// événement comme les autres depuis le retour utilisateur "ne fais plus
+// de différence" : seul le jour férié garde sa carte à part (jamais un
+// vrai événement, purement informatif, voir getHolidayPseudoEvents).
 function evCardHTML(ev){
   const col=ev.isHoliday?'#6B6B6B':(ev.color||'#A8C5A0');
   const isSingle=ev.startDate===ev.endDate;
@@ -5808,15 +5811,6 @@ function evCardHTML(ev){
       <div class="evcard-info">
         <div class="evcard-title">${ev.title}</div>
         <div class="evcard-time">Jour férié</div>
-      </div>
-    </div>`;
-  }
-  if(ev.isFiscal){
-    return`<div class="evcard evcard-holiday">
-      ${dateHtml}
-      <div class="evcard-info">
-        <div class="evcard-title">${ev.title}</div>
-        <div class="evcard-time">Échéance fiscale</div>
       </div>
     </div>`;
   }
@@ -5839,22 +5833,13 @@ function renderEvList(term){
 
   ['pro','perso','fiscal','tous'].forEach(f=>byId('evfilter-'+f)?.classList.toggle('on',evFilter===f));
 
-  // Filtre Fiscal : toutes les échéances d'un coup (voir buildEventsFiscalHTML),
-  // pas de regroupement par mois — la recherche y filtre directement les
-  // échéances plutôt que de basculer sur une liste d'événements. À part des
-  // trois autres filtres : nature différente (échéances légales calculées),
-  // pas fusionné dans "Tout".
-  if(evFilter==='fiscal'){
-    byId('evList').innerHTML=buildEventsFiscalHTML(term);
-    return;
-  }
-
-  // Pro/Perso : uniquement les événements de la catégorie choisie (voir
-  // evCategoryOf) + les jours fériés, informatifs et donc affichés dans les
-  // trois filtres plutôt que rattachés à l'un ou l'autre. Tout : les deux
-  // catégories fusionnées (evCategoryOf ne renvoie jamais autre chose que
-  // 'pro'/'perso', donc S.events au complet) — retour utilisateur, "un
-  // encart tout pour voir l'ensemble classé à la suite".
+  // Pro/Perso/Fiscal : uniquement les événements de la catégorie choisie
+  // (voir evCategoryOf) + les jours fériés, informatifs et donc affichés
+  // dans les quatre filtres plutôt que rattachés à l'un ou l'autre. Tout :
+  // toutes les catégories fusionnées (y compris Fiscal depuis le retour
+  // utilisateur "ne fais plus de différence, dans Tout le fiscal est
+  // exclu, fais en sorte qu'il apparaisse") — retour utilisateur d'origine,
+  // "un encart tout pour voir l'ensemble classé à la suite".
   const catEvents=evFilter==='tous'?S.events:S.events.filter(ev=>evCategoryOf(ev)===evFilter);
 
   // Recherche : liste plate, tout mélangé (événements + fériés) — reste
@@ -5943,9 +5928,10 @@ function openEventEdit(id,prefillDate,prefillCategory){
   const ev=id?S.events.find(e=>e.id===id):null;
   const def=prefillDate||todayISO();
   // Pro par défaut à la création, sauf indication contraire (ex: le bouton
-  // "+ Nouvel événement" de la liste transmet le filtre Pro/Perso affiché) —
-  // et la catégorie déjà enregistrée en modification (voir evCategoryOf).
-  setEvCategory(ev?evCategoryOf(ev):(prefillCategory==='perso'?'perso':'pro'));
+  // "+ Nouvel événement" de la liste transmet le filtre Pro/Perso/Fiscal
+  // affiché, jamais 'tous' qui retombe sur Pro) — et la catégorie déjà
+  // enregistrée en modification (voir evCategoryOf).
+  setEvCategory(ev?evCategoryOf(ev):(prefillCategory==='perso'?'perso':prefillCategory==='fiscal'?'fiscal':'pro'));
   byId('evEditTitle').textContent=ev?ev.title:'Nouvel événement';
   byId('evTitle').value=ev?ev.title:'';
   byId('evStart').value=ev?ev.startDate:def;
@@ -6160,7 +6146,7 @@ function pickNewEv(){
 let evCategory='pro';
 function setEvCategory(v){
   evCategory=v;
-  ['pro','perso'].forEach(c=>byId('evcat-'+c)?.classList.toggle('on',evCategory===c));
+  ['pro','perso','fiscal'].forEach(c=>byId('evcat-'+c)?.classList.toggle('on',evCategory===c));
 }
 // evCategoryOf(ev) : catégorie d'un événement existant, 'pro' par défaut
 // pour ceux créés avant ce champ — utilisé à la fois par renderEvList (pour
@@ -7004,6 +6990,7 @@ function loadSettings(){
   if(!S.settings.taxeSejourHistory||!S.settings.taxeSejourHistory.length)S.settings.taxeSejourHistory=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.taxeSejourHistory));
   if(!S.settings.contract)S.settings.contract=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.contract));
   if(!S.settings.plan)S.settings.plan='essentiel';
+  if(!S.settings.fiscalSeedYears)S.settings.fiscalSeedYears=[];
   migrateCleaners();
   migrateStructures();
   migrateRoomFields();
@@ -11017,6 +11004,7 @@ function init(){
   loadCatalog();
   loadSettings();
   applySettings();
+  ensureFiscalEvents();
   byId('yrLabel').textContent=S.year;
   // Set year to current if we have bookings for it
   const curY=new Date().getFullYear();
