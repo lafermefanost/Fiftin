@@ -28,12 +28,12 @@ html,body{height:100%;overflow:hidden;}
 /* ─── TOKENS ─────────────────────────────────────────────── */
 :root{
   --cream:#EFEEEA; --earth:#1D2820; --green:#354B38; --green-deep:#1D2820; --dark:#2C2C2C;
-  /* Lavande : réservé à la fenêtre assistant (.wbrief), aux onglets de jour
-     des consommations d'un événement, et — depuis la refonte du code
-     couleur par catégorie — au code couleur des événements personnels
-     (voir evCategoryColor : pro en --green2, perso en --lavender, fiscal
-     en --lavender-deep) — plus aucun autre usage (voir --green2
-     ci-dessous pour tout le reste). */
+  /* Lavande : réservé à la fenêtre assistant (.wbrief) et aux onglets de
+     jour des consommations d'un événement — plus aucun autre usage (voir
+     --green2 ci-dessous pour tout le reste). Ne sert plus au code couleur
+     des événements (voir evCategoryColor) depuis le réajustement
+     pro/perso/fiscal : pro en --lavender-deep, perso en --green2, fiscal
+     en --violet. */
   --lavender:#B2BBDA; --lavender-bg:#E7E9F1;
   /* Contour de .wbrief : même teinte que --lavender, nettement plus saturé
      pour rester visible en simple contour (le fond, lui, reste --lavender-bg
@@ -45,18 +45,25 @@ html,body{height:100%;overflow:hidden;}
      (.switch-tile.hotes), pour que la couleur de "vous êtes dans Fiftin
      app" / "revenir à Séjours" soit cohérente entre les deux sites — et,
      depuis la refonte du code couleur par catégorie, le code couleur des
-     événements fiscaux (voir evCategoryColor), pour rester dans la même
-     famille lavande que les événements personnels (--lavender) tout en
-     restant visuellement distinct. */
+     événements professionnels (voir evCategoryColor : repris de l'ancien
+     code couleur du fiscal, sur demande explicite, le vert sauge libéré
+     passant alors au perso — voir --green2 et --violet ci-dessous). */
   --lavender-deep:#4E67BC;
+  /* Violet, réservé au code couleur des événements fiscaux (voir
+     evCategoryColor) — couleur fournie directement par l'utilisateur
+     (#B18CFD), distincte de la famille lavande/vert sauge utilisée pour
+     pro/perso. */
+  --violet:#B18CFD;
   /* Nouveau vert (vert sauge) : accent des volets secondaires et des petits
      éléments graphiques qui ponctuent l'appli (pictos chiffrés départs/
      arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
      Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé bancaire, jauges de
      seuils…) — le rôle que tenait le lavande avant ce recentrage. Sert
-     aussi de code couleur pour les événements professionnels (voir
+     aussi de code couleur pour les événements personnels (voir
      evCategoryColor), sur demande explicite ("le même vert sauge utilisé
-     à d'autres endroits du site") plutôt que le --green foncé d'origine.
+     à d'autres endroits du site", d'abord affecté au pro puis réaffecté
+     au perso lors du réajustement des trois couleurs) plutôt que le
+     --green foncé d'origine ou la lavande utilisée avant ce réajustement.
      Historique : #667650 (pipette) jugé trop kaki/vieillot, #628551 encore
      trop "vert gazon", #5A7C65 pas mal mais pas encore ça. Repris tel quel
      sur #8B9D86, déjà utilisé et validé ailleurs dans l'appli (2e couleur
@@ -470,10 +477,12 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Type d'événement (Pro/Perso/Fiscal, voir setEvCategory) — même couleur
    que le code couleur de la catégorie partout ailleurs (voir
    evCategoryColor) plutôt qu'un simple "actif" neutre : on apprend
-   l'association couleur↔catégorie dès qu'on la choisit ici. */
-#evcat-pro.on{background:var(--green2);color:var(--green-deep);border-color:var(--green2);}
-#evcat-perso.on{background:var(--lavender);color:var(--green-deep);border-color:var(--lavender);}
-#evcat-fiscal.on{background:var(--lavender-deep);color:#fff;border-color:var(--lavender-deep);}
+   l'association couleur↔catégorie dès qu'on la choisit ici. Texte blanc
+   sur les trois, comme partout où une couleur de catégorie s'affiche
+   (voir evBadge) — sur demande explicite. */
+#evcat-pro.on{background:var(--lavender-deep);color:#fff;border-color:var(--lavender-deep);}
+#evcat-perso.on{background:var(--green2);color:#fff;border-color:var(--green2);}
+#evcat-fiscal.on{background:var(--violet);color:#fff;border-color:var(--violet);}
 .src-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
 .src-chip{padding:5px 12px;border:1.5px solid var(--light);border-radius:20px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
@@ -4564,9 +4573,8 @@ function renderGrid(){
     // des jours fériés — pour la distinguer au premier coup d'œil.
     if(dayEvs.length){
       const ec=evCategoryColor(dayEvs[0]);
-      const lc=light(ec);
       const evTitles=dayEvs.map(ev=>ev.title).join(', ');
-      dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:${lc?'#2C2C2C':'#fff'}" title="${evTitles}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:#fff" title="${evTitles}">${date.getDate()}</div>`;
     } else if(holidayName){
       dayTd.innerHTML=`<div class="holiday-daynum" title="${holidayName}">${date.getDate()}</div>`;
     } else if(fiscalEv){
@@ -4698,8 +4706,7 @@ function renderGrid(){
     // la pastille du numéro de jour, qui ouvre déjà openDayEvent).
     let evTdHtml=evs.length?evs.map(ev=>{
       const col=evCategoryColor(ev);
-      const lc=light(col);
-      return`<span class="etag" style="background:${col};color:${lc?'#2C2C2C':'#FFF'}" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
+      return`<span class="etag" style="background:${col};color:#FFF" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
     }).join(' '):(holidayName?`<span class="holiday-tag">${holidayName}</span>`:'');
     evTd.innerHTML=evTdHtml;
     tr.appendChild(evTd);
@@ -5991,10 +5998,14 @@ function setEvFilter(f){
   evScrollKey=todayD.getFullYear()*12+todayD.getMonth();
   renderEvList(byId('evListSearch').value);
 }
+// Texte toujours blanc sur demande explicite ("toujours typo blanche sur
+// carte de couleur") — plus de calcul via light(col) ici : seules les
+// couleurs de catégorie (voir evCategoryColor) ou le gris des jours
+// fériés alimentent ce badge, jamais une couleur arbitraire assez claire
+// pour vraiment poser un problème de lisibilité en blanc.
 const evBadge=(ds,col)=>{
   const d=new Date(ds+'T00:00:00');
-  const lc=light(col);
-  return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+  return`<div class="evdate-badge" style="background:${col};color:#fff">
     <div class="evdate-dow">${DOW[d.getDay()]}</div>
     <div class="evdate-day">${d.getDate()}</div>
     <div class="evdate-mon">${MON3[d.getMonth()]}</div>
@@ -6362,15 +6373,16 @@ const evCategoryOf=ev=>ev.category||'pro';
 // Couleur d'un événement dérivée uniquement de sa catégorie — remplace
 // l'ancien choix de couleur libre par événement (retiré du formulaire,
 // retour utilisateur : "je n'ai pas du tout besoin d'un code couleur par
-// événement, j'ai besoin d'un code couleur par type"). Mêmes teintes que
-// --green2/--lavender/--lavender-deep (voir tokens en tête de fichier) en
-// hex brut plutôt qu'en var() : ces couleurs alimentent aussi light(hex)
-// pour choisir un texte clair/sombre lisible par-dessus, qui a besoin
-// d'un vrai hex à décomposer, pas d'une chaîne CSS var(). Pro en vert
-// sauge (--green2), pas le vert foncé d'origine (--green) — retour
-// utilisateur : même vert sauge que le reste de l'appli. À garder en
-// synchronisation avec les tokens si leurs valeurs changent.
-const EV_CATEGORY_COLOR={pro:'#8B9D86',perso:'#B2BBDA',fiscal:'#4E67BC'};
+// événement, j'ai besoin d'un code couleur par type"). Hex brut plutôt
+// qu'en var() pour rester une simple table de correspondance — à garder
+// en synchronisation avec les tokens (voir tête de fichier) si leurs
+// valeurs changent. Texte toujours blanc par-dessus (voir evBadge/.etag/
+// .ev-circle), plus de calcul via light(hex) : retour utilisateur
+// explicite, "toujours typo blanche sur carte de couleur". Réajusté une
+// fois sur demande explicite : pro en --lavender-deep (repris de l'ancien
+// fiscal), perso en --green2/vert sauge (repris de l'ancien pro), fiscal
+// en --violet (couleur fournie directement par l'utilisateur).
+const EV_CATEGORY_COLOR={pro:'#4E67BC',perso:'#8B9D86',fiscal:'#B18CFD'};
 function evCategoryColor(ev){
   return EV_CATEGORY_COLOR[evCategoryOf(ev)]||EV_CATEGORY_COLOR.pro;
 }
@@ -9366,10 +9378,11 @@ function renderWeek(){
   // Volet Événements collectif pour toute la semaine (même design que la vue
   // Jour) — un seul volet listant tous les événements qui chevauchent la
   // semaine, plutôt qu'un bloc répété dans chaque jour.
+  // Texte toujours blanc, voir evBadge (même raison, même garantie : gris
+  // jour férié ou couleur de catégorie uniquement).
   const evDayBadge=(dds,col)=>{
     const dd=new Date(dds+'T00:00:00');
-    const lc=light(col);
-    return`<div class="evdate-badge" style="background:${col};color:${lc?'#2C2C2C':'#fff'}">
+    return`<div class="evdate-badge" style="background:${col};color:#fff">
       <div class="evdate-dow">${DOW[dd.getDay()]}</div>
       <div class="evdate-day">${dd.getDate()}</div>
       <div class="evdate-mon">${MON3[dd.getMonth()]}</div>
