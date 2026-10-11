@@ -54,11 +54,14 @@ html,body{height:100%;overflow:hidden;}
      (#B18CFD), distincte de la famille lavande/vert sauge utilisée pour
      pro/perso. */
   --violet:#B18CFD;
-  /* Nouveau vert (vert sauge) : accent des volets secondaires et des petits
-     éléments graphiques qui ponctuent l'appli (pictos chiffrés départs/
-     arrivées, bandeaux Ménage/Table d'hôtes/Extras du jour, pilules
-     Entrée/Plat/Dessert et Ménage/Ajout manuel/Relevé bancaire, jauges de
-     seuils…) — le rôle que tenait le lavande avant ce recentrage. Sert
+  /* Nouveau vert (vert sauge) : accent de petits éléments graphiques qui
+     ponctuent l'appli (pilules Entrée/Plat/Dessert et Ménage/Ajout
+     manuel/Relevé bancaire, jauges de seuils…) — le rôle que tenait le
+     lavande avant ce recentrage. N'habille plus les bandeaux "a des
+     données" (Ménage/Table d'hôtes/Extras du jour, pictos chiffrés
+     départs/arrivées) ni les événements, repassés en --green (vert
+     principal) sur demande explicite ("je ne veux plus de vert sauge
+     ici") — voir .tsec-hd.has-items/.dep-arr-num.has-val. Sert
      aussi de code couleur pour les événements personnels (voir
      evCategoryColor), sur demande explicite ("le même vert sauge utilisé
      à d'autres endroits du site", d'abord affecté au pro puis réaffecté
@@ -736,23 +739,17 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    disparaissait quasiment) — fond repassé en --gray ("gris moyen", tel que
    décrit), puis retour utilisateur ("un gris plus léger pour les encarts
    qui n'ont pas de données") : #949494 plutôt que --gray (#6B6B6B),
-   contraste blanc ~3:1, du même ordre que .tsec-hd.has-items (--green2,
-   ~2.9:1, déjà accepté ci-dessous) — assez clair pour alléger le bandeau
-   sans retomber sur l'ancien --light illisible. */
+   contraste blanc ~3:1 — assez clair pour alléger le bandeau sans
+   retomber sur l'ancien --light illisible (le bandeau "a des données"
+   juste en dessous est en --green, contraste largement supérieur). */
 .tsec-hd{background:#949494;color:#fff;}
-/* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire).
-   Texte blanc sur demande explicite (contraste réel ~2.9:1 sur ce fond
-   clair --green2, sous le seuil AA pour du texte de cette taille — à
-   surveiller si la lisibilité pose problème en usage réel). */
-.tsec-hd.has-items{background:var(--green2);color:#fff;}
-/* "Événements du mois"/"de la semaine" : vert foncé (--green), celui des
-   encarts principaux (.wsm-total, .mstat-card…), pas le vert sauge des
-   autres bandeaux secondaires ci-dessus — sur demande explicite. Avait
-   été mis en lavande lors de la refonte du calendrier fiscal puis repassé
-   en vert sauge (comme les autres volets) ; la lavande sert désormais de
-   code couleur par catégorie d'événement (voir evCategoryColor), donc
-   plus de raison de la reprendre ici. */
-.tsec-panel.ev>.tsec-hd.has-items{background:var(--green);color:#fff;}
+/* Ménage/Table d'hôtes/Extras du jour/Événements : vert principal
+   (--green), celui des encarts principaux (.wsm-total, .mstat-card…) —
+   sur demande explicite ("je ne veux plus de vert sauge ici"). Essayé en
+   vert sauge (--green2) un temps (volet "secondaire" plus doux), mais
+   plus de distinction secondaire/principal voulue désormais : un seul
+   vert dans toute l'appli pour "il y a des données ici". Texte blanc. */
+.tsec-hd.has-items{background:var(--green);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
 .tsec-count{margin-left:auto;background:#fff;color:var(--dark)!important;border-radius:12px;padding:4px 13px;font-size:15px;font-weight:700;}
@@ -1012,7 +1009,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
-.dep-arr-num.has-val{background:var(--green2);color:#fff;}
+.dep-arr-num.has-val{background:var(--green);color:#fff;}
 .dep-arr-col .day-chip{margin-bottom:6px;}
 .day-chip-main{flex:1;min-width:0;display:flex;flex-direction:column;}
 /* Total du séjour sous chaque chip de départ (voir wMiniChip/showTotal),
@@ -1083,8 +1080,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-align:left;
   color:var(--dark);background:#F7F5F1;cursor:pointer;transition:all .15s;}
 .cleaner-btn:hover{background:#EFEBE3;}
-/* Nouveau vert à l'activation, comme les autres indicateurs "rempli" de
-   l'appli (.dep-arr-num.has-val, .tsec-hd.has-items) — plus de lavande ici. */
+/* Vert sauge à l'activation (sélection d'une personne, pas un indicateur
+   "a des données" comme .dep-arr-num.has-val/.tsec-hd.has-items, passés
+   au vert principal — pas concerné par ce changement). */
 .cleaner-on{background:var(--green2)!important;color:var(--green-deep)!important;}
 .extras-day-tab{padding:5px 13px;border:1.5px solid var(--light);border-radius:16px;
   font-family:'Jost',sans-serif;font-size:12px;font-weight:500;
