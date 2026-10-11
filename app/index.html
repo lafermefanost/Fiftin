@@ -743,13 +743,16 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* Ménage/Table d'hôtes/Extras du jour : nouveau vert (volet secondaire).
    Texte blanc sur demande explicite (contraste réel ~2.9:1 sur ce fond
    clair --green2, sous le seuil AA pour du texte de cette taille — à
-   surveiller si la lisibilité pose problème en usage réel). "Événements
-   du mois"/"de la semaine" repassé au même vert sur demande explicite
-   ("comme les encarts") — avait été mis en lavande lors de la refonte du
-   calendrier fiscal, mais la lavande sert maintenant de code couleur par
-   catégorie d'événement (voir evCategoryColor) : plus de raison de
-   distinguer ce bandeau des autres volets secondaires. */
+   surveiller si la lisibilité pose problème en usage réel). */
 .tsec-hd.has-items{background:var(--green2);color:#fff;}
+/* "Événements du mois"/"de la semaine" : vert foncé (--green), celui des
+   encarts principaux (.wsm-total, .mstat-card…), pas le vert sauge des
+   autres bandeaux secondaires ci-dessus — sur demande explicite. Avait
+   été mis en lavande lors de la refonte du calendrier fiscal puis repassé
+   en vert sauge (comme les autres volets) ; la lavande sert désormais de
+   code couleur par catégorie d'événement (voir evCategoryColor), donc
+   plus de raison de la reprendre ici. */
+.tsec-panel.ev>.tsec-hd.has-items{background:var(--green);color:#fff;}
 /* Même cartouche que .dep-arr-num (Départs/Arrivées, vue Semaine) : coins
    arrondis 12px, mêmes proportions — plus un petit badge pilule. */
 .tsec-count{margin-left:auto;background:#fff;color:var(--dark)!important;border-radius:12px;padding:4px 13px;font-size:15px;font-weight:700;}
@@ -913,19 +916,20 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    n'est pas le jour sélectionné (même idée que .rv-day-today, un repère
    qui ne se confond pas avec la sélection). margin-top explicite ici
    (exception à la règle "pas de marge en plus du gap" de .week-inner,
-   voir .week-inner>.tsec-panel plus bas) : retour utilisateur, le seul
-   gap de 12px entre le volet Événements juste au-dessus et ce menu
-   restait "trop collé au bloc du haut". */
-.wpick-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0 12px;}
-/* Retour utilisateur : "enlève le contour et sois plutôt sur une ombre qui
-   détache du fond comme les autres cartes" — même recette que .day-chip/
-   .tcard (fond blanc + box-shadow, jamais de border) ; "aujourd'hui"
-   (ex-border-color verte) passe à un anneau vert en inset, superposé à la
-   même ombre, plutôt qu'un vrai contour. */
-.wpick-cell{background:#fff;border-radius:8px;box-shadow:var(--shadow);
+   voir .week-inner>.tsec-panel plus bas) : retour utilisateur, le menu
+   doit rester un peu écarté du volet Événements juste au-dessus, mais se
+   rapprocher de la carte du jour dépliée juste en dessous — marge du bas
+   retirée (le seul gap de 8px de .week-inner suffit), marge du haut
+   légèrement augmentée plutôt que supprimée. */
+.wpick-row{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:12px 0 0;}
+/* Retour utilisateur : plus d'ombre derrière les cases — fond blanc plat,
+   sans détachement du fond contrairement aux autres cartes (.day-chip/
+   .tcard). "Aujourd'hui" garde son anneau vert en inset, seul, sans ombre
+   superposée. */
+.wpick-cell{background:#fff;border-radius:8px;
   padding:6px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  cursor:pointer;transition:transform .12s,box-shadow .12s;}
-.wpick-cell.wpick-today{box-shadow:var(--shadow),inset 0 0 0 1.5px var(--green);}
+  cursor:pointer;transition:transform .12s;}
+.wpick-cell.wpick-today{box-shadow:inset 0 0 0 1.5px var(--green);}
 .wpick-dow{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;
   opacity:.8;line-height:1;margin-bottom:2px;color:var(--gray);}
 .wpick-num{font-family:'Jost',sans-serif;font-size:19px;font-weight:700;line-height:1.1;color:var(--dark);}
