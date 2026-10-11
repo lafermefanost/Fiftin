@@ -938,35 +938,36 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    juste le picto ; cliqué, il se déplie en bulle pleine largeur avec le
    texte. Clic = bascule (ouvre si replié, referme si déplié). S'ouvre
    seul une fois par jour et par vue, se referme seul après 10s (voir
-   briefArm/toggleBrief) — reste cliquable ensuite pour rouvrir. Seules
-   width/padding/border-radius/gap sont transitionnées (jamais height,
-   qu'on ne peut pas animer depuis/vers "auto" en CSS) : la hauteur suit
-   silencieusement ces valeurs à chaque image, ce qui donne un
-   redimensionnement perçu comme fluide sans à-coup ; .wbrief-wrap centre
-   l'élément dans sa ligne, donc le rétrécissement/agrandissement se fait
-   bien depuis le centre et non depuis un bord. Courbe d'easing en
-   décélération pure (sans rebond/ressort) pour un mouvement fluide plutôt
-   que mécanique. */
+   briefArm/toggleBrief) — reste cliquable ensuite pour rouvrir.
+   width/padding/border-radius/gap animent en CSS ; height anime aussi
+   (ajouté à la liste ci-dessous) mais sa valeur de départ/arrivée est
+   pilotée en JS (voir briefAnimateHeight, technique FLIP : mesure la
+   vraie hauteur avant/après, CSS ne sachant pas transitionner vers/depuis
+   "height:auto") plutôt que de laisser la hauteur suivre le reflow du
+   texte — qui donnait un mouvement saccadé (plusieurs lignes qui
+   apparaissent d'un coup à la fin de l'ouverture, ou une explosion de
+   lignes pendant que la largeur rétrécit en fermeture). .wbrief-wrap
+   centre l'élément dans sa ligne, donc le rétrécissement/agrandissement
+   se fait bien depuis le centre et non depuis un bord. Courbe d'easing en
+   décélération pure (sans rebond/ressort), la même pour toutes les
+   propriétés animées pour que tout bouge au même rythme. */
 .wbrief-wrap{display:flex;justify-content:center;width:100%;}
 .wbrief{display:flex;align-items:center;gap:10px;background:var(--lavender-bg);
   border:1.5px solid var(--lavender-strong);
   color:var(--earth);border-radius:12px;padding:14px 16px;
   font-size:13px;line-height:1.45;cursor:pointer;width:100%;box-sizing:border-box;
   overflow:hidden;
-  transition:width .5s cubic-bezier(.16,1,.3,1),padding .5s cubic-bezier(.16,1,.3,1),
-    border-radius .5s cubic-bezier(.16,1,.3,1),gap .5s cubic-bezier(.16,1,.3,1);}
+  transition:width .5s cubic-bezier(.16,1,.3,1),height .5s cubic-bezier(.16,1,.3,1),
+    padding .5s cubic-bezier(.16,1,.3,1),border-radius .5s cubic-bezier(.16,1,.3,1),
+    gap .5s cubic-bezier(.16,1,.3,1);}
 .wbrief svg{flex-shrink:0;color:var(--green);}
-/* white-space:nowrap par défaut (retiré seulement une fois .settled, voir
-   briefOpenEl) : le texte ne doit jamais passer en retour à la ligne
-   libre tant que la largeur anime encore, sinon il se retrouve forcé sur
-   des dizaines de lignes pendant la transition (largeur déjà réduite mais
-   texte encore considéré "normal") — observé en test, corrigé ainsi
-   plutôt qu'en acceptant le flash visuel. */
-.wbrief-text{display:inline-block;white-space:nowrap;max-width:600px;opacity:1;
+.wbrief-text{display:inline-block;max-width:600px;opacity:1;
   transition:opacity .3s ease .15s,max-width .5s cubic-bezier(.16,1,.3,1);}
-.wbrief.settled .wbrief-text{white-space:normal;}
-.wbrief.collapsed{width:36px;padding:10px;border-radius:50%;
-  justify-content:center;gap:0;line-height:1;}
+/* width ET height fixes et identiques (pas juste un padding symétrique) :
+   un rond vraiment rond, pas une ellipse, quelle que soit la hauteur de
+   ligne du texte juste avant le repli. */
+.wbrief.collapsed{width:36px;height:36px;padding:0;border-radius:50%;
+  justify-content:center;align-items:center;gap:0;}
 .wbrief.collapsed .wbrief-text{opacity:0;max-width:0;
   transition:opacity .15s ease,max-width .4s cubic-bezier(.16,1,.3,1) .05s;}
 /* .tsec-panel a son propre margin-bottom (12px, pour les cas où il n'est
@@ -3002,45 +3003,55 @@ function briefMarkSeenToday(viewKey){
 // pour une vue donnée — appelé par chaque render*() à la place de
 // l'ancien <div class="wbrief"> fixe. Retourne '' si pas de message (ex.
 // historique trop court), comme avant.
-// L'ouverture automatique au premier rendu n'anime rien (la bulle naît
-// déjà dépliée) : .settled peut donc être posé tout de suite, contrairement
-// à une ouverture manuelle où .settled n'est ajouté qu'à la fin réelle de
-// la transition de largeur (voir briefOpenEl).
 function briefHTML(viewKey,msgHTML){
   if(!msgHTML)return'';
   const autoOpen=!briefSeenToday(viewKey);
   if(autoOpen)briefMarkSeenToday(viewKey);
   return`<div class="wbrief-wrap">
-    <div class="wbrief${autoOpen?' settled':' collapsed'}" id="wbrief-${viewKey}" onclick="toggleBrief('${viewKey}')" role="button" tabindex="0" title="Astuce du jour" aria-label="Astuce du jour">${BRIEF_ICON}<span class="wbrief-text">${msgHTML}</span></div>
+    <div class="wbrief${autoOpen?'':' collapsed'}" id="wbrief-${viewKey}" onclick="toggleBrief('${viewKey}')" role="button" tabindex="0" title="Astuce du jour" aria-label="Astuce du jour">${BRIEF_ICON}<span class="wbrief-text">${msgHTML}</span></div>
   </div>`;
 }
-// Replie la bulle — retire .settled immédiatement (sinon le texte reste en
-// "white-space:normal" pendant que la largeur rétrécit, et se retrouve
-// forcé sur des dizaines de lignes avant que max-width ne le masque).
-function briefCollapseEl(el){
-  el.classList.remove('settled');
-  el.classList.add('collapsed');
-}
-// Déplie la bulle — .settled (qui autorise le texte à revenir à la ligne
-// normalement) n'est posé qu'au vrai terme de la transition de largeur
-// (transitionend sur 'width'), jamais au clic lui-même : le poser trop tôt
-// reproduirait le même bug que ci-dessus mais à l'ouverture (texte qui
-// essaie de tenir sur toute sa largeur finale alors que la bulle est
-// encore étroite). Le garde `!collapsed` évite qu'un second clic rapide
-// (fermeture avant la fin de l'ouverture) ne pose .settled après coup sur
-// une bulle entre-temps repliée.
-function briefOpenEl(el,viewKey){
-  el.classList.remove('collapsed');
-  // Pas {once:true} : transitionend bubble aussi depuis .wbrief-text (son
-  // opacity transitionne en premier) — un {once:true} sur l'élément
-  // consommerait l'écouteur sur cet événement-enfant avant que le vrai
-  // transitionend 'width' de .wbrief n'arrive. Désabonnement manuel
-  // seulement sur le bon événement.
+// Anime la hauteur en plus de la largeur/du padding (déjà transitionnés en
+// CSS) : impossible de transitionner en CSS vers/depuis "height:auto", et
+// laisser la hauteur suivre le reflow naturel du texte donne un mouvement
+// saccadé (plusieurs lignes qui apparaissent d'un coup une fois la largeur
+// finale atteinte, ou à l'inverse une explosion de lignes pendant que la
+// largeur est encore étroite en fermeture). Technique FLIP : on mesure la
+// vraie hauteur avant et après le changement d'état, puis on la fait
+// transitionner explicitement entre ces deux valeurs — comme ça, hauteur
+// et largeur avancent au même rythme, à chaque image.
+// La hauteur cible est mesurée sur un CLONE détaché, jamais sur l'élément
+// réel : avec box-sizing:border-box + overflow:hidden + padding + flex
+// combinés à une transition CSS sur height (exactement notre cas),
+// Chromium renvoie une valeur obsolète (figée sur l'ancienne hauteur) si
+// on relit la géométrie du vrai élément juste après avoir basculé sa
+// classe, même après un reflow forcé — bug constaté en test. Le clone,
+// lui, n'a jamais été rendu avec une transition en cours, donc sa mesure
+// est fiable.
+function briefAnimateHeight(el,collapsing){
+  const startH=el.getBoundingClientRect().height;
+  const clone=el.cloneNode(true);
+  clone.removeAttribute('id');
+  clone.classList.toggle('collapsed',collapsing);
+  clone.style.cssText+=';position:absolute;visibility:hidden;top:-9999px;left:-9999px;pointer-events:none;transition:none;';
+  document.body.appendChild(clone);
+  const endH=clone.getBoundingClientRect().height;
+  document.body.removeChild(clone);
+  el.style.height=startH+'px';
+  void el.offsetHeight; // commit la hauteur de départ avant de changer la classe
+  el.classList.toggle('collapsed',collapsing);
+  el.style.height=endH+'px';
   el.addEventListener('transitionend',function onEnd(e){
-    if(e.target!==el||e.propertyName!=='width')return;
+    if(e.target!==el||e.propertyName!=='height')return;
     el.removeEventListener('transitionend',onEnd);
-    if(!el.classList.contains('collapsed'))el.classList.add('settled');
+    el.style.height=''; // revient à "auto" au repos (contenu dynamique/redimensionnement)
   });
+}
+function briefCollapseEl(el){
+  briefAnimateHeight(el,true);
+}
+function briefOpenEl(el,viewKey){
+  briefAnimateHeight(el,false);
   briefArm(viewKey);
 }
 // Programme/reprogramme la fermeture auto 10s après une ouverture (auto ou
