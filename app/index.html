@@ -1746,10 +1746,16 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   text-align:center;}
 .evfilter-btn svg{flex-shrink:0;}
 .evfilter-btn:hover{border-color:#aaa;color:var(--dark);}
-/* Vert du header (--green, comme .mhead) plutôt que --green2/lavande
-   (retour utilisateur : "fais plutôt couleur vert du header plutôt que le
-   vert sauge") — texte clair assorti, même --cream que .mhead. */
-.evfilter-btn.on{background:var(--green);color:var(--cream);border-color:var(--green);}
+/* Chaque onglet à l'actif reprend la couleur de ses propres cartes
+   d'événement (voir evCategoryColor/EV_CATEGORY_COLOR) — retour
+   utilisateur : "pour être cohérent". "Tout" seul reste au vert
+   principal de l'appli (--green, comme .mhead), n'étant rattaché à
+   aucune catégorie en particulier. Texte clair, --cream (comme .mhead)
+   sur "Tout", blanc sur les trois autres (même choix que les cartes). */
+#evfilter-pro.on{background:var(--lavender-deep);color:#fff;border-color:var(--lavender-deep);}
+#evfilter-perso.on{background:var(--green2);color:#fff;border-color:var(--green2);}
+#evfilter-fiscal.on{background:var(--violet);color:#fff;border-color:var(--violet);}
+#evfilter-tous.on{background:var(--green);color:var(--cream);border-color:var(--green);}
 /* Tri Clients (voir renderGList/setGSort) : choix binaire alphabétique/
    nombre de séjours, même recette que .evfilter-btn (pilule, vert plein
    à l'actif) mais 2 pilules pleine largeur plutôt que 4 carrés — pas
