@@ -38,6 +38,17 @@ const Stripe = require("stripe");
 initializeApp();
 const db = getFirestore();
 
+/* Région des déclencheurs Firestore (onDocumentWritten) : europe-west1,
+ * celle où ils tournent déjà en production — un déclencheur Firestore
+ * doit être proche de l'emplacement de la base. Sans cette option, le
+ * code les déclarait en us-central1 (région par défaut) : un déploiement
+ * aurait voulu les recréer là-bas et supprimer ceux d'europe-west1
+ * (premier déploiement automatique, refusé pour cette raison). Les
+ * fonctions appelées par l'app (onCall/onRequest : Stripe, iCal) restent
+ * dans la région par défaut, us-central1, celle qu'utilise
+ * firebase.functions() côté client. */
+const FIRESTORE_TRIGGER_REGION = "europe-west1";
+
 const STRIPE_SECRET_KEY = defineSecret("STRIPE_SECRET_KEY");
 const STRIPE_WEBHOOK_SECRET = defineSecret("STRIPE_WEBHOOK_SECRET");
 function stripeClient() {
@@ -126,7 +137,7 @@ function listingIndexThumb(listing) {
   return null;
 }
 
-exports.syncPublicListingIndex = onDocumentWritten("listings/{listingId}", async (event) => {
+exports.syncPublicListingIndex = onDocumentWritten({document: "listings/{listingId}", region: FIRESTORE_TRIGGER_REGION}, async (event) => {
   const listingId = event.params.listingId;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   const indexRef = db.collection("listingIndex").doc(listingId);
@@ -179,7 +190,7 @@ function writePublicAvail(listingId, unitId, ranges) {
  * moins une chambre liée (unit.linkedRoomId) et on republie, pour
  * CHACUNE, uniquement les dates de LA chambre app/ à laquelle elle est
  * liée — jamais les réservations des autres chambres du compte. */
-exports.syncPublicAvailFromAccount = onDocumentWritten("accounts/{uid}", async (event) => {
+exports.syncPublicAvailFromAccount = onDocumentWritten({document: "accounts/{uid}", region: FIRESTORE_TRIGGER_REGION}, async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   await republishAccountAvail(uid, (after && after.bookings) || []);
@@ -218,7 +229,7 @@ async function republishAccountAvail(uid, bookings) {
  * traiter que le document modifié, pour rester correct même après une
  * suppression (le document qui vient de disparaître ne doit plus compter). */
 exports.syncPublicAvailFromListingBookings = onDocumentWritten(
-  "listings/{listingId}/bookings/{bookingId}",
+  {document: "listings/{listingId}/bookings/{bookingId}", region: FIRESTORE_TRIGGER_REGION},
   async (event) => {
     const listingId = event.params.listingId;
     const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
@@ -252,7 +263,7 @@ exports.syncPublicAvailFromListingBookings = onDocumentWritten(
  * reçu (création/mise à jour de statut/suppression) suffit à lui seul à
  * savoir de combien bouger chaque compteur. */
 exports.syncListingContactStats = onDocumentWritten(
-  "contactLog/{uid}/entries/{entryId}",
+  {document: "contactLog/{uid}/entries/{entryId}", region: FIRESTORE_TRIGGER_REGION},
   async (event) => {
     const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
     const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
@@ -551,7 +562,7 @@ exports.stripeWebhook = onRequest({secrets: [STRIPE_SECRET_KEY, STRIPE_WEBHOOK_S
  * write) mais s'arrête aussitôt grâce au test "déjà correct" ci-dessous —
  * sans lui, boucle infinie. Ne coûte rien pour tous les autres comptes
  * (sort dès que l'email ne correspond pas). */
-exports.enforceFreeProAccounts = onDocumentWritten("accounts/{uid}", async (event) => {
+exports.enforceFreeProAccounts = onDocumentWritten({document: "accounts/{uid}", region: FIRESTORE_TRIGGER_REGION}, async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
   if (!after) return;
