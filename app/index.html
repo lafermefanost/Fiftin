@@ -238,6 +238,12 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   font-size:12px;font-weight:500;cursor:pointer;}
 .tbtn-today{background:var(--green);color:var(--white);margin-left:auto;}
 .tbtn-add{background:var(--yellow);color:var(--green-deep);}
+.tbtn-ical{background:#F7E9D7;color:#9A6420;}
+.ical-alert{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--light);}
+.ical-alert:first-child{border-top:none;padding-top:0;}
+.ical-alert-txt{font-size:13px;line-height:1.45;color:var(--dark);}
+.ical-alert-acts{display:flex;gap:8px;flex-wrap:wrap;}
+.ical-alert-acts button{padding:6px 12px;font-size:12px;width:auto;}
 .vtabs{display:flex;gap:4px;}
 .vtab{padding:4px 12px;border:1px solid var(--light);background:var(--white);
   border-radius:20px;font-family:'Jost',sans-serif;font-size:11px;cursor:pointer;color:var(--gray);
@@ -2137,6 +2143,7 @@ Gardez la main.</div>
   </div>
   <button class="tbtn tbtn-today" onclick="goToday()">Aujourd'hui</button>
   <button class="tbtn tbtn-add" id="addResaBtn" onclick="openAddModal()">+ Résa</button>
+  <button class="tbtn tbtn-ical" id="icalAlertBtn" onclick="openIcalAlerts()" style="display:none"></button>
 </div>
 
 <!-- ─── GRID VIEW ─────────────────────────────────────────────── -->
@@ -2200,6 +2207,18 @@ Gardez la main.</div>
 
 <!-- ─── TOOLTIP ─────────────────────────────────────────────── -->
 <div id="tooltip"></div>
+
+<!-- ─── CALENDRIERS AIRBNB / BOOKING : points à vérifier ─────────── -->
+<div class="overlay" id="modalIcal" style="display:none" onclick="ovClose(event,'modalIcal')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle">Calendriers Airbnb / Booking</div>
+      <button class="mclose" onclick="closeM('modalIcal')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:12px">Rien n'est modifié sans votre accord : chaque point ci-dessous attend votre choix.</div>
+    <div id="icalAlertList"></div>
+  </div>
+</div>
 
 <!-- ─── BACKUP REMINDER ───────────────────────────────────────── -->
 <div id="backupReminder">
@@ -4179,6 +4198,10 @@ function applyRemoteData(d,meta){
   // Repoussé une fois tout le reste (guests/events/settings…) bien réappliqué,
   // pour ne jamais envoyer un état partiellement à jour vers Firebase.
   if(bookingsFixed)pushToFirebase();
+  // Calendriers Airbnb/Booking : seulement sur des données venues du serveur
+  // (jamais sur le cache local, qui peut être en retard), au plus toutes
+  // les 10 min — voir maybeRunIcalImport().
+  if(!(meta&&meta.fromCache))setTimeout(()=>maybeRunIcalImport(false),0);
 }
 
 // Version restreinte d'applyRemoteData() pour un compte Personnel : reçoit
@@ -4428,6 +4451,293 @@ function pushSharedOpsMirror(){
     catalog:S.catalog, // juste la carte des extras (nom/prix/emoji) — pas une donnée comptable, le staff doit pouvoir voir le détail des repas/consos d'une fiche
     updated:new Date().toISOString()
   }).catch(err=>console.error('[sync] échec miroir équipe',err));
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CALENDRIERS AIRBNB / BOOKING (iCal)
+// ═══════════════════════════════════════════════════════════════
+// Voir README « Calendriers Airbnb / Booking (iCal) » et functions/ical.js.
+// Le serveur télécharge les flux (icalGetImports) mais n'écrit jamais dans
+// le compte : c'est ici, et seulement ici, que les séjours importés
+// deviennent des réservations — même chemin d'écriture que tout le reste
+// (persist/pushToFirebase), donc aucune écriture concurrente possible.
+// Règles de prudence, voulues dès le départ :
+//  - une réservation existante n'est JAMAIS modifiée ni supprimée
+//    automatiquement : dates changées ou séjour disparu du flux (annulé ?)
+//    deviennent des alertes, appliquées seulement sur confirmation ;
+//  - un séjour qui chevauche une réservation déjà présente sur la même
+//    location n'est jamais ajouté (pas de doublon avec une saisie manuelle,
+//    ni avec le reflet de notre propre export dans Airbnb/Booking) ;
+//  - inerte tant qu'aucune location n'a de lien d'import, et pour un compte
+//    Personnel ; une erreur ici ne bloque jamais la grille (try/catch).
+const ICAL_PLATFORMS={
+  airbnb:{label:'Airbnb',color:'#F1948A'},
+  booking:{label:'Booking',color:'#9FA8DA'}
+};
+let icalLastRun=0,icalBusy=false,icalFeedsCache=[],icalAlerts=[];
+
+function icalRoomsWithImports(){
+  return (S.settings&&S.settings.rooms||[]).filter(r=>r.icalImports&&(r.icalImports.airbnb||r.icalImports.booking));
+}
+function icalCall(name,data){
+  return firebase.functions().httpsCallable(name)(data||{}).then(r=>r.data);
+}
+function icalAvailable(){
+  return currentRole!=='personnel'&&!!db&&!!currentUid&&typeof firebase!=='undefined'&&!!firebase.functions;
+}
+function maybeRunIcalImport(force){
+  if(!icalAvailable())return;
+  if(!icalRoomsWithImports().length){icalAlerts=[];renderIcalAlertBtn();return;}
+  if(icalBusy)return;
+  if(!force&&Date.now()-icalLastRun<10*60*1000)return;
+  icalBusy=true;icalLastRun=Date.now();
+  if(force)setIcalSyncMsg('Synchronisation…');
+  icalCall('icalGetImports',{refresh:!!force}).then(res=>{
+    icalFeedsCache=(res&&res.feeds)||[];
+    let changed=false;
+    try{changed=mergeIcalFeeds(icalFeedsCache);}
+    catch(e){console.error('[ical] intégration impossible',e);icalAlerts=[{type:'error',msg:'Intégration des calendriers impossible : '+(e&&e.message||e)}];}
+    if(changed){
+      persist();renderGrid();
+      if(S.view==='today')renderToday();
+      if(S.view==='week')renderWeek();
+      if(S.view==='month')renderMonth();
+    }
+    renderIcalAlertBtn();
+    if(force)setIcalSyncMsg('Synchronisé à '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}));
+    if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
+  }).catch(e=>{
+    console.warn('[ical] import indisponible',e);
+    if(force)setIcalSyncMsg('Synchronisation impossible : '+((e&&e.message)||e));
+  }).finally(()=>{icalBusy=false;});
+}
+function setIcalSyncMsg(t){document.querySelectorAll('.ical-sync-msg').forEach(el=>{el.textContent=t;});}
+
+// Source de réservation correspondant à la plateforme (Réglages → Sources) :
+// par id, puis par libellé ; recréée si l'hôte l'avait supprimée.
+function icalSourceId(platform){
+  const srcs=S.settings.sources||(S.settings.sources=[...DEFAULT_SETTINGS.sources]);
+  const label=ICAL_PLATFORMS[platform].label;
+  const found=srcs.find(s=>s.id===platform)||srcs.find(s=>new RegExp(label,'i').test(s.label||''));
+  if(found)return found.id;
+  srcs.push({id:platform,label,color:ICAL_PLATFORMS[platform].color,noRevenue:false});
+  return platform;
+}
+// Client générique par plateforme : le flux iCal ne donne jamais le nom du
+// voyageur. À remplacer par le vrai client dans chaque réservation.
+function icalPlaceholderGuest(platform){
+  const id='ical-guest-'+platform;
+  if(!S.guests.find(g=>g.id===id)){
+    S.guests.push({id,name:'Voyageur '+ICAL_PLATFORMS[platform].label+' (à compléter)',color:ICAL_PLATFORMS[platform].color,phone:'',email:'',
+      notes:'Client générique des réservations importées depuis '+ICAL_PLATFORMS[platform].label+' : remplacez-le par le vrai client dans chaque réservation.'});
+  }
+  return id;
+}
+function newIcalBooking(rm,platform,ev){
+  const label=ICAL_PLATFORMS[platform].label;
+  return {id:uid(),roomId:rm.id,checkIn:ev.start,checkOut:ev.end,arrivalTime:'',status:'ok',
+    nbPersons:Math.min(2,rm.maxPersons||2),dinnerNights:{},noBreakfast:{},
+    notes:'Importée depuis '+label+' — client et prix à compléter'+(platform==='booking'?' (réservation ou fermeture : à vérifier)':''),
+    guestId:icalPlaceholderGuest(platform),payment:null,depositAmount:0,source:icalSourceId(platform),ghost:false,
+    prixNet:null,taxeSejour:false,createdAt:new Date().toISOString(),
+    ical:{platform,uid:ev.uid,roomId:rm.id,start:ev.start,end:ev.end,summary:String(ev.summary||'').slice(0,80),importedAt:new Date().toISOString()}};
+}
+
+// Intègre les séjours importés. Renvoie true si S.bookings/S.guests/
+// S.settings ont été modifiés (à enregistrer). Remplit icalAlerts.
+function mergeIcalFeeds(feeds){
+  let changed=false;
+  const alerts=[];
+  const today=todayISO();
+  const ignored=new Set(S.settings.icalIgnored||[]);
+  // Airbnb d'abord : un "CLOSED" Booking qui n'est que le reflet d'une
+  // réservation Airbnb tombe alors sur une date déjà occupée, et n'est pas
+  // ajouté une seconde fois.
+  const ordered=[...feeds].sort((a,b)=>(a.platform==='airbnb'?0:1)-(b.platform==='airbnb'?0:1));
+  ordered.forEach(f=>{
+    const rm=(S.settings.rooms||[]).find(r=>r.id===f.roomId);
+    if(!rm||!rm.icalImports||!rm.icalImports[f.platform]||!ICAL_PLATFORMS[f.platform])return;
+    if(f.error)alerts.push({type:'error',roomId:rm.id,platform:f.platform,msg:f.error});
+    const seen=new Set();
+    (f.events||[]).forEach(ev=>{
+      if(!ev||!ev.uid||!ev.start||!ev.end||ev.start>=ev.end)return;
+      seen.add(ev.uid);
+      if(ignored.has(f.platform+':'+ev.uid))return;
+      const existing=S.bookings.find(b=>b.ical&&b.ical.platform===f.platform&&b.ical.uid===ev.uid);
+      if(existing){
+        if(existing.ical.detached)return;
+        if(existing.ical.missing){existing.ical.missing=false;changed=true;}
+        if(existing.ical.start!==ev.start||existing.ical.end!==ev.end){
+          alerts.push({type:'changed',bid:existing.id,roomId:existing.roomId,platform:f.platform,start:ev.start,end:ev.end});
+        }
+        return;
+      }
+      if(ev.end<=today)return;
+      const overlap=S.bookings.find(b=>b.roomId===rm.id&&b.status!=='no'&&b.checkIn<ev.end&&b.checkOut>ev.start);
+      if(overlap){
+        // Vraie réservation Airbnb sur des dates déjà prises par une
+        // réservation saisie dans Fiftin : possible double réservation (ou
+        // simple doublon d'une saisie manuelle) — signalé, jamais fusionné.
+        if(ev.kind==='reservation'&&!overlap.ical)alerts.push({type:'conflict',bid:overlap.id,roomId:rm.id,platform:f.platform,start:ev.start,end:ev.end});
+        return;
+      }
+      if(ev.kind==='block')return; // dates fermées sur Airbnb, pas une réservation
+      S.bookings.push(newIcalBooking(rm,f.platform,ev));
+      changed=true;
+    });
+    // Disparu du flux = annulé sur la plateforme ? Seulement si le flux a
+    // été lu sans erreur, et seulement pour un séjour à venir (les flux ne
+    // listent plus les séjours passés).
+    if(f.error||!f.lastOkAt)return;
+    S.bookings.forEach(b=>{
+      if(!b.ical||b.ical.platform!==f.platform||b.ical.roomId!==rm.id||b.ical.detached||b.status==='no')return;
+      if(b.checkIn<=today||seen.has(b.ical.uid))return;
+      if(!b.ical.missing){b.ical.missing=true;changed=true;}
+      alerts.push({type:'missing',bid:b.id,roomId:b.roomId,platform:f.platform});
+    });
+  });
+  icalAlerts=alerts;
+  return changed;
+}
+
+function renderIcalAlertBtn(){
+  const btn=byId('icalAlertBtn');
+  if(!btn)return;
+  const n=icalAlerts.length;
+  btn.style.display=n?'':'none';
+  btn.textContent='Calendriers · '+n+' à vérifier';
+}
+function icalFmt(ds){const d=new Date(ds+'T00:00:00');return d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});}
+function icalRoomName(id){const r=room(id);return r?r.name:'Location supprimée';}
+function openIcalAlerts(){
+  const list=byId('icalAlertList');
+  if(!icalAlerts.length){list.innerHTML='<div style="font-size:13px;color:var(--gray)">Rien à vérifier.</div>';openM('modalIcal');return;}
+  list.innerHTML=icalAlerts.map((a,i)=>{
+    const plat=a.platform?ICAL_PLATFORMS[a.platform].label:'';
+    const b=a.bid?S.bookings.find(x=>x.id===a.bid):null;
+    const open=b?`<button class="btn-s" onclick="closeM('modalIcal');openEditModal('${b.id}')">Ouvrir</button>`:'';
+    let txt='',acts=open;
+    if(a.type==='changed'&&b){
+      txt=`${plat} a modifié les dates d'une réservation (${escHtml(icalRoomName(b.roomId))}) : ${icalFmt(b.checkIn)} → ${icalFmt(b.checkOut)} devient ${icalFmt(a.start)} → ${icalFmt(a.end)}.`;
+      acts=`<button class="btn-p" onclick="applyIcalChange(${i})">Appliquer</button><button class="btn-s" onclick="ignoreIcalChange(${i})">Ignorer</button>`+open;
+    }else if(a.type==='missing'&&b){
+      txt=`La réservation ${plat} du ${icalFmt(b.checkIn)} au ${icalFmt(b.checkOut)} (${escHtml(icalRoomName(b.roomId))}) n'est plus dans le calendrier ${plat} : annulée ?`;
+      acts=`<button class="btn-p" onclick="markIcalCancelled(${i})">Marquer annulée</button><button class="btn-s" onclick="keepIcalBooking(${i})">La garder</button>`+open;
+    }else if(a.type==='conflict'&&b){
+      txt=`${plat} a une réservation du ${icalFmt(a.start)} au ${icalFmt(a.end)} sur ${escHtml(icalRoomName(a.roomId))}, dates déjà occupées dans Fiftin : double réservation, ou réservation déjà saisie à la main ? Non importée.`;
+    }else if(a.type==='error'){
+      txt=`Import ${plat}${a.roomId?' — '+escHtml(icalRoomName(a.roomId)):''} : ${escHtml(a.msg||'erreur')}`;
+      acts='';
+    }else return '';
+    return `<div class="ical-alert"><div class="ical-alert-txt">${txt}</div><div class="ical-alert-acts">${acts}</div></div>`;
+  }).join('');
+  openM('modalIcal');
+}
+function icalAfterAction(){
+  persist();renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
+  renderIcalAlertBtn();openIcalAlerts();
+}
+function applyIcalChange(i){
+  const a=icalAlerts[i];const b=a&&S.bookings.find(x=>x.id===a.bid);if(!b)return;
+  const clash=S.bookings.some(x=>x.id!==b.id&&x.roomId===b.roomId&&x.status!=='no'&&x.checkIn<a.end&&x.checkOut>a.start);
+  if(clash){alert('Ces nouvelles dates sont déjà occupées sur cette location. Ouvrez la réservation pour la déplacer à la main.');return;}
+  b.checkIn=a.start;b.checkOut=a.end;b.ical.start=a.start;b.ical.end=a.end;
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+function ignoreIcalChange(i){
+  const a=icalAlerts[i];const b=a&&S.bookings.find(x=>x.id===a.bid);if(!b)return;
+  b.ical.start=a.start;b.ical.end=a.end; // nouvelles dates prises en compte, réservation inchangée
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+function markIcalCancelled(i){
+  const a=icalAlerts[i];const b=a&&S.bookings.find(x=>x.id===a.bid);if(!b)return;
+  b.status='no';b.ical.missing=false;
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+function keepIcalBooking(i){
+  const a=icalAlerts[i];const b=a&&S.bookings.find(x=>x.id===a.bid);if(!b)return;
+  b.ical.missing=false;b.ical.detached=true; // ne plus la suivre : devient une réservation ordinaire
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+// Suppression d'une réservation importée (voir delBooking) : retenue, pour
+// que le séjour ne soit pas réimporté à la synchro suivante.
+function icalRememberDeleted(b){
+  if(!b||!b.ical)return;
+  const list=S.settings.icalIgnored||(S.settings.icalIgnored=[]);
+  const key=b.ical.platform+':'+b.ical.uid;
+  if(list.indexOf(key)===-1)list.push(key);
+  if(list.length>500)list.splice(0,list.length-500);
+}
+
+// — Réglages → Locations : bloc « Calendriers Airbnb / Booking » —
+function icalFeedStatus(rid,platform){
+  const f=icalFeedsCache.find(x=>x.roomId===rid&&x.platform===platform);
+  if(!f)return '';
+  if(f.error)return `<span style="color:var(--danger)">${escHtml(f.error)}</span>`;
+  const t=f.lastOkAt?new Date(f.lastOkAt).toLocaleString('fr-FR',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+  return `✓ ${f.events.length} séjour${f.events.length>1?'s':''} à venir lu${f.events.length>1?'s':''}${t?' · '+t:''}`;
+}
+function roomIcalHTML(r){
+  if(currentRole==='personnel')return '';
+  const imp=r.icalImports||{};
+  const field=(platform,ph)=>`<div class="sc-field" style="margin-top:6px">
+      <label>Importer depuis ${ICAL_PLATFORMS[platform].label}</label>
+      <input class="set-fi" style="width:100%;font-size:12px" value="${(imp[platform]||'').replace(/"/g,'&quot;')}" placeholder="${ph}"
+        onchange="setIcalImport('${r.id}','${platform}',this)">
+      <div class="ical-st" id="icalSt-${r.id}-${platform}" style="font-size:11px;color:var(--gray);margin-top:3px">${icalFeedStatus(r.id,platform)}</div>
+    </div>`;
+  const exp=r.icalExportUrl
+    ?`<div style="display:flex;gap:6px;align-items:center;margin-top:4px"><input class="set-fi" style="flex:1;font-size:11px" readonly value="${r.icalExportUrl.replace(/"/g,'&quot;')}" onclick="this.select()">
+        <button class="btn-s" style="padding:4px 10px" onclick="copyIcalExport('${r.id}',this)">Copier</button></div>`
+    :`<button class="set-add" style="margin-top:4px" onclick="getIcalExport('${r.id}',false)">Créer le lien d'export</button>`;
+  return `<div class="set-card-sub">
+      <div class="set-card-sub-title">Calendriers Airbnb / Booking</div>
+      <div style="font-size:11px;color:var(--gray);line-height:1.45">Import : collez le lien d'export iCal de cette location (Airbnb : Calendrier → Disponibilités → Associer des calendriers → Exporter ; Booking : Tarifs et disponibilités → Synchroniser les calendriers). Seules les dates arrivent : client et prix restent à compléter.</div>
+      ${field('airbnb','https://www.airbnb.fr/calendar/ical/….ics?s=…')}
+      ${field('booking','https://ical.booking.com/v1/export?t=…')}
+      <div style="font-size:11px;color:var(--gray);line-height:1.45;margin-top:10px">Export : à coller dans Airbnb et Booking (« Importer un calendrier ») pour qu'ils bloquent les dates réservées ici. Ne contient que des dates, jamais de nom.</div>
+      ${exp}
+      ${r.icalExportUrl?`<button class="set-add" style="margin-top:4px;font-size:11px" onclick="if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner : il faudra recoller le nouveau dans Airbnb et Booking.'))getIcalExport('${r.id}',true)">Régénérer le lien</button>`:''}
+      ${(imp.airbnb||imp.booking)?`<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><button class="btn-s" style="padding:4px 10px" onclick="maybeRunIcalImport(true)">Synchroniser maintenant</button><span class="ical-sync-msg" style="font-size:11px;color:var(--gray)"></span></div>`:''}
+    </div>`;
+}
+function setIcalImport(rid,platform,input){
+  const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r)return;
+  const url=input.value.trim();
+  const prev=(r.icalImports||{})[platform]||'';
+  if(url===prev)return;
+  const st=byId('icalSt-'+rid+'-'+platform);
+  if(!icalAvailable()){if(st)st.textContent='Connexion requise.';input.value=prev;return;}
+  if(st)st.textContent=url?'Vérification du lien…':'Retrait…';
+  input.disabled=true;
+  icalCall('icalSetImportUrl',{roomId:rid,platform,url}).then(res=>{
+    r.icalImports={...(r.icalImports||{}),[platform]:url};
+    icalFeedsCache=icalFeedsCache.filter(x=>!(x.roomId===rid&&x.platform===platform));
+    if(res&&res.feed)icalFeedsCache.push(res.feed);
+    saveSettings();
+    if(st)st.innerHTML=url?icalFeedStatus(rid,platform):'Import retiré. Les réservations déjà importées restent dans le planning.';
+    if(url){icalLastRun=0;maybeRunIcalImport(false);}
+    else{renderIcalAlertBtn();}
+  }).catch(e=>{
+    input.value=prev;
+    if(st)st.innerHTML=`<span style="color:var(--danger)">${escHtml((e&&e.message)||'Lien refusé.')}</span>`;
+  }).finally(()=>{input.disabled=false;});
+}
+function getIcalExport(rid,regenerate){
+  const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r)return;
+  if(!icalAvailable()){alert('Connexion requise.');return;}
+  icalCall('icalGetExportUrl',{roomId:rid,regenerate:!!regenerate}).then(res=>{
+    r.icalExportUrl=res.url;saveSettings();renderSettings();
+  }).catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
+}
+function copyIcalExport(rid,btn){
+  const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r||!r.icalExportUrl)return;
+  const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(r.icalExportUrl).then(done).catch(()=>{});
+  else{const i=btn.previousElementSibling;i.select();document.execCommand('copy');done();}
 }
 
 function setSyncPip(state,title){
@@ -5355,7 +5665,9 @@ function openEditModal(id,clickedDay){
   const cd=b.createdAt?new Date(b.createdAt):new Date();
   const dateStr=`${p(cd.getDate())}/${p(cd.getMonth()+1)}/${cd.getFullYear()}`;
   const timeStr=`${p(cd.getHours())}:${p(cd.getMinutes())}`;
-  byId('bCreatedAt').textContent=`Réservation créée le ${dateStr} à ${timeStr}`;
+  byId('bCreatedAt').textContent=b.ical
+    ?`Importée depuis ${(ICAL_PLATFORMS[b.ical.platform]||{label:'une plateforme'}).label} le ${dateStr} — complétez le client et le prix`
+    :`Réservation créée le ${dateStr} à ${timeStr}`;
   byId('bCreatedAt').style.display='block';
   byId('bRoom').value=b.roomId;
   byId('bIn').value=b.checkIn;
@@ -5693,6 +6005,7 @@ function saveBooking(){
 function delBooking(){
   if(!editBid)return;
   if(!confirm('Supprimer cette réservation ?'))return;
+  icalRememberDeleted(S.bookings.find(b=>b.id===editBid));
   S.bookings=S.bookings.filter(b=>b.id!==editBid);
   persist();closeM('modalBooking');renderGrid();
   if(S.view==='today')renderToday();
@@ -7964,6 +8277,7 @@ function renderSettings(){
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Description du logement…" onblur="updateRoom('${r.id}','description',this.value)">${(r.description||'').replace(/</g,'&lt;')}</textarea>
       </div>
       ${roomTariffHTML(r)}
+      ${roomIcalHTML(r)}
     </div>`;
   });
   roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une location</button>`;

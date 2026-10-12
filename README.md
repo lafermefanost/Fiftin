@@ -1297,6 +1297,25 @@ Retour utilisateur après avoir testé le chantier précédent en conditions ré
 
 **Rappel important** : ce chantier touche encore `functions/index.js` (ajout de `thumbUrl`) — nécessite un nouveau `firebase deploy --only functions` pour apparaître en production, en plus du déploiement déjà requis pour `unitIds` du chantier précédent si ce n'est pas encore fait.
 
+## Calendriers Airbnb / Booking (iCal)
+
+Import (Airbnb/Booking → Fiftin) et export (Fiftin → Airbnb/Booking), **par location**, depuis Réglages → Locations → « Calendriers Airbnb / Booking ». Pas un channel manager : seules des dates circulent, jamais de nom, de prix ni de nombre de voyageurs (les flux iCal des plateformes n'en contiennent pas).
+
+**Export.** « Créer le lien d'export » génère une adresse `…cloudfunctions.net/icalExport/<jeton>.ics` (fonction `icalExport`), à coller dans Airbnb (Calendrier → Disponibilités → Associer des calendriers → Importer) et Booking (Synchroniser les calendriers → Importer). Contenu : les réservations non annulées de la location + les séjours de ses calendriers importés (une réservation Airbnb bloque ainsi Booking, et inversement), en plages fusionnées, libellées « Fiftin - indisponible ». Jeton aléatoire par location (`icalExportTokens/{jeton}`), « Régénérer le lien » invalide l'ancien.
+
+**Import.** Le lien d'export iCal de la plateforme, collé dans le champ de la location, est vérifié (téléchargé) par `icalSetImportUrl` avant d'être enregistré ; refusé s'il ne vient pas d'airbnb.* / booking.com ou ne renvoie pas un calendrier. Le serveur range les séjours à venir dans `icalFeeds/{uid}__{roomId}__{plateforme}`, relus toutes les 30 min (`icalScheduledSync`) et à l'ouverture de l'app (`icalGetImports`, au plus toutes les 10 min ; « Synchroniser maintenant » force la relecture).
+
+**Le serveur n'écrit jamais dans `accounts/{uid}`** (réécrit en entier par l'app à chaque sauvegarde : une écriture serveur concurrente serait écrasée). C'est l'app qui transforme les séjours en réservations (`mergeIcalFeeds()`, app/index.html), avec ces règles :
+- réservation créée avec la source Airbnb/Booking, un client générique « Voyageur Airbnb (à compléter) », statut Confirmé, sans prix personnalisé — **client et prix à compléter à la main** (le chiffre d'affaires est sinon estimé au tarif de la location, comme pour toute réservation sans prix saisi) ;
+- jamais ajoutée si les dates chevauchent une réservation existante de la location (saisie manuelle, ou reflet de notre propre export dans la plateforme) ; une vraie réservation Airbnb (« Reserved ») sur des dates déjà prises est signalée comme double réservation possible ;
+- « Airbnb (Not available) » = dates fermées, jamais transformées en réservation ; Booking n'écrit que « CLOSED - Not available », impossible à distinguer d'une fermeture : réservation créée avec la mention « réservation ou fermeture : à vérifier » ;
+- **aucune réservation existante n'est modifiée ni supprimée automatiquement** : dates changées sur la plateforme, ou séjour disparu du flux (annulé ?), deviennent des points « Calendriers · n à vérifier » (bouton de la barre d'outils), appliqués seulement sur confirmation ; un flux en erreur ne déclenche jamais d'alerte d'annulation ;
+- une réservation importée supprimée est retenue (`settings.icalIgnored`) pour ne pas être réimportée.
+
+Inerte tant qu'aucune location n'a de lien d'import, et pour un compte Personnel. Disponibilité publique (Fiftin Séjours) : `republishAccountAvail()` ajoute désormais les séjours importés aux réservations, et n'y compte plus les réservations annulées (status `no`, auparavant comptées par erreur).
+
+Aucune règle Firestore à coller : `icalFeeds` et `icalExportTokens` ne sont accessibles qu'aux fonctions (SDK Admin), refusées par défaut à tout client. **Déploiement nécessaire** : `firebase deploy --only functions` (le premier déploiement active Cloud Scheduler pour `icalScheduledSync`, inclus dans le forfait Blaze). Tests du décodeur/export : `node functions/ical.test.js`.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
