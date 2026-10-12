@@ -737,12 +737,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
    sur demande explicite. Vérifié à l'écran : blanc sur l'ancien fond pâle
    (--light) était illisible (le "0" des cartouches Départs/Arrivées
    disparaissait quasiment) — fond repassé en --gray ("gris moyen", tel que
-   décrit), puis retour utilisateur ("un gris plus léger pour les encarts
-   qui n'ont pas de données") : #949494 plutôt que --gray (#6B6B6B),
-   contraste blanc ~3:1 — assez clair pour alléger le bandeau sans
-   retomber sur l'ancien --light illisible (le bandeau "a des données"
-   juste en dessous est en --green, contraste largement supérieur). */
-.tsec-hd{background:#949494;color:#fff;}
+   décrit), éclairci en #949494, puis une nouvelle fois en #A0A0A0 sur
+   retour utilisateur ("un gris plus clair... prend un gris déjà utilisé
+   ailleurs") — repris tel quel de .blk.paid (statut "payé" de la grille,
+   même teinte + même texte blanc déjà acceptés) plutôt qu'une nouvelle
+   couleur, pour rester discret sans retomber sur l'ancien --light
+   illisible (le bandeau "a des données" juste en dessous est en --green,
+   contraste largement supérieur). */
+.tsec-hd{background:#A0A0A0;color:#fff;}
 /* Ménage/Table d'hôtes/Extras du jour/Événements : vert principal
    (--green), celui des encarts principaux (.wsm-total, .mstat-card…) —
    sur demande explicite ("je ne veux plus de vert sauge ici"). Essayé en
@@ -1002,10 +1004,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .dep-arr-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--gray);}
 /* Même cartouche (arrondi 12px) que .tsec-count désormais — voir plus haut.
    Placé à gauche du libellé (accolé), plus à droite façon space-between.
-   Texte toujours blanc, y compris à 0 — même correctif de fond que
-   .tsec-hd (voir son commentaire : --light pâle rendait le blanc illisible,
-   repassé en --gray puis éclairci en #949494 sur retour utilisateur). */
-.dep-arr-num{background:#949494;color:#fff;font-size:18px;font-weight:700;
+   Texte toujours blanc, y compris à 0 — même fond que .tsec-hd, voir son
+   commentaire pour l'historique (#A0A0A0, repris de .blk.paid). */
+.dep-arr-num{background:#A0A0A0;color:#fff;font-size:18px;font-weight:700;
   border-radius:12px;padding:4px 13px;flex:none;}
 /* Au moins un client concerné (voir .tsec-hd.has-items, même couleur/texte) —
    gris neutre sinon, quand le chiffre est à 0. */
