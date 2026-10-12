@@ -33,15 +33,13 @@ jobs:
         working-directory: functions
       - name: Tests iCal
         run: node functions/ical.test.js
-      - name: Clé du compte de service
-        env:
-          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-        run: |
-          if [ -z "$SA" ]; then echo "Secret FIREBASE_SERVICE_ACCOUNT absent : voir l'en-tête de ce fichier."; exit 1; fi
-          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
-          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      # Action officielle Google : écrit la clé dans un fichier temporaire
+      # du runner, positionne GOOGLE_APPLICATION_CREDENTIALS, et l'efface en
+      # fin de job. La clé n'est jamais affichée dans les journaux (GitHub
+      # masque les secrets). Ne se déclenche que sur main ou à la main,
+      # jamais sur une pull request venue d'un fork (aucun accès au secret).
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - name: Déploiement
         run: npx --yes firebase-tools@13.29.1 deploy --only functions --project fiftin-e30c2 --non-interactive
-      - name: Nettoyage de la clé
-        if: always()
-        run: rm -f "$RUNNER_TEMP/sa.json"
