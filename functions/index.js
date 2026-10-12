@@ -26,6 +26,9 @@
 
 const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
+const crypto = require("crypto");
+const ical = require("./ical");
 const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
@@ -179,20 +182,33 @@ function writePublicAvail(listingId, unitId, ranges) {
 exports.syncPublicAvailFromAccount = onDocumentWritten("accounts/{uid}", async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
-  const bookings = (after && after.bookings) || [];
+  await republishAccountAvail(uid, (after && after.bookings) || []);
+});
 
+/* Republie la disponibilité publique de toutes les chambres liées d'un
+ * compte gestion. Partagée entre syncPublicAvailFromAccount (à chaque
+ * écriture du compte) et icalScheduledSync (quand un calendrier Airbnb/
+ * Booking importé change, même si l'hôte n'a pas ouvert l'app : ses
+ * réservations plateformes bloquent alors quand même les dates côté
+ * voyageur). Les réservations annulées (status "no") ne bloquent plus
+ * aucune date — elles le faisaient jusqu'ici, toPublicRanges ne
+ * regardant pas le statut. */
+async function republishAccountAvail(uid, bookings) {
   const listingsSnap = await db.collection("listings").where("ownerUid", "==", uid).get();
+  if (listingsSnap.empty) return;
+  const feedRangesByRoom = await icalRangesByRoom(uid);
   const writes = [];
   listingsSnap.forEach(function (doc) {
     const listing = doc.data();
     (listing.units || []).forEach(function (unit) {
       if (!unit.linkedRoomId) return;
-      const roomBookings = bookings.filter(function (b) { return b.roomId === unit.linkedRoomId; });
-      writes.push(writePublicAvail(doc.id, unit.id, toPublicRanges(roomBookings)));
+      const roomBookings = (bookings || []).filter(function (b) { return b && b.roomId === unit.linkedRoomId && b.status !== "no"; });
+      const ranges = toPublicRanges(roomBookings).concat(feedRangesByRoom[unit.linkedRoomId] || []);
+      writes.push(writePublicAvail(doc.id, unit.id, ranges));
     });
   });
   await Promise.all(writes);
-});
+}
 
 /* Compte simple annonce : à chaque écriture dans
  * listings/{listingId}/bookings, on republie les dates de CETTE chambre
@@ -555,4 +571,248 @@ exports.enforceFreeProAccounts = onDocumentWritten("accounts/{uid}", async (even
     settings: {plan: "pro"},
     billing: {exempt: true},
   }, {merge: true});
+});
+
+/* ---------------- Calendriers iCal Airbnb / Booking ----------------
+ *
+ * Import (Airbnb/Booking -> Fiftin) et export (Fiftin -> Airbnb/Booking),
+ * par chambre (roomId côté app/). Voir README « Calendriers Airbnb /
+ * Booking (iCal) ».
+ *
+ * Le serveur n'écrit JAMAIS dans accounts/{uid} : ce document est réécrit
+ * en entier par l'app à chaque sauvegarde (pushToFirebase), une écriture
+ * serveur en parallèle serait écrasée, ou ferait réapparaître des
+ * réservations supprimées. Le serveur se contente de télécharger les flux
+ * et de ranger leurs séjours dans icalFeeds/{uid}__{roomId}__{platform} ;
+ * c'est l'app, à l'ouverture, qui les transforme en réservations
+ * (mergeIcalFeeds() côté app/index.html).
+ *
+ * icalFeeds et icalExportTokens n'ont aucune règle Firestore cliente :
+ * tout passe par les fonctions ci-dessous (SDK Admin), aucune règle à
+ * coller dans la console. Par défaut, Firestore refuse alors tout accès
+ * client direct à ces deux collections — c'est voulu (les liens iCal sont
+ * secrets : quiconque les possède voit le calendrier).
+ */
+
+const ICAL_FETCH_TIMEOUT_MS = 15000;
+const ICAL_MAX_BYTES = 2 * 1024 * 1024;
+const ICAL_REFRESH_MIN_MS = 60 * 1000; // anti-rafale du bouton "Synchroniser maintenant"
+const ICAL_STALE_MS = 25 * 60 * 1000; // au-delà, l'ouverture de l'app relit les flux
+
+function todayIsoUtc() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function feedDocId(uid, roomId, platform) {
+  return [uid, roomId, platform].map(function (x) { return String(x).replace(/[^A-Za-z0-9_-]/g, ""); }).join("__");
+}
+
+function requireRoomId(data) {
+  const roomId = data && typeof data.roomId === "string" ? data.roomId : "";
+  if (!roomId || roomId.length > 100) throw new HttpsError("invalid-argument", "Chambre inconnue.");
+  return roomId;
+}
+
+/* Téléchargement d'un flux : redirections suivies à la main (3 max) pour
+ * revalider le domaine à chaque saut — fetch() les suivrait sinon vers
+ * n'importe quelle adresse. Taille et durée plafonnées. */
+async function fetchIcalText(platform, url) {
+  let current = url;
+  for (let hop = 0; hop < 4; hop++) {
+    const err = ical.validateImportUrl(platform, current);
+    if (err) throw new Error(err);
+    const ctrl = new AbortController();
+    const timer = setTimeout(function () { ctrl.abort(); }, ICAL_FETCH_TIMEOUT_MS);
+    let res;
+    try {
+      res = await fetch(current, {redirect: "manual", signal: ctrl.signal, headers: {"User-Agent": "Fiftin-Calendar/1.0", "Accept": "text/calendar,*/*"}});
+    } catch (e) {
+      clearTimeout(timer);
+      throw new Error("Calendrier injoignable (délai dépassé ou réseau).");
+    }
+    if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+      clearTimeout(timer);
+      current = new URL(res.headers.get("location"), current).toString();
+      continue;
+    }
+    if (!res.ok) {
+      clearTimeout(timer);
+      throw new Error("La plateforme a refusé le lien (erreur " + res.status + "). Vérifiez qu'il est complet et toujours actif.");
+    }
+    const len = Number(res.headers.get("content-length") || 0);
+    if (len > ICAL_MAX_BYTES) { clearTimeout(timer); throw new Error("Calendrier trop volumineux."); }
+    const text = await res.text();
+    clearTimeout(timer);
+    if (text.length > ICAL_MAX_BYTES) throw new Error("Calendrier trop volumineux.");
+    return text;
+  }
+  throw new Error("Trop de redirections.");
+}
+
+/* Relit un flux et met à jour son document. Ne jette jamais : une erreur
+ * est enregistrée dans le document (error) sans effacer les derniers
+ * séjours connus — un flux momentanément injoignable ne doit pas faire
+ * croire à l'app que toutes les réservations ont été annulées. Renvoie
+ * true si la liste des séjours a changé. */
+async function refreshFeed(ref, feed) {
+  const now = new Date().toISOString();
+  try {
+    const text = await fetchIcalText(feed.platform, feed.url);
+    const events = ical.parseIcal(text, feed.platform, todayIsoUtc());
+    const changed = JSON.stringify(events) !== JSON.stringify(feed.events || []);
+    await ref.set({events: events, eventCount: events.length, lastSyncAt: now, lastOkAt: now, error: null}, {merge: true});
+    feed.events = events; feed.lastSyncAt = now; feed.lastOkAt = now; feed.error = null;
+    return changed;
+  } catch (e) {
+    const msg = String((e && e.message) || e).slice(0, 300);
+    await ref.set({lastSyncAt: now, error: msg}, {merge: true});
+    feed.lastSyncAt = now; feed.error = msg;
+    return false;
+  }
+}
+
+/* Plages bloquées par les calendriers importés d'un compte, par chambre —
+ * pour la disponibilité publique (Fiftin Séjours) et pour l'export. Les
+ * "block" Airbnb en font partie : des dates fermées sur Airbnb ne sont pas
+ * réservables ailleurs non plus. */
+async function icalRangesByRoom(uid) {
+  const snap = await db.collection("icalFeeds").where("uid", "==", uid).get();
+  const out = {};
+  snap.forEach(function (doc) {
+    const f = doc.data();
+    (f.events || []).forEach(function (ev) {
+      if (!ev || !ev.start || !ev.end) return;
+      (out[f.roomId] = out[f.roomId] || []).push({checkIn: ev.start, checkOut: ev.end});
+    });
+  });
+  return out;
+}
+
+function feedForClient(f) {
+  return {
+    roomId: f.roomId, platform: f.platform, events: f.events || [],
+    lastSyncAt: f.lastSyncAt || null, lastOkAt: f.lastOkAt || null, error: f.error || null,
+  };
+}
+
+/* Enregistre (ou retire, url vide) le lien d'import d'une chambre. Le lien
+ * est vérifié en le téléchargeant : on refuse d'enregistrer un lien qui ne
+ * renvoie pas un calendrier lisible, plutôt que de le découvrir plus tard. */
+exports.icalSetImportUrl = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+  const roomId = requireRoomId(request.data);
+  const platform = request.data && request.data.platform;
+  if (ical.PLATFORMS.indexOf(platform) === -1) throw new HttpsError("invalid-argument", "Plateforme inconnue.");
+  const url = String((request.data && request.data.url) || "").trim();
+  const ref = db.collection("icalFeeds").doc(feedDocId(uid, roomId, platform));
+
+  if (!url) {
+    await ref.delete();
+    return {ok: true, removed: true};
+  }
+  const urlErr = ical.validateImportUrl(platform, url);
+  if (urlErr) throw new HttpsError("invalid-argument", urlErr);
+
+  let events;
+  try {
+    events = ical.parseIcal(await fetchIcalText(platform, url), platform, todayIsoUtc());
+  } catch (e) {
+    throw new HttpsError("failed-precondition", String((e && e.message) || e));
+  }
+  const now = new Date().toISOString();
+  const feed = {uid: uid, roomId: roomId, platform: platform, url: url, events: events, eventCount: events.length,
+    lastSyncAt: now, lastOkAt: now, error: null, createdAt: now};
+  await ref.set(feed);
+  const acc = await db.collection("accounts").doc(uid).get();
+  await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+  return {ok: true, feed: feedForClient(feed)};
+});
+
+/* Séjours importés du compte connecté, pour que l'app les intègre.
+ * refresh:true (bouton "Synchroniser maintenant") relit tous les flux
+ * tout de suite ; sinon seuls les flux plus vieux que ICAL_STALE_MS sont
+ * relus (le passage planifié ci-dessous garde le reste à jour). */
+exports.icalGetImports = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+  const force = !!(request.data && request.data.refresh);
+  const snap = await db.collection("icalFeeds").where("uid", "==", uid).get();
+  const now = Date.now();
+  const feeds = [];
+  let anyChanged = false;
+  await Promise.all(snap.docs.map(async function (doc) {
+    const f = doc.data();
+    const last = f.lastSyncAt ? Date.parse(f.lastSyncAt) : 0;
+    const due = force ? now - last > ICAL_REFRESH_MIN_MS : now - last > ICAL_STALE_MS;
+    if (due && await refreshFeed(doc.ref, f)) anyChanged = true;
+    feeds.push(feedForClient(f));
+  }));
+  if (anyChanged) {
+    const acc = await db.collection("accounts").doc(uid).get();
+    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+  }
+  return {feeds: feeds};
+});
+
+/* Lien d'export d'une chambre (à coller dans Airbnb/Booking). Un jeton
+ * aléatoire par chambre, conservé tant qu'il n'est pas régénéré
+ * (regenerate:true invalide l'ancien lien, si jamais il a fuité). */
+exports.icalGetExportUrl = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+  const roomId = requireRoomId(request.data);
+  const regenerate = !!(request.data && request.data.regenerate);
+  const col = db.collection("icalExportTokens");
+  const existing = await col.where("uid", "==", uid).where("roomId", "==", roomId).get();
+  let token = null;
+  if (!existing.empty && !regenerate) {
+    token = existing.docs[0].id;
+  } else {
+    await Promise.all(existing.docs.map(function (d) { return d.ref.delete(); }));
+    token = crypto.randomBytes(24).toString("hex");
+    await col.doc(token).set({uid: uid, roomId: roomId, createdAt: new Date().toISOString()});
+  }
+  const project = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || "fiftin-e30c2";
+  return {url: "https://us-central1-" + project + ".cloudfunctions.net/icalExport/" + token + ".ics"};
+});
+
+/* Calendrier public d'une chambre, lu par Airbnb/Booking. Ne contient que
+ * des plages de dates (voir ical.buildIcal) : réservations non annulées de
+ * la chambre + séjours des calendriers importés (pour qu'une réservation
+ * Airbnb bloque Booking et inversement, même avant que l'app ne l'ait
+ * intégrée). */
+exports.icalExport = onRequest(async (req, res) => {
+  const fromPath = String(req.path || "").replace(/^\/+/, "").replace(/\.ics$/i, "");
+  const token = String(fromPath || req.query.t || "");
+  if (!/^[a-f0-9]{48}$/.test(token)) { res.status(404).send("Not found"); return; }
+  const tokSnap = await db.collection("icalExportTokens").doc(token).get();
+  if (!tokSnap.exists) { res.status(404).send("Not found"); return; }
+  const tok = tokSnap.data();
+  const acc = await db.collection("accounts").doc(tok.uid).get();
+  const bookings = acc.exists ? (acc.data().bookings || []) : [];
+  const today = todayIsoUtc();
+  const ranges = bookings
+    .filter(function (b) { return b && b.roomId === tok.roomId && b.status !== "no" && typeof b.checkIn === "string" && typeof b.checkOut === "string" && b.checkOut > today; })
+    .map(function (b) { return {start: b.checkIn, end: b.checkOut}; });
+  const feedRanges = (await icalRangesByRoom(tok.uid))[tok.roomId] || [];
+  feedRanges.forEach(function (r) { if (r.checkOut > today) ranges.push({start: r.checkIn, end: r.checkOut}); });
+  res.set("Content-Type", "text/calendar; charset=utf-8");
+  res.set("Cache-Control", "no-cache, no-store, max-age=0");
+  res.status(200).send(ical.buildIcal(ranges));
+});
+
+/* Relecture planifiée de tous les flux importés : garde la disponibilité
+ * publique à jour même quand l'hôte n'ouvre pas l'app. */
+exports.icalScheduledSync = onSchedule({schedule: "every 30 minutes", timeoutSeconds: 300}, async () => {
+  const snap = await db.collection("icalFeeds").get();
+  const changedUids = {};
+  for (const doc of snap.docs) {
+    const f = doc.data();
+    if (await refreshFeed(doc.ref, f)) changedUids[f.uid] = true;
+  }
+  for (const uid of Object.keys(changedUids)) {
+    const acc = await db.collection("accounts").doc(uid).get();
+    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+  }
 });
