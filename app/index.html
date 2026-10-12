@@ -4537,7 +4537,7 @@ function newIcalBooking(rm,platform,ev){
   const label=ICAL_PLATFORMS[platform].label;
   return {id:uid(),roomId:rm.id,checkIn:ev.start,checkOut:ev.end,arrivalTime:'',status:'ok',
     nbPersons:Math.min(2,rm.maxPersons||2),dinnerNights:{},noBreakfast:{},
-    notes:'Importée depuis '+label+' — client et prix à compléter'+(platform==='booking'?' (réservation ou fermeture : à vérifier)':''),
+    notes:'Importée depuis '+label+' — client et prix à compléter',
     guestId:icalPlaceholderGuest(platform),payment:null,depositAmount:0,source:icalSourceId(platform),ghost:false,
     prixNet:null,taxeSejour:false,createdAt:new Date().toISOString(),
     ical:{platform,uid:ev.uid,roomId:rm.id,start:ev.start,end:ev.end,summary:String(ev.summary||'').slice(0,80),importedAt:new Date().toISOString()}};
@@ -4582,6 +4582,15 @@ function mergeIcalFeeds(feeds){
         return;
       }
       if(ev.kind==='block')return; // dates fermées sur Airbnb, pas une réservation
+      if(ev.kind==='closed'){
+        // Booking n'écrit que « CLOSED » : réservation, fermeture manuelle,
+        // ou simple écho de notre propre export (dates d'une réservation
+        // Fiftin tout juste annulée, que Booking n'a pas encore relues).
+        // Créée automatiquement, elle serait réexportée et refermerait les
+        // dates sans fin : jamais ajoutée sans confirmation.
+        alerts.push({type:'closed',roomId:rm.id,platform:f.platform,uid:ev.uid,start:ev.start,end:ev.end});
+        return;
+      }
       S.bookings.push(newIcalBooking(rm,f.platform,ev));
       changed=true;
     });
@@ -4625,6 +4634,9 @@ function openIcalAlerts(){
       acts=`<button class="btn-p" onclick="markIcalCancelled(${i})">Marquer annulée</button><button class="btn-s" onclick="keepIcalBooking(${i})">La garder</button>`+open;
     }else if(a.type==='conflict'&&b){
       txt=`${plat} a une réservation du ${icalFmt(a.start)} au ${icalFmt(a.end)} sur ${escHtml(icalRoomName(a.roomId))}, dates déjà occupées dans Fiftin : double réservation, ou réservation déjà saisie à la main ? Non importée.`;
+    }else if(a.type==='closed'){
+      txt=`${plat} indique des dates fermées du ${icalFmt(a.start)} au ${icalFmt(a.end)} sur ${escHtml(icalRoomName(a.roomId))}, absentes de Fiftin. Réservation ${plat}, ou simple fermeture ?`;
+      acts=`<button class="btn-p" onclick="createIcalClosed(${i})">C'est une réservation</button><button class="btn-s" onclick="ignoreIcalClosed(${i})">Ignorer</button>`;
     }else if(a.type==='error'){
       txt=`Import ${plat}${a.roomId?' — '+escHtml(icalRoomName(a.roomId)):''} : ${escHtml(a.msg||'erreur')}`;
       acts='';
@@ -4660,6 +4672,19 @@ function markIcalCancelled(i){
 function keepIcalBooking(i){
   const a=icalAlerts[i];const b=a&&S.bookings.find(x=>x.id===a.bid);if(!b)return;
   b.ical.missing=false;b.ical.detached=true; // ne plus la suivre : devient une réservation ordinaire
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+function createIcalClosed(i){
+  const a=icalAlerts[i];if(!a)return;
+  const rm=(S.settings.rooms||[]).find(r=>r.id===a.roomId);if(!rm)return;
+  const clash=S.bookings.some(x=>x.roomId===rm.id&&x.status!=='no'&&x.checkIn<a.end&&x.checkOut>a.start);
+  if(clash){alert('Ces dates sont déjà occupées sur cette location.');return;}
+  S.bookings.push(newIcalBooking(rm,a.platform,{uid:a.uid,start:a.start,end:a.end,summary:''}));
+  icalAlerts.splice(i,1);icalAfterAction();
+}
+function ignoreIcalClosed(i){
+  const a=icalAlerts[i];if(!a)return;
+  icalRememberDeleted({ical:{platform:a.platform,uid:a.uid}});
   icalAlerts.splice(i,1);icalAfterAction();
 }
 // Suppression d'une réservation importée (voir delBooking) : retenue, pour

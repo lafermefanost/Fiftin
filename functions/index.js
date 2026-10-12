@@ -789,10 +789,14 @@ exports.icalGetExportUrl = onCall(async (request) => {
 });
 
 /* Calendrier public d'une chambre, lu par Airbnb/Booking. Ne contient que
- * des plages de dates (voir ical.buildIcal) : réservations non annulées de
- * la chambre + séjours des calendriers importés (pour qu'une réservation
- * Airbnb bloque Booking et inversement, même avant que l'app ne l'ait
- * intégrée). */
+ * des plages de dates (voir ical.buildIcal) : UNIQUEMENT les réservations
+ * non annulées enregistrées dans Fiftin — jamais les séjours bruts des
+ * calendriers importés. Les y inclure créait une boucle d'écho : une
+ * fermeture Airbnb importée, réexportée vers Airbnb, y devenait une
+ * fermeture "calendrier externe", que l'export Airbnb renvoyait à son tour
+ * à Fiftin… et des dates rouvertes sur Airbnb se refermaient seules, sans
+ * fin. Une réservation Airbnb bloque Booking (et inversement) une fois
+ * intégrée comme réservation par l'app (mergeIcalFeeds). */
 exports.icalExport = onRequest(async (req, res) => {
   const fromPath = String(req.path || "").replace(/^\/+/, "").replace(/\.ics$/i, "");
   const token = String(fromPath || req.query.t || "");
@@ -806,8 +810,6 @@ exports.icalExport = onRequest(async (req, res) => {
   const ranges = bookings
     .filter(function (b) { return b && b.roomId === tok.roomId && b.status !== "no" && typeof b.checkIn === "string" && typeof b.checkOut === "string" && b.checkOut > today; })
     .map(function (b) { return {start: b.checkIn, end: b.checkOut}; });
-  const feedRanges = (await icalRangesByRoom(tok.uid))[tok.roomId] || [];
-  feedRanges.forEach(function (r) { if (r.checkOut > today) ranges.push({start: r.checkIn, end: r.checkOut}); });
   res.set("Content-Type", "text/calendar; charset=utf-8");
   res.set("Cache-Control", "no-cache, no-store, max-age=0");
   res.status(200).send(ical.buildIcal(ranges));
