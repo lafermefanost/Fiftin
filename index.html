@@ -409,6 +409,12 @@ a{color:inherit; text-decoration:none;}
    vide sur la plupart des appareils, sans jamais recouvrir la carte. */
 #feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(85px + env(safe-area-inset-bottom, 0px)); gap:6px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
+/* Pas de grain sur les vraies photos du fil Explorer (retour utilisateur :
+   "retirer l'effet de grain par-dessus les images") — .has-photos posé par
+   coverHtml() quand l'annonce a des photos. Le grain reste sur les
+   couvertures dégradées sans photo et dans les autres vues (Carte, Envies,
+   fiche détail), non concernées par ce retour. */
+#feed.feed-explore .cover.has-photos .grain{display:none;}
 /* Onglet Carte uniquement (retour utilisateur) : fond derrière la carte/
    la liste distinct de #app/--cream (qui reste tel quel pour la barre de
    filtres et la barre d'onglets — seule la légère différence de gris
@@ -5011,7 +5017,7 @@ function coverHtml(l){
     mediaHtml = '<div class="grad" style="background:'+GRADIENTS[l.grad]+'"></div>'+
       '<div class="motif" style="width:56%;height:56%;right:-6%;top:6%;"><svg viewBox="0 0 100 100">'+MOTIFS[l.motif]+'</svg></div>';
   }
-  return '<div class="cover">'+
+  return '<div class="cover'+(shots?' has-photos':'')+'">'+
     mediaHtml+
     '<div class="grain"></div>'+
     '<div class="scrim"></div>'+
