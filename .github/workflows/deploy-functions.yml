@@ -1,0 +1,47 @@
+# Déploie les Cloud Functions (functions/) à chaque mise à jour de main qui
+# les touche — remplace le "firebase deploy --only functions" à lancer à la
+# main. Le site (HTML) reste servi par GitHub Pages, indépendamment.
+#
+# Secret requis (GitHub → Settings → Secrets and variables → Actions) :
+#   FIREBASE_SERVICE_ACCOUNT : contenu JSON complet de la clé du compte de
+#   service github-deploy (projet fiftin-e30c2). Ne jamais le mettre ailleurs.
+#
+# Pas de --force : si le déploiement devait SUPPRIMER une fonction présente
+# en production mais absente du code, il échoue au lieu de la supprimer.
+name: Déploiement des fonctions Firebase
+
+on:
+  push:
+    branches: [main]
+    paths: ["functions/**", "firebase.json", ".firebaserc", ".github/workflows/deploy-functions.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-functions
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Dépendances des fonctions
+        run: npm ci
+        working-directory: functions
+      - name: Tests iCal
+        run: node functions/ical.test.js
+      - name: Clé du compte de service
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "Secret FIREBASE_SERVICE_ACCOUNT absent : voir l'en-tête de ce fichier."; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/sa.json" >> "$GITHUB_ENV"
+      - name: Déploiement
+        run: npx --yes firebase-tools@13.29.1 deploy --only functions --project fiftin-e30c2 --non-interactive
+      - name: Nettoyage de la clé
+        if: always()
+        run: rm -f "$RUNNER_TEMP/sa.json"
