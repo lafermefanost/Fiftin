@@ -1316,6 +1316,18 @@ Inerte tant qu'aucune location n'a de lien d'import, et pour un compte Personnel
 
 Aucune règle Firestore à coller : `icalFeeds` et `icalExportTokens` ne sont accessibles qu'aux fonctions (SDK Admin), refusées par défaut à tout client. **Déploiement nécessaire** : `firebase deploy --only functions` (le premier déploiement active Cloud Scheduler pour `icalScheduledSync`, inclus dans le forfait Blaze). Tests du décodeur/export : `node functions/ical.test.js`.
 
+## Réservation à plusieurs locations, heures d'arrivée et de départ
+
+**Fiche réservation, partie Séjour.** Chaque ligne = une location, ses voyageurs et son prix — même présentation avec une ou plusieurs locations. « + Ajouter une location à la réservation » ajoute une ligne (seules les locations libres sur les dates sont sélectionnables, × pour retirer). Une location au nom trop long (> 14 caractères) s'affiche par son code court (Réglages → Locations → Code).
+
+**Prix : un seul endroit, la ligne de chaque location** — prix d'hébergement pour tout le séjour, vide = tarif de la location (affiché en grisé). Remplace l'ancien « Prix personnalisé » de la partie Paiement (`#prixNet` reste un champ caché, recopie du prix de la 1re ligne). « Fixer un prix total d'hébergement » (sous le total séjour) répartit un montant dans les lignes au prorata de leur tarif (parts égales si aucun tarif, reste de l'arrondi sur la 1re) ; les prix restent ensuite modifiables ligne par ligne. Table d'hôtes et taxe de séjour : calculées par location avec ses propres voyageurs, en plus. Extras et contrat : portés par la 1re location, comme avant.
+
+**Stockage : une réservation par location**, reliées par `groupId` (`saveBGroup()`) — grille, ménage, compta par location et par structure, export iCal et disponibilités Séjours fonctionnent sans changement. Champs communs recopiés sur toutes : client, dates, heures, statut, paiement, source, taxe de séjour (oui/non), petit-déjeuner/table d'hôtes par nuit, notes. Acompte : seulement sur la 1re (sinon compté autant de fois que de locations). Ouvrir n'importe laquelle des réservations du groupe affiche la fiche complète. Supprimer : « toute la réservation » ou « seulement cette location ».
+
+**Arrivée / Départ** : date et heure sur la même ligne ; nouvelle heure de départ facultative (`departureTime`), « Heure ? » = non précisée.
+
+**Réversible** : annuler la pull request (bouton « Revert » sur GitHub) ne perd aucune donnée — les réservations d'un groupe redeviennent des réservations indépendantes (`groupId` simplement ignoré), `departureTime` est ignoré.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.

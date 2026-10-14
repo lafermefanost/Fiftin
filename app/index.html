@@ -522,6 +522,26 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   background:#fff;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:500;color:#2E5C28;cursor:pointer;}
 .free-room-btn:hover{background:#E8E3DB;}
+/* Lignes Location / Voyageurs / Prix de la fiche réservation (voir renderBLines) */
+.bdt-row{display:flex;gap:8px;}
+.bdt-row input{flex:1;min-width:0;}
+.bdt-row select{width:112px;flex:none;}
+.bline-head,.bline{display:flex;align-items:center;gap:6px;}
+.bline-head{margin-bottom:4px;}
+.bline-head .fl{margin:0;}
+.bline-head .fl:first-child,.bline>select{flex:1;min-width:0;}
+.bline-head .fl:nth-child(2){width:102px;flex:none;}
+.bline .stepper{flex:none;width:102px;justify-content:space-between;}
+.bline .stepper button{width:30px;}
+.bline .stepper span{min-width:22px;}
+.bline-price-head,.bline .bline-price{width:74px;flex:none;}
+.bline .bline-price{padding-left:8px;padding-right:6px;}
+.bline+.bline,#bExtraLines .bline{margin-top:8px;}
+.bline-del,.bline-del-sp{width:24px;flex:none;}
+.bline-del{height:24px;border:none;border-radius:50%;background:var(--light);color:var(--gray);font-size:15px;line-height:1;cursor:pointer;padding:0;}
+.bline-note{font-size:11px;color:var(--gray);line-height:1.4;margin-top:6px;}
+.btot-fix{padding:4px 0 8px;}
+.bline-add{margin-top:8px;background:none;border:none;padding:4px 0;color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
 .btn-swap{padding:7px 14px;border:none;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:600;background:var(--green);color:#fff;cursor:pointer;}
 .btn-swap:hover{background:#2e4728;}
@@ -2268,45 +2288,40 @@ Gardez la main.</div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         Séjour
       </div>
+      <!-- Location(s) : chaque ligne = une location + ses voyageurs (+ son
+           prix dès qu'il y a plusieurs locations). Retour utilisateur :
+           réserver plusieurs locations au nom d'un même client dans une
+           seule fiche ; le nombre de voyageurs "par principe à côté de la
+           location", même pour une seule. Enregistré comme une réservation
+           par location, reliées par groupId (voir saveBGroup()) : grille,
+           ménage, compta par structure, iCal et Séjours restent inchangés. -->
       <div class="fg">
-        <label class="fl">Location</label>
-        <select class="fsel" id="bRoom" onchange="chkConflict();updateModalTotal()">
-        </select>
-      </div>
-      <div class="fg">
-        <label class="fl">Arrivée</label>
-        <input type="date" class="fi date-box" id="bIn" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
-      </div>
-      <div class="fg">
-        <label class="fl">Départ</label>
-        <input type="date" class="fi date-box" id="bOut" onchange="chkConflict();renderBreakfastList();renderDinnerList();updateModalTotal()">
-      </div>
-      <!-- Voyageurs : même mise en forme (stepper −/+) que le widget
-           Arrivée/Départ/Voyageurs du site voyageur (fiftin.fr), retour
-           utilisateur — déplacé ici depuis Services ("il est maintenant
-           présent uniquement dans la partie séjour, c'est plus logique"),
-           remplace l'ancien sélecteur à 5 boutons ronds (voir setPax()). -->
-      <!-- Voyageurs + Heure d'arrivée côte à côte (retour utilisateur) ;
-           Heure d'arrivée en <select> plutôt qu'en texte libre — un
-           <select> s'ouvre nativement comme une roulette sur mobile (iOS),
-           bien plus simple à remplir qu'un clavier texte. Les anciennes
-           valeurs libres qui ne correspondent à aucun créneau sont
-           réinjectées comme option supplémentaire par openEditModal, pour
-           ne rien perdre des résas déjà enregistrées avant ce changement. -->
-      <div class="frow">
-        <div class="fg">
-          <label class="fl">Voyageurs</label>
+        <div class="bline-head"><label class="fl">Location</label><label class="fl">Voyageurs</label><label class="fl bline-price-head">Prix €</label><span class="bline-del-sp" id="bLinesDelHead" style="display:none"></span></div>
+        <div class="bline">
+          <select class="fsel" id="bRoom" onchange="chkConflict();renderBLines();updateModalTotal()">
+          </select>
           <div class="stepper">
             <button type="button" onclick="stepPax(-1)">−</button>
             <span id="paxCount">1</span>
             <button type="button" onclick="stepPax(1)">+</button>
           </div>
-          <input type="hidden" id="bPersons" value="1">
+          <input type="number" class="fi bline-price" id="bLinePrice0" min="0" step="1" oninput="onBLinePrice0Input()">
+          <span class="bline-del-sp" id="bLine0Sp" style="display:none"></span>
         </div>
-        <div class="fg">
-          <label class="fl">Heure d'arrivée</label>
-          <select class="fsel date-box" id="bTime">
-            <option value="">Non précisée</option>
+        <input type="hidden" id="bPersons" value="1">
+        <div id="bExtraLines"></div>
+        <div class="bline-note">Prix = hébergement pour tout le séjour ; vide = tarif de la location. Table d'hôtes, extras et taxe de séjour s'ajoutent au total.</div>
+        <button type="button" class="bline-add" id="bLineAddBtn" onclick="addBLine()">+ Ajouter une location à la réservation</button>
+      </div>
+      <!-- Arrivée / Départ : date + heure sur la même ligne (retour
+           utilisateur, "simplifierait visuellement ce modal") ; heure
+           facultative, "Heure ?" = non précisée comme avant. -->
+      <div class="fg">
+        <label class="fl">Arrivée</label>
+        <div class="bdt-row">
+          <input type="date" class="fi date-box" id="bIn" onchange="chkConflict();renderBreakfastList();renderDinnerList();renderBLines();updateModalTotal()">
+          <select class="fsel date-box" id="bTime" title="Heure d'arrivée">
+            <option value="">Heure ?</option>
             <option value="12h">12h</option>
             <option value="12h30">12h30</option>
             <option value="13h">13h</option>
@@ -2334,6 +2349,43 @@ Gardez la main.</div>
           </select>
         </div>
       </div>
+      <div class="fg">
+        <label class="fl">Départ</label>
+        <div class="bdt-row">
+          <input type="date" class="fi date-box" id="bOut" onchange="chkConflict();renderBreakfastList();renderDinnerList();renderBLines();updateModalTotal()">
+          <select class="fsel date-box" id="bTimeOut" title="Heure de départ">
+            <option value="">Heure ?</option>
+            <option value="7h">7h</option>
+            <option value="7h30">7h30</option>
+            <option value="8h">8h</option>
+            <option value="8h30">8h30</option>
+            <option value="9h">9h</option>
+            <option value="9h30">9h30</option>
+            <option value="10h">10h</option>
+            <option value="10h30">10h30</option>
+            <option value="11h">11h</option>
+            <option value="11h30">11h30</option>
+            <option value="12h">12h</option>
+            <option value="12h30">12h30</option>
+            <option value="13h">13h</option>
+            <option value="13h30">13h30</option>
+            <option value="14h">14h</option>
+          </select>
+        </div>
+      </div>
+      <!-- Voyageurs : même mise en forme (stepper −/+) que le widget
+           Arrivée/Départ/Voyageurs du site voyageur (fiftin.fr), retour
+           utilisateur — déplacé ici depuis Services ("il est maintenant
+           présent uniquement dans la partie séjour, c'est plus logique"),
+           remplace l'ancien sélecteur à 5 boutons ronds (voir setPax()). -->
+      <!-- Voyageurs + Heure d'arrivée côte à côte (retour utilisateur) ;
+           Heure d'arrivée en <select> plutôt qu'en texte libre — un
+           <select> s'ouvre nativement comme une roulette sur mobile (iOS),
+           bien plus simple à remplir qu'un clavier texte. Les anciennes
+           valeurs libres qui ne correspondent à aucun créneau sont
+           réinjectées comme option supplémentaire par openEditModal, pour
+           ne rien perdre des résas déjà enregistrées avant ce changement. -->
+
       <!-- Statut (de la réservation, pas du paiement) : deux points de
            couleur, plus de <select> (retour utilisateur : "utiliser
            plutôt deux points de couleur... plus de menu déroulant").
@@ -2421,13 +2473,11 @@ Gardez la main.</div>
         <label class="fl">Source</label>
         <div class="src-row" id="srcBtns"></div>
       </div>
-      <div class="fg">
-        <label class="fl">Prix personnalisé <span id="prixNetHint" style="color:var(--gray);font-weight:400;font-size:11px;"></span></label>
-        <div style="position:relative;">
-          <input type="number" class="fi" id="prixNet" placeholder="Vide = calcul automatique" min="0" step="1" style="padding-right:26px;" oninput="updateModalTotal()">
-          <span style="position:absolute;right:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--gray);pointer-events:none;">€</span>
-        </div>
-      </div>
+      <!-- Prix : saisi sur la ligne de chaque location (partie Séjour) ;
+           #prixNet reste un champ caché, miroir du prix de la 1re ligne,
+           pour le calcul existant à une location (updateModalTotal). -->
+      <input type="hidden" id="prixNet" value="">
+      <span id="prixNetHint" style="display:none"></span>
       <div id="bExtrasTotal" style="display:none;font-size:12px;color:var(--green);font-weight:600;">
         Extras enregistrés : <span id="bExtrasTotalVal"></span>
       </div>
@@ -2440,6 +2490,13 @@ Gardez la main.</div>
           </span>
         </div>
         <div class="btot-detail" id="bTotDetail" style="display:none"></div>
+        <div class="btot-fix">
+          <button type="button" class="bline-add" id="bTotFixBtn" onclick="openBTotFix()">Fixer un prix total d'hébergement</button>
+          <div id="bTotFixRow" style="display:none;gap:8px;align-items:center">
+            <input type="number" class="fi" id="bTotFixVal" min="0" step="1" placeholder="Total hébergement €" style="flex:1;min-width:0">
+            <button type="button" class="btn-p" style="width:auto;padding:8px 14px" onclick="applyBTotFix()">Répartir</button>
+          </div>
+        </div>
         <div class="conso-share-row" id="bConsoShare" style="display:none"></div>
       </div>
     </div>
@@ -5631,6 +5688,162 @@ function exportContractPDF(){
 // ═══════════════════════════════════════════════════════════════
 //  BOOKING MODAL
 // ═══════════════════════════════════════════════════════════════
+// ── Réservation à plusieurs locations ──────────────────────────
+// La 1re ligne reste #bRoom/#bPersons (tout le code existant continue de
+// les lire tel quel : conflits, total, contrat…) ; les lignes en plus
+// vivent dans bkLines. Prix : un seul endroit, la ligne de chaque location
+// (vide = tarif auto) ; #prixNet (caché) recopie celui de la 1re ligne.
+// « Fixer un prix total » (récapitulatif) ne fait que remplir les lignes.
+let bkLines=[];             // [{bid|null, roomId, pax, price:''}]
+let bkGroupBids=new Set();  // réservations du groupe en cours d'édition
+let bkLinesRemoved=[];      // réservations existantes retirées (supprimées à l'enregistrement)
+function resetBLines(){
+  bkLines=[];bkGroupBids=new Set();bkLinesRemoved=[];
+  byId('bLinePrice0').value='';
+  byId('prixNet').value='';
+  byId('bTotFixRow').style.display='none';byId('bTotFixBtn').style.display='';
+  renderBLines();
+}
+function allBLines(){
+  return [{bid:editBid,roomId:byId('bRoom').value,pax:parseInt(byId('bPersons').value)||1,price:byId('bLinePrice0').value},...bkLines];
+}
+function roomBusyForBooking(rid,ci,co){
+  return S.bookings.some(b=>b.roomId===rid&&b.id!==editBid&&!bkGroupBids.has(b.id)&&b.checkIn<co&&b.checkOut>ci);
+}
+function bLineAutoPrice(rid,pax){
+  const ci=byId('bIn').value,co=byId('bOut').value;
+  if(!ci||!co||ci>=co)return 0;
+  const tmp={checkIn:ci,checkOut:co,roomId:rid,nbPersons:pax,guestId:selGid,source:bkSource,noBreakfast:breakfastEnabled()?getNoBreakfastNights():{}};
+  return Math.max(0,daysBetween(ci,co)*getNightlyRate(tmp)-getBreakfastDeduction(tmp,ci,co));
+}
+// Prix hébergement de chaque ligne (null = tarif automatique).
+function bLinesPrices(){
+  return allBLines().map(l=>l.price===''||l.price==null?null:(parseFloat(l.price)||0));
+}
+// Libellé d'une location dans les listes de la fiche : son nom, ou son code
+// court (Réglages → Locations → Code) s'il est trop long pour la ligne.
+function bRoomLabel(r){
+  return (r.name||'').length>14&&r.short?r.short:(r.name||'');
+}
+// « Fixer un prix total » : répartit un total d'hébergement dans les lignes
+// au prorata de leur tarif automatique (parts égales si aucun tarif), reste
+// de l'arrondi sur la 1re ; les prix restent ensuite modifiables ligne par ligne.
+function openBTotFix(){
+  byId('bTotFixBtn').style.display='none';
+  byId('bTotFixRow').style.display='flex';
+  byId('bTotFixVal').value='';
+  byId('bTotFixVal').focus();
+}
+function applyBTotFix(){
+  const v=byId('bTotFixVal').value;
+  byId('bTotFixRow').style.display='none';
+  byId('bTotFixBtn').style.display='';
+  if(v==='')return;
+  const total=Math.round(parseFloat(v)||0);
+  const lines=allBLines();
+  const w=lines.map(l=>bLineAutoPrice(l.roomId,l.pax));
+  const sw=w.reduce((a,b)=>a+b,0);
+  const shares=w.map(x=>Math.floor(sw>0?total*x/sw:total/lines.length));
+  shares[0]+=total-shares.reduce((a,b)=>a+b,0);
+  byId('bLinePrice0').value=String(shares[0]);
+  byId('prixNet').value=String(shares[0]);
+  bkLines.forEach((l,i)=>{l.price=String(shares[i+1]);});
+  renderBLines();updateModalTotal();
+}
+function renderBLines(){
+  const multi=bkLines.length>0;
+  const ci=byId('bIn').value,co=byId('bOut').value;
+  ['bLine0Sp','bLinesDelHead'].forEach(id=>{byId(id).style.display=multi?'':'none';});
+  const r0=byId('bRoom').value;
+  byId('bExtraLines').innerHTML=bkLines.map((l,i)=>{
+    const others=new Set([r0,...bkLines.filter((_,j)=>j!==i).map(x=>x.roomId)]);
+    const opts=ROOMS.map(r=>{
+      const busy=r.id!==l.roomId&&(others.has(r.id)||(ci&&co&&roomBusyForBooking(r.id,ci,co)));
+      return `<option value="${r.id}"${r.id===l.roomId?' selected':''}${busy?' disabled':''}>${escHtml(bRoomLabel(r))}${busy?' (prise)':''}</option>`;
+    }).join('');
+    return `<div class="bline">
+      <select class="fsel" onchange="setBLineRoom(${i},this.value)">${opts}</select>
+      <div class="stepper"><button type="button" onclick="stepBLinePax(${i},-1)">−</button><span>${l.pax}</span><button type="button" onclick="stepBLinePax(${i},1)">+</button></div>
+      <input type="number" class="fi bline-price" min="0" step="1" value="${l.price}" oninput="setBLinePrice(${i},this.value)">
+      <button type="button" class="bline-del" onclick="removeBLine(${i})" title="Retirer cette location">×</button>
+    </div>`;
+  }).join('');
+  refreshBLinePlaceholders();
+}
+function refreshBLinePlaceholders(){
+  const lines=allBLines();
+  const inputs=[byId('bLinePrice0'),...document.querySelectorAll('#bExtraLines .bline-price')];
+  inputs.forEach((inp,i)=>{
+    if(!inp||!lines[i])return;
+    inp.placeholder=String(Math.round(bLineAutoPrice(lines[i].roomId,lines[i].pax)));
+  });
+}
+function addBLine(){
+  const ci=byId('bIn').value,co=byId('bOut').value;
+  const used=new Set([byId('bRoom').value,...bkLines.map(l=>l.roomId)]);
+  const free=ROOMS.find(r=>!used.has(r.id)&&!(ci&&co&&roomBusyForBooking(r.id,ci,co)));
+  if(!free){alert('Aucune autre location libre sur ces dates.');return;}
+  bkLines.push({bid:null,roomId:free.id,pax:Math.min(2,free.maxPersons||2),price:''});
+  renderBLines();updateModalTotal();
+}
+function removeBLine(i){
+  const l=bkLines[i];if(!l)return;
+  if(l.bid)bkLinesRemoved.push(l.bid);
+  bkLines.splice(i,1);
+  renderBLines();updateModalTotal();
+}
+function setBLineRoom(i,rid){bkLines[i].roomId=rid;renderBLines();updateModalTotal();}
+function stepBLinePax(i,d){bkLines[i].pax=Math.max(1,Math.min(12,(bkLines[i].pax||1)+d));renderBLines();updateModalTotal();}
+function setBLinePrice(i,v){
+  bkLines[i].price=v;
+  updateModalTotal();
+}
+function onBLinePrice0Input(){
+  byId('prixNet').value=byId('bLinePrice0').value;
+  updateModalTotal();
+}
+// Ouverture d'une réservation existante : charge les autres locations de son groupe.
+function loadBLinesForEdit(b){
+  bkLines=[];bkLinesRemoved=[];bkGroupBids=new Set();
+  byId('bLinePrice0').value=b.prixNet!=null?String(b.prixNet):'';
+  if(b.groupId){
+    S.bookings.filter(x=>x.groupId===b.groupId).forEach(m=>{
+      bkGroupBids.add(m.id);
+      if(m.id!==b.id)bkLines.push({bid:m.id,roomId:m.roomId,pax:m.nbPersons||2,price:m.prixNet!=null?String(m.prixNet):''});
+    });
+  }
+  renderBLines();
+}
+// Enregistre les autres locations de la réservation (après la 1re, déjà
+// enregistrée par saveBooking) : champs communs recopiés depuis elle,
+// location / voyageurs / prix propres à chaque ligne. L'acompte reste sur
+// la 1re seulement (sinon compté autant de fois que de locations).
+function saveBGroup(primary,prices,rawNotes,taxeSejour){
+  if(bkLinesRemoved.length){
+    bkLinesRemoved.forEach(bid=>icalRememberDeleted(S.bookings.find(b=>b.id===bid)));
+    S.bookings=S.bookings.filter(b=>!bkLinesRemoved.includes(b.id));
+  }
+  if(!bkLines.length){
+    if(primary.groupId&&!S.bookings.some(b=>b.groupId===primary.groupId&&b.id!==primary.id))delete primary.groupId;
+    return;
+  }
+  const gid=primary.groupId||uid();
+  primary.groupId=gid;
+  bkLines.forEach((l,i)=>{
+    const ts=taxeSejour?getTaxeSejourAmount({checkIn:primary.checkIn,checkOut:primary.checkOut,nbPersons:l.pax,roomId:l.roomId,guestId:primary.guestId,taxeSejour:true}):0;
+    const fields={
+      guestId:primary.guestId,checkIn:primary.checkIn,checkOut:primary.checkOut,arrivalTime:primary.arrivalTime,departureTime:primary.departureTime||'',
+      status:primary.status,payment:primary.payment,source:primary.source,ghost:primary.ghost,taxeSejour:primary.taxeSejour,
+      dinnerNights:{...(primary.dinnerNights||{})},noBreakfast:{...(primary.noBreakfast||{})},
+      notes:syncTaxeSejourNote(rawNotes,taxeSejour,ts),groupId:gid,
+      roomId:l.roomId,nbPersons:l.pax,prixNet:prices[i+1]
+    };
+    const k=l.bid?S.bookings.findIndex(b=>b.id===l.bid):-1;
+    if(k!==-1)S.bookings[k]={...S.bookings[k],...fields};
+    else S.bookings.push({id:uid(),...fields,depositAmount:0,createdAt:new Date().toISOString()});
+  });
+}
+
 function openAddModal(roomId,ds,dsOut){
   editBid=null;selGid=null;newGMode=false;gSearchTerm='';gChanging=false;
   byId('mBookTitle').textContent='Nouvelle réservation';
@@ -5650,6 +5863,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('bIn').value=ci;
   byId('bOut').value=dsOut||addDays(ci,1);
   setBTime('');
+  setBTimeOut('');
   setBStatus('ok');
   setPax(1);
   byId('bNotes').value='';
@@ -5662,6 +5876,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('bExtrasTotal').style.display='none';
   byId('bTotalSejour').style.display='none';
   byId('bExtrasSec').style.display='none';
+  resetBLines();
 
   renderGPicker();
   renderBreakfastList();
@@ -5698,6 +5913,7 @@ function openEditModal(id,clickedDay){
   byId('bIn').value=b.checkIn;
   byId('bOut').value=b.checkOut;
   setBTime(b.arrivalTime||'');
+  setBTimeOut(b.departureTime||'');
   setBStatus(b.status||'ok');
   setPax(b.nbPersons||2);
   byId('bNotes').value=b.notes||'';
@@ -5715,6 +5931,7 @@ function openEditModal(id,clickedDay){
   // vient de regarder. Si le jour n'appartient pas au séjour (ou n'a pas
   // été fourni), renderModalExtras() retombe sur son ancien comportement.
   modalExtrasDay=clickedDay||null;
+  loadBLinesForEdit(b);
   renderModalExtras();
   renderGPicker();
   renderBreakfastList();
@@ -5796,6 +6013,18 @@ function setBStatus(v){
 // correspond à aucun créneau proposé (résa créée avant ce changement,
 // avec un texte libre type "18h, 23h"), on la réinjecte comme option
 // supplémentaire plutôt que de la faire silencieusement disparaître.
+// Heure de départ (#bTimeOut) : même principe que setBTime, valeur hors
+// liste réinjectée plutôt que perdue.
+function setBTimeOut(v){
+  const sel=byId('bTimeOut');
+  sel.value=v;
+  if(sel.value!==v){
+    const opt=document.createElement('option');
+    opt.value=v;opt.textContent=v;
+    sel.insertBefore(opt,sel.firstChild.nextSibling);
+    sel.value=v;
+  }
+}
 function setBTime(v){
   const sel=byId('bTime');
   sel.value=v;
@@ -5893,15 +6122,15 @@ function chkConflict(){
   const ci=byId('bIn').value;
   const co=byId('bOut').value;
   if(!rid||!ci||!co){byId('conflictWarn').style.display='none';byId('freeRoomPicker').style.display='none';return;}
-  const conflicts=S.bookings.filter(b=>b.id!==editBid&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
+  const conflicts=S.bookings.filter(b=>b.id!==editBid&&!bkGroupBids.has(b.id)&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
   const conflict=conflicts.length>0;
   byId('conflictWarn').style.display=conflict?'block':'none';
   byId('bSaveBtn').disabled=conflict;
   const fp=byId('freeRoomPicker');
   if(conflict){
     let html='';
-    // Swap option: only when editing an existing booking
-    if(editBid){
+    // Swap option: only when editing an existing booking (une seule location)
+    if(editBid&&!bkLines.length){
       const origRid=S.bookings.find(b=>b.id===editBid)?.roomId;
       if(origRid&&origRid!==rid){
         const canSwap=conflicts.every(cb=>
@@ -5975,6 +6204,7 @@ function saveBooking(){
   const ci=byId('bIn').value;
   const co=byId('bOut').value;
   const at=byId('bTime').value.trim();
+  const dt=byId('bTimeOut').value.trim();
   const st=byId('bStatus').value;
   const np=parseInt(byId('bPersons').value)||2;
   const taxeSejour=taxeSejourEnabled()&&bkTaxeSejour;
@@ -5986,13 +6216,26 @@ function saveBooking(){
   const ghost=source==='ghost';
   // "" = calcul automatique ; "0" est un prix personnalisé valide (séjour offert)
   // et ne doit pas être confondu avec une valeur vide.
-  const prixNetRaw=byId('prixNet').value;
-  const prixNet=prixNetRaw===''?null:(parseFloat(prixNetRaw)||0);
+  // Une location : prix personnalisé tel quel. Plusieurs : prix de chaque
+  // ligne, ou prix total réparti (voir bLinesPrices).
+  const bPrices=bLinesPrices();
+  const prixNet=bPrices[0];
 
   if(!ci||!co){alert('Remplissez les dates');return;}
   if(ci>=co){alert('La date de départ doit être après l\'arrivée');return;}
-  const hasConflict=S.bookings.some(b=>b.id!==editBid&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
+  const hasConflict=S.bookings.some(b=>b.id!==editBid&&!bkGroupBids.has(b.id)&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
   if(hasConflict){alert('Cette location est déjà prise sur ces dates. Choisissez une location libre.');return;}
+  const bLinesAll=allBLines();
+  if(bLinesAll.length>1){
+    const rids=bLinesAll.map(l=>l.roomId);
+    if(new Set(rids).size!==rids.length){alert('La même location figure deux fois dans la réservation.');return;}
+    const busy=bLinesAll.find(l=>roomBusyForBooking(l.roomId,ci,co));
+    if(busy){alert(`${room(busy.roomId)?.name||'Une location'} est déjà prise sur ces dates.`);return;}
+  }
+  if(bkLinesRemoved.length){
+    const names=bkLinesRemoved.map(bid=>room(S.bookings.find(b=>b.id===bid)?.roomId)?.name).filter(Boolean).join(', ');
+    if(!confirm(`Retirer ${names||'ces locations'} de la réservation ? Leurs réservations seront supprimées.`))return;
+  }
 
   let gid=selGid;
   if(newGMode){
@@ -6010,7 +6253,7 @@ function saveBooking(){
     // par une lecture vide du formulaire.
     const dn=dinnerEnabled()?getDinnerNights():(i!==-1?S.bookings[i].dinnerNights:{});
     const nbf=breakfastEnabled()?getNoBreakfastNights():(i!==-1?S.bookings[i].noBreakfast:{});
-    if(i!==-1) S.bookings[i]={...S.bookings[i],roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour};
+    if(i!==-1) S.bookings[i]={...S.bookings[i],roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,departureTime:dt,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour};
   }else{
     // Le petit-déjeuner est inclus par défaut (checkboxes cochées à la création) :
     // on lit quand même les cases de la modale au cas où l'utilisateur en aurait
@@ -6019,8 +6262,10 @@ function saveBooking(){
     // enregistrement.
     const nbf=getNoBreakfastNights();
     const dn=dinnerEnabled()?getDinnerNights():{};
-    S.bookings.push({id:uid(),roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour,createdAt:new Date().toISOString()});
+    S.bookings.push({id:uid(),roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,departureTime:dt,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour,createdAt:new Date().toISOString()});
   }
+  const primaryBk=editBid?S.bookings.find(b=>b.id===editBid):S.bookings[S.bookings.length-1];
+  if(primaryBk)saveBGroup(primaryBk,bPrices,byId('bNotes').value.trim(),taxeSejour);
   persist();closeM('modalBooking');renderGrid();
   if(S.view==='today')renderToday();
   if(S.view==='week')renderWeek();
@@ -6029,6 +6274,25 @@ function saveBooking(){
 
 function delBooking(){
   if(!editBid)return;
+  const cur=S.bookings.find(b=>b.id===editBid);
+  const members=cur&&cur.groupId?S.bookings.filter(b=>b.groupId===cur.groupId):[];
+  if(members.length>1){
+    // Réservation à plusieurs locations : tout supprimer, ou seulement celle-ci.
+    if(confirm(`Supprimer toute la réservation (${members.length} locations) ?`)){
+      members.forEach(m=>icalRememberDeleted(m));
+      S.bookings=S.bookings.filter(b=>b.groupId!==cur.groupId);
+    }else if(confirm(`Supprimer seulement ${room(cur.roomId)?.name||'cette location'} ?`)){
+      icalRememberDeleted(cur);
+      S.bookings=S.bookings.filter(b=>b.id!==editBid);
+      const rest=S.bookings.filter(b=>b.groupId===cur.groupId);
+      if(rest.length===1)delete rest[0].groupId;
+    }else return;
+    persist();closeM('modalBooking');renderGrid();
+    if(S.view==='today')renderToday();
+    if(S.view==='week')renderWeek();
+    if(S.view==='month')renderMonth();
+    return;
+  }
   if(!confirm('Supprimer cette réservation ?'))return;
   icalRememberDeleted(S.bookings.find(b=>b.id===editBid));
   S.bookings=S.bookings.filter(b=>b.id!==editBid);
@@ -7712,7 +7976,7 @@ function applySettings(){
   const bRoomEl=byId('bRoom');
   if(bRoomEl){
     const cur=bRoomEl.value;
-    bRoomEl.innerHTML=ROOMS.map(r=>`<option value="${r.id}">${r.name}</option>`).join('');
+    bRoomEl.innerHTML=ROOMS.map(r=>`<option value="${r.id}">${bRoomLabel(r)}</option>`).join('');
     if(cur)bRoomEl.value=cur;
   }
 }
@@ -9408,6 +9672,8 @@ function fallbackCopy(txt,done){
 function updateModalTotal(){
   const el=byId('bTotalSejour');
   if(!el)return;
+  if(bkLines.length){updateGroupTotal();return;}
+  refreshBLinePlaceholders();
   const shareRow=byId('bConsoShare');
   if(shareRow){shareRow.style.display='none';shareRow.innerHTML='';}
   const ci=byId('bIn').value;
@@ -9457,11 +9723,11 @@ function updateModalTotal(){
   byId('prixNetHint').textContent=autoTotal>0&&!isCustom?`(auto : ${autoTotal.toLocaleString('fr-FR')} €)`:'';
   if(total<=0&&!isCustom){el.style.display='none';return;}
   el.style.display='block';
-  byId('bTotLbl').textContent=(isCustom&&extTotal<=0&&dinCount<=0?'Prix personnalisé':'Total séjour')+' — '+nights+' nuit'+(nights>1?'s':'');
+  byId('bTotLbl').textContent='Total séjour — '+nights+' nuit'+(nights>1?'s':'');
   byId('bTotVal').textContent=total.toLocaleString('fr-FR')+' €';
   let rows='';
   if(isCustom){
-    rows+=`<div class="btot-line"><span>Prix personnalisé</span><span>${prixNetVal.toLocaleString('fr-FR')} €</span></div>`;
+    rows+=`<div class="btot-line"><span>Hébergement (prix fixé)</span><span>${prixNetVal.toLocaleString('fr-FR')} €</span></div>`;
     if(autoNoExtras>0)rows+=`<div class="btot-line" style="opacity:.55;font-style:italic"><span>Calcul auto (hors extras)</span><span>${autoNoExtras.toLocaleString('fr-FR')} €</span></div>`;
     if(dinCount>0)rows+=`<div class="btot-line"><span>${dinCount} repas × ${pax} pers × ${tariff.th} €</span><span>${dinRevenue.toLocaleString('fr-FR')} €</span></div>`;
     if(tsAmount>0)rows+=`<div class="btot-line"><span>Taxe de séjour</span><span>${tsAmount.toLocaleString('fr-FR')} €</span></div>`;
@@ -9501,6 +9767,51 @@ function updateModalTotal(){
     if(rows)rows+=`<div class="btot-line sep"><span>Total</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
   }
   if(shareRow&&bk)renderConsoShareRow(shareRow,bk);
+  byId('bTotDetail').innerHTML=rows;
+}
+// Total d'une réservation à plusieurs locations : une ligne par location
+// (hébergement + table d'hôtes de ses voyageurs), puis taxe de séjour et
+// extras (portés par la 1re location) — mêmes règles que updateModalTotal.
+function updateGroupTotal(){
+  const el=byId('bTotalSejour');
+  const shareRow=byId('bConsoShare');
+  if(shareRow){shareRow.style.display='none';shareRow.innerHTML='';}
+  const ci=byId('bIn').value,co=byId('bOut').value;
+  const tsBox=byId('bTaxeSejourVal');
+  refreshBLinePlaceholders();
+  if(!ci||!co||ci>=co){el.style.display='none';if(tsBox){tsBox.textContent='';tsBox.style.display='none';}return;}
+  const nights=daysBetween(ci,co);
+  const bk=editBid?S.bookings.find(b=>b.id===editBid):null;
+  const lines=allBLines();
+  const prices=bLinesPrices();
+  const tariff=getTariffForDate(ci);
+  const dinCount=Object.keys(getDinnerNights()).length;
+  const taxeSejourOn=taxeSejourEnabled()&&bkTaxeSejour;
+  let tsTotal=0,acc=0,autoSum=0,rows='';
+  lines.forEach((l,i)=>{
+    const auto=bLineAutoPrice(l.roomId,l.pax);
+    autoSum+=auto;
+    const a=prices[i]!=null?prices[i]:auto;
+    const din=dinCount*l.pax*tariff.th;
+    acc+=a+din;
+    if(taxeSejourOn)tsTotal+=getTaxeSejourAmount({checkIn:ci,checkOut:co,nbPersons:l.pax,roomId:l.roomId,guestId:selGid,source:bkSource,taxeSejour:true});
+    rows+=`<div class="btot-line"><span>${escHtml(room(l.roomId)?.name||'')} · ${l.pax} pers.${prices[i]!=null?'':' <span style="opacity:.6">(tarif auto)</span>'}</span><span>${a.toLocaleString('fr-FR')} €</span></div>`;
+    if(din>0)rows+=`<div class="btot-line btot-subline"><span>${dinCount} repas × ${l.pax} pers × ${tariff.th} €</span><span>${din.toLocaleString('fr-FR')} €</span></div>`;
+  });
+  if(tsBox){
+    tsBox.textContent=taxeSejourOn?`${tsTotal.toLocaleString('fr-FR')} €`:'';
+    tsBox.style.display=taxeSejourOn?'block':'none';
+    tsBox.style.marginTop=taxeSejourOn?'6px':'0';
+  }
+  const extTotal=bk?getExtrasTotal(bk):0;
+  if(tsTotal>0)rows+=`<div class="btot-line"><span>Taxe de séjour</span><span>${tsTotal.toLocaleString('fr-FR')} €</span></div>`;
+  if(extTotal>0)rows+=`<div class="btot-line"><span>Extras</span><span>${extTotal.toLocaleString('fr-FR')} €</span></div>`;
+  const total=acc+tsTotal+extTotal;
+  rows+=`<div class="btot-line sep"><span>Total</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
+  byId('prixNetHint').textContent=autoSum>0&&byId('prixNet').value===''?`(auto : ${Math.round(autoSum).toLocaleString('fr-FR')} €)`:'';
+  el.style.display='block';
+  byId('bTotLbl').textContent=`Total séjour — ${lines.length} locations · ${nights} nuit${nights>1?'s':''}`;
+  byId('bTotVal').textContent=total.toLocaleString('fr-FR')+' €';
   byId('bTotDetail').innerHTML=rows;
 }
 function toggleBTot(){
