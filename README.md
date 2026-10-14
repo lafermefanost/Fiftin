@@ -1318,12 +1318,9 @@ Aucune règle Firestore à coller : `icalFeeds` et `icalExportTokens` ne sont ac
 
 ## Réservation à plusieurs locations, heures d'arrivée et de départ
 
-**Fiche réservation, partie Séjour.** Chaque ligne = une location + ses voyageurs (le nombre de voyageurs est désormais à côté de la location, même pour une seule). « + Ajouter une location à la réservation » ajoute une ligne (seules les locations libres sur les dates sont sélectionnables, × pour retirer). Dès qu'il y a plusieurs lignes, une colonne Prix apparaît.
+**Fiche réservation, partie Séjour.** Chaque ligne = une location, ses voyageurs et son prix — même présentation avec une ou plusieurs locations. « + Ajouter une location à la réservation » ajoute une ligne (seules les locations libres sur les dates sont sélectionnables, × pour retirer). Une location au nom trop long (> 14 caractères) s'affiche par son code court (Réglages → Locations → Code).
 
-**Prix, au choix** (les deux s'excluent, saisir l'un vide l'autre) :
-- prix par ligne (vide = tarif automatique de la location, affiché en grisé) ;
-- ou « Prix total hébergement » (champ Paiement) réparti entre les locations au prorata de leur tarif automatique (parts égales si aucun tarif), reste de l'arrondi sur la 1re.
-Table d'hôtes, taxe de séjour : calculées par location avec ses propres voyageurs. Extras et contrat : portés par la 1re location, comme avant.
+**Prix : un seul endroit, la ligne de chaque location** — prix d'hébergement pour tout le séjour, vide = tarif de la location (affiché en grisé). Remplace l'ancien « Prix personnalisé » de la partie Paiement (`#prixNet` reste un champ caché, recopie du prix de la 1re ligne). « Fixer un prix total d'hébergement » (sous le total séjour) répartit un montant dans les lignes au prorata de leur tarif (parts égales si aucun tarif, reste de l'arrondi sur la 1re) ; les prix restent ensuite modifiables ligne par ligne. Table d'hôtes et taxe de séjour : calculées par location avec ses propres voyageurs, en plus. Extras et contrat : portés par la 1re location, comme avant.
 
 **Stockage : une réservation par location**, reliées par `groupId` (`saveBGroup()`) — grille, ménage, compta par location et par structure, export iCal et disponibilités Séjours fonctionnent sans changement. Champs communs recopiés sur toutes : client, dates, heures, statut, paiement, source, taxe de séjour (oui/non), petit-déjeuner/table d'hôtes par nuit, notes. Acompte : seulement sur la 1re (sinon compté autant de fois que de locations). Ouvrir n'importe laquelle des réservations du groupe affiche la fiche complète. Supprimer : « toute la réservation » ou « seulement cette location ».
 
