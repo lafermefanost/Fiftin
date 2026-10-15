@@ -2583,11 +2583,14 @@ Gardez la main.</div>
 </div>
 
 <!-- ─── GUEST EDIT MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalGuestEdit" style="display:none" onclick="ovClose(event,'modalGuestEdit')">
+<div class="overlay" id="modalGuestEdit" style="display:none" onclick="if(event.target===this)cancelM('modalGuestEdit')">
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="gEditTitle">Client</div>
-      <button class="mclose" onclick="closeM('modalGuestEdit')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" onclick="saveGuest()" title="Enregistrer">✓ Enregistrer</button>
+        <button class="mclose" onclick="cancelM('modalGuestEdit')" title="Annuler les modifications">✕</button>
+      </div>
     </div>
     <div class="frow">
       <div class="fg" style="grid-column:1/-1">
@@ -2637,11 +2640,7 @@ Gardez la main.</div>
       </div>
     </div>
     <div id="geHistory"></div>
-    <div class="macts">
-      <button class="btn-d" id="gDelBtn" onclick="delGuest()">Supprimer</button>
-      <button class="btn-s" onclick="closeM('modalGuestEdit')">Annuler</button>
-      <button class="btn-p btn-add" onclick="saveGuest()">Enregistrer</button>
-    </div>
+    <button class="mdel-link" id="gDelBtn" onclick="delGuest()">Supprimer le client</button>
   </div>
 </div>
 
@@ -2692,11 +2691,14 @@ Gardez la main.</div>
 </div>
 
 <!-- ─── EVENT EDIT MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalEventEdit" style="display:none" onclick="ovClose(event,'modalEventEdit')">
+<div class="overlay" id="modalEventEdit" style="display:none" onclick="if(event.target===this)cancelM('modalEventEdit')">
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="evEditTitle">Événement</div>
-      <button class="mclose" onclick="closeM('modalEventEdit')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" onclick="saveEvent()" title="Enregistrer">✓ Enregistrer</button>
+        <button class="mclose" onclick="cancelM('modalEventEdit')" title="Annuler les modifications">✕</button>
+      </div>
     </div>
 
     <!-- ── Client ── (même principe que le modal réservation : un événement a
@@ -2839,11 +2841,7 @@ Gardez la main.</div>
       </div>
     </div>
 
-    <div class="macts">
-      <button class="btn-d" id="evDelBtn" onclick="delEvent()">Supprimer</button>
-      <button class="btn-s" onclick="closeM('modalEventEdit')">Annuler</button>
-      <button class="btn-p btn-add" onclick="saveEvent()">Enregistrer</button>
-    </div>
+    <button class="mdel-link" id="evDelBtn" onclick="delEvent()">Supprimer l'événement</button>
   </div>
 </div>
 
@@ -2855,11 +2853,14 @@ Gardez la main.</div>
      (l'utilisateur choisit la catégorie lui-même) — même modèle de donnée
      qu'une ligne importée (S.transactions, direction 'Debit'), juste avec
      manual:true pour la distinguer si besoin plus tard. ─────────────────-->
-<div class="overlay" id="modalChargeAdd" style="display:none" onclick="ovClose(event,'modalChargeAdd')">
+<div class="overlay" id="modalChargeAdd" style="display:none" onclick="if(event.target===this)cancelM('modalChargeAdd')">
   <div class="modal">
     <div class="mhead">
       <div class="mtitle">Ajouter une charge</div>
-      <button class="mclose" onclick="closeM('modalChargeAdd')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" onclick="saveManualCharge()" title="Ajouter">✓ Ajouter</button>
+        <button class="mclose" onclick="cancelM('modalChargeAdd')" title="Annuler les modifications">✕</button>
+      </div>
     </div>
     <div style="font-size:12px;color:var(--gray);margin:-10px 0 16px" id="mchaMonthInfo"></div>
     <div class="msec">
@@ -2878,10 +2879,6 @@ Gardez la main.</div>
         <label class="fl">Libellé <span style="font-weight:400;color:var(--gray)">(optionnel)</span></label>
         <input type="text" class="fi" id="mchaLabel" placeholder="Ex. Frais SumUp">
       </div>
-    </div>
-    <div class="macts">
-      <button class="btn-s" onclick="closeM('modalChargeAdd')">Annuler</button>
-      <button class="btn-p btn-add" onclick="saveManualCharge()">Ajouter</button>
     </div>
   </div>
 </div>
@@ -11452,7 +11449,7 @@ function openM(id){
   el.style.display='flex';
   el.querySelector('.modal').scrollTop=0;
   el.querySelector('.modal-scrollarea')?.scrollTo(0,0);
-  if(id==='modalBooking')bookSnap=bookFormState();
+  if(FORM_EXTRA[id])formSnap[id]=formState(id);
   if(id==='modalTH')thSnap=thState(thCurrentDate);
 }
 
@@ -11462,11 +11459,19 @@ function openM(id){
 // Table d'hôtes : chaque case/champ est enregistré à la volée (voir
 // toggleDinnerNight, setMenuField…), donc annuler = remettre l'état photo-
 // graphié à l'ouverture (thRestore).
-let bookSnap=null,thSnap=null;
-function bookFormState(){
-  const vals=[...byId('modalBooking').querySelectorAll('input,select,textarea')]
+// Modaux à enregistrement explicite : état = valeurs des champs + l'état
+// tenu en variables (choix du client, puces de paiement/source…).
+const FORM_EXTRA={
+  modalBooking:()=>[selGid,newGMode,bkTaxeSejour,bkPayment,bkSource],
+  modalGuestEdit:()=>[geRating],
+  modalEventEdit:()=>[evSelGid,evNewGMode,evCategory,evPayment,evSource],
+  modalChargeAdd:()=>[],
+};
+const formSnap={};let thSnap=null;
+function formState(id){
+  const vals=[...byId(id).querySelectorAll('input,select,textarea')]
     .map(e=>e.type==='checkbox'||e.type==='radio'?e.checked:e.value);
-  return JSON.stringify([vals,selGid,newGMode,bkTaxeSejour,bkPayment,bkSource]);
+  return JSON.stringify([vals,FORM_EXTRA[id]()]);
 }
 function thState(ds){
   if(!ds)return null;
@@ -11497,7 +11502,7 @@ function cancelM(id){
   // Le champ de menu en cours de saisie n'a pas encore déclenché son
   // onchange : le valider d'abord pour comparer le vrai état.
   if(document.activeElement&&byId(id).contains(document.activeElement))document.activeElement.blur();
-  if(id==='modalBooking'&&bookSnap!==null&&bookFormState()!==bookSnap){
+  if(FORM_EXTRA[id]&&formSnap[id]!=null&&formState(id)!==formSnap[id]){
     if(!confirm('Annuler les modifications ?'))return;
   }
   if(id==='modalTH'&&thSnap!==null&&thState(thCurrentDate)!==thSnap){
@@ -11529,7 +11534,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
   const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
-  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){(id==='modalBooking'?cancelM:closeM)(id);break;}}
+  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){(FORM_EXTRA[id]?cancelM:closeM)(id);break;}}
 });
 
 // Retour utilisateur : "sur les menus bottom et le menu des 7 jours, quand
