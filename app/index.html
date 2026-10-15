@@ -447,8 +447,9 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .blk.cin{border-left:3px solid rgba(0,0,0,.22);}
 .blk.cout{border-right:3px solid rgba(0,0,0,.18);}
 .blk.cont{opacity:.72;}
-.blk.opt{background-image:repeating-linear-gradient(
-  45deg,transparent,transparent 3px,rgba(255,255,255,.18) 3px,rgba(255,255,255,.18) 6px);}
+/* Réservation en option : barre à 50 % d'opacité (retour utilisateur,
+   remplace les hachures + le point de couleur, jugés peu lisibles). */
+.blk.opt{opacity:.5;}
 .blk.canc{opacity:.38;text-decoration:line-through;}
 
 /* Payment states */
@@ -666,8 +667,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   font-size:7.5px;font-weight:600;border-radius:2.5px;background:var(--light);
   color:var(--dark);cursor:pointer;}
 .rvm-day.blank{visibility:hidden;cursor:default;}
-.rvm-day.opt{background-image:repeating-linear-gradient(
-  45deg,transparent,transparent 2px,rgba(255,255,255,.3) 2px,rgba(255,255,255,.3) 4px);}
+.rvm-day.opt{opacity:.5;}
 .rvm-day.canc{opacity:.35;}
 .rvm-day.today{box-shadow:inset 0 0 0 1.3px var(--green-deep);}
 .rv-dow-hd{display:grid;grid-template-columns:14px repeat(7,1fr);gap:2px;}
@@ -712,8 +712,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .rv-seg.cin{border-radius:4px 0 0 4px;}
 .rv-seg.cout{border-radius:0 4px 4px 0;}
 .rv-seg.cin.cout{border-radius:4px;}
-.rv-seg.opt{background-image:repeating-linear-gradient(
-  45deg,transparent,transparent 3px,rgba(255,255,255,.25) 3px,rgba(255,255,255,.25) 6px);}
+.rv-seg.opt{opacity:.5;}
 .rv-seg.canc{opacity:.35;}
 /* Numéro du jour, superposé au segment coloré (pointer-events:none pour ne
    pas gêner le clic sur le séjour en dessous) — couleur claire/foncée déjà
@@ -1552,9 +1551,11 @@ input[type="time"].fi{height:35px;}
 .status-dot-btn{display:flex;align-items:center;gap:6px;background:none;
   border:1.5px solid transparent;border-radius:20px;padding:5px 12px;
   font-family:'Jost',sans-serif;font-size:13px;color:var(--gray);font-weight:500;cursor:pointer;}
-.status-dot-btn.on{color:var(--dark);font-weight:700;border-color:var(--sdc);}
-.status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;opacity:.4;}
-.status-dot-btn.on .status-dot{opacity:1;}
+/* Statut : deux boutons radio neutres, sans couleur (retour utilisateur) ;
+   l'option se lit sur la grille par sa barre à 50 % d'opacité. */
+.status-dot-btn.on{color:var(--dark);font-weight:700;}
+.status-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0;border:1.5px solid var(--gray);box-sizing:border-box;background:transparent;}
+.status-dot-btn.on .status-dot{border-color:var(--dark);background:radial-gradient(circle,var(--dark) 0 4px,transparent 4.5px);}
 .cdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;border:1px solid rgba(0,0,0,.1);}
 /* Homogénéise les encarts du modal de réservation : les 3 styles
    présents (pilule, rectangle peu arrondi, rectangle très arrondi)
@@ -2410,8 +2411,8 @@ Gardez la main.</div>
       <div class="fg">
         <label class="fl">Statut</label>
         <div class="status-dot-row">
-          <button type="button" class="status-dot-btn" id="bstatus-ok" style="--sdc:#4CAF50" onclick="setBStatus('ok')"><span class="status-dot" style="background:#4CAF50"></span>Confirmé</button>
-          <button type="button" class="status-dot-btn" id="bstatus-opt" style="--sdc:#D98A3D" onclick="setBStatus('opt')"><span class="status-dot" style="background:#D98A3D"></span>Option</button>
+          <button type="button" class="status-dot-btn" id="bstatus-ok" onclick="setBStatus('ok')"><span class="status-dot"></span>Confirmé</button>
+          <button type="button" class="status-dot-btn" id="bstatus-opt" onclick="setBStatus('opt')"><span class="status-dot"></span>Option</button>
         </div>
         <input type="hidden" id="bStatus" value="ok">
       </div>
@@ -5030,7 +5031,6 @@ function renderGrid(){
         const isCout=addDays(ds,1)===bk.checkOut;
         // Status classes
         const sc=bk.status==='opt'?' opt':bk.status==='no'?' canc':'';
-        const dot=bk.status==='opt'?'#B2BBDA':bk.status==='no'?'#F44336':'#4CAF50';
 
         const isPaid=bk.payment==='paid';
         const isPending=bk.payment==='pending';
@@ -5053,8 +5053,7 @@ function renderGrid(){
         const hasDinner=bk.dinnerNights&&bk.dinnerNights[ds];
         const thIcon=hasDinner?`<span class="bth">${MEAL_ICON_SM}${bk.nbPersons||''}</span>`:'';
         if(isCin){
-          div.innerHTML=`<span class="sdot" style="background:${dot}"></span>`+
-            `<span class="bname">${g?g.name:'?'}</span>`+
+          div.innerHTML=`<span class="bname">${g?g.name:'?'}</span>`+
             (bk.arrivalTime?`<span class="btime">${bk.arrivalTime}</span>`:'')+
             thIcon;
         } else {
