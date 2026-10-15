@@ -541,7 +541,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .bline-del{height:24px;border:none;border-radius:50%;background:var(--light);color:var(--gray);font-size:15px;line-height:1;cursor:pointer;padding:0;}
 .bline-note{font-size:11px;color:var(--gray);line-height:1.4;margin-top:6px;}
 .btot-fix{padding:4px 0 8px;}
-.bline-add{margin-top:8px;background:none;border:none;padding:4px 0;color:var(--green);font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+/* Actions de la fiche (« + Ajouter une location… », « Fixer manuellement un
+   prix total ») : pilule vert propriétaire, texte blanc (retour utilisateur). */
+.bline-add{display:inline-flex;align-items:center;margin-top:10px;background:var(--green);border:none;border-radius:999px;padding:8px 16px;color:#fff;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;}
+.bline-add:active{opacity:.85;}
 .btn-swap{padding:7px 14px;border:none;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:600;background:var(--green);color:#fff;cursor:pointer;}
 .btn-swap:hover{background:#2e4728;}
@@ -1581,9 +1584,11 @@ input[type="time"].fi{height:35px;}
 /* ─── MODAL SECTIONS ─────────────────────────────────────────── */
 .msec{display:flex;flex-direction:column;gap:10px;background:#F8F6F2;border-radius:10px;
   padding:12px 14px;border:1px solid var(--light);margin-bottom:8px;}
+/* Titres des cartes (Client, Séjour, Services, Paiement…) et leur picto en
+   vert propriétaire, celui du bandeau du haut (retour utilisateur). */
 .msec-title{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;
-  text-transform:uppercase;letter-spacing:.07em;color:var(--gray);}
-.msec-title svg{flex-shrink:0;opacity:.75;}
+  text-transform:uppercase;letter-spacing:.07em;color:var(--green);}
+.msec-title svg{flex-shrink:0;opacity:1;}
 .msec .fg{margin-bottom:0;}
 .btot-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0 0;cursor:pointer;}
 .btot-lbl{font-size:13px;color:var(--dark);font-weight:500;}
@@ -2499,7 +2504,7 @@ Gardez la main.</div>
         </div>
         <div class="btot-detail" id="bTotDetail" style="display:none"></div>
         <div class="btot-fix">
-          <button type="button" class="bline-add" id="bTotFixBtn" onclick="openBTotFix()">Fixer un prix total d'hébergement</button>
+          <button type="button" class="bline-add" id="bTotFixBtn" onclick="openBTotFix()">Fixer manuellement un prix total</button>
           <div id="bTotFixRow" style="display:none;gap:8px;align-items:center">
             <input type="number" class="fi" id="bTotFixVal" min="0" step="1" placeholder="Total hébergement €" style="flex:1;min-width:0">
             <button type="button" class="btn-p" style="width:auto;padding:8px 14px" onclick="applyBTotFix()">Répartir</button>
