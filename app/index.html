@@ -1456,6 +1456,18 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--cream);
   transition:background .15s;flex-shrink:0;}
 .mclose:hover{background:rgba(255,255,255,.25);}
+/* En-tête vert fixe en haut des modaux qui défilent d'un bloc (réservation,
+   table d'hôtes…), comme ceux à zone défilante séparée (retour
+   utilisateur) — le bandeau reste visible pendant qu'on descend. */
+.modal>.mhead{position:sticky;top:0;z-index:30;}
+/* Valider directement depuis l'en-tête (retour utilisateur : éviter de
+   descendre en bas de la fiche pour enregistrer) ; la croix annule. */
+.mhead-acts{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.msave{width:auto;height:30px;padding:0 14px;border:none;border-radius:15px;background:var(--yellow);
+  color:var(--green-deep);font-family:'Jost',sans-serif;font-size:13px;font-weight:700;cursor:pointer;
+  display:flex;align-items:center;gap:5px;}
+.msave:active{opacity:.85;}
+.msave:disabled{opacity:.4;cursor:default;}
 /* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit) :
    retour utilisateur, "j'aimerais que l'encart de header de cette vue
    redevienne vert comme celui de liste de clients" — l'essai en lavande
@@ -2268,7 +2280,10 @@ Gardez la main.</div>
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="mBookTitle">Nouvelle réservation</div>
-      <button class="mclose" onclick="closeM('modalBooking')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" id="bSaveTopBtn" onclick="saveBooking()" title="Enregistrer">✓ Enregistrer</button>
+        <button class="mclose" onclick="closeM('modalBooking')" title="Annuler">✕</button>
+      </div>
     </div>
     <div id="bCreatedAt" style="display:none;font-size:11px;color:var(--gray);margin:-10px 0 12px;padding:0 2px"></div>
 
@@ -2873,7 +2888,10 @@ Gardez la main.</div>
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="thModalTitle">Couverts du soir</div>
-      <button class="mclose" onclick="closeM('modalTH')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" onclick="closeM('modalTH')" title="Valider">✓ OK</button>
+        <button class="mclose" onclick="closeM('modalTH')" title="Fermer">✕</button>
+      </div>
     </div>
     <div id="thModalBody"></div>
     <div id="thTotal" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--light);
@@ -5881,7 +5899,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('bDelBtn').style.display='none';
   byId('conflictWarn').style.display='none';
   byId('freeRoomPicker').style.display='none';
-  byId('bSaveBtn').disabled=false;
+  byId('bSaveBtn').disabled=false;byId('bSaveTopBtn').disabled=false;
   byId('newGNameFg').style.display='none';
   byId('newGName').value='';
   byId('gSearch').value='';
@@ -5926,7 +5944,7 @@ function openEditModal(id,clickedDay){
   byId('bDelBtn').style.display='block';
   byId('conflictWarn').style.display='none';
   byId('freeRoomPicker').style.display='none';
-  byId('bSaveBtn').disabled=false;
+  byId('bSaveBtn').disabled=false;byId('bSaveTopBtn').disabled=false;
   byId('newGNameFg').style.display='none';
   byId('bContractSec').style.display='block';
   // Absente pour les réservations créées avant l'ajout de ce champ — plutôt que
@@ -6208,7 +6226,7 @@ function chkConflict(){
   const conflicts=S.bookings.filter(b=>b.id!==editBid&&!bkGroupBids.has(b.id)&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
   const conflict=conflicts.length>0;
   byId('conflictWarn').style.display=conflict?'block':'none';
-  byId('bSaveBtn').disabled=conflict;
+  byId('bSaveBtn').disabled=conflict;byId('bSaveTopBtn').disabled=conflict;
   const fp=byId('freeRoomPicker');
   if(conflict){
     let html='';
