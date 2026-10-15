@@ -2447,9 +2447,7 @@ Gardez la main.</div>
         </div>
         <input type="hidden" id="bStatus" value="ok">
       </div>
-      <div class="warn" id="conflictWarn" style="display:none">
-        ⚠️ Cette location est déjà prise sur ces dates
-      </div>
+      <div class="warn" id="conflictWarn" style="display:none"></div>
       <div id="freeRoomPicker" style="display:none;background:#F0F7EE;border-radius:12px;padding:10px 12px;"></div>
       <!-- Notes : déplacées ici depuis leur propre section (retour
            utilisateur : "intègre note directement dans séjour juste avant
@@ -6259,7 +6257,9 @@ function chkConflict(){
   if(!rid||!ci||!co){byId('conflictWarn').style.display='none';byId('freeRoomPicker').style.display='none';return;}
   const conflicts=S.bookings.filter(b=>b.id!==editBid&&!bkGroupBids.has(b.id)&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
   const conflict=conflicts.length>0;
-  byId('conflictWarn').style.display=conflict?'block':'none';
+  const cw=byId('conflictWarn');
+  cw.textContent='⚠️ Cette location est déjà prise sur ces dates';
+  cw.style.display=conflict?'block':'none';
   byId('bSaveTopBtn').disabled=conflict;
   const fp=byId('freeRoomPicker');
   if(conflict){
@@ -6286,10 +6286,12 @@ function chkConflict(){
       html+='<div style="font-size:11px;color:var(--gray);margin-bottom:5px">Locations libres pour ces dates :</div>'+
         free.map(r=>`<button class="free-room-btn" onclick="pickFreeRoom('${r.id}')">${r.name}</button>`).join('');
     } else if(!html){
-      html='<div style="font-size:11px;color:var(--danger)">Aucune location libre sur ces dates</div>';
+      // Rien à proposer : un seul message (avant, un 2e encadré « Aucune
+      // location libre » s'ajoutait sous l'alerte, comme une 2e erreur).
+      cw.textContent='⚠️ Cette location est déjà prise sur ces dates, et aucune autre n\'est libre';
     }
     fp.innerHTML=html;
-    fp.style.display='block';
+    fp.style.display=html?'block':'none';
   } else {
     fp.style.display='none';
   }
