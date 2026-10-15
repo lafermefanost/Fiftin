@@ -1459,7 +1459,10 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 /* En-tête vert fixe en haut des modaux qui défilent d'un bloc (réservation,
    table d'hôtes…), comme ceux à zone défilante séparée (retour
    utilisateur) — le bandeau reste visible pendant qu'on descend. */
-.modal>.mhead{position:sticky;top:0;z-index:30;}
+/* top:-20px = padding-top de .modal : un élément sticky s'arrête au bord
+   intérieur (padding) du conteneur qui défile, il laissait donc 20px où l'on
+   voyait le contenu défiler au-dessus du bandeau. */
+.modal>.mhead{position:sticky;top:-20px;z-index:30;}
 /* Valider directement depuis l'en-tête (retour utilisateur : éviter de
    descendre en bas de la fiche pour enregistrer) ; la croix annule. */
 .mhead-acts{display:flex;align-items:center;gap:8px;flex-shrink:0;}
