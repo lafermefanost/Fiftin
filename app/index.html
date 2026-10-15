@@ -1468,6 +1468,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:flex;align-items:center;gap:5px;}
 .msave:active{opacity:.85;}
 .msave:disabled{opacity:.4;cursor:default;}
+.mdel-link{display:block;margin:22px auto 4px;background:none;border:none;color:var(--danger);font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer;}
 /* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit) :
    retour utilisateur, "j'aimerais que l'encart de header de cette vue
    redevienne vert comme celui de liste de clients" — l'essai en lavande
@@ -2276,13 +2277,13 @@ Gardez la main.</div>
 </div>
 
 <!-- ─── BOOKING MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalBooking" style="display:none" onclick="ovClose(event,'modalBooking')">
+<div class="overlay" id="modalBooking" style="display:none" onclick="if(event.target===this)cancelM('modalBooking')">
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="mBookTitle">Nouvelle réservation</div>
       <div class="mhead-acts">
         <button class="msave" id="bSaveTopBtn" onclick="saveBooking()" title="Enregistrer">✓ Enregistrer</button>
-        <button class="mclose" onclick="closeM('modalBooking')" title="Annuler">✕</button>
+        <button class="mclose" onclick="cancelM('modalBooking')" title="Annuler les modifications">✕</button>
       </div>
     </div>
     <div id="bCreatedAt" style="display:none;font-size:11px;color:var(--gray);margin:-10px 0 12px;padding:0 2px"></div>
@@ -2531,11 +2532,10 @@ Gardez la main.</div>
       </div>
     </div>
 
-    <div class="macts">
-      <button class="btn-d" id="bDelBtn" onclick="delBooking()" style="display:none">Supprimer</button>
-      <button class="btn-s" onclick="closeM('modalBooking')">Annuler</button>
-      <button class="btn-p btn-add" id="bSaveBtn" onclick="saveBooking()">Enregistrer</button>
-    </div>
+    <!-- Enregistrer / Annuler : uniquement dans l'en-tête fixe (retour
+         utilisateur : ne plus devoir descendre en bas du modal). Seule la
+         suppression reste ici, à l'écart, pour ne pas la toucher par erreur. -->
+    <button class="mdel-link" id="bDelBtn" onclick="delBooking()" style="display:none">Supprimer la réservation</button>
   </div>
 </div>
 
@@ -2884,21 +2884,18 @@ Gardez la main.</div>
 </div>
 
 <!-- ─── TABLE D'HÔTES MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalTH" style="display:none" onclick="ovClose(event,'modalTH')">
+<div class="overlay" id="modalTH" style="display:none" onclick="if(event.target===this)cancelM('modalTH')">
   <div class="modal">
     <div class="mhead">
       <div class="mtitle" id="thModalTitle">Couverts du soir</div>
       <div class="mhead-acts">
-        <button class="msave" onclick="closeM('modalTH')" title="Valider">✓ OK</button>
-        <button class="mclose" onclick="closeM('modalTH')" title="Fermer">✕</button>
+        <button class="msave" onclick="closeM('modalTH')" title="Enregistrer">✓ Enregistrer</button>
+        <button class="mclose" onclick="cancelM('modalTH')" title="Annuler les modifications">✕</button>
       </div>
     </div>
     <div id="thModalBody"></div>
     <div id="thTotal" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--light);
          font-size:13px;font-weight:600;color:var(--green);min-height:20px"></div>
-    <div class="macts">
-      <button class="btn-p" onclick="closeM('modalTH')">OK</button>
-    </div>
   </div>
 </div>
 
@@ -5899,7 +5896,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('bDelBtn').style.display='none';
   byId('conflictWarn').style.display='none';
   byId('freeRoomPicker').style.display='none';
-  byId('bSaveBtn').disabled=false;byId('bSaveTopBtn').disabled=false;
+  byId('bSaveTopBtn').disabled=false;
   byId('newGNameFg').style.display='none';
   byId('newGName').value='';
   byId('gSearch').value='';
@@ -5944,7 +5941,7 @@ function openEditModal(id,clickedDay){
   byId('bDelBtn').style.display='block';
   byId('conflictWarn').style.display='none';
   byId('freeRoomPicker').style.display='none';
-  byId('bSaveBtn').disabled=false;byId('bSaveTopBtn').disabled=false;
+  byId('bSaveTopBtn').disabled=false;
   byId('newGNameFg').style.display='none';
   byId('bContractSec').style.display='block';
   // Absente pour les réservations créées avant l'ajout de ce champ — plutôt que
@@ -6226,7 +6223,7 @@ function chkConflict(){
   const conflicts=S.bookings.filter(b=>b.id!==editBid&&!bkGroupBids.has(b.id)&&b.roomId===rid&&b.checkIn<co&&b.checkOut>ci);
   const conflict=conflicts.length>0;
   byId('conflictWarn').style.display=conflict?'block':'none';
-  byId('bSaveBtn').disabled=conflict;byId('bSaveTopBtn').disabled=conflict;
+  byId('bSaveTopBtn').disabled=conflict;
   const fp=byId('freeRoomPicker');
   if(conflict){
     let html='';
@@ -11452,6 +11449,59 @@ function openM(id){
   el.style.display='flex';
   el.querySelector('.modal').scrollTop=0;
   el.querySelector('.modal-scrollarea')?.scrollTo(0,0);
+  if(id==='modalBooking')bookSnap=bookFormState();
+  if(id==='modalTH')thSnap=thState(thCurrentDate);
+}
+
+// ✕ / clic à côté / Échap des modaux Réservation et Table d'hôtes : si
+// quelque chose a changé depuis l'ouverture, on demande avant de jeter.
+// Réservation : rien n'est écrit avant "Enregistrer", il suffit de fermer.
+// Table d'hôtes : chaque case/champ est enregistré à la volée (voir
+// toggleDinnerNight, setMenuField…), donc annuler = remettre l'état photo-
+// graphié à l'ouverture (thRestore).
+let bookSnap=null,thSnap=null;
+function bookFormState(){
+  const vals=[...byId('modalBooking').querySelectorAll('input,select,textarea')]
+    .map(e=>e.type==='checkbox'||e.type==='radio'?e.checked:e.value);
+  return JSON.stringify([vals,selGid,newGMode,bkTaxeSejour,bkPayment,bkSource]);
+}
+function thState(ds){
+  if(!ds)return null;
+  const dn={};
+  S.bookings.forEach(b=>{if(b.dinnerNights&&b.dinnerNights[ds])dn[b.id]=true;});
+  return JSON.stringify({menu:S.menus[ds]||null,ext:(S.extDiners&&S.extDiners[ds])||null,dn,gids:S.guests.map(g=>g.id)});
+}
+function thRestore(ds,snap){
+  const o=JSON.parse(snap);
+  if(o.menu)S.menus[ds]=o.menu;else delete S.menus[ds];
+  if(!S.extDiners)S.extDiners={};
+  if(o.ext)S.extDiners[ds]=o.ext;else delete S.extDiners[ds];
+  S.bookings.forEach(b=>{
+    if(o.dn[b.id]){if(!b.dinnerNights)b.dinnerNights={};b.dinnerNights[ds]=true;}
+    else if(b.dinnerNights)delete b.dinnerNights[ds];
+  });
+  // Clients créés depuis "Client externe" pendant cette ouverture : ils
+  // n'étaient liés qu'à ce repas annulé.
+  const keep=new Set(o.gids);
+  S.guests=S.guests.filter(g=>keep.has(g.id));
+  persist();
+  renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  refreshMenuDatalists();
+}
+function cancelM(id){
+  // Le champ de menu en cours de saisie n'a pas encore déclenché son
+  // onchange : le valider d'abord pour comparer le vrai état.
+  if(document.activeElement&&byId(id).contains(document.activeElement))document.activeElement.blur();
+  if(id==='modalBooking'&&bookSnap!==null&&bookFormState()!==bookSnap){
+    if(!confirm('Annuler les modifications ?'))return;
+  }
+  if(id==='modalTH'&&thSnap!==null&&thState(thCurrentDate)!==thSnap){
+    if(!confirm('Annuler les modifications ?'))return;
+    thRestore(thCurrentDate,thSnap);
+  }
+  closeM(id);
 }
 function closeM(id){
   byId(id).style.display='none';
@@ -11476,7 +11526,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
   const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
-  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){closeM(id);break;}}
+  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){(id==='modalBooking'?cancelM:closeM)(id);break;}}
 });
 
 // Retour utilisateur : "sur les menus bottom et le menu des 7 jours, quand
