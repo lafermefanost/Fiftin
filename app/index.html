@@ -1499,6 +1499,7 @@ input[type="time"].fi{height:35px;}
   font-size:11px;font-weight:500;transition:all .15s;background:var(--light);}
 .gchip.on{border-color:var(--dark);background:var(--dark);color:var(--white);}
 .gchip.on .cdot{border-color:rgba(255,255,255,.3);}
+.gchip-new{border:1.5px dashed var(--green)!important;color:var(--green);font-weight:600;}
 .gnew-btn{margin-top:8px;font-size:12px;color:var(--earth);cursor:pointer;
   display:inline-block;padding:2px 0;}
 .gnew-btn:hover{text-decoration:underline;}
@@ -2273,10 +2274,16 @@ Gardez la main.</div>
       <div id="gSelectedName" style="display:none"></div>
       <div class="gcontact" id="gContact" style="display:none"></div>
       <div id="gSearchWrap">
-        <input class="fi gsearch" id="gSearch" placeholder="Rechercher un client…"
-          autocomplete="off" oninput="filterGuests(this.value)">
+        <!-- Une seule barre pour trouver OU créer un client (retour
+             utilisateur) : les clients existants s'affichent sous la saisie,
+             avec en plus « + Créer « … » » ; Entrée = 1er client trouvé, ou
+             création. Enregistrer avec un nom tapé sans rien choisir le
+             crée aussi (ou reprend le client du même nom). #gNewBtn/pickNew
+             restent pour compatibilité, masqués. -->
+        <input class="fi gsearch" id="gSearch" placeholder="Nom du client (existant ou nouveau)…"
+          autocomplete="off" oninput="filterGuests(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();gSearchEnter();}">
         <div class="gpicker" id="gPicker"></div>
-        <div class="gnew-btn" id="gNewBtn" onclick="pickNew()">+ Nouveau client</div>
+        <div class="gnew-btn" id="gNewBtn" onclick="pickNew()" style="display:none">+ Nouveau client</div>
       </div>
       <div id="newGNameFg" style="display:none">
         <input class="fi" id="newGName" placeholder="Nom du nouveau client">
@@ -5868,6 +5875,7 @@ function openAddModal(roomId,ds,dsOut){
   byId('freeRoomPicker').style.display='none';
   byId('bSaveBtn').disabled=false;
   byId('newGNameFg').style.display='none';
+  byId('newGName').value='';
   byId('gSearch').value='';
   // Le contrat se génère depuis une résa déjà enregistrée (a besoin d'un id).
   byId('bContractSec').style.display='none';
@@ -6102,11 +6110,15 @@ function renderGPicker(){
   const visible=searching
     ? sorted.filter(g=>g.name.toLowerCase().includes(gSearchTerm))
     : showName ? sorted.filter(g=>g.id===selGid) : [];
+  const typed=searching?byId('gSearch').value.trim():'';
+  const exact=typed&&S.guests.some(g=>g.name.trim().toLowerCase()===typed.toLowerCase());
+  const createChip=typed&&!exact&&!editBid
+    ?`<div class="gchip gchip-new" onclick="pickNewFromSearch()">+ Créer « ${escHtml(typed).replace(/"/g,'&quot;')} »</div>`:'';
   byId('gPicker').innerHTML=visible.map(g=>
     `<div class="gchip${g.id===selGid?' on':''}" onclick="pickGuest('${g.id}')">
       <span class="cdot" style="background:${g.color}"></span>${g.name}</div>`
-  ).join('');
-  byId('gPicker').style.display=visible.length?'flex':'none';
+  ).join('')+createChip;
+  byId('gPicker').style.display=(visible.length||createChip)?'flex':'none';
 
   const g=selGid?S.guests.find(x=>x.id===selGid):null;
   const gSelEl=byId('gSelectedName');
@@ -6122,11 +6134,15 @@ function renderGPicker(){
     gSelEl.innerHTML=`<div class="gsel-card"><div class="gsel-bar" style="background:${g.color}"></div><div class="gsel-info"><div class="gsel-name-label">${g.name}</div></div>${actBtns}</div>`;
     gSelEl.style.display='block';
     byId('gSearchWrap').style.display=editBid?'none':'flex';
+  }else if(newGMode&&byId('newGName').value.trim()&&!searching){
+    gSelEl.innerHTML=`<div class="gsel-card"><div class="gsel-bar" style="background:var(--light)"></div><div class="gsel-info"><div class="gsel-name-label">${escHtml(byId('newGName').value.trim())} <span style="font-weight:400;color:var(--gray);font-size:12px">· nouveau client</span></div></div><div class="gsel-acts"><button class="gsel-icobtn" title="Changer" onclick="cancelNewFromSearch()">✕</button></div></div>`;
+    gSelEl.style.display='block';
+    byId('gSearchWrap').style.display='none';
   }else{
     gSelEl.style.display='none';
     byId('gSearchWrap').style.display='flex';
   }
-  byId('gNewBtn').style.display=editBid?'none':'block';
+  byId('gNewBtn').style.display='none';
   const contactHtml=g?contactButtonsHTML(g.phone,g.email):'';
   byId('gContact').innerHTML=contactHtml;
   byId('gContact').style.display=contactHtml?'flex':'none';
@@ -6140,6 +6156,33 @@ function pickGuest(id){
   renderGPicker();chkConflict();
 }
 
+// Nouveau client depuis la barre de recherche : le nom tapé est retenu
+// (#newGName, même chemin d'enregistrement que l'ancien « + Nouveau
+// client » dans saveBooking), créé seulement à l'enregistrement.
+function pickNewFromSearch(){
+  const t=byId('gSearch').value.trim();
+  if(!t)return;
+  selGid=null;newGMode=true;gChanging=false;
+  byId('newGName').value=t;
+  gSearchTerm='';byId('gSearch').value='';
+  renderGPicker();
+}
+function cancelNewFromSearch(){
+  const t=byId('newGName').value;
+  newGMode=false;byId('newGName').value='';
+  byId('gSearch').value=t;gSearchTerm=t.trim().toLowerCase();
+  renderGPicker();byId('gSearch').focus();
+}
+// Entrée dans la barre : client du même nom, sinon le seul trouvé, sinon création.
+function gSearchEnter(){
+  const t=byId('gSearch').value.trim();if(!t)return;
+  const low=t.toLowerCase();
+  const exact=S.guests.find(g=>g.name.trim().toLowerCase()===low);
+  const found=S.guests.filter(g=>g.name.toLowerCase().includes(low));
+  if(exact)pickGuest(exact.id);
+  else if(found.length===1)pickGuest(found[0].id);
+  else if(!editBid)pickNewFromSearch();
+}
 function pickNew(){
   selGid=null;newGMode=true;
   gSearchTerm='';
@@ -6270,6 +6313,16 @@ function saveBooking(){
     if(!confirm(`Retirer ${names||'ces locations'} de la réservation ? Leurs réservations seront supprimées.`))return;
   }
 
+  // Nom tapé dans la barre sans rien choisir : client existant du même nom,
+  // sinon nouveau client (voir pickNewFromSearch).
+  if(!selGid&&!newGMode){
+    const t=byId('gSearch').value.trim();
+    if(t){
+      const ex=S.guests.find(g=>g.name.trim().toLowerCase()===t.toLowerCase());
+      if(ex)selGid=ex.id;
+      else if(!editBid){newGMode=true;byId('newGName').value=t;}
+    }
+  }
   let gid=selGid;
   if(newGMode){
     const nm=byId('newGName').value.trim();
