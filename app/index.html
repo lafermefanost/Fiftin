@@ -3244,12 +3244,6 @@ function toggleBrief(viewKey){
   }
 }
 
-const PALETTE = [
-  '#5B8DB5','#6B9E60','#A8956A','#8B7DB0','#C09A4A','#5B9E94',
-  '#9E7890','#7A9E5B','#5B7A9E','#9E8A5B','#6BA87A','#9E9A5B',
-  '#7A8BAF','#8BAF7A','#AF7A8B','#5BA0AF',
-];
-
 // ═══════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════
@@ -3621,7 +3615,7 @@ function resetPaymentUI(pay,ghost,depositAmt,source){
   byId('depositAmt').value=depositAmt||'';
   renderSourceBtns();
 }
-let dragBid = null, paletteIdx = 0;
+let dragBid = null;
 
 // ═══════════════════════════════════════════════════════════════
 //  UTILS
@@ -3793,7 +3787,39 @@ function light(hex){
   return(r*299+g*587+b*114)/1000>145;
 }
 
-function nextColor(){const c=PALETTE[paletteIdx%PALETTE.length];paletteIdx++;return c;}
+// Couleur d'un nouveau client. Avant : la palette dans l'ordre, en repartant
+// du début à chaque chargement de l'app — d'où les mêmes couleurs côte à côte
+// dans la grille. Désormais : on tire au hasard 80 teintes dans la même gamme
+// (assez soutenues et foncées pour le texte blanc des barres) et on garde
+// celle qui est la plus éloignée des couleurs déjà visibles — clients ayant
+// une réservation ou un événement récent / à venir, plus les dernières
+// couleurs attribuées dans cette session (clients pas encore réservés).
+const recentNewColors=[];
+function hexRgb(h){const m=/^#?([0-9a-f]{6})$/i.exec(h||'');if(!m)return null;const n=parseInt(m[1],16);return[n>>16&255,n>>8&255,n&255];}
+function hslHex(h,s,l){s/=100;l/=100;const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l);
+  const f=n=>Math.round(255*(l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1))));
+  return '#'+[f(0),f(8),f(4)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+// Distance perçue approximative (« redmean »), suffisante pour départager.
+function colorDist(a,b){const r=(a[0]+b[0])/2,dr=a[0]-b[0],dg=a[1]-b[1],db=a[2]-b[2];
+  return Math.sqrt((2+r/256)*dr*dr+4*dg*dg+(2+(255-r)/256)*db*db);}
+function nextColor(){
+  const since=addDays(todayISO(),-30);
+  const ids=new Set();
+  (S.bookings||[]).forEach(b=>{if(b.checkOut>=since&&b.guestId)ids.add(b.guestId);});
+  (S.events||[]).forEach(e=>{if((e.endDate||e.startDate||'')>=since&&e.guestId)ids.add(e.guestId);});
+  let used=(S.guests||[]).filter(g=>ids.has(g.id)).map(g=>g.color);
+  if(!used.length)used=(S.guests||[]).slice(-40).map(g=>g.color);
+  used=used.concat(recentNewColors,(ROOMS||[]).map(r=>r.color)).map(hexRgb).filter(Boolean);
+  let best=null,bestD=-1;
+  for(let i=0;i<80;i++){
+    const c=hslHex(Math.random()*360,28+Math.random()*20,40+Math.random()*16);
+    const rgb=hexRgb(c);
+    const d=used.length?Math.min(...used.map(u=>colorDist(rgb,u))):Infinity;
+    if(d>bestD){bestD=d;best=c;}
+  }
+  recentNewColors.push(best);if(recentNewColors.length>20)recentNewColors.shift();
+  return best;
+}
 
 function byId(id){return document.getElementById(id);}
 
