@@ -6585,7 +6585,10 @@ function renderGList(term){
   const typedRaw=(term||'').trim();
   term=typedRaw.toLowerCase();
   const exactExists=typedRaw&&S.guests.some(g=>g.name.trim().toLowerCase()===term);
-  const createLine=`<div class="gline gline-new" onclick="gListCreate()"><div class="gline-info"><div class="gline-name">${typedRaw&&!exactExists?`+ Créer « ${escHtml(typedRaw)} »`:'+ Nouveau client'}</div></div></div>`;
+  // Ligne « + Créer « … » » seulement quand un nom est tapé et n'existe pas :
+  // sans saisie, un « + Nouveau client » faisait doublon avec la barre
+  // « Rechercher ou créer un client… » juste au-dessus.
+  const createLine=typedRaw&&!exactExists?`<div class="gline gline-new" onclick="gListCreate()"><div class="gline-info"><div class="gline-name">+ Créer « ${escHtml(typedRaw)} »</div></div></div>`:'';
   ['alpha','stays'].forEach(m=>byId('gsort-'+m)?.classList.toggle('on',gSortMode===m));
   const withCounts=S.guests.map(g=>({g,n:S.bookings.filter(b=>b.guestId===g.id).length}));
   // Nombre de séjours décroissant ; à égalité, ordre alphabétique (sinon
@@ -6596,7 +6599,7 @@ function renderGList(term){
     : withCounts.sort((a,b)=>a.g.name.localeCompare(b.g.name));
   if(term)sorted=sorted.filter(x=>x.g.name.toLowerCase().includes(term));
   if(!sorted.length){
-    byId('gList').innerHTML=createLine+(typedRaw?'':'<p style="text-align:center;color:var(--gray);padding:20px">Aucun client</p>');return;
+    byId('gList').innerHTML=createLine+(typedRaw?'':'<p style="text-align:center;color:var(--gray);padding:20px">Aucun client — tapez un nom ci-dessus pour en créer un</p>');return;
   }
   // Petit repère de lecture par initiale (A, B, C…) — seulement en tri
   // alphabétique : par nombre de séjours, l'ordre ne suit plus les
@@ -6604,7 +6607,7 @@ function renderGList(term){
   // hasard plutôt qu'une seule fois par groupe). Diacritiques ignorés
   // (Émile groupe avec Emile) pour rester cohérent avec le tri lui-même.
   let lastLetter=null;
-  byId('gList').innerHTML=(typedRaw?'':createLine)+sorted.map(({g,n})=>{
+  byId('gList').innerHTML=sorted.map(({g,n})=>{
     let sep='';
     if(gSortMode==='alpha'){
       const letter=g.name.trim().charAt(0).normalize('NFD').replace(/[̀-ͯ]/g,'').toUpperCase();
