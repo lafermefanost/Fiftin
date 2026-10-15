@@ -408,6 +408,17 @@ body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15
 @media(max-width:599px){#rangeBar{bottom:62px;font-size:12px;padding:8px 14px;gap:8px;}}
 #rangeLabel{font-weight:500;}
 #rangeLabel b{color:#9DC89A;}
+#rangeLabel .rl-short{display:none;}
+@media(max-width:599px){
+  #rangeLabel .rl-full{display:none;}
+  #rangeLabel .rl-short{display:inline;}
+  #rangeBar{max-width:calc(100vw - 16px);padding:8px 10px 8px 14px;}
+  /* Dernier recours sur écran très étroit : le texte se coupe (…), jamais
+     les boutons Réserver / ✕. */
+  #rangeLabel{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  #rangeBar .rbtn-ok,#rangeBar .rbtn-cancel{flex-shrink:0;}
+  #rangeBar .rbtn-ok{padding:6px 12px;}
+}
 .rbtn-ok{padding:6px 16px;background:var(--green);color:#fff;border:none;
   border-radius:20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;}
@@ -7439,9 +7450,12 @@ function showRangeBar(){
   const ds=new Date(start+'T00:00:00');
   const de=new Date(end+'T00:00:00');
   const fmt=d=>`${DOW_FULL[d.getDay()]} ${d.getDate()} ${MON3[d.getMonth()]}`;
+  // Nom abrégé de la location sur téléphone (voir .rl-full/.rl-short) : le
+  // nom complet faisait déborder la barre de la largeur de l'écran.
+  const nm=rm?`<span class="rl-full">${escHtml(rm.name||'')}</span><span class="rl-short">${escHtml(rm.short||rm.name||'')}</span>`:'';
   const label=nights===1
-    ?`<b>${rm?rm.name:''}</b> · ${fmt(ds)} · <b>1 nuit</b>`
-    :`<b>${rm?rm.name:''}</b> · ${fmt(ds)} → ${fmt(de)} · <b>${nights} nuits</b>`;
+    ?`<b>${nm}</b> · ${fmt(ds)} · <b>1 nuit</b>`
+    :`<b>${nm}</b> · ${fmt(ds)} → ${fmt(de)} · <b>${nights} nuits</b>`;
   byId('rangeLabel').innerHTML=label;
   byId('rangeBar').classList.add('show');
 }
