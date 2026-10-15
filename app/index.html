@@ -1534,6 +1534,7 @@ input[type="time"].fi{height:35px;}
 .fi.date-box,.fsel.date-box{border:1.5px solid var(--light);border-radius:12px;}
 .stepper{display:flex;align-items:center;border:1.5px solid var(--light);border-radius:12px;
   background:var(--white);overflow:hidden;width:fit-content;margin-top:4px;}
+.stepper button:disabled{opacity:.25;cursor:default;}
 .stepper button{background:none;border:none;width:36px;height:38px;font-size:17px;font-weight:700;
   color:var(--green);cursor:pointer;font-family:'Jost',sans-serif;}
 .stepper span{min-width:30px;text-align:center;font-weight:700;font-size:14px;color:var(--dark);}
@@ -2298,12 +2299,12 @@ Gardez la main.</div>
       <div class="fg">
         <div class="bline-head"><label class="fl">Location</label><label class="fl">Voyageurs</label><label class="fl bline-price-head">Prix €</label><span class="bline-del-sp" id="bLinesDelHead" style="display:none"></span></div>
         <div class="bline">
-          <select class="fsel" id="bRoom" onchange="chkConflict();renderBLines();updateModalTotal()">
+          <select class="fsel" id="bRoom" onchange="clampPax0();chkConflict();renderBLines();updateModalTotal()">
           </select>
           <div class="stepper">
             <button type="button" onclick="stepPax(-1)">−</button>
             <span id="paxCount">1</span>
-            <button type="button" onclick="stepPax(1)">+</button>
+            <button type="button" id="bPaxPlus" onclick="stepPax(1)">+</button>
           </div>
           <input type="number" class="fi bline-price" id="bLinePrice0" min="0" step="1" oninput="onBLinePrice0Input()">
           <span class="bline-del-sp" id="bLine0Sp" style="display:none"></span>
@@ -5763,7 +5764,7 @@ function renderBLines(){
     }).join('');
     return `<div class="bline">
       <select class="fsel" onchange="setBLineRoom(${i},this.value)">${opts}</select>
-      <div class="stepper"><button type="button" onclick="stepBLinePax(${i},-1)">−</button><span>${l.pax}</span><button type="button" onclick="stepBLinePax(${i},1)">+</button></div>
+      <div class="stepper"><button type="button" onclick="stepBLinePax(${i},-1)">−</button><span>${l.pax}</span><button type="button" onclick="stepBLinePax(${i},1)"${l.pax>=roomCap(l.roomId)?' disabled title="Capacité maximale de la location (Réglages → Locations)"':''}>+</button></div>
       <input type="number" class="fi bline-price" min="0" step="1" value="${l.price}" oninput="setBLinePrice(${i},this.value)">
       <button type="button" class="bline-del" onclick="removeBLine(${i})" title="Retirer cette location">×</button>
     </div>`;
@@ -5792,8 +5793,23 @@ function removeBLine(i){
   bkLines.splice(i,1);
   renderBLines();updateModalTotal();
 }
-function setBLineRoom(i,rid){bkLines[i].roomId=rid;renderBLines();updateModalTotal();}
-function stepBLinePax(i,d){bkLines[i].pax=Math.max(1,Math.min(12,(bkLines[i].pax||1)+d));renderBLines();updateModalTotal();}
+// Capacité max d'une location (Réglages → Locations → Capacité max) : le
+// + des voyageurs s'arrête là (retour utilisateur). Une réservation déjà
+// au-delà (saisie avant cette règle, ou capacité baissée depuis) garde sa
+// valeur à l'ouverture : seul le + est bloqué, le − reste possible.
+function roomCap(rid){const r=room(rid);return Math.max(1,Math.min(12,(r&&r.maxPersons)||12));}
+function setBLineRoom(i,rid){
+  bkLines[i].roomId=rid;
+  bkLines[i].pax=Math.min(bkLines[i].pax||1,roomCap(rid));
+  renderBLines();updateModalTotal();
+}
+function stepBLinePax(i,d){
+  const l=bkLines[i],cap=roomCap(l.roomId);
+  const n=(l.pax||1)+d;
+  if(d>0&&n>cap)return;
+  l.pax=Math.max(1,Math.min(12,n));
+  renderBLines();updateModalTotal();
+}
 function setBLinePrice(i,v){
   bkLines[i].price=v;
   updateModalTotal();
@@ -5984,13 +6000,29 @@ function setPax(n){
   byId('bPersons').value=n;
   const span=byId('paxCount');
   if(span)span.textContent=n;
+  refreshPaxPlus0();
   updateModalTotal();
+}
+// + de la 1re ligne grisé à la capacité max de la location (voir roomCap).
+function refreshPaxPlus0(){
+  const btn=byId('bPaxPlus');if(!btn)return;
+  const atCap=(parseInt(byId('bPersons').value)||1)>=roomCap(byId('bRoom').value);
+  btn.disabled=atCap;
+  btn.title=atCap?'Capacité maximale de la location (Réglages → Locations)':'';
+}
+// Changement de location sur la 1re ligne : voyageurs ramenés à sa capacité.
+function clampPax0(){
+  const cap=roomCap(byId('bRoom').value);
+  if((parseInt(byId('bPersons').value)||1)>cap)setPax(cap);
+  else refreshPaxPlus0();
 }
 // Boutons −/+ du stepper Voyageurs (voir setPax()) : même geste que les
 // anciens boutons ronds 1-5 (setPax(i);renderBreakfastList();renderDinnerList()),
 // juste par pas de 1 au lieu d'une valeur absolue.
 function stepPax(delta){
-  setPax((parseInt(byId('bPersons').value)||1)+delta);
+  const n=(parseInt(byId('bPersons').value)||1)+delta;
+  if(delta>0&&n>roomCap(byId('bRoom').value))return;
+  setPax(n);
   renderBreakfastList();
   renderDinnerList();
 }
@@ -6162,6 +6194,7 @@ function chkConflict(){
 
 function pickFreeRoom(rid){
   byId('bRoom').value=rid;
+  clampPax0();
   chkConflict();
 }
 
