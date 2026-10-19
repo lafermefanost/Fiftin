@@ -4896,7 +4896,12 @@ function setIcalImport(rid,platform,input){
   if(st)st.textContent=url?'Vérification du lien…':'Retrait…';
   input.disabled=true;
   icalCall('icalSetImportUrl',{roomId:rid,platform,url}).then(res=>{
-    r.icalImports={...(r.icalImports||{}),[platform]:url};
+    // Relu à la réponse du serveur (quelques secondes plus tard) : entre-temps
+    // une synchro a pu remplacer S.settings, et `r` ne serait plus la
+    // location réellement enregistrée — le lien semblait pris mais était perdu.
+    const rNow=(S.settings.rooms||[]).find(x=>x.id===rid);
+    if(!rNow)return;
+    rNow.icalImports={...(rNow.icalImports||{}),[platform]:url};
     icalFeedsCache=icalFeedsCache.filter(x=>!(x.roomId===rid&&x.platform===platform));
     if(res&&res.feed)icalFeedsCache.push(res.feed);
     saveSettings();
@@ -4912,7 +4917,9 @@ function getIcalExport(rid,regenerate){
   const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r)return;
   if(!icalAvailable()){alert('Connexion requise.');return;}
   icalCall('icalGetExportUrl',{roomId:rid,regenerate:!!regenerate}).then(res=>{
-    r.icalExportUrl=res.url;saveSettings();renderSettings();
+    const rNow=(S.settings.rooms||[]).find(x=>x.id===rid); // voir setIcalImport
+    if(!rNow)return;
+    rNow.icalExportUrl=res.url;saveSettings();renderSettings();
   }).catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
 }
 function copyIcalExport(rid,btn){
