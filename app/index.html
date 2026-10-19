@@ -1795,11 +1795,13 @@ body.no-dinner .tsec-panel.th,body.no-dinner .fg-th-notes{display:none;}
 body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 
 /* On desktop, let the grid stretch and widen its columns to fill the available width */
+/* Ordinateur : largeurs calculées par sizeGridColumns() selon la largeur de
+   l'écran — locations ≈ 2/3 (dates comprises), Table d'hôtes + Ménage +
+   Événement le dernier tiers. Valeurs par défaut si le calcul n'a pas tourné. */
 @media(min-width:600px){
-  .pt{width:100%;}
-  .pt td.rc{max-width:190px;}
-  .pt td.c-menage{max-width:240px;}
-  .pt td.c-event{max-width:420px;}
+  .pt{--men-w:150px;--ev-w:220px;}
+  .pt td.c-menage,.pt thead th.th-menage{width:var(--men-w);min-width:var(--men-w);max-width:var(--men-w);}
+  .pt td.c-event,.pt thead th.th-event{width:var(--ev-w);min-width:var(--ev-w);max-width:var(--ev-w);}
 }
 
 /* Events modal */
@@ -5046,12 +5048,27 @@ function doRestoreSettings(inp){
     const backIds=new Set(bs.rooms.map(r=>r.id));
     const reappear=S.bookings.filter(b=>!curIds.has(b.roomId)&&backIds.has(b.roomId)).length;
     const stillOrphan=S.bookings.filter(b=>b.roomId&&!backIds.has(b.roomId)).length;
+    // Catalogue des consommations : champ à part (pas dans settings), remis
+    // lui aussi aux valeurs d'usine par le même incident (loadCatalog() sur
+    // un localStorage vidé, puis envoi). Restauré depuis la sauvegarde, en
+    // gardant les articles créés depuis (absents de la sauvegarde et qui ne
+    // sont pas des articles d'usine).
+    const backCat=Array.isArray(d.catalog)&&d.catalog.length?d.catalog:null;
+    let nextCat=null,catAdded=0;
+    if(backCat){
+      const backCatIds=new Set(backCat.map(c=>c.id));
+      const defIds=new Set(DEFAULT_CATALOG.map(c=>c.id));
+      const keep=(S.catalog||[]).filter(c=>!backCatIds.has(c.id)&&!defIds.has(c.id));
+      catAdded=keep.length;
+      nextCat=JSON.parse(JSON.stringify(backCat)).concat(keep);
+    }
     const when=d.exported?new Date(d.exported).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'date inconnue';
     const msg=`Sauvegarde du ${when}${bs.name?' — '+bs.name:''}\n\n`+
       `Locations dans la sauvegarde (${bs.rooms.length}) :\n${bs.rooms.map(r=>'• '+(r.name||r.id)).join('\n')}\n\n`+
       `Locations actuelles : ${(S.settings.rooms||[]).length}\n`+
-      `Réservations qui vont réapparaître : ${reappear}\n\n`+
-      `Seuls les réglages sont remplacés. Réservations (${S.bookings.length}), clients, événements, ménage, table d'hôtes et comptabilité actuels sont conservés tels quels.\n\nRestaurer ?`;
+      `Réservations qui vont réapparaître : ${reappear}\n`+
+      (nextCat?`Catalogue des consommations : ${backCat.length} article(s) de la sauvegarde${catAdded?` + ${catAdded} ajouté(s) depuis, conservé(s)`:''}\n\n`:`Catalogue : absent de la sauvegarde, inchangé\n\n`)+
+      `Seuls les réglages et le catalogue sont remplacés. Réservations (${S.bookings.length}), clients, événements, ménage, table d'hôtes et comptabilité actuels sont conservés tels quels.\n\nRestaurer ?`;
     if(!confirm(msg))return;
     const cur=S.settings;
     const next={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...JSON.parse(JSON.stringify(bs))};
@@ -5067,6 +5084,7 @@ function doRestoreSettings(inp){
       if(c.icalExportUrl&&!r.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
     S.settings=next;
+    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog);saveCatalog();}
     migrateCleaners();
     migrateStructures();
     migrateRoomFields();
@@ -5079,7 +5097,7 @@ function doRestoreSettings(inp){
     if(S.view==='week')renderWeek();
     refreshRevenueViews();
     if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
-    alert(`✓ Réglages restaurés — ${S.settings.rooms.length} locations.`+
+    alert(`✓ Réglages restaurés — ${S.settings.rooms.length} locations`+(nextCat?`, catalogue de ${S.catalog.length} articles.`:'.')+
       (stillOrphan?`\n\nAttention : ${stillOrphan} réservation(s) sont rattachées à une location absente de cette sauvegarde (créée après ?).`:''));
   };
   fr.readAsText(file);
@@ -5091,6 +5109,31 @@ function doRestoreSettings(inp){
 // En-têtes de colonnes chambres (nom complet, ou code court une fois la vue
 // dézoomée — voir toggleGridZoom). Régénérés à chaque renderGrid() pour
 // suivre les changements de chambres faits dans les réglages.
+// Ordinateur (≥ 600 px) : les locations occupent environ les 2/3 de la
+// largeur (colonnes de dates comprises), Table d'hôtes + Ménage + Événement
+// le dernier tiers (Ménage 40 %, Événement 60 % de ce qui reste après la
+// Table d'hôtes). Plancher de 90 px par location : au-delà d'un certain
+// nombre de locations, la grille défile horizontalement plutôt que d'avoir
+// des colonnes illisibles. Téléphone : largeurs fixes du CSS (--rc-w).
+function sizeGridColumns(){
+  const pt=byId('pt'),wrap=byId('gridWrap');
+  if(!pt||!wrap)return;
+  if(window.innerWidth<600){pt.style.removeProperty('--rc-w');pt.style.removeProperty('--men-w');pt.style.removeProperty('--ev-w');return;}
+  const avail=wrap.clientWidth;
+  if(!avail)return;
+  const w=sel=>{const el=pt.querySelector(sel);return el&&el.offsetParent!==null?el.getBoundingClientRect().width:0;};
+  const dates=w('thead th.th-dow')+w('thead th.th-day')+w('thead th.th-wk');
+  const th=w('thead th.th-th');
+  const n=Math.max(1,ROOMS.length);
+  const rc=Math.max(90,Math.floor((avail*2/3-dates)/n));
+  const side=Math.max(0,avail-dates-rc*n-th);
+  const men=Math.max(90,Math.floor(side*0.4));
+  const ev=Math.max(120,Math.floor(side-men)-1);
+  pt.style.setProperty('--rc-w',rc+'px');
+  pt.style.setProperty('--men-w',men+'px');
+  pt.style.setProperty('--ev-w',ev+'px');
+}
+window.addEventListener('resize',()=>{sizeGridColumns();});
 function renderGridHeader(){
   const tr=byId('ptHeadRow');
   if(!tr)return;
@@ -5107,6 +5150,7 @@ function renderGridHeader(){
     frag.appendChild(th);
   });
   tr.insertBefore(frag,thTh);
+  sizeGridColumns();
 }
 function renderGrid(){
   renderGridHeader();
@@ -9142,8 +9186,8 @@ function renderSettings(){
     <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Sauvegarde/restauration complète (JSON) : réservations, clients, événements, réglages, catalogue et comptabilité en un seul fichier — pour transférer ce planning vers un autre compte ou en garder une copie. Anciennement un picto dédié dans l'en-tête, déplacé ici (retour utilisateur) pour libérer de la place sur la page principale.</div>
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="doExport()">⬇ Exporter JSON</button>
     <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>
-    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer uniquement les réglages (locations, noms, tarifs, structures…) depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé.</div>
-    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer uniquement les réglages</button>`;
+    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer les réglages (locations, noms, tarifs, structures…) et le catalogue des consommations depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé. Le catalogue des consommations est restauré aussi.</div>
+    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer réglages et catalogue</button>`;
   h+=settingsPanel('export','Export / Import',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
