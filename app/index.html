@@ -1496,6 +1496,8 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
   display:flex;align-items:center;gap:5px;}
 .msave:active{opacity:.85;}
 .msave:disabled{opacity:.4;cursor:default;}
+#offlineBar{display:none;background:var(--yellow);color:var(--green-deep);font-family:'Jost',sans-serif;font-size:12px;font-weight:600;text-align:center;padding:6px 12px;line-height:1.35;}
+#offlineBar.show{display:block;}
 .mdel-link{display:block;margin:22px auto 4px;background:none;border:none;color:var(--danger);font-family:'Jost',sans-serif;font-size:13px;font-weight:600;text-decoration:underline;cursor:pointer;}
 /* En-tête des modaux Événement (liste #modalEvents + fiche #modalEventEdit) :
    retour utilisateur, "j'aimerais que l'encart de header de cette vue
@@ -2199,6 +2201,8 @@ Gardez la main.</div>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
   <input type="file" id="restoreSettingsFile" accept=".json" style="display:none" onchange="doRestoreSettings(this)">
 </header>
+<!-- Bandeau hors connexion (voir updateOfflineUI) -->
+<div id="offlineBar" role="status"></div>
 
 <!-- ─── TOOLBAR ─────────────────────────────────────────────── -->
 <div class="toolbar">
@@ -3853,7 +3857,61 @@ let db=null; // Firebase Firestore instance when configured
 // inexistant, compte neuf) pour la connexion en cours — voir pushToFirebase.
 let remoteReady=false;
 
+// ── Hors connexion ─────────────────────────────────────────────────────
+// L'app s'ouvre sans réseau grâce au service worker (app/sw.js) et affiche
+// la dernière copie gardée sur l'appareil (ff2_data / ff2_settings /
+// ff2_catalog, réécrits à chaque synchro). Tant que le document du compte
+// n'a pas été reçu du serveur (remoteReady), consultation seulement : une
+// modification ne peut de toute façon pas être envoyée (pushToFirebase la
+// refuse), et l'envoyer plus tard écraserait ce qu'un autre appareil a pu
+// saisir entre-temps (le document est réécrit en entier). Bandeau visible
+// + modification annulée avec un message, plutôt qu'une perte silencieuse.
+let connectSlow=false,offlineMsgAt=0;
+function offlineBlocked(){
+  if(!currentUid||!db||remoteReady||currentRole==='personnel')return false;
+  if(Date.now()-offlineMsgAt>3000){
+    offlineMsgAt=Date.now();
+    alert(navigator.onLine
+      ?'Connexion au serveur en cours — modification non enregistrée. Réessayez dans un instant.'
+      :'Hors connexion : consultation seulement. Cette modification n\'est pas enregistrée.');
+  }
+  // L'affichage revient à la dernière copie synchronisée (ce qui est
+  // réellement enregistré), au lieu de montrer une modification fantôme.
+  loadLocal();loadCatalog();loadSettings();applySettings();
+  renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
+  return true;
+}
+function updateOfflineUI(){
+  const bar=byId('offlineBar');
+  if(!bar)return;
+  const show=!!currentUid&&!remoteReady&&(!navigator.onLine||connectSlow);
+  if(show){
+    let when='';
+    const last=localStorage.getItem('ff2_lastSync');
+    if(last){
+      const d=new Date(last);
+      when=' — planning à jour au '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
+    }
+    bar.textContent=(navigator.onLine?'Serveur injoignable':'Hors connexion')+when+'. Consultation seulement.';
+  }
+  bar.classList.toggle('show',show);
+  if(currentRole!=='personnel'){
+    document.body.classList.toggle('ro-ui',show);
+    const add=byId('addResaBtn');if(add)add.style.display=show?'none':'';
+  }
+}
+function markServerSync(){
+  try{localStorage.setItem('ff2_lastSync',new Date().toISOString());}catch(e){}
+  updateOfflineUI();
+}
+window.addEventListener('online',updateOfflineUI);
+window.addEventListener('offline',updateOfflineUI);
+
 function persist(){
+  if(offlineBlocked())return;
   localStorage.setItem('ff2_data',JSON.stringify({
     bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners, transactions:S.transactions
   }));
@@ -4115,7 +4173,16 @@ function ensureFirestoreSettings(){
 // d'une fiche accountMembers/{uid} est la seule source de vérité — elle est
 // créée une seule fois, au moment où l'invitation est acceptée (voir
 // acceptInvite()), et n'est ensuite modifiable par personne (règles Firestore).
+// Rôle retenu sur l'appareil (ff2_role_{uid}) : hors connexion, la lecture
+// d'accountMembers est impossible — sans ce souvenir, un compte Personnel
+// ouvert sans réseau serait pris pour un Propriétaire. Hors ligne avec un
+// rôle connu, on n'attend pas la réponse (qui finirait en erreur).
 function resolveAccountRole(uid){
+  const key='ff2_role_'+uid;
+  let cached=null;
+  try{cached=JSON.parse(localStorage.getItem(key)||'null');}catch(e){}
+  const applyCached=()=>{currentRole=cached.role;ownerUid=cached.ownerUid;};
+  if(cached&&!navigator.onLine){applyCached();return Promise.resolve();}
   return firebase.firestore().collection('accountMembers').doc(uid).get().then(snap=>{
     if(snap.exists&&snap.data().ownerUid){
       currentRole='personnel';
@@ -4124,7 +4191,9 @@ function resolveAccountRole(uid){
       currentRole='owner';
       ownerUid=uid;
     }
+    try{localStorage.setItem(key,JSON.stringify({role:currentRole,ownerUid}));}catch(e){}
   }).catch(err=>{
+    if(cached){applyCached();return;}
     // En cas de souci réseau/règles, on ne bloque jamais l'ouverture de
     // l'app : on retombe sur 'owner' — si ce compte est en réalité un
     // compte Personnel, connectFirestoreForUser() essaiera alors de lire
@@ -4473,6 +4542,9 @@ function connectFirestoreForUser(){
     // ou reprise automatique après erreur, voir onErr ci-dessous).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
     remoteReady=false;
+    connectSlow=false;
+    setTimeout(()=>{connectSlow=true;updateOfflineUI();},4000);
+    updateOfflineUI();
     const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     // Constaté en usage réel : sur certains navigateurs/réseaux, le canal
     // temps réel (onSnapshot) ne répond parfois JAMAIS — ni succès, ni
@@ -4516,6 +4588,7 @@ function connectFirestoreForUser(){
       // que S a été remplacé par le contenu du serveur.
       remoteReady=true;
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
+      markServerSync();
       onOk();
       setSyncPip('ok','Synchronisé ✓'+delayTxt());
     },onErr);
@@ -4544,6 +4617,7 @@ function refreshFromServer(){
   ref.get({source:'server'}).then(snap=>{
     if(currentRole!=='personnel')remoteReady=true;
     if(snap.exists) apply(snap.data(),snap.metadata);
+    if(currentRole!=='personnel')markServerSync();
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
   }).catch(err=>{
@@ -8324,6 +8398,7 @@ function migrateCleaners(){
   }
 }
 function saveSettings(){
+  if(offlineBlocked())return;
   localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
   if(db)pushToFirebase();
 }
@@ -12411,6 +12486,10 @@ function init(){
   },3000);
 }
 
+// Service worker : permet d'ouvrir l'app sans réseau (voir app/sw.js).
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
+  navigator.serviceWorker.register('sw.js').catch(err=>console.warn('[sw] enregistrement impossible',err));
+}
 bootFirebaseApp();
 </script>
 </body>
