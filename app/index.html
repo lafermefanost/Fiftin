@@ -3833,6 +3833,9 @@ function isCO(b,ds){return b.checkOut===ds;}
 //  STORAGE (localStorage + optional Firebase)
 // ═══════════════════════════════════════════════════════════════
 let db=null; // Firebase Firestore instance when configured
+// true dès que le document du compte a été reçu du serveur (ou constaté
+// inexistant, compte neuf) pour la connexion en cours — voir pushToFirebase.
+let remoteReady=false;
 
 function persist(){
   localStorage.setItem('ff2_data',JSON.stringify({
@@ -4042,11 +4045,23 @@ function bootFirebaseApp(){
         // qu'aucune donnée ne traîne à l'écran, et on efface le cache local
         // de l'appareil — sur un poste partagé, la personne suivante ne
         // doit jamais voir les données du compte précédent, même une seconde.
+        const hadSession=!!currentUid;
         if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
         currentUid=null;currentUserEmail=null;currentRole='owner';ownerUid=null;
+        remoteReady=false;
         localStorage.removeItem('ff2_data');
         localStorage.removeItem('ff2_settings');
         localStorage.removeItem('ff2_catalog');
+        // Session perdue SANS passer par signOutUser() (jeton révoqué après un
+        // changement de mot de passe sur un autre appareil, stockage effacé
+        // par le navigateur…) : on recharge la page entière. Sans ça, se
+        // reconnecter dans le même onglet relançait init() avec les
+        // réservations encore en mémoire, des réglages d'usine (localStorage
+        // vidé juste au-dessus) et Firestore déjà branché — et
+        // ensureFiscalEvents() les envoyait aussitôt au serveur : locations
+        // et réglages du compte remplacés par « Location 1 à 4 » (incident
+        // réel, octobre 2026). Le rechargement repart d'une mémoire vide.
+        if(hadSession){location.reload();return;}
         // Redonne la priorité au lien d'invitation en cours (voir plus haut) :
         // ce même code s'exécute juste après le tout premier chargement de
         // la page (Firebase répond toujours par "personne connecté" avant de
@@ -4274,6 +4289,7 @@ function applyRemoteData(d,meta){
   if(incomingKey===lastSentPayloadKey)return;
   S.bookings=d.bookings||[];
   const bookingsFixed=migrateHomeExchangePrix();
+  let catalogFixed=false;
   S.guests=d.guests||[];
   S.events=d.events||[];
   migrateEvents();
@@ -4295,7 +4311,10 @@ function applyRemoteData(d,meta){
     // sans quoi chaque synchro le ferait disparaître à nouveau.
     const added=mergeCatalogDefaults(S.catalog);
     saveCatalog();
-    if(added)pushToFirebase();
+    // Envoi repoussé en fin de fonction : ici, S.settings n'a pas encore
+    // reçu les réglages du serveur (plus bas) — envoyer maintenant pouvait
+    // écraser les vrais réglages avec ceux, périmés ou d'usine, de l'appareil.
+    if(added)catalogFixed=true;
   }
   if(d.settings){
     S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...d.settings};
@@ -4323,7 +4342,7 @@ function applyRemoteData(d,meta){
   if(S.view==='year') renderYear();
   // Repoussé une fois tout le reste (guests/events/settings…) bien réappliqué,
   // pour ne jamais envoyer un état partiellement à jour vers Firebase.
-  if(bookingsFixed)pushToFirebase();
+  if(bookingsFixed||catalogFixed)pushToFirebase();
   // Calendriers Airbnb/Booking : seulement sur des données venues du serveur
   // (jamais sur le cache local, qui peut être en retard), au plus toutes
   // les 10 min — voir maybeRunIcalImport().
@@ -4437,6 +4456,7 @@ function connectFirestoreForUser(){
     // Évite d'empiler plusieurs listeners si rappelé (changement de compte,
     // ou reprise automatique après erreur, voir onErr ci-dessous).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+    remoteReady=false;
     const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     // Constaté en usage réel : sur certains navigateurs/réseaux, le canal
     // temps réel (onSnapshot) ne répond parfois JAMAIS — ni succès, ni
@@ -4475,6 +4495,10 @@ function connectFirestoreForUser(){
     }
     // Real-time listener
     unsubSnapshot=db.collection('accounts').doc(currentUid).onSnapshot({includeMetadataChanges:true},snap=>{
+      if(snap.metadata&&snap.metadata.fromCache&&!remoteReady)return;
+      // Avant applyRemoteData : ses propres envois (migrations) partent APRÈS
+      // que S a été remplacé par le contenu du serveur.
+      remoteReady=true;
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
       onOk();
       setSyncPip('ok','Synchronisé ✓'+delayTxt());
@@ -4502,6 +4526,7 @@ function refreshFromServer(){
   const ref=currentRole==='personnel'?sharedOpsRef():db.collection('accounts').doc(currentUid);
   const apply=currentRole==='personnel'?applySharedOpsData:applyRemoteData;
   ref.get({source:'server'}).then(snap=>{
+    if(currentRole!=='personnel')remoteReady=true;
     if(snap.exists) apply(snap.data(),snap.metadata);
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
@@ -4520,6 +4545,12 @@ window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
   if(!db||!currentUid)return;
+  // Jamais d'écriture avant d'avoir reçu au moins une fois le document du
+  // compte depuis le serveur pour cette connexion : avant, S peut contenir
+  // des réglages d'usine ou des données restées d'une session précédente,
+  // et l'envoi écraserait le vrai document (merge:true remplace
+  // settings.rooms, bookings… en entier). Voir remoteReady.
+  if(!remoteReady){console.warn('[sync] envoi ignoré : document du compte pas encore reçu');return;}
   // Un compte Personnel est en lecture seule (v1) : aucune écriture possible,
   // ni sur le document du propriétaire (interdit par les règles Firestore de
   // toute façon) ni sur le sous-document partagé (qui n'est mis à jour QUE
