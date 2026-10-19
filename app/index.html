@@ -5048,12 +5048,27 @@ function doRestoreSettings(inp){
     const backIds=new Set(bs.rooms.map(r=>r.id));
     const reappear=S.bookings.filter(b=>!curIds.has(b.roomId)&&backIds.has(b.roomId)).length;
     const stillOrphan=S.bookings.filter(b=>b.roomId&&!backIds.has(b.roomId)).length;
+    // Catalogue des consommations : champ à part (pas dans settings), remis
+    // lui aussi aux valeurs d'usine par le même incident (loadCatalog() sur
+    // un localStorage vidé, puis envoi). Restauré depuis la sauvegarde, en
+    // gardant les articles créés depuis (absents de la sauvegarde et qui ne
+    // sont pas des articles d'usine).
+    const backCat=Array.isArray(d.catalog)&&d.catalog.length?d.catalog:null;
+    let nextCat=null,catAdded=0;
+    if(backCat){
+      const backCatIds=new Set(backCat.map(c=>c.id));
+      const defIds=new Set(DEFAULT_CATALOG.map(c=>c.id));
+      const keep=(S.catalog||[]).filter(c=>!backCatIds.has(c.id)&&!defIds.has(c.id));
+      catAdded=keep.length;
+      nextCat=JSON.parse(JSON.stringify(backCat)).concat(keep);
+    }
     const when=d.exported?new Date(d.exported).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'date inconnue';
     const msg=`Sauvegarde du ${when}${bs.name?' — '+bs.name:''}\n\n`+
       `Locations dans la sauvegarde (${bs.rooms.length}) :\n${bs.rooms.map(r=>'• '+(r.name||r.id)).join('\n')}\n\n`+
       `Locations actuelles : ${(S.settings.rooms||[]).length}\n`+
-      `Réservations qui vont réapparaître : ${reappear}\n\n`+
-      `Seuls les réglages sont remplacés. Réservations (${S.bookings.length}), clients, événements, ménage, table d'hôtes et comptabilité actuels sont conservés tels quels.\n\nRestaurer ?`;
+      `Réservations qui vont réapparaître : ${reappear}\n`+
+      (nextCat?`Catalogue des consommations : ${backCat.length} article(s) de la sauvegarde${catAdded?` + ${catAdded} ajouté(s) depuis, conservé(s)`:''}\n\n`:`Catalogue : absent de la sauvegarde, inchangé\n\n`)+
+      `Seuls les réglages et le catalogue sont remplacés. Réservations (${S.bookings.length}), clients, événements, ménage, table d'hôtes et comptabilité actuels sont conservés tels quels.\n\nRestaurer ?`;
     if(!confirm(msg))return;
     const cur=S.settings;
     const next={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...JSON.parse(JSON.stringify(bs))};
@@ -5069,6 +5084,7 @@ function doRestoreSettings(inp){
       if(c.icalExportUrl&&!r.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
     S.settings=next;
+    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog);saveCatalog();}
     migrateCleaners();
     migrateStructures();
     migrateRoomFields();
@@ -5081,7 +5097,7 @@ function doRestoreSettings(inp){
     if(S.view==='week')renderWeek();
     refreshRevenueViews();
     if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
-    alert(`✓ Réglages restaurés — ${S.settings.rooms.length} locations.`+
+    alert(`✓ Réglages restaurés — ${S.settings.rooms.length} locations`+(nextCat?`, catalogue de ${S.catalog.length} articles.`:'.')+
       (stillOrphan?`\n\nAttention : ${stillOrphan} réservation(s) sont rattachées à une location absente de cette sauvegarde (créée après ?).`:''));
   };
   fr.readAsText(file);
@@ -9170,8 +9186,8 @@ function renderSettings(){
     <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Sauvegarde/restauration complète (JSON) : réservations, clients, événements, réglages, catalogue et comptabilité en un seul fichier — pour transférer ce planning vers un autre compte ou en garder une copie. Anciennement un picto dédié dans l'en-tête, déplacé ici (retour utilisateur) pour libérer de la place sur la page principale.</div>
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="doExport()">⬇ Exporter JSON</button>
     <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>
-    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer uniquement les réglages (locations, noms, tarifs, structures…) depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé.</div>
-    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer uniquement les réglages</button>`;
+    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer les réglages (locations, noms, tarifs, structures…) et le catalogue des consommations depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé. Le catalogue des consommations est restauré aussi.</div>
+    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer réglages et catalogue</button>`;
   h+=settingsPanel('export','Export / Import',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
