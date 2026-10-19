@@ -270,7 +270,7 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 .th-room-short{display:none;}
 .pt.zoomed-out .th-room-full{display:none;}
 .pt.zoomed-out .th-room-short{display:inline;}
-.pt.zoomed-out td.rc{min-width:46px;max-width:56px;}
+.pt.zoomed-out td.rc,.pt.zoomed-out thead th.th-room{width:52px;min-width:52px;max-width:52px;}
 .pt.zoomed-out td.c-menage{min-width:56px;max-width:76px;}
 .pt.zoomed-out td.c-event{min-width:70px;max-width:110px;}
 .pt.zoomed-out td.c-th{min-width:28px;max-width:28px;}
@@ -428,8 +428,22 @@ body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15
   display:flex;align-items:center;justify-content:center;}
 
 /* ─── ROOM CELLS ─────────────────────────────────────────────── */
-.pt td.rc{cursor:pointer;padding:1px 1px;min-width:88px;max-width:108px;
+/* Largeur IDENTIQUE pour toutes les colonnes de locations (retour
+   utilisateur : elles variaient de 88 à 164 px selon la longueur du nom ou
+   du client). Téléphone : 80 px = 4 colonnes pile sur 390 px une fois les
+   colonnes de dates figées à gauche (68 px) déduites — 3 à 4 visibles selon
+   l'écran. Ordinateur : 110 px. Nom trop long : coupé (…), en-tête compris. */
+:root{--rc-w:110px;}
+@media(max-width:599px){:root{--rc-w:80px;}}
+.pt td.rc{cursor:pointer;padding:1px 1px;width:var(--rc-w);min-width:var(--rc-w);max-width:var(--rc-w);
   overflow:hidden;position:relative;}
+.pt thead th.th-room{width:var(--rc-w);min-width:var(--rc-w);max-width:var(--rc-w);
+  overflow:hidden;text-overflow:ellipsis;}
+/* Le contenu d'une case (barre de réservation au nom non coupé, nowrap) ne
+   doit pas pouvoir élargir sa colonne : en mise en page de tableau auto, la
+   largeur minimale du contenu l'emportait sur le max-width de la cellule. */
+.pt td.rc > *{max-width:calc(var(--rc-w) - 3px);box-sizing:border-box;}
+.pt.zoomed-out td.rc > *{max-width:50px;}
 .pt td.rc.empty:hover{background:#F0EDE7 !important;}
 .pt td.rc.dover{background:rgba(61,92,53,.15) !important;}
 
