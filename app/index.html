@@ -430,11 +430,11 @@ body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15
 /* ─── ROOM CELLS ─────────────────────────────────────────────── */
 /* Largeur IDENTIQUE pour toutes les colonnes de locations (retour
    utilisateur : elles variaient de 88 à 164 px selon la longueur du nom ou
-   du client). Téléphone : 80 px = 4 colonnes pile sur 390 px une fois les
-   colonnes de dates figées à gauche (68 px) déduites — 3 à 4 visibles selon
-   l'écran. Ordinateur : 110 px. Nom trop long : coupé (…), en-tête compris. */
+   du client). Téléphone : 90 px (80 px jugé un peu serré) — environ 3,5
+   colonnes visibles sur 390 px une fois les colonnes de dates figées à
+   gauche (68 px) déduites. Ordinateur : 110 px. Nom trop long : coupé (…), en-tête compris. */
 :root{--rc-w:110px;}
-@media(max-width:599px){:root{--rc-w:80px;}}
+@media(max-width:599px){:root{--rc-w:90px;}}
 .pt td.rc{cursor:pointer;padding:1px 1px;width:var(--rc-w);min-width:var(--rc-w);max-width:var(--rc-w);
   overflow:hidden;position:relative;}
 .pt thead th.th-room{width:var(--rc-w);min-width:var(--rc-w);max-width:var(--rc-w);
