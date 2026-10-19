@@ -3910,11 +3910,21 @@ function markServerSync(){
 window.addEventListener('online',updateOfflineUI);
 window.addEventListener('offline',updateOfflineUI);
 
+// Copie locale du planning (ff2_data) : relue au démarrage (loadLocal) et
+// surtout hors connexion. Écrite à chaque modification ET à chaque réception
+// du serveur — avant, seulement à la modification : un appareil qui ne
+// faisait que consulter n'avait aucune copie, et s'ouvrait hors ligne sur un
+// planning vide. try/catch : un stockage plein ne doit rien bloquer.
+function saveLocalData(){
+  try{
+    localStorage.setItem('ff2_data',JSON.stringify({
+      bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners, transactions:S.transactions
+    }));
+  }catch(e){console.warn('[local] copie locale impossible',e);}
+}
 function persist(){
   if(offlineBlocked())return;
-  localStorage.setItem('ff2_data',JSON.stringify({
-    bookings:S.bookings, guests:S.guests, events:S.events, cleaning:S.cleaning, menus:S.menus, extDiners:S.extDiners, transactions:S.transactions
-  }));
+  saveLocalData();
   if(db) pushToFirebase();
   else setSyncPip('ok','Local');
 }
@@ -4420,6 +4430,7 @@ function applyRemoteData(d,meta){
     applySettings();
     ensureFiscalEvents();
   }
+  saveLocalData();
   renderGrid();
   if(S.view==='today') renderToday();
   if(S.view==='week') renderWeek();
@@ -4470,6 +4481,9 @@ function applySharedOpsData(d,meta){
   S.catalog=d.catalog||[];
   S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),rooms:d.rooms||[],name:d.name||''};
   applySettings();
+  // Copie locale pour l'ouverture hors connexion (voir saveLocalData).
+  saveLocalData();
+  try{localStorage.setItem('ff2_settings',JSON.stringify(S.settings));saveCatalog();}catch(e){}
   renderGrid();
   if(S.view==='today') renderToday();
 }
