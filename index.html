@@ -7698,9 +7698,24 @@ function submitAuthSheet(){
       .then(afterAuth)
       .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
   } else {
+    // Retour utilisateur (Safari Mac, nombreux onglets ouverts) : clic sur
+    // « Se connecter » sans aucun effet ni message. Reproduit nulle part
+    // ailleurs (Chromium : 2e onglet connecté en < 1 s, session partagée) —
+    // piste probable : stockage du navigateur (IndexedDB, où Firebase garde
+    // la session) qui ne répond plus. Au minimum, ne jamais laisser le
+    // visiteur devant un bouton muet : état « Connexion… » visible, puis
+    // message explicite au bout de 15 s si Firebase n'a toujours pas répondu.
+    var label = btn.textContent;
+    btn.textContent = "Connexion…";
+    var settled = false;
+    var slowTimer = setTimeout(function(){
+      if(settled) return;
+      errEl.textContent = "La connexion ne répond pas. Rechargez la page (⌘R / ↻) puis réessayez — si ça persiste, fermez les autres onglets fiftin.fr.";
+      btn.disabled = false; btn.textContent = label;
+    }, 15000);
     firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(afterAuth)
-      .catch(function(err){ errEl.textContent = authErrorMessage(err); btn.disabled = false; });
+      .then(function(){ settled = true; clearTimeout(slowTimer); afterAuth(); })
+      .catch(function(err){ settled = true; clearTimeout(slowTimer); errEl.textContent = authErrorMessage(err)+(err&&err.code?" ("+err.code+")":""); btn.disabled = false; btn.textContent = label; });
   }
 }
 /* Retour utilisateur : "ni un endroit dédié pour changer le mot de passe"
