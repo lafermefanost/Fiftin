@@ -2181,6 +2181,7 @@ Gardez la main.</div>
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
   </button>
   <input type="file" id="importFile" accept=".json" style="display:none" onchange="doImport(this)">
+  <input type="file" id="restoreSettingsFile" accept=".json" style="display:none" onchange="doRestoreSettings(this)">
 </header>
 
 <!-- ─── TOOLBAR ─────────────────────────────────────────────── -->
@@ -3832,6 +3833,9 @@ function isCO(b,ds){return b.checkOut===ds;}
 //  STORAGE (localStorage + optional Firebase)
 // ═══════════════════════════════════════════════════════════════
 let db=null; // Firebase Firestore instance when configured
+// true dès que le document du compte a été reçu du serveur (ou constaté
+// inexistant, compte neuf) pour la connexion en cours — voir pushToFirebase.
+let remoteReady=false;
 
 function persist(){
   localStorage.setItem('ff2_data',JSON.stringify({
@@ -4041,11 +4045,23 @@ function bootFirebaseApp(){
         // qu'aucune donnée ne traîne à l'écran, et on efface le cache local
         // de l'appareil — sur un poste partagé, la personne suivante ne
         // doit jamais voir les données du compte précédent, même une seconde.
+        const hadSession=!!currentUid;
         if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
         currentUid=null;currentUserEmail=null;currentRole='owner';ownerUid=null;
+        remoteReady=false;
         localStorage.removeItem('ff2_data');
         localStorage.removeItem('ff2_settings');
         localStorage.removeItem('ff2_catalog');
+        // Session perdue SANS passer par signOutUser() (jeton révoqué après un
+        // changement de mot de passe sur un autre appareil, stockage effacé
+        // par le navigateur…) : on recharge la page entière. Sans ça, se
+        // reconnecter dans le même onglet relançait init() avec les
+        // réservations encore en mémoire, des réglages d'usine (localStorage
+        // vidé juste au-dessus) et Firestore déjà branché — et
+        // ensureFiscalEvents() les envoyait aussitôt au serveur : locations
+        // et réglages du compte remplacés par « Location 1 à 4 » (incident
+        // réel, octobre 2026). Le rechargement repart d'une mémoire vide.
+        if(hadSession){location.reload();return;}
         // Redonne la priorité au lien d'invitation en cours (voir plus haut) :
         // ce même code s'exécute juste après le tout premier chargement de
         // la page (Firebase répond toujours par "personne connecté" avant de
@@ -4273,6 +4289,7 @@ function applyRemoteData(d,meta){
   if(incomingKey===lastSentPayloadKey)return;
   S.bookings=d.bookings||[];
   const bookingsFixed=migrateHomeExchangePrix();
+  let catalogFixed=false;
   S.guests=d.guests||[];
   S.events=d.events||[];
   migrateEvents();
@@ -4294,7 +4311,10 @@ function applyRemoteData(d,meta){
     // sans quoi chaque synchro le ferait disparaître à nouveau.
     const added=mergeCatalogDefaults(S.catalog);
     saveCatalog();
-    if(added)pushToFirebase();
+    // Envoi repoussé en fin de fonction : ici, S.settings n'a pas encore
+    // reçu les réglages du serveur (plus bas) — envoyer maintenant pouvait
+    // écraser les vrais réglages avec ceux, périmés ou d'usine, de l'appareil.
+    if(added)catalogFixed=true;
   }
   if(d.settings){
     S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...d.settings};
@@ -4322,7 +4342,7 @@ function applyRemoteData(d,meta){
   if(S.view==='year') renderYear();
   // Repoussé une fois tout le reste (guests/events/settings…) bien réappliqué,
   // pour ne jamais envoyer un état partiellement à jour vers Firebase.
-  if(bookingsFixed)pushToFirebase();
+  if(bookingsFixed||catalogFixed)pushToFirebase();
   // Calendriers Airbnb/Booking : seulement sur des données venues du serveur
   // (jamais sur le cache local, qui peut être en retard), au plus toutes
   // les 10 min — voir maybeRunIcalImport().
@@ -4436,6 +4456,7 @@ function connectFirestoreForUser(){
     // Évite d'empiler plusieurs listeners si rappelé (changement de compte,
     // ou reprise automatique après erreur, voir onErr ci-dessous).
     if(unsubSnapshot){unsubSnapshot();unsubSnapshot=null;}
+    remoteReady=false;
     const delayTxt=()=>lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     // Constaté en usage réel : sur certains navigateurs/réseaux, le canal
     // temps réel (onSnapshot) ne répond parfois JAMAIS — ni succès, ni
@@ -4474,6 +4495,10 @@ function connectFirestoreForUser(){
     }
     // Real-time listener
     unsubSnapshot=db.collection('accounts').doc(currentUid).onSnapshot({includeMetadataChanges:true},snap=>{
+      if(snap.metadata&&snap.metadata.fromCache&&!remoteReady)return;
+      // Avant applyRemoteData : ses propres envois (migrations) partent APRÈS
+      // que S a été remplacé par le contenu du serveur.
+      remoteReady=true;
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
       onOk();
       setSyncPip('ok','Synchronisé ✓'+delayTxt());
@@ -4501,6 +4526,7 @@ function refreshFromServer(){
   const ref=currentRole==='personnel'?sharedOpsRef():db.collection('accounts').doc(currentUid);
   const apply=currentRole==='personnel'?applySharedOpsData:applyRemoteData;
   ref.get({source:'server'}).then(snap=>{
+    if(currentRole!=='personnel')remoteReady=true;
     if(snap.exists) apply(snap.data(),snap.metadata);
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
     setSyncPip('ok','Synchronisé ✓'+delayTxt);
@@ -4519,6 +4545,12 @@ window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
   if(!db||!currentUid)return;
+  // Jamais d'écriture avant d'avoir reçu au moins une fois le document du
+  // compte depuis le serveur pour cette connexion : avant, S peut contenir
+  // des réglages d'usine ou des données restées d'une session précédente,
+  // et l'envoi écraserait le vrai document (merge:true remplace
+  // settings.rooms, bookings… en entier). Voir remoteReady.
+  if(!remoteReady){console.warn('[sync] envoi ignoré : document du compte pas encore reçu');return;}
   // Un compte Personnel est en lecture seule (v1) : aucune écriture possible,
   // ni sur le document du propriétaire (interdit par les règles Firestore de
   // toute façon) ni sur le sous-document partagé (qui n'est mis à jour QUE
@@ -4966,6 +4998,70 @@ function doImport(inp){
   };
   fr.readAsText(inp.files[0]);
   inp.value='';
+}
+
+// Restauration des SEULS réglages depuis une sauvegarde JSON (cas réel : les
+// réglages d'un compte revenus aux valeurs d'usine — locations 5 à 8
+// disparues, noms « Location N » — alors que les réservations, elles, étaient
+// intactes). Contrairement à doImport(), ne lit QUE d.settings : S.bookings,
+// S.guests, S.events, S.cleaning, S.menus, S.extDiners, S.transactions et
+// S.catalog restent exactement ceux d'aujourd'hui. Les réservations dont la
+// location revient dans la sauvegarde réapparaissent d'elles-mêmes (même
+// roomId). Ce qui a pu être réglé APRÈS la sauvegarde est gardé quand la
+// sauvegarde ne l'a pas : formule (plan, gérée par le serveur), liens
+// Airbnb/Booking d'une location.
+function doRestoreSettings(inp){
+  const file=inp.files&&inp.files[0];
+  inp.value='';
+  if(!file)return;
+  if(currentRole==='personnel'){alert('Ce compte est en lecture seule.');return;}
+  const fr=new FileReader();
+  fr.onload=e=>{
+    let d;
+    try{d=JSON.parse(e.target.result);}catch(err){alert('Fichier invalide (ce n\'est pas une sauvegarde JSON Fiftin).');return;}
+    const bs=d&&d.settings;
+    if(!bs||!Array.isArray(bs.rooms)||!bs.rooms.length){alert('Cette sauvegarde ne contient pas de réglages exploitables.');return;}
+    const curIds=new Set((S.settings.rooms||[]).map(r=>r.id));
+    const backIds=new Set(bs.rooms.map(r=>r.id));
+    const reappear=S.bookings.filter(b=>!curIds.has(b.roomId)&&backIds.has(b.roomId)).length;
+    const stillOrphan=S.bookings.filter(b=>b.roomId&&!backIds.has(b.roomId)).length;
+    const when=d.exported?new Date(d.exported).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}):'date inconnue';
+    const msg=`Sauvegarde du ${when}${bs.name?' — '+bs.name:''}\n\n`+
+      `Locations dans la sauvegarde (${bs.rooms.length}) :\n${bs.rooms.map(r=>'• '+(r.name||r.id)).join('\n')}\n\n`+
+      `Locations actuelles : ${(S.settings.rooms||[]).length}\n`+
+      `Réservations qui vont réapparaître : ${reappear}\n\n`+
+      `Seuls les réglages sont remplacés. Réservations (${S.bookings.length}), clients, événements, ménage, table d'hôtes et comptabilité actuels sont conservés tels quels.\n\nRestaurer ?`;
+    if(!confirm(msg))return;
+    const cur=S.settings;
+    const next={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...JSON.parse(JSON.stringify(bs))};
+    if(!bs.structures)next.structures=null;
+    if(!bs.structureThresholds)next.structureThresholds=null;
+    if(!next.chargeCategories||!next.chargeCategories.length)next.chargeCategories=JSON.parse(JSON.stringify(DEFAULT_SETTINGS.chargeCategories));
+    if(!next.sources)next.sources=[...DEFAULT_SETTINGS.sources];
+    if(cur.plan)next.plan=cur.plan;
+    next.rooms.forEach(r=>{
+      const c=(cur.rooms||[]).find(x=>x.id===r.id);
+      if(!c)return;
+      if(c.icalImports&&!r.icalImports)r.icalImports=c.icalImports;
+      if(c.icalExportUrl&&!r.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
+    });
+    S.settings=next;
+    migrateCleaners();
+    migrateStructures();
+    migrateRoomFields();
+    migrateTariffFields();
+    restoreDirectSource();
+    saveSettings();
+    applySettings();
+    renderGrid();
+    if(S.view==='today')renderToday();
+    if(S.view==='week')renderWeek();
+    refreshRevenueViews();
+    if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
+    alert(`✓ Réglages restaurés — ${S.settings.rooms.length} locations.`+
+      (stillOrphan?`\n\nAttention : ${stillOrphan} réservation(s) sont rattachées à une location absente de cette sauvegarde (créée après ?).`:''));
+  };
+  fr.readAsText(file);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -9024,7 +9120,9 @@ function renderSettings(){
     <button class="btn-p btn-add" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>
     <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Sauvegarde/restauration complète (JSON) : réservations, clients, événements, réglages, catalogue et comptabilité en un seul fichier — pour transférer ce planning vers un autre compte ou en garder une copie. Anciennement un picto dédié dans l'en-tête, déplacé ici (retour utilisateur) pour libérer de la place sur la page principale.</div>
     <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="doExport()">⬇ Exporter JSON</button>
-    <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>`;
+    <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>
+    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer uniquement les réglages (locations, noms, tarifs, structures…) depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé.</div>
+    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer uniquement les réglages</button>`;
   h+=settingsPanel('export','Export / Import',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
