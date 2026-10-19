@@ -1795,11 +1795,13 @@ body.no-dinner .tsec-panel.th,body.no-dinner .fg-th-notes{display:none;}
 body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 
 /* On desktop, let the grid stretch and widen its columns to fill the available width */
+/* Ordinateur : largeurs calculées par sizeGridColumns() selon la largeur de
+   l'écran — locations ≈ 2/3 (dates comprises), Table d'hôtes + Ménage +
+   Événement le dernier tiers. Valeurs par défaut si le calcul n'a pas tourné. */
 @media(min-width:600px){
-  .pt{width:100%;}
-  .pt td.rc{max-width:190px;}
-  .pt td.c-menage{max-width:240px;}
-  .pt td.c-event{max-width:420px;}
+  .pt{--men-w:150px;--ev-w:220px;}
+  .pt td.c-menage,.pt thead th.th-menage{width:var(--men-w);min-width:var(--men-w);max-width:var(--men-w);}
+  .pt td.c-event,.pt thead th.th-event{width:var(--ev-w);min-width:var(--ev-w);max-width:var(--ev-w);}
 }
 
 /* Events modal */
@@ -5091,6 +5093,31 @@ function doRestoreSettings(inp){
 // En-têtes de colonnes chambres (nom complet, ou code court une fois la vue
 // dézoomée — voir toggleGridZoom). Régénérés à chaque renderGrid() pour
 // suivre les changements de chambres faits dans les réglages.
+// Ordinateur (≥ 600 px) : les locations occupent environ les 2/3 de la
+// largeur (colonnes de dates comprises), Table d'hôtes + Ménage + Événement
+// le dernier tiers (Ménage 40 %, Événement 60 % de ce qui reste après la
+// Table d'hôtes). Plancher de 90 px par location : au-delà d'un certain
+// nombre de locations, la grille défile horizontalement plutôt que d'avoir
+// des colonnes illisibles. Téléphone : largeurs fixes du CSS (--rc-w).
+function sizeGridColumns(){
+  const pt=byId('pt'),wrap=byId('gridWrap');
+  if(!pt||!wrap)return;
+  if(window.innerWidth<600){pt.style.removeProperty('--rc-w');pt.style.removeProperty('--men-w');pt.style.removeProperty('--ev-w');return;}
+  const avail=wrap.clientWidth;
+  if(!avail)return;
+  const w=sel=>{const el=pt.querySelector(sel);return el&&el.offsetParent!==null?el.getBoundingClientRect().width:0;};
+  const dates=w('thead th.th-dow')+w('thead th.th-day')+w('thead th.th-wk');
+  const th=w('thead th.th-th');
+  const n=Math.max(1,ROOMS.length);
+  const rc=Math.max(90,Math.floor((avail*2/3-dates)/n));
+  const side=Math.max(0,avail-dates-rc*n-th);
+  const men=Math.max(90,Math.floor(side*0.4));
+  const ev=Math.max(120,Math.floor(side-men)-1);
+  pt.style.setProperty('--rc-w',rc+'px');
+  pt.style.setProperty('--men-w',men+'px');
+  pt.style.setProperty('--ev-w',ev+'px');
+}
+window.addEventListener('resize',()=>{sizeGridColumns();});
 function renderGridHeader(){
   const tr=byId('ptHeadRow');
   if(!tr)return;
@@ -5107,6 +5134,7 @@ function renderGridHeader(){
     frag.appendChild(th);
   });
   tr.insertBefore(frag,thTh);
+  sizeGridColumns();
 }
 function renderGrid(){
   renderGridHeader();
