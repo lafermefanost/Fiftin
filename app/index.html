@@ -1563,6 +1563,19 @@ input[type="time"].fi{height:35px;}
 .gcontact-btn.wa{background:#25D366;}
 .gcontact-btn.sms{background:#5B8AF0;}
 .gcontact-btn.mail{background:var(--green2);color:var(--green-deep);}
+.gcontact-btn.msg{background:var(--yellow);color:var(--green-deep);border:none;cursor:pointer;font-family:'Jost',sans-serif;}
+/* Messages pré-écrits (voir openMsgModal) */
+.msg-lang{display:inline-flex;border:1px solid var(--light);border-radius:16px;overflow:hidden;margin-bottom:10px;}
+.msg-lang button{border:none;background:none;padding:6px 14px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;color:var(--gray);cursor:pointer;}
+.msg-lang button.on{background:var(--green);color:#fff;}
+.msg-tpls{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
+.msg-tpls button{border:1.5px solid var(--light);background:var(--white);border-radius:16px;padding:6px 12px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;color:var(--green-deep);cursor:pointer;}
+.msg-tpls button.on{border-color:var(--green);background:#EEF3EC;}
+.msg-text{width:100%;min-height:220px;box-sizing:border-box;font-family:inherit;font-size:13px;line-height:1.45;resize:vertical;}
+.msg-missing{font-size:12px;color:var(--danger);margin:6px 0 0;}
+.msg-chans{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.msg-vars{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 10px;}
+.msg-vars button{border:1px solid var(--light);background:#F7F5F0;border-radius:12px;padding:3px 8px;font-size:11px;font-family:'Jost',sans-serif;cursor:pointer;color:var(--green-deep);}
 .gsel-card{display:flex;align-items:stretch;background:#fff;border-radius:8px;
   border:1.5px solid var(--light);overflow:hidden;margin-top:6px;}
 .gsel-bar{width:5px;flex-shrink:0;}
@@ -2913,6 +2926,22 @@ Gardez la main.</div>
   </div>
 </div>
 
+<!-- ─── MESSAGE PRÉ-ÉCRIT (fiche réservation → 💬 Message) ───────────────── -->
+<div class="overlay" id="modalMsg" style="display:none" onclick="ovClose(event,'modalMsg')">
+  <div class="modal">
+    <div class="mhead">
+      <div class="mtitle" id="msgTitle">Message</div>
+      <button class="mclose" onclick="closeM('modalMsg')">✕</button>
+    </div>
+    <div class="msg-lang"><button id="msgLangFr" onclick="setMsgLang('fr')">Français</button><button id="msgLangEn" onclick="setMsgLang('en')">English</button></div>
+    <div class="msg-tpls" id="msgTpls"></div>
+    <textarea class="fi msg-text" id="msgText"></textarea>
+    <div class="msg-missing" id="msgMissing"></div>
+    <div class="msg-chans" id="msgChans"></div>
+    <div style="font-size:11px;color:var(--gray);margin-top:10px">Le texte reste modifiable ici, puis dans WhatsApp / SMS / Mail avant l'envoi. Modèles : Réglages → Messages.</div>
+  </div>
+</div>
+
 <!-- ─── TABLE D'HÔTES MODAL ─────────────────────────────────────────────── -->
 <div class="overlay" id="modalTH" style="display:none" onclick="if(event.target===this)cancelM('modalTH')">
   <div class="modal">
@@ -3104,6 +3133,7 @@ function categoryIconHTML(id){
 // rester cohérent plutôt que d'inventer un nouveau glyphe pour un concept
 // déjà illustré.
 const SETTINGS_PANEL_ICONS={
+  messages:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   etablissement:'<path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><rect x="9" y="14" width="6" height="6"/>',
   compte:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
   equipe:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
@@ -6395,6 +6425,193 @@ function fmtIntlPhone(p){
   if(d.startsWith('33')) return d;
   return d;
 }
+// ═══════════════════════════════════════════════════════════════
+//  MESSAGES PRÉ-ÉCRITS AUX CLIENTS
+// ═══════════════════════════════════════════════════════════════
+// Fiche réservation → 💬 Message : modèle choisi (FR ou EN, au choix de
+// l'hôte au moment d'envoyer), rempli avec les données de la réservation,
+// modifiable, puis envoyé par WhatsApp / SMS / Mail depuis l'appareil (ou
+// copié). Modèles modifiables dans Réglages → Messages ; tant que l'hôte n'y
+// a pas touché, S.settings.messageTemplates est absent et les modèles par
+// défaut s'appliquent (ils peuvent donc évoluer sans écraser les siens).
+const MSG_VARS=[
+  {k:'prénom',fr:'Prénom'},{k:'nom',fr:'Nom complet'},{k:'location',fr:'Location'},
+  {k:'arrivée',fr:'Date d\'arrivée'},{k:'heure_arrivée',fr:'Heure d\'arrivée'},
+  {k:'départ',fr:'Date de départ'},{k:'heure_départ',fr:'Heure de départ'},
+  {k:'nuits',fr:'Nuits'},{k:'voyageurs',fr:'Voyageurs'},{k:'total',fr:'Total'},
+  {k:'acompte',fr:'Acompte'},{k:'reste',fr:'Reste à payer'},
+  {k:'infos_arrivée',fr:'Infos d\'arrivée'},{k:'établissement',fr:'Établissement'},
+];
+const DEFAULT_MSG_TEMPLATES=[
+  {id:'confirm',name:'Confirmation',
+   fr:"Bonjour {prénom},\n\nJe vous confirme votre réservation à {établissement} : {location}, du {arrivée} au {départ} ({nuits} nuit(s), {voyageurs} pers.).\n\nMontant du séjour : {total}.\nPour bloquer définitivement les dates, merci de régler un acompte de {acompte}.\n\nÀ très bientôt,\n{établissement}",
+   en:"Hello {prénom},\n\nI am pleased to confirm your booking at {établissement}: {location}, from {arrivée} to {départ} ({nuits} night(s), {voyageurs} guest(s)).\n\nTotal for your stay: {total}.\nTo secure the dates, please pay a deposit of {acompte}.\n\nSee you soon,\n{établissement}"},
+  {id:'arrival',name:'Infos d\'arrivée',
+   fr:"Bonjour {prénom},\n\nNous avons hâte de vous accueillir ! Arrivée prévue le {arrivée} à {heure_arrivée}.\n\n{infos_arrivée}\n\nN'hésitez pas à nous écrire si besoin.\n{établissement}",
+   en:"Hello {prénom},\n\nWe look forward to welcoming you! Your arrival is planned on {arrivée} at {heure_arrivée}.\n\n{infos_arrivée}\n\nFeel free to message us if you need anything.\n{établissement}"},
+  {id:'deposit',name:'Relance acompte',
+   fr:"Bonjour {prénom},\n\nPetit rappel : l'acompte de {acompte} pour votre séjour du {arrivée} au {départ} n'a pas encore été reçu. Pourriez-vous nous le faire parvenir ?\n\nMerci beaucoup,\n{établissement}",
+   en:"Hello {prénom},\n\nA quick reminder: we have not yet received the deposit of {acompte} for your stay from {arrivée} to {départ}. Could you please send it?\n\nMany thanks,\n{établissement}"},
+  {id:'thanks',name:'Remerciement',
+   fr:"Bonjour {prénom},\n\nMerci pour votre séjour à {établissement}, ce fut un plaisir de vous accueillir !\nSi vous avez un instant, un petit avis nous aiderait beaucoup.\n\nAu plaisir de vous revoir,\n{établissement}",
+   en:"Hello {prénom},\n\nThank you for staying at {établissement}, it was a pleasure to have you!\nIf you have a moment, a short review would mean a lot to us.\n\nHope to see you again,\n{établissement}"},
+];
+function msgTemplates(){
+  const t=S.settings&&S.settings.messageTemplates;
+  return (t&&t.length)?t:DEFAULT_MSG_TEMPLATES;
+}
+// Première modification : les modèles par défaut deviennent ceux du compte.
+function ensureOwnMsgTemplates(){
+  if(!S.settings.messageTemplates||!S.settings.messageTemplates.length)
+    S.settings.messageTemplates=JSON.parse(JSON.stringify(DEFAULT_MSG_TEMPLATES));
+  return S.settings.messageTemplates;
+}
+function msgMissing(lang,label){return lang==='en'?`[${label} ?]`:`[${label} ?]`;}
+function msgValues(b,lang){
+  const en=lang==='en';
+  const g=guest(b.guestId);
+  const members=b.groupId?S.bookings.filter(x=>x.groupId===b.groupId):[b];
+  const fmtD=ds=>new Date(ds+'T00:00:00').toLocaleDateString(en?'en-GB':'fr-FR',{weekday:'short',day:'numeric',month:'short'});
+  const eur=n=>en?`€${Math.round(n*100)/100}`:`${Math.round(n*100)/100} €`;
+  const total=members.reduce((s,m)=>s+getStayTotal(m)+(m.taxeSejour?getTaxeSejourAmount(m):0),0);
+  const dep=members.reduce((s,m)=>s+(parseFloat(m.depositAmount)||0),0);
+  const paid=members.every(m=>m.payment==='paid');
+  const reste=paid?0:Math.max(0,total-(members.some(m=>m.payment==='deposit')?dep:0));
+  const rooms=members.map(m=>room(m.roomId)).filter(Boolean);
+  const info=rooms.map(r=>{
+    const t=((en?r.arrivalInfoEn:r.arrivalInfo)||(en?r.arrivalInfo:'')||'').trim();
+    return t&&rooms.length>1?`${r.name} :\n${t}`:t;
+  }).filter(Boolean).join('\n\n');
+  const L=en
+    ?{name:'name',time:'arrival time',dtime:'departure time',dep:'deposit',info:'arrival info'}
+    :{name:'nom',time:'heure d\'arrivée',dtime:'heure de départ',dep:'acompte',info:'infos d\'arrivée'};
+  const full=(g&&g.name||'').trim();
+  return {
+    'prénom':full?full.split(/\s+/)[0]:msgMissing(lang,L.name),
+    'nom':full||msgMissing(lang,L.name),
+    'location':rooms.map(r=>r.name).join(' + '),
+    'arrivée':fmtD(b.checkIn),'départ':fmtD(b.checkOut),
+    'heure_arrivée':(b.arrivalTime||'').trim()||msgMissing(lang,L.time),
+    'heure_départ':(b.departureTime||'').trim()||msgMissing(lang,L.dtime),
+    'nuits':String(daysBetween(b.checkIn,b.checkOut)),
+    'voyageurs':String(members.reduce((s,m)=>s+(parseInt(m.nbPersons)||0),0)||''),
+    'total':eur(total),
+    'acompte':dep>0?eur(dep):msgMissing(lang,L.dep),
+    'reste':eur(reste),
+    'infos_arrivée':info||msgMissing(lang,L.info),
+    'établissement':(S.settings.name||'').trim(),
+  };
+}
+function fillMsg(text,vals){
+  return String(text||'').replace(/\{([^{}\s]+)\}/g,(m,k)=>vals[k]!==undefined?vals[k]:m);
+}
+let msgState={bid:null,lang:'fr',tplId:null};
+function openMsgModal(){
+  if(!editBid)return;
+  msgState={bid:editBid,lang:msgState.lang||'fr',tplId:msgState.tplId||msgTemplates()[0].id};
+  if(!msgTemplates().some(t=>t.id===msgState.tplId))msgState.tplId=msgTemplates()[0].id;
+  const b=S.bookings.find(x=>x.id===editBid);const g=b&&guest(b.guestId);
+  byId('msgTitle').textContent='Message'+(g?' à '+g.name:'');
+  renderMsgModal();
+  openM('modalMsg');
+}
+function setMsgLang(l){msgState.lang=l;renderMsgModal();}
+function pickMsgTpl(id){msgState.tplId=id;renderMsgModal();}
+function renderMsgModal(){
+  const b=S.bookings.find(x=>x.id===msgState.bid);if(!b)return;
+  byId('msgLangFr').classList.toggle('on',msgState.lang==='fr');
+  byId('msgLangEn').classList.toggle('on',msgState.lang==='en');
+  const tpls=msgTemplates();
+  byId('msgTpls').innerHTML=tpls.map(t=>`<button type="button" class="${t.id===msgState.tplId?'on':''}" onclick="pickMsgTpl('${t.id}')">${escHtml(t.name||'Sans nom')}</button>`).join('');
+  const t=tpls.find(x=>x.id===msgState.tplId)||tpls[0];
+  const src=(msgState.lang==='en'?t.en:t.fr)||'';
+  const text=fillMsg(src,msgValues(b,msgState.lang));
+  byId('msgText').value=src.trim()?text:(msgState.lang==='en'?'(No English version of this template yet — Settings → Messages.)':'(Ce modèle n\'a pas de version française — Réglages → Messages.)');
+  const miss=[...new Set((text.match(/\[[^\]]+ \?\]/g)||[]))];
+  byId('msgMissing').textContent=miss.length?'⚠️ À compléter avant l\'envoi : '+miss.join(', '):'';
+  const g=guest(b.guestId)||{};
+  const chans=[];
+  if(g.phone){
+    const p=fmtIntlPhone(g.phone);
+    chans.push(`<button type="button" class="gcontact-btn wa" onclick="sendMsg('wa')">WhatsApp</button>`);
+    chans.push(`<button type="button" class="gcontact-btn sms" onclick="sendMsg('sms')">SMS</button>`);
+  }
+  if(g.email)chans.push(`<button type="button" class="gcontact-btn mail" onclick="sendMsg('mail')">Mail</button>`);
+  chans.push(`<button type="button" class="gcontact-btn copy" onclick="sendMsg('copy',this)">Copier</button>`);
+  byId('msgChans').innerHTML=chans.join('')+(g.phone||g.email?'':'<div style="font-size:11px;color:var(--gray);width:100%">Ajoutez un téléphone ou un e-mail dans la fiche client pour envoyer directement.</div>');
+}
+function sendMsg(ch,btn){
+  const b=S.bookings.find(x=>x.id===msgState.bid);if(!b)return;
+  const g=guest(b.guestId)||{};
+  const text=byId('msgText').value;
+  const enc=encodeURIComponent(text);
+  if(ch==='copy'){
+    const done=()=>{if(btn){btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);}};
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(done).catch(()=>{byId('msgText').select();document.execCommand('copy');done();});
+    else{byId('msgText').select();document.execCommand('copy');done();}
+    return;
+  }
+  let url='';
+  if(ch==='wa')url=`https://wa.me/${fmtIntlPhone(g.phone)}?text=${enc}`;
+  if(ch==='sms'){const ios=/iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);url=`sms:+${fmtIntlPhone(g.phone)}${ios?'&':'?'}body=${enc}`;}
+  if(ch==='mail'){
+    const t=msgTemplates().find(x=>x.id===msgState.tplId)||{};
+    const subj=[t.name,S.settings.name].filter(Boolean).join(' — ');
+    url=`mailto:${g.email}?subject=${encodeURIComponent(subj)}&body=${enc}`;
+  }
+  if(url)window.open(url,ch==='wa'?'_blank':'_self');
+}
+// — Réglages → Messages —
+let msgLastField=null;
+function msgTemplatesSettingsHTML(){
+  const esc=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const chips=MSG_VARS.map(v=>`<button type="button" onmousedown="event.preventDefault()" onclick="insertMsgVar('${v.k}')">+ ${v.fr}</button>`).join('');
+  let h=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px">Modèles proposés dans la fiche réservation (💬 Message). Les données entre accolades, ex. {prénom}, sont remplacées automatiquement. Placez le curseur dans un texte puis touchez une pastille pour l'insérer. Les infos d'arrivée se règlent dans chaque location.</div>
+  <div class="msg-vars">${chips}</div>`;
+  msgTemplates().forEach(t=>{
+    h+=`<div class="set-card" style="display:block">
+      <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px">
+        <input class="set-fi" style="flex:1" value="${esc(t.name).replace(/"/g,'&quot;')}" placeholder="Nom du modèle" onblur="updateMsgTpl('${t.id}','name',this.value)">
+        <button class="mch-del" title="Supprimer ce modèle" onclick="delMsgTpl('${t.id}')">×</button>
+      </div>
+      <div class="set-card-sub-title">Français</div>
+      <textarea class="set-fi" data-tpl="${t.id}" data-lang="fr" style="width:100%;min-height:110px;resize:vertical;font-family:inherit;box-sizing:border-box" onfocus="msgLastField=this" onblur="updateMsgTpl('${t.id}','fr',this.value)">${esc(t.fr)}</textarea>
+      <div class="set-card-sub-title" style="margin-top:6px">English</div>
+      <textarea class="set-fi" data-tpl="${t.id}" data-lang="en" style="width:100%;min-height:110px;resize:vertical;font-family:inherit;box-sizing:border-box" onfocus="msgLastField=this" onblur="updateMsgTpl('${t.id}','en',this.value)">${esc(t.en)}</textarea>
+    </div>`;
+  });
+  h+=`<button class="set-add" onclick="addMsgTpl()">+ Ajouter un modèle</button>
+  <button class="set-add" style="margin-top:6px" onclick="resetMsgTpls()">Rétablir les modèles d'origine</button>`;
+  return h;
+}
+function insertMsgVar(k){
+  const el=msgLastField;
+  if(!el||!document.body.contains(el)){alert('Touchez d\'abord le texte du modèle à l\'endroit où insérer la donnée.');return;}
+  const tag='{'+k+'}';const a=el.selectionStart??el.value.length,z=el.selectionEnd??a;
+  el.value=el.value.slice(0,a)+tag+el.value.slice(z);
+  el.focus();el.selectionStart=el.selectionEnd=a+tag.length;
+  updateMsgTpl(el.dataset.tpl,el.dataset.lang,el.value);
+}
+function updateMsgTpl(id,field,val){
+  const list=ensureOwnMsgTemplates();
+  const t=list.find(x=>x.id===id);if(!t||t[field]===val)return;
+  t[field]=val;saveSettings();
+}
+function addMsgTpl(){
+  ensureOwnMsgTemplates().push({id:uid(),name:'Nouveau modèle',fr:'Bonjour {prénom},\n\n\n\n{établissement}',en:'Hello {prénom},\n\n\n\n{établissement}'});
+  saveSettings();renderSettings();
+}
+function delMsgTpl(id){
+  const list=ensureOwnMsgTemplates();
+  if(list.length<=1){alert('Gardez au moins un modèle.');return;}
+  if(!confirm('Supprimer ce modèle ?'))return;
+  S.settings.messageTemplates=list.filter(x=>x.id!==id);saveSettings();renderSettings();
+}
+function resetMsgTpls(){
+  if(!confirm('Remplacer tous vos modèles par ceux d\'origine ? Vos modifications seront perdues.'))return;
+  delete S.settings.messageTemplates;saveSettings();renderSettings();
+}
+
 function contactButtonsHTML(phone,email){
   const icoWa=`<svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="flex-shrink:0"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.109.549 4.09 1.508 5.808L.057 24l6.304-1.654A11.93 11.93 0 0012 23.943C18.627 23.943 24 18.57 24 11.943S18.627 0 12 0zm0 21.87a9.882 9.882 0 01-5.032-1.373l-.361-.214-3.741.981.998-3.648-.235-.374A9.86 9.86 0 012.12 12c0-5.455 4.436-9.891 9.891-9.891S21.902 6.545 21.902 12c0 5.454-4.436 9.89-9.901 9.877z"/></svg>`;
   const icoSms=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
@@ -6450,7 +6667,10 @@ function renderGPicker(){
     byId('gSearchWrap').style.display='flex';
   }
   byId('gNewBtn').style.display='none';
-  const contactHtml=g?contactButtonsHTML(g.phone,g.email):'';
+  // 💬 Message pré-écrit : seulement sur une réservation enregistrée (les
+  // données du message sont celles de la réservation, pas d'un formulaire
+  // en cours de saisie).
+  const contactHtml=g?contactButtonsHTML(g.phone,g.email)+(editBid?`<button type="button" class="gcontact-btn msg" onclick="openMsgModal()">💬 Message</button>`:''):'';
   byId('gContact').innerHTML=contactHtml;
   byId('gContact').style.display=contactHtml?'flex':'none';
 }
@@ -9027,6 +9247,11 @@ function renderSettings(){
         <div class="set-card-sub-title">Description (pour le contrat de location)</div>
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Description du logement…" onblur="updateRoom('${r.id}','description',this.value)">${(r.description||'').replace(/</g,'&lt;')}</textarea>
       </div>
+      <div class="set-card-sub">
+        <div class="set-card-sub-title">Infos d'arrivée (messages aux clients — {infos_arrivée})</div>
+        <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Adresse, code de la boîte à clés, wifi, parking…" onblur="updateRoom('${r.id}','arrivalInfo',this.value)">${(r.arrivalInfo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+        <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box;margin-top:6px" placeholder="English version — address, key box code, wifi…" onblur="updateRoom('${r.id}','arrivalInfoEn',this.value)">${(r.arrivalInfoEn||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+      </div>
       ${roomTariffHTML(r)}
       ${roomIcalHTML(r)}
     </div>`;
@@ -9142,6 +9367,7 @@ function renderSettings(){
       <textarea class="set-fi" style="width:100%;min-height:70px;resize:vertical;font-family:inherit;box-sizing:border-box" onblur="updateContractField('conditionsAnnulation',this.value)">${(ct.conditionsAnnulation||'').replace(/</g,'&lt;')}</textarea>
     </div>`;
   h+=settingsPanel('contrat','Contrat de location',contractBody);
+  h+=settingsPanel('messages','Messages aux clients',msgTemplatesSettingsHTML());
 
   // — Catalogue extras (boissons, options, lit bébé…), vendu à la nuit ou au séjour —
   const catCats=[...new Set(S.catalog.map(c=>c.cat))];
