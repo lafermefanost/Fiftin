@@ -100,6 +100,17 @@ html,body{height:100%;overflow:hidden;}
    l'indicateur d'accueil en bas d'une PWA installée sur iPhone, qui
    affichait ce crème/blanc au lieu du fond de l'écran de connexion. */
 html{background:var(--green2);}
+/* Hauteur que la barre du bas gagne au-dessus de ses 54 px quand l'écran a
+   une zone sûre (barre de geste iPhone, app sur l'écran d'accueil) — voir
+   --mbnav-sab dans .mbnav. Les boutons flottants (œil, loupe) et les barres
+   de sélection s'en écartent d'autant : sans ça, en app installée, ils
+   recouvraient le haut du menu du bas. */
+:root{--nav-extra:max(0px,calc(env(safe-area-inset-bottom) - 10px));}
+/* App ouverte (écran de connexion masqué) : la « toile » sous la page est
+   verte comme les barres du haut et du bas — si iOS laisse une bande sous
+   le contenu (zone de l'indicateur d'accueil), elle se fond avec le menu.
+   L'écran de connexion garde le fond vert sauge ci-dessus. */
+html:has(#lockScreen:not(.show)){background:var(--green);}
 body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--dark);
   display:flex;flex-direction:column;}
 
@@ -281,7 +292,7 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   box-shadow:0 2px 8px rgba(0,0,0,.12);transition:all .15s;}
 .grid-zoom-btn:hover{color:var(--green);border-color:var(--green);}
 .grid-zoom-btn.on{background:var(--green);color:var(--white);border-color:var(--green);}
-@media(max-width:599px){.grid-zoom-btn{bottom:66px;}}
+@media(max-width:599px){.grid-zoom-btn{bottom:calc(66px + var(--nav-extra));}}
 /* Retour utilisateur : "comme la loupe de la vue Grille, mais sur toutes
    les autres vues, un picto œil qui floute tous les montants en euros —
    à la manière des banques". Même position/style que .grid-zoom-btn (les
@@ -295,7 +306,7 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
   box-shadow:0 2px 8px rgba(0,0,0,.12);transition:all .15s;}
 .money-eye-btn:hover{color:var(--green);border-color:var(--green);}
 .money-eye-btn.on{background:var(--green);color:var(--white);border-color:var(--green);}
-@media(max-width:599px){.money-eye-btn{bottom:66px;}}
+@media(max-width:599px){.money-eye-btn{bottom:calc(66px + var(--nav-extra));}}
 body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15s;}
 
 /* Sticky header */
@@ -399,13 +410,13 @@ body.money-hidden .money{filter:blur(6px);user-select:none;transition:filter .15
   box-shadow:0 4px 20px rgba(0,0,0,.4);z-index:500;white-space:nowrap;
   font-size:13px;}
 #swapBar.show{display:flex;}
-@media(max-width:599px){#swapBar{bottom:62px;font-size:12px;padding:8px 12px;gap:7px;}}
+@media(max-width:599px){#swapBar{bottom:calc(62px + var(--nav-extra));font-size:12px;padding:8px 12px;gap:7px;}}
 .swap-arrow{font-size:16px;opacity:.7;}
 .rbtn-swap{padding:6px 16px;background:#4A8C60;color:#fff;border:none;
   border-radius:20px;font-family:'Jost',sans-serif;font-size:12px;font-weight:600;
   cursor:pointer;}
 .rbtn-swap:hover{background:#3A7050;}
-@media(max-width:599px){#rangeBar{bottom:62px;font-size:12px;padding:8px 14px;gap:8px;}}
+@media(max-width:599px){#rangeBar{bottom:calc(62px + var(--nav-extra));font-size:12px;padding:8px 14px;gap:8px;}}
 #rangeLabel{font-weight:500;}
 #rangeLabel b{color:#9DC89A;}
 #rangeLabel .rl-short{display:none;}
@@ -1714,7 +1725,13 @@ input[type="time"].fi{height:35px;}
   border-top:1px solid rgba(255,255,255,.12);flex-shrink:0;gap:6px;
   padding-top:4px;padding-bottom:var(--mbnav-sab);
   padding-left:max(14px,env(safe-area-inset-left));
-  padding-right:max(14px,env(safe-area-inset-right));}
+  padding-right:max(14px,env(safe-area-inset-right));
+  /* Prolonge le vert de la barre jusqu'au bord bas de l'écran (retour
+     utilisateur : bande crème visible sous le menu, alors que le haut est
+     vert jusqu'au bord) — copie verte de la barre 50 px plus bas, dessinée
+     derrière elle, qui couvre la zone de l'indicateur d'accueil quelle que
+     soit la façon dont iOS calcule la hauteur de la page. */
+  box-shadow:0 50px 0 0 var(--green);}
 /* Libellé/icône au repos en blanc cassé semi-opaque plutôt que --gray
    (pensé lui aussi pour un fond blanc, illisible sur fond vert foncé) —
    même opacité .75 que .mstat-card.mstat-rev .mstat-sub, déjà le
