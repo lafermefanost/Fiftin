@@ -2010,6 +2010,38 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-card-sub .set-tariff-row,.set-card-sub .set-tariff-hd,.set-card .set-tariff-row,.set-card .set-tariff-hd{background:transparent;}
 .set-card .mch-row{border-bottom:none;padding:3px 0;}
 .set-card-checklbl{font-size:10px;color:var(--gray);display:flex;align-items:center;gap:3px;white-space:nowrap;}
+/* ── Réglages : hiérarchie visuelle (retour utilisateur : « catégories pas
+   assez claires, pas de hiérarchie, locations mal séparées ») ──
+   4 niveaux lisibles d'un coup d'œil :
+   1. volet (Locations, Tarifs…) : bandeau ; le volet OUVERT passe en vert,
+      ombre portée, pour se détacher des volets fermés restés beiges ;
+   2. carte (une location, un article…) : carte blanche bordée, bien
+      espacée, nom en titre (16 px) précédé de la pastille de couleur ;
+   3. sous-partie d'une carte (Description, Infos d'arrivée, Tarif…) :
+      intitulé vert, séparée par un filet ;
+   4. libellés de champ : petites capitales grises (inchangés).
+   Les champs passent en beige clair puisque la carte devient blanche. */
+.set-sec{padding:0;overflow:hidden;}
+.set-sec-title{font-size:12px;color:var(--green-deep);padding:15px 16px;letter-spacing:.07em;transition:background .15s,color .15s;}
+.set-sec .yr-regl-body{margin-top:0!important;padding:4px 14px 16px;}
+.set-sec.open{background:#F4F2EE;box-shadow:0 3px 14px rgba(29,40,32,.12);}
+.set-sec.open>.set-sec-title{background:var(--green);color:#fff;}
+.set-sec.open .yr-regl-body{padding-top:16px;}
+.set-card{background:#fff;border:1px solid #E6E2DA;border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 1px 3px rgba(29,40,32,.05);}
+.set-card .set-fi,.set-card .mch-label,.set-card .set-fi-sm,.set-card select,.sc-field .sc-input-wrap,.sc-field select{background:#F4F2EE;}
+.set-card .set-fi.set-card-title{font-size:16px;font-weight:600;color:var(--green-deep);background:transparent;padding:4px 2px;}
+.set-card .set-fi.set-card-title:focus{background:#F4F2EE;}
+.set-card-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;box-shadow:0 0 0 2px #fff,0 0 0 3px #E6E2DA;}
+.set-card-sub{border-top:1px solid #EEEAE3;margin-top:14px;padding-top:12px;}
+.set-card-sub-title{color:var(--green);font-size:10.5px;margin-bottom:8px;}
+.set-hint{font-size:11px;color:var(--gray);margin:-4px 0 8px;line-height:1.35;}
+.set-card-room .set-card-top{margin-bottom:0;}
+.set-card-room .set-card-body{display:none;margin-top:12px;}
+.set-card-room.open .set-card-body{display:block;}
+.set-card-room.open{border-color:var(--green);box-shadow:0 2px 10px rgba(29,40,32,.10);}
+.set-card-summary{font-size:12px;color:var(--gray);margin:6px 0 0 24px;cursor:pointer;}
+.set-card-toggle{border:none;background:#EEF3EC;color:var(--green);font-family:'Jost',sans-serif;font-size:12px;font-weight:600;border-radius:14px;padding:5px 11px;cursor:pointer;flex-shrink:0;white-space:nowrap;}
+.set-card .set-tariff-row .set-fi-sm{padding:7px 2px;font-size:12px;}
 /* ── Year view ── */
 #yearWrap{flex:1;overflow-y:auto;display:none;padding:12px 12px 24px;
   -webkit-overflow-scrolling:touch;}
@@ -9118,6 +9150,8 @@ function regulatoryItemsHTML(){
 // Enveloppe une section des réglages dans un volet dépliant, comme les volets des
 // vues Mois/Année (même chevron, même mécanique). L'état ouvert/fermé est mémorisé
 // par id pour survivre aux multiples re-rendus déclenchés par chaque modification.
+let roomCardOpen={};
+function toggleRoomCard(id){roomCardOpen[id]=!roomCardOpen[id];renderSettings();}
 function settingsPanel(id,title,bodyHtml){
   const open=!!settingsPanelOpen[id];
   const icon=SETTINGS_PANEL_ICONS[id];
@@ -9253,11 +9287,22 @@ function renderSettings(){
   const structs=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
   let roomsBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
   (st.rooms||[]).forEach(r=>{
-    roomsBody+=`<div class="set-card">
+    // Carte repliée par défaut (résumé : code, capacité, structure, tarif) —
+    // avec 8 locations, toutes dépliées faisaient un long défilement où on
+    // ne savait plus à quelle location appartenait un champ.
+    const rOpen=!!roomCardOpen[r.id];
+    const st=structs.find(s=>s.id===(r.group||structs[0].id));
+    const lastT=[...(r.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from)).pop();
+    const p2=lastT&&lastT.prices?(lastT.prices[2]??lastT.prices[1]):null;
+    const summary=[r.short,(r.maxPersons||2)+' pers',st&&st.name,p2!=null&&p2!==''?p2+' €/nuit':null].filter(Boolean).map(x=>escHtml(String(x))).join(' · ');
+    roomsBody+=`<div class="set-card set-card-room${rOpen?' open':''}">
       <div class="set-card-top">
-        <input class="set-fi" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Nom de la location" onblur="updateRoom('${r.id}','name',this.value)">
-        <button class="set-del" onclick="delRoom('${r.id}')">×</button>
+        <span class="set-card-dot" style="background:${r.color||'#9AA394'}"></span>
+        <input class="set-fi set-card-title" value="${r.name.replace(/"/g,'&quot;')}" placeholder="Nom de la location" onblur="updateRoom('${r.id}','name',this.value)">
+        <button type="button" class="set-card-toggle" onclick="toggleRoomCard('${r.id}')">${rOpen?'Replier ▴':'Modifier ▾'}</button>
       </div>
+      ${rOpen?'':`<div class="set-card-summary" onclick="toggleRoomCard('${r.id}')">${summary}</div>`}
+      <div class="set-card-body">
       <div class="set-card-grid">
         <div class="sc-field">
           <label title="Nom abrégé affiché dans les en-têtes de la grille">Code</label>
@@ -9275,16 +9320,20 @@ function renderSettings(){
         </div>
       </div>
       <div class="set-card-sub">
-        <div class="set-card-sub-title">Description (pour le contrat de location)</div>
+        <div class="set-card-sub-title">Description</div>
+        <div class="set-hint">Reprise dans le contrat de location.</div>
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Description du logement…" onblur="updateRoom('${r.id}','description',this.value)">${(r.description||'').replace(/</g,'&lt;')}</textarea>
       </div>
       <div class="set-card-sub">
-        <div class="set-card-sub-title">Infos d'arrivée (messages aux clients — {infos_arrivée})</div>
+        <div class="set-card-sub-title">Infos d'arrivée</div>
+        <div class="set-hint">Insérées dans les messages aux clients ({infos_arrivée}) — français puis anglais.</div>
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Adresse, code de la boîte à clés, wifi, parking…" onblur="updateRoom('${r.id}','arrivalInfo',this.value)">${(r.arrivalInfo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box;margin-top:6px" placeholder="English version — address, key box code, wifi…" onblur="updateRoom('${r.id}','arrivalInfoEn',this.value)">${(r.arrivalInfoEn||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
       </div>
       ${roomTariffHTML(r)}
       ${roomIcalHTML(r)}
+      <button class="mdel-link" style="margin-top:14px" onclick="delRoom('${r.id}')">Supprimer cette location</button>
+      </div>
     </div>`;
   });
   roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une location</button>`;
@@ -9809,7 +9858,8 @@ function addRoom(){
 function addRoomBlank(){
   const n=S.settings.rooms.length+1;
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
-  S.settings.rooms.push({id:uid(),name:'Location '+n,short:'L'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
+  const newRid=uid();roomCardOpen[newRid]=true;
+  S.settings.rooms.push({id:newRid,name:'Location '+n,short:'L'+n,maxPersons:2,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:defaultRoomPrices(2)}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
 }
@@ -9824,6 +9874,7 @@ function addRoomFromListingUnit(listingId,unitId){
   const prices=defaultRoomPrices(max);
   if(unit.price) prices[max]=Number(unit.price);
   const newRoomId=uid();
+  roomCardOpen[newRoomId]=true;
   S.settings.rooms.push({id:newRoomId,name:(unit.name||'Location '+n).trim()||('Location '+n),short:'L'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
