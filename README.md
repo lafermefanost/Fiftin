@@ -1328,6 +1328,20 @@ Aucune règle Firestore à coller : `icalFeeds` et `icalExportTokens` ne sont ac
 
 **Réversible** : annuler la pull request (bouton « Revert » sur GitHub) ne perd aucune donnée — les réservations d'un groupe redeviennent des réservations indépendantes (`groupId` simplement ignoré), `departureTime` est ignoré.
 
+## Messages pré-écrits aux clients
+
+**Fiche réservation enregistrée → « 💬 Message »** (à droite de WA · SMS · Mail) : choix Français / English par l'hôte, choix du modèle, texte rempli avec la réservation (`msgValues()` : groupe de locations compris) et modifiable, puis WhatsApp / SMS / Mail / Copier. Donnée manquante signalée dans le texte (`[heure d'arrivée ?]`).
+
+**Réglages → Messages aux clients** : modèles FR + EN (`S.settings.messageTemplates`, absent tant que l'hôte n'a rien modifié → `DEFAULT_MSG_TEMPLATES`), pastilles d'insertion des données ({prénom}, {arrivée}, {total}, {acompte}, {infos_arrivée}…). **Réglages → Locations → Infos d'arrivée** FR + EN (`arrivalInfo` / `arrivalInfoEn`).
+
+## Hors connexion
+
+`app/sw.js` (service worker, portée `/app/`) : page réseau d'abord puis copie gardée, SDK Firebase / polices / logo gardés sur l'appareil, données jamais mises en cache. L'app affiche alors la dernière copie (`ff2_data`, réécrite à chaque modification **et** à chaque réception du serveur), bandeau « Hors connexion — planning à jour au … », consultation seule tant que le document du compte n'a pas été reçu du serveur (`remoteReady`).
+
+## Restauration depuis une sauvegarde
+
+Réglages → Export / Import → « 🛟 Restaurer réglages et catalogue » : ne lit que `settings` et `catalog` d'une sauvegarde JSON ; réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels inchangés. Firestore : récupération à un moment précis (7 jours) activée le 20/10/2026.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
