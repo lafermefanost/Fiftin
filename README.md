@@ -1342,6 +1342,10 @@ Aucune règle Firestore à coller : `icalFeeds` et `icalExportTokens` ne sont ac
 
 Réglages → Export / Import → « 🛟 Restaurer réglages et catalogue » : ne lit que `settings` et `catalog` d'une sauvegarde JSON ; réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels inchangés. Firestore : récupération à un moment précis (7 jours) activée le 20/10/2026.
 
+## Publication du site (GitHub Pages)
+
+Chaque fusion sur `main` republie tout le site (workflow « pages build and deployment », ~1 min). Si une publication reste bloquée côté GitHub (étape « Deploy to GitHub Pages » qui expire), les suivantes échouent avec « due to in progress deployment » tant que GitHub ne l'a pas clôturée : attendre, puis republier (nouvelle fusion ou « Re-run jobs » sur l'exécution échouée). Le site reste servi dans sa version précédente entre-temps.
+
 ## À faire avant un vrai passage en production
 
 - Paiement en ligne (Stripe) — essai gratuit 15 jours, puis abonnement réel.
