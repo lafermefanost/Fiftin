@@ -4569,6 +4569,17 @@ function stableStringify(obj){
 // premier chargement en cliquant sur le point de synchro plus tard.
 let lastSyncErrorMsg=null;
 let lastSyncErrorAt=null;
+// Mesures d'affichage (bande vide sous le menu en app installée sur iPhone :
+// diagnostic avant correctif — la zone n'est pas reproductible hors iPhone).
+function screenDebugLine(){
+  const probe=document.createElement('div');
+  probe.style.cssText='position:fixed;visibility:hidden;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;';
+  document.body.appendChild(probe);
+  const cs=getComputedStyle(probe);const top=cs.paddingTop,bot=cs.paddingBottom;probe.remove();
+  const vv=window.visualViewport;
+  const standalone=window.navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+  return `app installée : ${standalone?'oui':'non'} · écran ${screen.width}×${screen.height} · fenêtre ${innerWidth}×${innerHeight} · page ${document.documentElement.clientHeight}${vv?' · visible '+Math.round(vv.height):''} · zones sûres haut ${top} / bas ${bot}`;
+}
 function showSyncDebug(){
   const lines=[
     currentUserEmail?`Compte : ${currentUserEmail}`:'Aucun compte connecté',
@@ -4578,6 +4589,8 @@ function showSyncDebug(){
     lastSyncDelayMs!=null?`Délai dernière réception : ${Math.round(lastSyncDelayMs/1000)}s`:'Aucune donnée reçue depuis ce chargement',
     lastReceiveAt?`Dernière réception à : ${lastReceiveAt}`:'',
     lastSyncErrorMsg?`⚠️ Dernière erreur (${lastSyncErrorAt}) : ${lastSyncErrorMsg}`:'Aucune erreur de synchro depuis ce chargement',
+    '— Écran —',
+    screenDebugLine(),
   ].filter(Boolean);
   alert('Diagnostic sync\n\n'+lines.join('\n'));
 }
