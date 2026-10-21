@@ -3599,14 +3599,22 @@ function isSourceNoRevenue(src){
 // Interrupteur global "table d'hôte" (réglages → Services). Désactivé, il masque
 // toutes les options/compteurs liés dans l'app, sans toucher aux données déjà
 // enregistrées (dinnerNights des réservations existantes reste intact).
+// Plus d'interrupteur général (ancien volet Services) : la table d'hôtes est
+// « active » dès qu'au moins une location la propose (Réglages → Locations &
+// services). Un ancien réglage général décoché est reporté sur toutes les
+// locations par migrateServiceFlags().
 function dinnerEnabled(){
-  return S.settings.dinnerEnabled!==false;
+  const rooms=(S.settings&&S.settings.rooms)||[];
+  if(S.settings&&S.settings.dinnerEnabled===false)return false;
+  return !rooms.length||rooms.some(r=>!r.noDinnerService);
 }
 // Même principe pour le petit-déjeuner (utile pour les hébergements type gîte,
 // sans prestation petit-déj). Désactivé, il masque la case à cocher par nuit dans
 // le modal de réservation, sans toucher aux données déjà enregistrées.
 function breakfastEnabled(){
-  return S.settings.breakfastEnabled!==false;
+  const rooms=(S.settings&&S.settings.rooms)||[];
+  if(S.settings&&S.settings.breakfastEnabled===false)return false;
+  return !rooms.length||rooms.some(r=>!r.noBreakfastService);
 }
 // Même principe pour la taxe de séjour (utile pour les communes qui ne
 // l'appliquent pas). Désactivée, elle masque la case à cocher dans le modal
@@ -3625,8 +3633,8 @@ function taxeSejourEnabled(){
 // déjà enregistrés sur une réservation restent comptés tels quels, même si la
 // location cesse de proposer le service (on masque seulement la saisie).
 function roomOffers(roomId,svc){
-  if(svc==='breakfast'&&!breakfastEnabled())return false;
-  if(svc==='dinner'&&!dinnerEnabled())return false;
+  if(svc==='breakfast'&&S.settings&&S.settings.breakfastEnabled===false)return false;
+  if(svc==='dinner'&&S.settings&&S.settings.dinnerEnabled===false)return false;
   const r=ROOMS.find(x=>x.id===roomId);
   if(!r)return true;
   return svc==='breakfast'?!r.noBreakfastService:!r.noDinnerService;
@@ -4636,6 +4644,7 @@ function applyRemoteData(d,meta){
   if(S.view==='year') renderYear();
   // Repoussé une fois tout le reste (guests/events/settings…) bien réappliqué,
   // pour ne jamais envoyer un état partiellement à jour vers Firebase.
+  if(ensureThExtCatalogItem()){saveCatalog();catalogFixed=true;}
   if(bookingsFixed||catalogFixed)pushToFirebase();
   // Calendriers Airbnb/Booking : seulement sur des données venues du serveur
   // (jamais sur le cache local, qui peut être en retard), au plus toutes
@@ -8299,9 +8308,26 @@ function extDinersCount(ds){
 // Tarif dédié aux personnes extérieures (Réglages → Services), distinct du
 // tarif repas des clients en séjour : par défaut 30 € contre 25 € pour ces
 // derniers, mais chacun ajuste les deux indépendamment.
+// Prix d'une personne extérieure : figé sur l'entrée à l'ajout (e.price, pris
+// dans l'article « Table d'hôtes — extérieur » du catalogue). Entrées plus
+// anciennes, sans prix figé : ancien tarif « Repas ext. » en vigueur ce
+// jour-là, comme avant — l'historique compté ne bouge pas.
+function extDinerUnitPrice(e,ds){
+  return (e&&e.price!=null&&!isNaN(+e.price))?+e.price:getTariffForDate(ds).thExt;
+}
 function extDinersRevenueForDate(ds){
-  if(!extDinersCount(ds))return 0;
-  return extDinersCount(ds)*getTariffForDate(ds).thExt;
+  return ((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false).reduce((s,e)=>s+(e.count||1)*extDinerUnitPrice(e,ds),0);
+}
+// Article de catalogue servant de prix aux personnes extérieures à la table
+// d'hôtes (remplace la colonne « Repas ext. » de l'ancien volet Services) —
+// créé une fois, au prix « Repas ext. » en vigueur, puis réglé comme tout
+// article (Réglages → Catalogue extras).
+const TH_EXT_ITEM_ID='th-ext';
+function thExtCatalogItem(){return (S.catalog||[]).find(c=>c.id===TH_EXT_ITEM_ID);}
+function ensureThExtCatalogItem(){
+  if(!Array.isArray(S.catalog)||thExtCatalogItem())return false;
+  S.catalog.push({id:TH_EXT_ITEM_ID,name:"Table d'hôtes — personne extérieure",price:getTariffForDate(todayISO()).thExt,cat:"Table d'hôtes",emoji:'🍽'});
+  return true;
 }
 // Ajouter une personne extérieure crée directement un client dans le carnet
 // (comme "+ Nouveau client" ailleurs dans l'appli) et le lie à ce jour — elle
@@ -8315,7 +8341,8 @@ function addExtDiner(ds){
   const ng={id:uid(),name,color:nextColor(),phone:'',email:'',notes:''};
   S.guests.push(ng);
   if(!S.extDiners[ds])S.extDiners[ds]=[];
-  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true});
+  const item=thExtCatalogItem();
+  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true,price:item?+item.price||0:getTariffForDate(ds).thExt});
   nameInp.value='';
   persist();
   renderGrid();
@@ -8796,7 +8823,16 @@ function migrateStructures(){
 // globales existantes, pour que les réservations déjà enregistrées ne changent pas de
 // prix après la mise à jour. Appelée à la fois au chargement local et à la réception
 // de réglages synchronisés (Firebase), qui peuvent provenir d'un ancien format.
+// Ancien interrupteur général décoché → reporté sur chaque location, puis
+// supprimé (même affichage, mêmes chiffres : les calculs ne lisent que les
+// données enregistrées sur les réservations).
+function migrateServiceFlags(){
+  if(!S.settings||!S.settings.rooms)return;
+  if(S.settings.dinnerEnabled===false){S.settings.rooms.forEach(r=>{r.noDinnerService=true;});delete S.settings.dinnerEnabled;}
+  if(S.settings.breakfastEnabled===false){S.settings.rooms.forEach(r=>{r.noBreakfastService=true;});delete S.settings.breakfastEnabled;}
+}
 function migrateRoomFields(){
+  migrateServiceFlags();
   if(!S.settings.rooms)return;
   const defMap=new Map(DEFAULT_SETTINGS.rooms.map(r=>[r.id,r]));
   S.settings.rooms.forEach(r=>{
@@ -9383,19 +9419,19 @@ function delRoomRule(roomId,tid,list,i){
 // Services proposés par une location (Réglages → Locations → Services).
 function roomServicesHTML(r){
   const items=[];
-  if(breakfastEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noBreakfastService?'':'checked'} onchange="setRoomService('${r.id}','noBreakfastService',!this.checked)"> Petit-déjeuner proposé</label>`);
-  if(dinnerEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noDinnerService?'':'checked'} onchange="setRoomService('${r.id}','noDinnerService',!this.checked)"> Table d'hôtes proposée</label>`);
+  items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noBreakfastService?'':'checked'} onchange="setRoomService('${r.id}','noBreakfastService',!this.checked)"> Petit-déjeuner proposé</label>`);
+  items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noDinnerService?'':'checked'} onchange="setRoomService('${r.id}','noDinnerService',!this.checked)"> Table d'hôtes proposée</label>`);
   if(!items.length)return '';
   return `<div class="set-card-sub">
     <div class="set-card-sub-title">Services</div>
-    <div class="set-hint">Décochez ce que cette location ne propose pas : l'option disparaît de ses réservations. Les repas déjà enregistrés restent comptés.</div>
+    <div class="set-hint">Décochez ce que cette location ne propose pas : l'option disparaît de ses réservations (et de l'appli si aucune location ne la propose). Les repas déjà enregistrés restent comptés.</div>
     ${items.join('')}
   </div>`;
 }
 function setRoomService(roomId,field,off){
   const r=S.settings.rooms.find(x=>x.id===roomId);if(!r)return;
   if(off)r[field]=true;else delete r[field];
-  saveSettings();applySettings();renderSettings();refreshRevenueViews();
+  saveSettings();applySettings();renderSettings();renderGrid();refreshRevenueViews();
 }
 function updateRoomTariffSvc(roomId,tid,field,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
@@ -9504,7 +9540,29 @@ function renderSettings(){
 
   // — Chambres / gîtes, avec tarif nuitée propre à chacun(e) —
   const structs=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
-  let roomsBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
+  // Prix par défaut des services, communs à toutes les locations (une
+  // location peut avoir les siens) — versionnés par date de début de séjour.
+  const showTh=dinnerEnabled(),showBf=breakfastEnabled();
+  const svcCols=`1fr${showTh?' 60px':''}${showBf?' 60px':''} 24px`;
+  let svcBody='';
+  if(showTh||showBf){
+    svcBody=`<div class="set-card">
+      <div class="set-card-top" style="margin-bottom:4px"><span class="set-card-title" style="font-size:15px;font-weight:600;color:var(--green-deep)">Prix des services par défaut</span></div>
+      <div class="set-hint" style="margin:0 0 8px">Pour toutes les locations, sauf prix propre indiqué dans une location. Personnes extérieures à la table d'hôtes : article du catalogue.</div>
+      <div class="set-tariff-hd" style="grid-template-columns:${svcCols}"><span>À partir du</span>${showTh?'<span>Repas €/pers</span>':''}${showBf?'<span>P-déj €</span>':''}<span></span></div>`;
+    const tariffs=[...(st.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from));
+    tariffs.forEach(t=>{
+      const canDel=tariffs.length>1;
+      svcBody+=`<div class="set-tariff-row" style="grid-template-columns:${svcCols}">
+        <input class="set-fi" type="date" value="${t.from}" onblur="updateTariff('${t.id}','from',this.value)">
+        ${showTh?`<input class="set-fi-sm" type="number" value="${t.th}" onblur="updateTariff('${t.id}','th',+this.value)">`:''}
+        ${showBf?`<input class="set-fi-sm" type="number" value="${t.bf!=null?t.bf:5}" onblur="updateTariff('${t.id}','bf',+this.value)">`:''}
+        <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delTariff('${t.id}')">×</button>
+      </div>`;
+    });
+    svcBody+=`<button class="set-add" onclick="addTariff()">+ Nouveaux prix à partir d'aujourd'hui</button></div>`;
+  }
+  let roomsBody=svcBody+`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
   (st.rooms||[]).forEach(r=>{
     // Carte repliée par défaut (résumé : code, capacité, structure, tarif) —
     // avec 8 locations, toutes dépliées faisaient un long défilement où on
@@ -9557,46 +9615,11 @@ function renderSettings(){
     </div>`;
   });
   roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une location</button>`;
-  h+=settingsPanel('locations','Locations',roomsBody);
+  h+=settingsPanel('locations','Locations & services',roomsBody);
 
-  // — Services : table d'hôte + petit-déjeuner (interrupteurs globaux) + tarifs —
-  let tarifsBody=`<div class="set-card set-card-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
-        <input type="checkbox" ${dinnerEnabled()?'checked':''} onchange="toggleDinnerEnabled(this.checked)">
-        <span style="font-weight:500">Table d'hôte</span>
-      </label>
-    </div>
-    <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez si vous ne proposez pas de repas en table d'hôte : masque la colonne dédiée dans la grille, l'option dans les réservations, le menu du jour (vues Jour &amp; Semaine) et les compteurs correspondants dans les autres vues. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div class="set-card set-card-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
-        <input type="checkbox" ${breakfastEnabled()?'checked':''} onchange="toggleBreakfastEnabled(this.checked)">
-        <span style="font-weight:500">Petit-déjeuner</span>
-      </label>
-    </div>
-    <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez pour les hébergements sans prestation petit-déjeuner (ex : gîtes) : masque l'option dans les réservations. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Prix communs à toutes les locations, appliqués selon la date de début du séjour. Une location peut avoir ses propres prix, ou ne pas proposer un service : Réglages → Locations → Modifier. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque location) n'est utilisé que si le petit-déjeuner est activé.</div>
-    <div class="set-card">
-    <div class="set-tariff-hd" style="grid-template-columns:1fr 48px 48px 48px 24px">
-      <span>À partir du</span><span>Repas €</span><span>Repas ext. €</span><span>P-déj €</span><span></span>
-    </div>`;
-  const tariffs=[...(st.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from));
-  tariffs.forEach((t,i)=>{
-    const canDel=tariffs.length>1;
-    tarifsBody+=`<div class="set-tariff-row" style="grid-template-columns:1fr 48px 48px 48px 24px">
-      <input class="set-fi" type="date" value="${t.from}"
-        onblur="updateTariff('${t.id}','from',this.value)">
-      <input class="set-fi-sm" type="number" value="${t.th}"
-        onblur="updateTariff('${t.id}','th',+this.value)">
-      <input class="set-fi-sm" type="number" value="${t.thExt!=null?t.thExt:30}"
-        onblur="updateTariff('${t.id}','thExt',+this.value)">
-      <input class="set-fi-sm" type="number" value="${t.bf!=null?t.bf:5}"
-        onblur="updateTariff('${t.id}','bf',+this.value)">
-      <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delTariff('${t.id}')">×</button>
-    </div>`;
-  });
-  tarifsBody+=`<button class="set-add" onclick="addTariff()">+ Nouveau tarif à partir d'aujourd'hui</button>
-    </div>`;
-  h+=settingsPanel('tarifs','Services',tarifsBody);
+  // Ancien volet « Services » : fondu dans « Locations & services » (prix par
+  // défaut en tête, services proposés dans chaque location, prix des
+  // personnes extérieures dans le catalogue — voir TH_EXT_ITEM_ID).
 
   // — Taxe de séjour —
   // Deux régimes possibles selon la commune : montant fixe €/pers/nuit
@@ -9944,7 +9967,8 @@ function toggleTaxeSejourEnabled(checked){
 
 // Tariff CRUD
 function addTariff(){
-  S.settings.tariffHistory.push({id:uid(),from:todayISO(),th:25,bf:5,thExt:30});
+  const last=[...S.settings.tariffHistory].sort((a,b)=>a.from.localeCompare(b.from)).pop()||{th:25,bf:5,thExt:30};
+  S.settings.tariffHistory.push({id:uid(),from:todayISO(),th:last.th??25,bf:last.bf??5,thExt:last.thExt??30});
   saveSettings();renderSettings();
   refreshRevenueViews();
 }
