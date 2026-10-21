@@ -2029,6 +2029,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-sec.open>.set-sec-title{background:var(--green);color:#fff;}
 .set-sec.open .yr-regl-body{padding-top:16px;}
 .set-card{background:#fff;border:none;border-radius:12px;padding:14px;margin-bottom:14px;box-shadow:0 2px 8px rgba(29,40,32,.08);}
+/* Export / Import : tuiles 2 colonnes (même famille que .evfilter-btn,
+   mais carte blanche + ombre comme .set-card), picto au trait vert. */
+.exp-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.exp-tile{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  min-height:92px;padding:14px 8px;border:none;border-radius:12px;background:#fff;
+  box-shadow:0 2px 8px rgba(29,40,32,.08);font-family:'Jost',sans-serif;color:var(--green);
+  cursor:pointer;text-align:center;transition:transform .12s,box-shadow .12s;}
+.exp-tile:active{transform:scale(.97);box-shadow:0 1px 4px rgba(29,40,32,.08);}
+.exp-tile b{font-size:13.5px;font-weight:600;color:var(--green-deep);line-height:1.2;}
+.exp-tile small{font-size:10px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;}
+.exp-tile.wide{grid-column:1/-1;flex-direction:row;min-height:0;padding:14px 16px;gap:12px;justify-content:flex-start;text-align:left;}
+.exp-tile.wide span{display:flex;flex-direction:column;gap:2px;}
+.exp-note{font-size:11px;color:var(--gray);margin:0 0 10px;line-height:1.45;}
+.exp-sep{margin-top:18px;padding-top:14px;border-top:1px solid var(--light);}
 .set-card .set-fi,.set-card .mch-label,.set-card .set-fi-sm,.set-card select,.sc-field .sc-input-wrap,.sc-field select{background:#F4F2EE;}
 .set-card .set-fi.set-card-title{font-size:16px;font-weight:600;color:var(--green-deep);background:transparent;padding:4px 2px;}
 .set-card .set-fi.set-card-title:focus{background:#F4F2EE;}
@@ -9929,16 +9943,36 @@ function renderSettings(){
   h+=settingsPanel('charges','Catégories — relevé bancaire',chargesBody);
 
   // — Export CSV —
-  const exportBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Fichiers CSV (compatibles Excel/Google Sheets), un par catégorie de données. « Chiffres » reprend, mois par mois, le même détail que la vue Mois (nuitées, repas, extras, événements, remplissage).</div>
-    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportClientsCSV()">📇 Exporter les clients (CSV)</button>
-    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportBookingsCSV()">🛏️ Exporter les réservations (CSV)</button>
-    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="exportEventsCSV()">🎉 Exporter les événements (CSV)</button>
-    <button class="btn-p btn-add" style="width:100%" onclick="exportFiguresCSV()">📊 Exporter les chiffres (CSV)</button>
-    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Sauvegarde/restauration complète (JSON) : réservations, clients, événements, réglages, catalogue et comptabilité en un seul fichier — pour transférer ce planning vers un autre compte ou en garder une copie. Anciennement un picto dédié dans l'en-tête, déplacé ici (retour utilisateur) pour libérer de la place sur la page principale.</div>
-    <button class="btn-p btn-add" style="width:100%;margin-bottom:8px" onclick="doExport()">⬇ Exporter JSON</button>
-    <button class="btn-p btn-add" style="width:100%" onclick="byId('importFile').click()">⬆ Importer JSON</button>
-    <div style="font-size:11px;color:var(--gray);margin:16px 0 10px;padding-top:14px;border-top:1px solid var(--light);">Restaurer les réglages (locations, noms, tarifs, structures…) et le catalogue des consommations depuis une sauvegarde JSON. Les réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés : tout ce qui a été saisi depuis la sauvegarde est conservé. Le catalogue des consommations est restauré aussi.</div>
-    <button class="btn-s" style="width:100%" onclick="byId('restoreSettingsFile').click()">🛟 Restaurer réglages et catalogue</button>`;
+  // Pictos au trait (même famille que ceux de l'appli), un par export.
+  const expIco=d=>`<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  const EXP_ICONS={
+    clients:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+    resas:'<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>',
+    events:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+    figures:'<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    save:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    load:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    restore:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  };
+  const expTile=(ico,label,sub,onclick,wide)=>wide
+    ?`<button type="button" class="exp-tile wide" onclick="${onclick}">${expIco(EXP_ICONS[ico])}<span><b>${label}</b><small>${sub}</small></span></button>`
+    :`<button type="button" class="exp-tile" onclick="${onclick}">${expIco(EXP_ICONS[ico])}<b>${label}</b><small>${sub}</small></button>`;
+  const exportBody=`<div class="exp-note">Fichiers CSV (Excel, Google Sheets), un par type de données. «&nbsp;Chiffres&nbsp;» reprend, mois par mois, le détail de la vue Mois.</div>
+    <div class="exp-grid">
+      ${expTile('clients','Clients','CSV','exportClientsCSV()')}
+      ${expTile('resas','Réservations','CSV','exportBookingsCSV()')}
+      ${expTile('events','Événements','CSV','exportEventsCSV()')}
+      ${expTile('figures','Chiffres','CSV','exportFiguresCSV()')}
+    </div>
+    <div class="exp-note exp-sep">Sauvegarde complète en un seul fichier : réservations, clients, événements, réglages, catalogue et comptabilité — pour garder une copie ou transférer ce planning vers un autre compte.</div>
+    <div class="exp-grid">
+      ${expTile('save','Sauvegarder','Fichier JSON','doExport()')}
+      ${expTile('load','Importer','Fichier JSON',"byId('importFile').click()")}
+    </div>
+    <div class="exp-note exp-sep">Restaure seulement les réglages (locations, tarifs, structures…) et le catalogue depuis une sauvegarde. Réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés.</div>
+    <div class="exp-grid">
+      ${expTile('restore','Restaurer réglages et catalogue','Depuis une sauvegarde JSON',"byId('restoreSettingsFile').click()",true)}
+    </div>`;
   h+=settingsPanel('export','Export / Import',exportBody);
 
   // — Réglementation — rappels : déplacé de la vue Année (voir renderYear),
