@@ -4610,7 +4610,7 @@ function applyRemoteData(d,meta){
     // Un autre appareil a pu synchroniser une version du catalogue antérieure à
     // l'ajout d'un article par défaut (ex: "Lit bébé") : on le recomplète ici,
     // sans quoi chaque synchro le ferait disparaître à nouveau.
-    const added=mergeCatalogDefaults(S.catalog);
+    const added=mergeCatalogDefaults(S.catalog,d.settings);
     saveCatalog();
     // Envoi repoussé en fin de fonction : ici, S.settings n'a pas encore
     // reçu les réglages du serveur (plus bas) — envoyer maintenant pouvait
@@ -4644,7 +4644,6 @@ function applyRemoteData(d,meta){
   if(S.view==='year') renderYear();
   // Repoussé une fois tout le reste (guests/events/settings…) bien réappliqué,
   // pour ne jamais envoyer un état partiellement à jour vers Firebase.
-  if(ensureThExtCatalogItem()){saveCatalog();catalogFixed=true;}
   if(bookingsFixed||catalogFixed)pushToFirebase();
   // Calendriers Airbnb/Booking : seulement sur des données venues du serveur
   // (jamais sur le cache local, qui peut être en retard), au plus toutes
@@ -5299,7 +5298,7 @@ function doImport(inp){
       if(d.transactions)S.transactions=d.transactions;
       if(d.catalog&&d.catalog.length){
         S.catalog=d.catalog;
-        mergeCatalogDefaults(S.catalog);
+        mergeCatalogDefaults(S.catalog,d.settings);
         saveCatalog();
       }
       // Même logique de fusion/migration que la réception d'une donnée
@@ -5392,7 +5391,7 @@ function doRestoreSettings(inp){
       if(c.icalExportUrl&&!r.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
     S.settings=next;
-    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog);saveCatalog();}
+    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog,next);saveCatalog();}
     migrateCleaners();
     migrateStructures();
     migrateRoomFields();
@@ -8305,29 +8304,18 @@ function toggleExtDinerMeal(ds,id,checked){
 function extDinersCount(ds){
   return ((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false).reduce((s,e)=>s+(e.count||1),0);
 }
-// Tarif dédié aux personnes extérieures (Réglages → Services), distinct du
-// tarif repas des clients en séjour : par défaut 30 € contre 25 € pour ces
-// derniers, mais chacun ajuste les deux indépendamment.
-// Prix d'une personne extérieure : figé sur l'entrée à l'ajout (e.price, pris
-// dans l'article « Table d'hôtes — extérieur » du catalogue). Entrées plus
-// anciennes, sans prix figé : ancien tarif « Repas ext. » en vigueur ce
-// jour-là, comme avant — l'historique compté ne bouge pas.
+// Prix repas d'une personne extérieure à la table d'hôtes : le même que pour
+// les clients en séjour (prix repas par défaut à la date, Réglages →
+// Locations & services) — un éventuel supplément se vend comme n'importe
+// quel article du catalogue. Ne vaut que pour les entrées marquées stdPrice
+// (ajoutées depuis cette règle) : les plus anciennes gardent l'ancien tarif
+// « Repas ext. » en vigueur ce jour-là, l'historique compté ne bouge pas.
 function extDinerUnitPrice(e,ds){
-  return (e&&e.price!=null&&!isNaN(+e.price))?+e.price:getTariffForDate(ds).thExt;
+  const t=getTariffForDate(ds);
+  return (e&&e.stdPrice)?t.th:t.thExt;
 }
 function extDinersRevenueForDate(ds){
   return ((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false).reduce((s,e)=>s+(e.count||1)*extDinerUnitPrice(e,ds),0);
-}
-// Article de catalogue servant de prix aux personnes extérieures à la table
-// d'hôtes (remplace la colonne « Repas ext. » de l'ancien volet Services) —
-// créé une fois, au prix « Repas ext. » en vigueur, puis réglé comme tout
-// article (Réglages → Catalogue extras).
-const TH_EXT_ITEM_ID='th-ext';
-function thExtCatalogItem(){return (S.catalog||[]).find(c=>c.id===TH_EXT_ITEM_ID);}
-function ensureThExtCatalogItem(){
-  if(!Array.isArray(S.catalog)||thExtCatalogItem())return false;
-  S.catalog.push({id:TH_EXT_ITEM_ID,name:"Table d'hôtes — personne extérieure",price:getTariffForDate(todayISO()).thExt,cat:"Table d'hôtes",emoji:'🍽'});
-  return true;
 }
 // Ajouter une personne extérieure crée directement un client dans le carnet
 // (comme "+ Nouveau client" ailleurs dans l'appli) et le lie à ce jour — elle
@@ -8341,8 +8329,7 @@ function addExtDiner(ds){
   const ng={id:uid(),name,color:nextColor(),phone:'',email:'',notes:''};
   S.guests.push(ng);
   if(!S.extDiners[ds])S.extDiners[ds]=[];
-  const item=thExtCatalogItem();
-  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true,price:item?+item.price||0:getTariffForDate(ds).thExt});
+  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true,stdPrice:true});
   nameInp.value='';
   persist();
   renderGrid();
@@ -8725,9 +8712,21 @@ function daysBetween(d1,d2){
 // Ajoute au catalogue passé les articles par défaut absents (ex: "Lit bébé", qui
 // remplace l'ancien réglage par chambre) sans toucher au reste. Renvoie true si le
 // catalogue a été complété, pour savoir s'il faut le re-sauvegarder/re-synchroniser.
-function mergeCatalogDefaults(cat){
+// Articles par défaut supprimés volontairement (Réglages → Catalogue) : notés
+// dans settings.catalogRemoved pour que la recomplétion ci-dessous (prévue
+// pour les articles par défaut ajoutés dans une version plus récente) ne les
+// fasse pas revenir à chaque synchro.
+function catalogRemovedIds(settings){
+  if(settings)return Array.isArray(settings.catalogRemoved)?settings.catalogRemoved:[];
+  if(S.settings&&Array.isArray(S.settings.catalogRemoved))return S.settings.catalogRemoved;
+  try{const ls=JSON.parse(localStorage.getItem('ff2_settings')||'null');if(ls&&Array.isArray(ls.catalogRemoved))return ls.catalogRemoved;}catch(e){}
+  return [];
+}
+function mergeCatalogDefaults(cat,settings){
   let added=false;
+  const removed=catalogRemovedIds(settings);
   DEFAULT_CATALOG.forEach(d=>{
+    if(removed.includes(d.id))return;
     if(!cat.some(c=>c.id===d.id)){cat.push({...d});added=true;}
   });
   return added;
@@ -9548,7 +9547,7 @@ function renderSettings(){
   if(showTh||showBf){
     svcBody=`<div class="set-card">
       <div class="set-card-top" style="margin-bottom:4px"><span class="set-card-title" style="font-size:15px;font-weight:600;color:var(--green-deep)">Prix des services par défaut</span></div>
-      <div class="set-hint" style="margin:0 0 8px">Pour toutes les locations, sauf prix propre indiqué dans une location. Personnes extérieures à la table d'hôtes : article du catalogue.</div>
+      <div class="set-hint" style="margin:0 0 8px">Pour toutes les locations, sauf prix propre indiqué dans une location. Les personnes extérieures à la table d'hôtes paient le même prix repas ; pour un supplément, crée un article dans le catalogue.</div>
       <div class="set-tariff-hd" style="grid-template-columns:${svcCols}"><span>À partir du</span>${showTh?'<span>Repas €/pers</span>':''}${showBf?'<span>P-déj €</span>':''}<span></span></div>`;
     const tariffs=[...(st.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from));
     tariffs.forEach(t=>{
@@ -9619,7 +9618,7 @@ function renderSettings(){
 
   // Ancien volet « Services » : fondu dans « Locations & services » (prix par
   // défaut en tête, services proposés dans chaque location, prix des
-  // personnes extérieures dans le catalogue — voir TH_EXT_ITEM_ID).
+  // personnes extérieures au prix repas normal — voir extDinerUnitPrice).
 
   // — Taxe de séjour —
   // Deux régimes possibles selon la commune : montant fixe €/pers/nuit
@@ -10547,10 +10546,15 @@ function delCatalogItem(id){
     (list||[]).forEach(e=>{if(e.extras&&e.extras[id])nb+=e.extras[id];});
   });
   const msg=nb
-    ?`${nb} unité(s) de "${item?item.label:'cet article'}" déjà vendue(s). Leur revenu disparaîtra des totaux une fois l'article supprimé. Supprimer quand même ?`
+    ?`${nb} unité(s) de "${item?item.name:'cet article'}" déjà vendue(s). Leur revenu disparaîtra des totaux une fois l'article supprimé. Supprimer quand même ?`
     :'Supprimer cet article ?';
   if(!confirm(msg))return;
   S.catalog=S.catalog.filter(c=>c.id!==id);
+  if(DEFAULT_CATALOG.some(d=>d.id===id)){
+    if(!Array.isArray(S.settings.catalogRemoved))S.settings.catalogRemoved=[];
+    if(!S.settings.catalogRemoved.includes(id))S.settings.catalogRemoved.push(id);
+    localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+  }
   saveCatalog();
   if(db)pushToFirebase();
   renderSettings();
