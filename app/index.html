@@ -3599,14 +3599,22 @@ function isSourceNoRevenue(src){
 // Interrupteur global "table d'hôte" (réglages → Services). Désactivé, il masque
 // toutes les options/compteurs liés dans l'app, sans toucher aux données déjà
 // enregistrées (dinnerNights des réservations existantes reste intact).
+// Plus d'interrupteur général (ancien volet Services) : la table d'hôtes est
+// « active » dès qu'au moins une location la propose (Réglages → Locations &
+// services). Un ancien réglage général décoché est reporté sur toutes les
+// locations par migrateServiceFlags().
 function dinnerEnabled(){
-  return S.settings.dinnerEnabled!==false;
+  const rooms=(S.settings&&S.settings.rooms)||[];
+  if(S.settings&&S.settings.dinnerEnabled===false)return false;
+  return !rooms.length||rooms.some(r=>!r.noDinnerService);
 }
 // Même principe pour le petit-déjeuner (utile pour les hébergements type gîte,
 // sans prestation petit-déj). Désactivé, il masque la case à cocher par nuit dans
 // le modal de réservation, sans toucher aux données déjà enregistrées.
 function breakfastEnabled(){
-  return S.settings.breakfastEnabled!==false;
+  const rooms=(S.settings&&S.settings.rooms)||[];
+  if(S.settings&&S.settings.breakfastEnabled===false)return false;
+  return !rooms.length||rooms.some(r=>!r.noBreakfastService);
 }
 // Même principe pour la taxe de séjour (utile pour les communes qui ne
 // l'appliquent pas). Désactivée, elle masque la case à cocher dans le modal
@@ -3625,8 +3633,8 @@ function taxeSejourEnabled(){
 // déjà enregistrés sur une réservation restent comptés tels quels, même si la
 // location cesse de proposer le service (on masque seulement la saisie).
 function roomOffers(roomId,svc){
-  if(svc==='breakfast'&&!breakfastEnabled())return false;
-  if(svc==='dinner'&&!dinnerEnabled())return false;
+  if(svc==='breakfast'&&S.settings&&S.settings.breakfastEnabled===false)return false;
+  if(svc==='dinner'&&S.settings&&S.settings.dinnerEnabled===false)return false;
   const r=ROOMS.find(x=>x.id===roomId);
   if(!r)return true;
   return svc==='breakfast'?!r.noBreakfastService:!r.noDinnerService;
@@ -4602,7 +4610,7 @@ function applyRemoteData(d,meta){
     // Un autre appareil a pu synchroniser une version du catalogue antérieure à
     // l'ajout d'un article par défaut (ex: "Lit bébé") : on le recomplète ici,
     // sans quoi chaque synchro le ferait disparaître à nouveau.
-    const added=mergeCatalogDefaults(S.catalog);
+    const added=mergeCatalogDefaults(S.catalog,d.settings);
     saveCatalog();
     // Envoi repoussé en fin de fonction : ici, S.settings n'a pas encore
     // reçu les réglages du serveur (plus bas) — envoyer maintenant pouvait
@@ -5290,7 +5298,7 @@ function doImport(inp){
       if(d.transactions)S.transactions=d.transactions;
       if(d.catalog&&d.catalog.length){
         S.catalog=d.catalog;
-        mergeCatalogDefaults(S.catalog);
+        mergeCatalogDefaults(S.catalog,d.settings);
         saveCatalog();
       }
       // Même logique de fusion/migration que la réception d'une donnée
@@ -5383,7 +5391,7 @@ function doRestoreSettings(inp){
       if(c.icalExportUrl&&!r.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
     S.settings=next;
-    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog);saveCatalog();}
+    if(nextCat){S.catalog=nextCat;mergeCatalogDefaults(S.catalog,next);saveCatalog();}
     migrateCleaners();
     migrateStructures();
     migrateRoomFields();
@@ -7947,6 +7955,13 @@ function setExtraEv(evId,ds,itemId,delta){
   if(S.view==='week')renderWeek();
   if(S.view==='month')renderMonth();
 }
+// Article retiré de la vente (archived, voir delCatalogItem) : plus proposé
+// dans les choix d'extras, mais gardé dans S.catalog pour que les ventes déjà
+// enregistrées gardent leur montant. Reste affiché là où il a une quantité,
+// pour pouvoir la corriger.
+function catalogForPicker(qtyById){
+  return S.catalog.filter(c=>!c.archived||((qtyById&&qtyById[c.id])||0)>0);
+}
 function getExtrasDayTotalEv(ev,ds){
   if(!ev.extras||!ev.extras[ds])return 0;
   return Object.entries(ev.extras[ds]).reduce((s,[id,qty])=>{
@@ -7958,12 +7973,13 @@ function getExtrasTotalEv(ev){
 }
 function extrasHTMLForEv(ev,ds){
   const dayX=ev.extras&&ev.extras[ds]?ev.extras[ds]:{};
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(dayX);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   let xh=`<div class="tcard-extras-hd">
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()">Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
@@ -8296,12 +8312,18 @@ function toggleExtDinerMeal(ds,id,checked){
 function extDinersCount(ds){
   return ((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false).reduce((s,e)=>s+(e.count||1),0);
 }
-// Tarif dédié aux personnes extérieures (Réglages → Services), distinct du
-// tarif repas des clients en séjour : par défaut 30 € contre 25 € pour ces
-// derniers, mais chacun ajuste les deux indépendamment.
+// Prix repas d'une personne extérieure à la table d'hôtes : le même que pour
+// les clients en séjour (prix repas par défaut à la date, Réglages →
+// Locations & services) — un éventuel supplément se vend comme n'importe
+// quel article du catalogue. Ne vaut que pour les entrées marquées stdPrice
+// (ajoutées depuis cette règle) : les plus anciennes gardent l'ancien tarif
+// « Repas ext. » en vigueur ce jour-là, l'historique compté ne bouge pas.
+function extDinerUnitPrice(e,ds){
+  const t=getTariffForDate(ds);
+  return (e&&e.stdPrice)?t.th:t.thExt;
+}
 function extDinersRevenueForDate(ds){
-  if(!extDinersCount(ds))return 0;
-  return extDinersCount(ds)*getTariffForDate(ds).thExt;
+  return ((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false).reduce((s,e)=>s+(e.count||1)*extDinerUnitPrice(e,ds),0);
 }
 // Ajouter une personne extérieure crée directement un client dans le carnet
 // (comme "+ Nouveau client" ailleurs dans l'appli) et le lie à ce jour — elle
@@ -8315,7 +8337,7 @@ function addExtDiner(ds){
   const ng={id:uid(),name,color:nextColor(),phone:'',email:'',notes:''};
   S.guests.push(ng);
   if(!S.extDiners[ds])S.extDiners[ds]=[];
-  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true});
+  S.extDiners[ds].push({id:uid(),guestId:ng.id,dinner:true,stdPrice:true});
   nameInp.value='';
   persist();
   renderGrid();
@@ -8363,12 +8385,13 @@ function getExtDinerExtrasTotal(e){
   },0);
 }
 function extDinerExtrasHTMLFor(ds,e){
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(e.extras);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   let xh=`<div class="tcard-extras-hd">
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()">Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
@@ -8698,9 +8721,21 @@ function daysBetween(d1,d2){
 // Ajoute au catalogue passé les articles par défaut absents (ex: "Lit bébé", qui
 // remplace l'ancien réglage par chambre) sans toucher au reste. Renvoie true si le
 // catalogue a été complété, pour savoir s'il faut le re-sauvegarder/re-synchroniser.
-function mergeCatalogDefaults(cat){
+// Articles par défaut supprimés volontairement (Réglages → Catalogue) : notés
+// dans settings.catalogRemoved pour que la recomplétion ci-dessous (prévue
+// pour les articles par défaut ajoutés dans une version plus récente) ne les
+// fasse pas revenir à chaque synchro.
+function catalogRemovedIds(settings){
+  if(settings)return Array.isArray(settings.catalogRemoved)?settings.catalogRemoved:[];
+  if(S.settings&&Array.isArray(S.settings.catalogRemoved))return S.settings.catalogRemoved;
+  try{const ls=JSON.parse(localStorage.getItem('ff2_settings')||'null');if(ls&&Array.isArray(ls.catalogRemoved))return ls.catalogRemoved;}catch(e){}
+  return [];
+}
+function mergeCatalogDefaults(cat,settings){
   let added=false;
+  const removed=catalogRemovedIds(settings);
   DEFAULT_CATALOG.forEach(d=>{
+    if(removed.includes(d.id))return;
     if(!cat.some(c=>c.id===d.id)){cat.push({...d});added=true;}
   });
   return added;
@@ -8796,7 +8831,16 @@ function migrateStructures(){
 // globales existantes, pour que les réservations déjà enregistrées ne changent pas de
 // prix après la mise à jour. Appelée à la fois au chargement local et à la réception
 // de réglages synchronisés (Firebase), qui peuvent provenir d'un ancien format.
+// Ancien interrupteur général décoché → reporté sur chaque location, puis
+// supprimé (même affichage, mêmes chiffres : les calculs ne lisent que les
+// données enregistrées sur les réservations).
+function migrateServiceFlags(){
+  if(!S.settings||!S.settings.rooms)return;
+  if(S.settings.dinnerEnabled===false){S.settings.rooms.forEach(r=>{r.noDinnerService=true;});delete S.settings.dinnerEnabled;}
+  if(S.settings.breakfastEnabled===false){S.settings.rooms.forEach(r=>{r.noBreakfastService=true;});delete S.settings.breakfastEnabled;}
+}
 function migrateRoomFields(){
+  migrateServiceFlags();
   if(!S.settings.rooms)return;
   const defMap=new Map(DEFAULT_SETTINGS.rooms.map(r=>[r.id,r]));
   S.settings.rooms.forEach(r=>{
@@ -9383,19 +9427,19 @@ function delRoomRule(roomId,tid,list,i){
 // Services proposés par une location (Réglages → Locations → Services).
 function roomServicesHTML(r){
   const items=[];
-  if(breakfastEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noBreakfastService?'':'checked'} onchange="setRoomService('${r.id}','noBreakfastService',!this.checked)"> Petit-déjeuner proposé</label>`);
-  if(dinnerEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noDinnerService?'':'checked'} onchange="setRoomService('${r.id}','noDinnerService',!this.checked)"> Table d'hôtes proposée</label>`);
+  items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noBreakfastService?'':'checked'} onchange="setRoomService('${r.id}','noBreakfastService',!this.checked)"> Petit-déjeuner proposé</label>`);
+  items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noDinnerService?'':'checked'} onchange="setRoomService('${r.id}','noDinnerService',!this.checked)"> Table d'hôtes proposée</label>`);
   if(!items.length)return '';
   return `<div class="set-card-sub">
     <div class="set-card-sub-title">Services</div>
-    <div class="set-hint">Décochez ce que cette location ne propose pas : l'option disparaît de ses réservations. Les repas déjà enregistrés restent comptés.</div>
+    <div class="set-hint">Décochez ce que cette location ne propose pas : l'option disparaît de ses réservations (et de l'appli si aucune location ne la propose). Les repas déjà enregistrés restent comptés.</div>
     ${items.join('')}
   </div>`;
 }
 function setRoomService(roomId,field,off){
   const r=S.settings.rooms.find(x=>x.id===roomId);if(!r)return;
   if(off)r[field]=true;else delete r[field];
-  saveSettings();applySettings();renderSettings();refreshRevenueViews();
+  saveSettings();applySettings();renderSettings();renderGrid();refreshRevenueViews();
 }
 function updateRoomTariffSvc(roomId,tid,field,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
@@ -9504,7 +9548,29 @@ function renderSettings(){
 
   // — Chambres / gîtes, avec tarif nuitée propre à chacun(e) —
   const structs=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
-  let roomsBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
+  // Prix par défaut des services, communs à toutes les locations (une
+  // location peut avoir les siens) — versionnés par date de début de séjour.
+  const showTh=dinnerEnabled(),showBf=breakfastEnabled();
+  const svcCols=`1fr${showTh?' 60px':''}${showBf?' 60px':''} 24px`;
+  let svcBody='';
+  if(showTh||showBf){
+    svcBody=`<div class="set-card">
+      <div class="set-card-top" style="margin-bottom:4px"><span class="set-card-title" style="font-size:15px;font-weight:600;color:var(--green-deep)">Prix des services par défaut</span></div>
+      <div class="set-hint" style="margin:0 0 8px">Pour toutes les locations, sauf prix propre indiqué dans une location. Les personnes extérieures à la table d'hôtes paient le même prix repas ; pour un supplément, crée un article dans le catalogue.</div>
+      <div class="set-tariff-hd" style="grid-template-columns:${svcCols}"><span>À partir du</span>${showTh?'<span>Repas €/pers</span>':''}${showBf?'<span>P-déj €</span>':''}<span></span></div>`;
+    const tariffs=[...(st.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from));
+    tariffs.forEach(t=>{
+      const canDel=tariffs.length>1;
+      svcBody+=`<div class="set-tariff-row" style="grid-template-columns:${svcCols}">
+        <input class="set-fi" type="date" value="${t.from}" onblur="updateTariff('${t.id}','from',this.value)">
+        ${showTh?`<input class="set-fi-sm" type="number" value="${t.th}" onblur="updateTariff('${t.id}','th',+this.value)">`:''}
+        ${showBf?`<input class="set-fi-sm" type="number" value="${t.bf!=null?t.bf:5}" onblur="updateTariff('${t.id}','bf',+this.value)">`:''}
+        <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delTariff('${t.id}')">×</button>
+      </div>`;
+    });
+    svcBody+=`<button class="set-add" onclick="addTariff()">+ Nouveaux prix à partir d'aujourd'hui</button></div>`;
+  }
+  let roomsBody=svcBody+`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Chaque location a son propre tarif nuitée par nombre de personnes, versionné par date : les réservations déjà enregistrées gardent le tarif en vigueur à leur date d'arrivée, seules les nouvelles réservations utilisent un tarif modifié.</div>`;
   (st.rooms||[]).forEach(r=>{
     // Carte repliée par défaut (résumé : code, capacité, structure, tarif) —
     // avec 8 locations, toutes dépliées faisaient un long défilement où on
@@ -9557,46 +9623,11 @@ function renderSettings(){
     </div>`;
   });
   roomsBody+=`<button class="set-add" onclick="addRoom()">+ Ajouter une location</button>`;
-  h+=settingsPanel('locations','Locations',roomsBody);
+  h+=settingsPanel('locations','Locations & services',roomsBody);
 
-  // — Services : table d'hôte + petit-déjeuner (interrupteurs globaux) + tarifs —
-  let tarifsBody=`<div class="set-card set-card-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
-        <input type="checkbox" ${dinnerEnabled()?'checked':''} onchange="toggleDinnerEnabled(this.checked)">
-        <span style="font-weight:500">Table d'hôte</span>
-      </label>
-    </div>
-    <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez si vous ne proposez pas de repas en table d'hôte : masque la colonne dédiée dans la grille, l'option dans les réservations, le menu du jour (vues Jour &amp; Semaine) et les compteurs correspondants dans les autres vues. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div class="set-card set-card-row">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1">
-        <input type="checkbox" ${breakfastEnabled()?'checked':''} onchange="toggleBreakfastEnabled(this.checked)">
-        <span style="font-weight:500">Petit-déjeuner</span>
-      </label>
-    </div>
-    <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez pour les hébergements sans prestation petit-déjeuner (ex : gîtes) : masque l'option dans les réservations. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Prix communs à toutes les locations, appliqués selon la date de début du séjour. Une location peut avoir ses propres prix, ou ne pas proposer un service : Réglages → Locations → Modifier. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque location) n'est utilisé que si le petit-déjeuner est activé.</div>
-    <div class="set-card">
-    <div class="set-tariff-hd" style="grid-template-columns:1fr 48px 48px 48px 24px">
-      <span>À partir du</span><span>Repas €</span><span>Repas ext. €</span><span>P-déj €</span><span></span>
-    </div>`;
-  const tariffs=[...(st.tariffHistory||[])].sort((a,b)=>a.from.localeCompare(b.from));
-  tariffs.forEach((t,i)=>{
-    const canDel=tariffs.length>1;
-    tarifsBody+=`<div class="set-tariff-row" style="grid-template-columns:1fr 48px 48px 48px 24px">
-      <input class="set-fi" type="date" value="${t.from}"
-        onblur="updateTariff('${t.id}','from',this.value)">
-      <input class="set-fi-sm" type="number" value="${t.th}"
-        onblur="updateTariff('${t.id}','th',+this.value)">
-      <input class="set-fi-sm" type="number" value="${t.thExt!=null?t.thExt:30}"
-        onblur="updateTariff('${t.id}','thExt',+this.value)">
-      <input class="set-fi-sm" type="number" value="${t.bf!=null?t.bf:5}"
-        onblur="updateTariff('${t.id}','bf',+this.value)">
-      <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delTariff('${t.id}')">×</button>
-    </div>`;
-  });
-  tarifsBody+=`<button class="set-add" onclick="addTariff()">+ Nouveau tarif à partir d'aujourd'hui</button>
-    </div>`;
-  h+=settingsPanel('tarifs','Services',tarifsBody);
+  // Ancien volet « Services » : fondu dans « Locations & services » (prix par
+  // défaut en tête, services proposés dans chaque location, prix des
+  // personnes extérieures au prix repas normal — voir extDinerUnitPrice).
 
   // — Taxe de séjour —
   // Deux régimes possibles selon la commune : montant fixe €/pers/nuit
@@ -9670,12 +9701,14 @@ function renderSettings(){
   h+=settingsPanel('messages','Messages aux clients',msgTemplatesSettingsHTML());
 
   // — Catalogue extras (boissons, options, lit bébé…), vendu à la nuit ou au séjour —
-  const catCats=[...new Set(S.catalog.map(c=>c.cat))];
+  const catActive=S.catalog.filter(c=>!c.archived);
+  const catArchived=S.catalog.filter(c=>c.archived);
+  const catCats=[...new Set(catActive.map(c=>c.cat))];
   let catalogBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Articles proposés en extra dans le modal de réservation (boissons, options petit-déjeuner, lit bébé…), regroupés par catégorie. Choisissez une catégorie existante ou créez-en une nouvelle.</div>`;
-  if(!S.catalog.length)catalogBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 8px">Catalogue vide.</div>`;
+  if(!catActive.length)catalogBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 8px">Catalogue vide.</div>`;
   catCats.forEach(cat=>{
     catalogBody+=`<div class="set-card-sub-title" style="margin-top:12px">${cat.replace(/</g,'&lt;')}</div>`;
-    S.catalog.filter(c=>c.cat===cat).forEach(item=>{
+    catActive.filter(c=>c.cat===cat).forEach(item=>{
       catalogBody+=`<div class="set-card set-card-row">
         <input class="set-fi" style="flex:0 0 36px;width:36px;text-align:center;padding:7px 0" maxlength="2" value="${(item.emoji||'').replace(/"/g,'&quot;')}" onblur="updateCatalogItem('${item.id}','emoji',this.value)">
         <input class="set-fi" style="flex:1 1 120px" value="${item.name.replace(/"/g,'&quot;')}" placeholder="Nom" onblur="updateCatalogItem('${item.id}','name',this.value)">
@@ -9689,6 +9722,16 @@ function renderSettings(){
       </div>`;
     });
   });
+  if(catArchived.length){
+    catalogBody+=`<div class="set-card-sub-title" style="margin-top:12px">Articles retirés de la vente</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:6px">Déjà vendus : gardés pour que les montants passés restent justes, mais plus proposés en extra.</div>`;
+    catArchived.forEach(item=>{
+      catalogBody+=`<div class="set-card set-card-row" style="opacity:.7">
+        <span style="flex:1 1 auto">${item.emoji||''} ${(item.name||'').replace(/</g,'&lt;')} · ${item.price} €</span>
+        <button class="set-add" style="width:auto;flex:0 0 auto;margin:0;padding:6px 10px;font-size:12px" onclick="restoreCatalogItem('${item.id}')">Remettre en vente</button>
+      </div>`;
+    });
+  }
   catalogBody+=`<div class="set-card set-card-new" style="margin-top:12px">
     <div class="set-card-row" style="margin-bottom:8px">
       <input class="set-fi" id="newCatEmoji" style="flex:0 0 36px;width:36px;text-align:center;padding:7px 0" maxlength="2" placeholder="🍷">
@@ -9944,7 +9987,8 @@ function toggleTaxeSejourEnabled(checked){
 
 // Tariff CRUD
 function addTariff(){
-  S.settings.tariffHistory.push({id:uid(),from:todayISO(),th:25,bf:5,thExt:30});
+  const last=[...S.settings.tariffHistory].sort((a,b)=>a.from.localeCompare(b.from)).pop()||{th:25,bf:5,thExt:30};
+  S.settings.tariffHistory.push({id:uid(),from:todayISO(),th:last.th??25,bf:last.bf??5,thExt:last.thExt??30});
   saveSettings();renderSettings();
   refreshRevenueViews();
 }
@@ -10514,23 +10558,46 @@ function delCatalogItem(id){
   // introuvable dans S.catalog) : la quantité reste, mais son revenu
   // disparaît silencieusement des totaux déjà enregistrés.
   const item=S.catalog.find(c=>c.id===id);
+  // Article déjà vendu : retiré de la vente (archived) au lieu d'être
+  // supprimé, pour ne jamais faire disparaître un revenu déjà compté.
   let nb=0;
-  S.bookings.forEach(bk=>{
-    if(!bk.extras)return;
-    Object.values(bk.extras).forEach(dayX=>{if(dayX[id])nb+=dayX[id];});
-  });
+  const countDays=x=>Object.values(x||{}).forEach(dayX=>{if(dayX&&dayX[id])nb+=dayX[id];});
+  S.bookings.forEach(bk=>countDays(bk.extras));
+  (S.events||[]).forEach(ev=>countDays(ev.extras));
   Object.values(S.extDiners||{}).forEach(list=>{
     (list||[]).forEach(e=>{if(e.extras&&e.extras[id])nb+=e.extras[id];});
   });
-  const msg=nb
-    ?`${nb} unité(s) de "${item?item.label:'cet article'}" déjà vendue(s). Leur revenu disparaîtra des totaux une fois l'article supprimé. Supprimer quand même ?`
-    :'Supprimer cet article ?';
-  if(!confirm(msg))return;
+  const name=item?item.name:'cet article';
+  if(nb){
+    if(!confirm(`« ${name} » a déjà été vendu (${nb} unité${nb>1?'s':''}). Il sera retiré de la vente mais gardé pour que les montants déjà enregistrés restent justes. Continuer ?`))return;
+    if(item)item.archived=true;
+    saveCatalog();
+    if(db)pushToFirebase();
+    renderSettings();
+    if(S.view==='week')renderWeek();
+    return;
+  }
+  if(!confirm(`Supprimer « ${name} » ?`))return;
   S.catalog=S.catalog.filter(c=>c.id!==id);
+  if(DEFAULT_CATALOG.some(d=>d.id===id)){
+    if(!Array.isArray(S.settings.catalogRemoved))S.settings.catalogRemoved=[];
+    if(!S.settings.catalogRemoved.includes(id))S.settings.catalogRemoved.push(id);
+    localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+  }
   saveCatalog();
   if(db)pushToFirebase();
   renderSettings();
   // Voir updateCatalogItem juste au-dessus.
+  if(S.view==='week')renderWeek();
+}
+
+function restoreCatalogItem(id){
+  const item=S.catalog.find(c=>c.id===id);
+  if(!item)return;
+  delete item.archived;
+  saveCatalog();
+  if(db)pushToFirebase();
+  renderSettings();
   if(S.view==='week')renderWeek();
 }
 
@@ -10568,7 +10635,8 @@ function getExtrasDayTotal(bk,ds){
 }
 function extrasHTMLFor(b,ds){
   const dayX=b.extras&&b.extras[ds]?b.extras[ds]:{};
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(dayX);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   // Rendu désactivé directement au niveau du HTML pour un compte Staff — pas
   // seulement dans le modal (voir personnelLockExtrasBody) : ce même HTML est
   // aussi injecté tel quel dans la vue Jour (renderToday), qui n'a pas son
@@ -10579,7 +10647,7 @@ function extrasHTMLFor(b,ds){
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()"${ro}>Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
