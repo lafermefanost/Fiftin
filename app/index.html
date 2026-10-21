@@ -3045,11 +3045,14 @@ Gardez la main.</div>
 </div>
 
 <!-- ─── SETTINGS MODAL ─────────────────────────────────────────────── -->
-<div class="overlay" id="modalSettings" style="display:none" onclick="ovClose(event,'modalSettings')">
+<div class="overlay" id="modalSettings" style="display:none" onclick="if(event.target===this)cancelSettings()">
   <div class="modal modal-noscroll">
     <div class="mhead">
       <div class="mtitle"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Paramètres</div>
-      <button class="mclose" onclick="closeM('modalSettings')">✕</button>
+      <div class="mhead-acts">
+        <button class="msave" onclick="commitSettings()" title="Enregistrer les modifications">✓ OK</button>
+        <button class="mclose" onclick="cancelSettings()" title="Annuler les modifications">✕</button>
+      </div>
     </div>
     <div class="modal-scrollarea"><div id="settingsBody"></div></div>
   </div>
@@ -4614,7 +4617,10 @@ function applyRemoteData(d,meta){
   // afficher dans Réglages → Compte. Posé par stripeWebhook() côté
   // functions/index.js, ou absent tant qu'aucun abonnement n'a jamais été créé.
   S.billing=d.billing||null;
-  if(d.catalog&&d.catalog.length){
+  // Paramètres ouverts en brouillon : réglages et catalogue reçus gardés de
+  // côté (appliqués si le brouillon est annulé, écrasés s'il est validé).
+  if(settingsDraft)settingsDraft.remote={d,meta};
+  if(!settingsDraft&&d.catalog&&d.catalog.length){
     S.catalog=d.catalog;
     // Un autre appareil a pu synchroniser une version du catalogue antérieure à
     // l'ajout d'un article par défaut (ex: "Lit bébé") : on le recomplète ici,
@@ -4626,7 +4632,7 @@ function applyRemoteData(d,meta){
     // écraser les vrais réglages avec ceux, périmés ou d'usine, de l'appareil.
     if(added)catalogFixed=true;
   }
-  if(d.settings){
+  if(!settingsDraft&&d.settings){
     S.settings={...JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),...d.settings};
     // Le spread ci-dessus comble structures/structureThresholds avec les valeurs par
     // défaut si absentes de d.settings — on les efface d'abord pour que la migration
@@ -4877,6 +4883,7 @@ window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
   if(!db||!currentUid)return;
+  if(settingsDraft){settingsDraft.pushBlocked=true;return;} // voir commitSettings
   // Jamais d'écriture avant d'avoir reçu au moins une fois le document du
   // compte depuis le serveur pour cette connexion : avant, S peut contenir
   // des réglages d'usine ou des données restées d'une session précédente,
@@ -5296,6 +5303,10 @@ function doExport(){
 function doImport(inp){
   const fr=new FileReader();
   fr.onload=e=>{
+    // Remplace tout : enregistré directement, hors brouillon des Paramètres
+    // (un nouveau brouillon repart de l'état importé).
+    settingsDraft=null;
+    setTimeout(()=>{if(byId('modalSettings').style.display==='flex')beginSettingsDraft();},0);
     try{
       const d=JSON.parse(e.target.result);
       if(d.bookings)S.bookings=d.bookings;
@@ -5356,6 +5367,10 @@ function doRestoreSettings(inp){
   if(currentRole==='personnel'){alert('Ce compte est en lecture seule.');return;}
   const fr=new FileReader();
   fr.onload=e=>{
+    // Remplace tout : enregistré directement, hors brouillon des Paramètres
+    // (un nouveau brouillon repart de l'état importé).
+    settingsDraft=null;
+    setTimeout(()=>{if(byId('modalSettings').style.display==='flex')beginSettingsDraft();},0);
     let d;
     try{d=JSON.parse(e.target.result);}catch(err){alert('Fichier invalide (ce n\'est pas une sauvegarde JSON Fiftin).');return;}
     const bs=d&&d.settings;
@@ -8775,7 +8790,7 @@ function loadCatalog(){
   S.catalog=raw?JSON.parse(raw):[...DEFAULT_CATALOG];
   if(mergeCatalogDefaults(S.catalog))saveCatalog();
 }
-function saveCatalog(){localStorage.setItem('ff2_catalog',JSON.stringify(S.catalog));}
+function saveCatalog(){if(settingsDraft)return;localStorage.setItem('ff2_catalog',JSON.stringify(S.catalog));}
 
 // ═══════════════════════════════════════════════════════════════
 //  SETTINGS
@@ -8903,7 +8918,7 @@ function migrateCleaners(){
 }
 function saveSettings(){
   if(offlineBlocked())return;
-  localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+  if(!settingsDraft)localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
   if(db)pushToFirebase();
 }
 function applySettings(){
@@ -10627,7 +10642,7 @@ function delCatalogItem(id){
   if(DEFAULT_CATALOG.some(d=>d.id===id)){
     if(!Array.isArray(S.settings.catalogRemoved))S.settings.catalogRemoved=[];
     if(!S.settings.catalogRemoved.includes(id))S.settings.catalogRemoved.push(id);
-    localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
+    if(!settingsDraft)localStorage.setItem('ff2_settings',JSON.stringify(S.settings));
   }
   saveCatalog();
   if(db)pushToFirebase();
@@ -12411,6 +12426,7 @@ function openM(id){
   el.querySelector('.modal-scrollarea')?.scrollTo(0,0);
   if(FORM_EXTRA[id])formSnap[id]=formState(id);
   if(id==='modalTH')thSnap=thState(thCurrentDate);
+  if(id==='modalSettings')beginSettingsDraft();
 }
 
 // ✕ / clic à côté / Échap des modaux Réservation et Table d'hôtes : si
@@ -12458,6 +12474,75 @@ function thRestore(ds,snap){
   if(S.view==='week')renderWeek();
   refreshMenuDatalists();
 }
+// Paramètres en brouillon, comme la fiche réservation : les modifications
+// s'appliquent à l'écran mais ne sont enregistrées (appareil + serveur)
+// qu'avec « ✓ OK » ; « ✕ » revient à l'état d'ouverture. Pendant le
+// brouillon, pushToFirebase/saveSettings/saveCatalog n'écrivent rien (voir
+// settingsDraft dans chacune). Une synchro reçue entre-temps n'écrase pas
+// le brouillon : elle est gardée (remote) et appliquée si on annule.
+let settingsDraft=null;
+function settingsDraftState(){return JSON.stringify({s:S.settings,c:S.catalog,t:S.transactions});}
+// Le reste des données (réservations…), qu'une action des Paramètres peut
+// aussi modifier (ex. import iCal lancé à l'ajout d'un lien).
+function settingsDraftOtherData(){return JSON.stringify({b:S.bookings,g:S.guests,e:S.events,c:S.cleaning,m:S.menus,x:S.extDiners});}
+function beginSettingsDraft(){
+  if(settingsDraft)return;
+  settingsDraft={snap:settingsDraftState(),other:settingsDraftOtherData(),pushBlocked:false,remote:null};
+}
+function settingsBlurActive(){
+  const el=document.activeElement;
+  if(el&&byId('modalSettings').contains(el))el.blur();
+}
+function refreshAfterSettings(){
+  renderGrid();
+  if(S.view==='today')renderToday();
+  if(S.view==='week')renderWeek();
+  if(S.view==='month')renderMonth();
+  if(S.view==='year')renderYear();
+}
+function commitSettings(){
+  settingsBlurActive(); // valide le champ en cours de saisie (onblur)
+  const d=settingsDraft;
+  settingsDraft=null;
+  if(d&&(d.pushBlocked||settingsDraftState()!==d.snap)){
+    if(offlineBlocked()){closeM('modalSettings');return;}
+    try{localStorage.setItem('ff2_settings',JSON.stringify(S.settings));}catch(e){}
+    saveCatalog();
+    persist();
+  }
+  closeM('modalSettings');
+}
+function cancelSettings(){
+  settingsBlurActive();
+  const d=settingsDraft;
+  if(!d){closeM('modalSettings');return;}
+  const changed=settingsDraftState()!==d.snap;
+  if(changed&&!confirm('Annuler les modifications ?'))return;
+  settingsDraft=null;
+  if(changed){
+    const cur=S.settings;
+    const o=JSON.parse(d.snap);
+    S.settings=o.s;S.catalog=o.c;S.transactions=o.t;
+    // Liens iCal : déjà enregistrés côté serveur au moment de la saisie,
+    // on garde donc leur état actuel plutôt que celui d'avant.
+    (S.settings.rooms||[]).forEach(r=>{
+      const c=(cur.rooms||[]).find(x=>x.id===r.id);
+      if(!c)return;
+      if(c.icalImports)r.icalImports=c.icalImports;else delete r.icalImports;
+      if(c.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
+    });
+    applySettings();
+  }
+  closeM('modalSettings');
+  if(d.remote)applyRemoteData(d.remote.d,d.remote.meta);
+  else{
+    if(changed)refreshAfterSettings();
+    // Autre chose que les réglages a pu changer pendant le brouillon (ex.
+    // réservations importées par iCal) : on l'envoie, avec les réglages
+    // d'origine.
+    if(d.pushBlocked&&settingsDraftOtherData()!==d.other)persist();
+  }
+}
 function cancelM(id){
   // Le champ de menu en cours de saisie n'a pas encore déclenché son
   // onchange : le valider d'abord pour comparer le vrai état.
@@ -12494,7 +12579,7 @@ document.addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
   const ids=['modalEventEdit','modalGuestEdit','modalGuests','modalEvents','modalBooking','modalSettings','modalChargeAdd','modalRoomAdd'];
-  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){(FORM_EXTRA[id]?cancelM:closeM)(id);break;}}
+  for(const id of ids){const el=byId(id);if(el&&el.style.display==='flex'){if(id==='modalSettings')cancelSettings();else (FORM_EXTRA[id]?cancelM:closeM)(id);break;}}
 });
 
 // Retour utilisateur : "sur les menus bottom et le menu des 7 jours, quand
