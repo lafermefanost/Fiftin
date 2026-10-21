@@ -2036,6 +2036,15 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-card-sub-title{color:var(--green);font-size:10.5px;margin-bottom:8px;}
 .set-hint{font-size:11px;color:var(--gray);margin:-4px 0 8px;line-height:1.35;}
 .set-svc-chk{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;cursor:pointer;}
+.set-rules{padding:6px 0 10px;border-bottom:1px solid var(--light);}
+.set-rule{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;color:var(--dark);padding:4px 0;}
+.set-rule-name small{color:var(--gray);font-weight:400;}
+.set-rule .set-fi-sm{width:52px;padding:5px 4px;}
+.set-rule .set-rule-date{width:58px;}
+.set-rule .set-rule-label{flex:0 0 74px;padding:5px 6px;font-size:12px;}
+.set-card .set-rule select.set-rule-mode{padding:5px 4px;font-size:12px;width:78px;flex:0 0 auto;}
+.set-rule-adds{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;}
+.set-rule-adds button{border:1px dashed var(--light);background:none;border-radius:14px;padding:4px 10px;font-family:'Jost',sans-serif;font-size:11px;color:var(--green);cursor:pointer;}
 .set-svc-chk input{width:16px;height:16px;accent-color:var(--green);}
 .set-svc-row{display:flex;gap:14px;flex-wrap:wrap;padding:2px 0 8px;border-bottom:1px solid var(--light);}
 .set-svc-price{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray);}
@@ -3640,6 +3649,81 @@ function getBabyCribRevenue(bk){
   if(!room||!room.babyCrib)return 0;
   const nights=Math.round((new Date(bk.checkOut)-new Date(bk.checkIn))/86400000);
   return nights*(room.babyCribPrice||15);
+}
+// ── Saisonnalité et remises long séjour ─────────────────────────────────
+// Règles rangées dans chaque version du tarif nuitée d'une location
+// (t.seasons, t.longStay) : une réservation applique celles de la version en
+// vigueur à sa date d'arrivée, comme le prix de base — modifier une règle ne
+// change jamais le prix des séjours déjà calculés sur une version antérieure.
+//   seasons : {type:'weekend'} (nuits du vendredi et du samedi) ou
+//             {type:'period', from:'MM-DD', to:'MM-DD', label} (chaque année,
+//             à cheval sur le 1er janvier possible), mode 'pct' (+ %) ou
+//             'eur' (+ €/nuit), value. Une période l'emporte sur le week-end.
+//   longStay : {minNights, pct} — remise en % sur chaque nuit, palier le plus
+//             élevé atteint par la durée TOTALE du séjour.
+// Sans aucune règle, le calcul est strictement l'ancien (nuits × prix).
+function tariffRules(t){
+  return {seasons:(t&&Array.isArray(t.seasons))?t.seasons:[],longStay:(t&&Array.isArray(t.longStay))?t.longStay:[]};
+}
+function inYearPeriod(md,from,to){return from<=to?(md>=from&&md<=to):(md>=from||md<=to);}
+function seasonRuleFor(R,ds){
+  const md=ds.slice(5);
+  const per=R.seasons.find(x=>x.type==='period'&&x.from&&x.to&&inYearPeriod(md,x.from,x.to));
+  if(per)return per;
+  const dow=new Date(ds+'T00:00:00').getDay();
+  const we=R.seasons.find(x=>x.type==='weekend');
+  return we&&(dow===5||dow===6)?we:null;
+}
+function longStayRuleFor(R,totalNights){
+  return R.longStay.filter(l=>+l.minNights>0&&totalNights>=+l.minNights&&+l.pct>0).sort((a,b)=>b.minNights-a.minNights)[0]||null;
+}
+// Prix d'une nuit : avant remise (pre) et après remise long séjour (final).
+function nightPriceDetail(base,R,ds,totalNights){
+  const rule=seasonRuleFor(R,ds);
+  let pre=base;
+  if(rule){const v=+rule.value||0;pre=rule.mode==='eur'?base+v:base*(1+v/100);}
+  pre=Math.round(pre*100)/100;
+  const ls=longStayRuleFor(R,totalNights);
+  const fin=ls?Math.round(pre*(1-(+ls.pct)/100)*100)/100:pre;
+  return {pre,final:fin,rule,ls};
+}
+function bookingRules(bk){
+  const g=guest(bk.guestId);
+  if(g&&g.price)return null; // prix client : appliqué tel quel, sans saison
+  const R=tariffRules(getRoomTariffForDate(bk.roomId,bk.checkIn||todayISO()));
+  return (R.seasons.length||R.longStay.length)?R:null;
+}
+// Hébergement (hors services) des nuits de [from,to) d'une réservation.
+function stayAccommodation(bk,from,to){
+  const a=from>bk.checkIn?from:bk.checkIn,b=to<bk.checkOut?to:bk.checkOut;
+  const n=daysBetween(a,b);
+  if(n<=0)return 0;
+  const rate=getNightlyRate(bk);
+  if(!rate)return 0;
+  const R=bookingRules(bk);
+  if(!R)return n*rate;
+  const N=daysBetween(bk.checkIn,bk.checkOut);
+  let sum=0,d=a;
+  while(d<b){sum+=nightPriceDetail(rate,R,d,N).final;d=addDays(d,1);}
+  return Math.round(sum*100)/100;
+}
+// Détail affichable : groupes de nuits au même prix (avant remise) + remise.
+function stayAccommodationDetail(bk){
+  const rate=getNightlyRate(bk);
+  const N=daysBetween(bk.checkIn,bk.checkOut);
+  const R=rate?bookingRules(bk):null;
+  if(!R)return {groups:N>0&&rate?[{n:N,price:rate,tag:''}]:[],discount:0,ls:null,total:N*rate};
+  const groups=[];let preSum=0,finSum=0,ls=null,d=bk.checkIn;
+  while(d<bk.checkOut){
+    const x=nightPriceDetail(rate,R,d,N);
+    preSum+=x.pre;finSum+=x.final;ls=x.ls;
+    const tag=x.rule?(x.rule.type==='weekend'?'week-end':(x.rule.label||'saison')):'';
+    const g=groups.find(g=>g.price===x.pre&&g.tag===tag);
+    if(g)g.n++;else groups.push({n:1,price:x.pre,tag});
+    d=addDays(d,1);
+  }
+  finSum=Math.round(finSum*100)/100;preSum=Math.round(preSum*100)/100;
+  return {groups,discount:Math.round((preSum-finSum)*100)/100,ls,total:finSum};
 }
 function getNightlyRate(bk){
   // Source "sans tarif nuitée" (réglages → Sources, ex. échange, personnel) :
@@ -6168,7 +6252,7 @@ function bLineAutoPrice(rid,pax){
   const ci=byId('bIn').value,co=byId('bOut').value;
   if(!ci||!co||ci>=co)return 0;
   const tmp={checkIn:ci,checkOut:co,roomId:rid,nbPersons:pax,guestId:selGid,source:bkSource,noBreakfast:roomOffers(rid,'breakfast')?getNoBreakfastNights():{}};
-  return Math.max(0,daysBetween(ci,co)*getNightlyRate(tmp)-getBreakfastDeduction(tmp,ci,co));
+  return Math.max(0,stayAccommodation(tmp,ci,co)-getBreakfastDeduction(tmp,ci,co));
 }
 // Prix hébergement de chaque ligne (null = tarif automatique).
 function bLinesPrices(){
@@ -6395,7 +6479,7 @@ function openEditModal(id,clickedDay){
   resetPaymentUI(b.payment,b.ghost,b.depositAmount,b.source);
   byId('prixNet').value=b.prixNet!=null?b.prixNet:'';
   const nights=Math.round((new Date(b.checkOut)-new Date(b.checkIn))/86400000);
-  const autoP=nights*getNightlyRate(b)-getBreakfastDeduction(b,b.checkIn,b.checkOut)+getThRevenue(b,b.checkIn,b.checkOut)+getExtrasTotal(b);
+  const autoP=stayAccommodation(b,b.checkIn,b.checkOut)-getBreakfastDeduction(b,b.checkIn,b.checkOut)+getThRevenue(b,b.checkIn,b.checkOut)+getExtrasTotal(b);
   byId('prixNetHint').textContent=autoP>0?`(auto : <span class="money">${autoP.toLocaleString('fr-FR')}</span> €)`:'';
   refreshBExtrasTotal(b);
   // Le jour cliqué dans la grille (ou la vue jour/semaine) présélectionne
@@ -9240,11 +9324,61 @@ function roomTariffHTML(r){
     if(roomOffers(r.id,'dinner'))svc.push(`<label class="set-svc-price">Repas <input class="set-fi-sm" type="number" min="0" step="0.5" value="${t.th!=null&&t.th!==''?t.th:''}" placeholder="${g.th}" onblur="updateRoomTariffSvc('${r.id}','${t.id}','th',this.value)"> €/pers</label>`);
     if(roomOffers(r.id,'breakfast'))svc.push(`<label class="set-svc-price">P-déj <input class="set-fi-sm" type="number" min="0" step="0.5" value="${t.bf!=null&&t.bf!==''?t.bf:''}" placeholder="${g.bf!=null?g.bf:5}" onblur="updateRoomTariffSvc('${r.id}','${t.id}','bf',this.value)"> €</label>`);
     if(svc.length)h+=`<div class="set-svc-row">${svc.join('')}</div>`;
+    h+=roomRulesHTML(r,t);
   });
-  if(roomOffers(r.id,'dinner')||roomOffers(r.id,'breakfast'))h+=`<div class="set-hint" style="margin-top:6px">Repas / P-déj vides = prix communs (Services), affichés en grisé.</div>`;
+  h+=`<div class="set-hint" style="margin-top:6px">${roomOffers(r.id,'dinner')||roomOffers(r.id,'breakfast')?'Repas / P-déj vides = prix communs (Services), affichés en grisé. ':''}Week-end et périodes majorent le prix de la nuit (une période l'emporte sur le week-end) ; la remise long séjour s'applique à toutes les nuits dès que la durée est atteinte. Chaque version de tarif garde ses propres règles.</div>`;
   h+=`<button class="set-add" onclick="addRoomTariff('${r.id}')">+ Nouveau tarif pour cette location</button>
   </div>`;
   return h;
+}
+// Saisons et remises d'une version de tarif (voir tariffRules).
+function mdToFr(md){return md&&/^\d{2}-\d{2}$/.test(md)?md.slice(3)+'/'+md.slice(0,2):'';}
+function frToMd(v){const m=/^(\d{1,2})[\/.\-](\d{1,2})$/.exec(String(v).trim());if(!m)return null;const d=+m[1],mo=+m[2];if(mo<1||mo>12||d<1||d>31)return null;return String(mo).padStart(2,'0')+'-'+String(d).padStart(2,'0');}
+function roomRulesHTML(r,t){
+  const R=tariffRules(t);
+  const esc=v=>String(v==null?'':v).replace(/"/g,'&quot;');
+  const modeSel=(list,i,m)=>`<select class="set-rule-mode" onchange="updRoomRule('${r.id}','${t.id}','${list}',${i},'mode',this.value)"><option value="pct"${m!=='eur'?' selected':''}>+ %</option><option value="eur"${m==='eur'?' selected':''}>+ €/nuit</option></select>`;
+  let rows='';
+  R.seasons.forEach((x,i)=>{
+    if(x.type==='weekend'){
+      rows+=`<div class="set-rule"><span class="set-rule-name">Week-end <small>(nuits ven. &amp; sam.)</small></span>${modeSel('seasons',i,x.mode)}<input class="set-fi-sm" type="number" step="1" value="${esc(x.value)}" onblur="updRoomRule('${r.id}','${t.id}','seasons',${i},'value',this.value)"><button class="set-del" onclick="delRoomRule('${r.id}','${t.id}','seasons',${i})">×</button></div>`;
+    }else{
+      rows+=`<div class="set-rule set-rule-period"><input class="set-fi set-rule-label" value="${esc(x.label)}" placeholder="Été" onblur="updRoomRule('${r.id}','${t.id}','seasons',${i},'label',this.value)"><span>du</span><input class="set-fi-sm set-rule-date" value="${mdToFr(x.from)}" placeholder="01/07" onblur="updRoomRule('${r.id}','${t.id}','seasons',${i},'from',this.value)"><span>au</span><input class="set-fi-sm set-rule-date" value="${mdToFr(x.to)}" placeholder="31/08" onblur="updRoomRule('${r.id}','${t.id}','seasons',${i},'to',this.value)">${modeSel('seasons',i,x.mode)}<input class="set-fi-sm" type="number" step="1" value="${esc(x.value)}" onblur="updRoomRule('${r.id}','${t.id}','seasons',${i},'value',this.value)"><button class="set-del" onclick="delRoomRule('${r.id}','${t.id}','seasons',${i})">×</button></div>`;
+    }
+  });
+  R.longStay.forEach((x,i)=>{
+    rows+=`<div class="set-rule"><span class="set-rule-name">Long séjour : dès</span><input class="set-fi-sm" type="number" min="2" step="1" value="${esc(x.minNights)}" onblur="updRoomRule('${r.id}','${t.id}','longStay',${i},'minNights',this.value)"><span>nuits, −</span><input class="set-fi-sm" type="number" min="0" max="90" step="1" value="${esc(x.pct)}" onblur="updRoomRule('${r.id}','${t.id}','longStay',${i},'pct',this.value)"><span>%</span><button class="set-del" onclick="delRoomRule('${r.id}','${t.id}','longStay',${i})">×</button></div>`;
+  });
+  const hasWe=R.seasons.some(x=>x.type==='weekend');
+  return `<div class="set-rules">${rows}<div class="set-rule-adds">
+    ${hasWe?'':`<button type="button" onclick="addRoomRule('${r.id}','${t.id}','weekend')">+ Week-end</button>`}
+    <button type="button" onclick="addRoomRule('${r.id}','${t.id}','period')">+ Période</button>
+    <button type="button" onclick="addRoomRule('${r.id}','${t.id}','long')">+ Remise long séjour</button>
+  </div></div>`;
+}
+function roomTariffById(roomId,tid){
+  const r=S.settings.rooms.find(x=>x.id===roomId);
+  return r&&r.tariffHistory&&r.tariffHistory.find(x=>x.id===tid);
+}
+function addRoomRule(roomId,tid,kind){
+  const t=roomTariffById(roomId,tid);if(!t)return;
+  if(kind==='long'){(t.longStay=t.longStay||[]).push({minNights:7,pct:10});}
+  else{t.seasons=t.seasons||[];t.seasons.push(kind==='weekend'?{type:'weekend',mode:'pct',value:20}:{type:'period',label:'Été',from:'07-01',to:'08-31',mode:'pct',value:20});}
+  saveSettings();renderSettings();refreshRevenueViews();
+}
+function updRoomRule(roomId,tid,list,i,field,val){
+  const t=roomTariffById(roomId,tid);const x=t&&t[list]&&t[list][i];if(!x)return;
+  let v=val;
+  if(field==='from'||field==='to'){v=frToMd(val);if(!v){alert('Date attendue au format jj/mm, ex. 01/07.');renderSettings();return;}}
+  else if(field==='value'||field==='minNights'||field==='pct'){v=val===''?0:+val;if(isNaN(v))return;}
+  if(x[field]===v)return;
+  x[field]=v;saveSettings();refreshRevenueViews();
+  if(field==='mode')renderSettings();
+}
+function delRoomRule(roomId,tid,list,i){
+  const t=roomTariffById(roomId,tid);if(!t||!t[list])return;
+  t[list].splice(i,1);if(!t[list].length)delete t[list];
+  saveSettings();renderSettings();refreshRevenueViews();
 }
 // Services proposés par une location (Réglages → Locations → Services).
 function roomServicesHTML(r){
@@ -10021,7 +10155,15 @@ function addRoomTariff(roomId){
   const last=[...r.tariffHistory].sort((a,b)=>a.from.localeCompare(b.from)).pop();
   const prices={};
   for(let p=1;p<=max;p++)prices[p]=last&&last.prices&&last.prices[p]!=null?last.prices[p]:(p===1?100:125);
-  r.tariffHistory.push({id:uid(),from:todayISO(),prices});
+  // Nouvelle version : reprend aussi prix des services, saisons et remises de
+  // la précédente (à ajuster ensuite) — l'ancienne version reste intacte.
+  const nt={id:uid(),from:todayISO(),prices};
+  if(last){
+    ['th','bf'].forEach(k=>{if(last[k]!=null&&last[k]!=='')nt[k]=last[k];});
+    if(last.seasons&&last.seasons.length)nt.seasons=JSON.parse(JSON.stringify(last.seasons));
+    if(last.longStay&&last.longStay.length)nt.longStay=JSON.parse(JSON.stringify(last.longStay));
+  }
+  r.tariffHistory.push(nt);
   saveSettings();renderSettings();
   refreshRevenueViews();
 }
@@ -10472,7 +10614,12 @@ function buildStayNoteText(bk){
     lines.push(`Prix personnalisé : ${bk.prixNet.toLocaleString('fr-FR')} €`,'');
     if(dinCount>0)lines.push(`${dinCount} repas × ${pax} pers × ${tariff.th} € — ${thRevenue.toLocaleString('fr-FR')} €`);
   } else {
-    if(rate>0)lines.push(`${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${roomOffers(bk.roomId,'breakfast')?' (petit-déj inclus)':''} — ${(nights*rate).toLocaleString('fr-FR')} €`);
+    if(rate>0){
+      const det=stayAccommodationDetail(bk);
+      const bfTxt=roomOffers(bk.roomId,'breakfast')?' (petit-déj inclus)':'';
+      det.groups.forEach(g=>lines.push(`${g.n} nuit${g.n>1?'s':''}${g.tag?' '+g.tag:''} × ${g.price.toLocaleString('fr-FR')} €${bfTxt} — ${(Math.round(g.n*g.price*100)/100).toLocaleString('fr-FR')} €`));
+      if(det.discount>0)lines.push(`Remise long séjour (${det.ls.minNights} nuits et +, −${det.ls.pct} %) — -${det.discount.toLocaleString('fr-FR')} €`);
+    }
     if(noBfCount>0)lines.push(`${noBfCount} nuit${noBfCount>1?'s':''} sans petit-déj — -${bfDeduction.toLocaleString('fr-FR')} €`);
     if(dinCount>0)lines.push(`${dinCount} repas × ${pax} pers × ${tariff.th} € — ${thRevenue.toLocaleString('fr-FR')} €`);
     if(cribRevenue>0)lines.push(`Lit bébé × ${nights} nuit${nights>1?'s':''} — ${cribRevenue.toLocaleString('fr-FR')} €`);
@@ -10575,13 +10722,15 @@ function updateModalTotal(){
   const extTotal=bk?getExtrasTotal(bk):0;
   const isCustom=prixNetVal!=null;
   const dinRevenue=dinCount*pax*tariff.th;
-  const autoTotal=nights*rate-bfDeduction+dinRevenue+extTotal+cribPrice+tsAmount;
+  const accDet=stayAccommodationDetail(tempBk);
+  const accom=accDet.total;
+  const autoTotal=accom-bfDeduction+dinRevenue+extTotal+cribPrice+tsAmount;
   // Prix personnalisé = prix de la nuitée fixé à la main, mais la table
   // d'hôte et les extras restent en plus (comme pour un prix automatique),
   // pas supposés déjà inclus dedans — cocher un repas doit bien faire
   // bouger le total affiché, même sur une résa à prix personnalisé.
   const total=isCustom?(prixNetVal+dinRevenue+extTotal+tsAmount):autoTotal;
-  const autoNoExtras=nights*rate-bfDeduction+dinRevenue+cribPrice;
+  const autoNoExtras=accom-bfDeduction+dinRevenue+cribPrice;
   byId('prixNetHint').textContent=autoTotal>0&&!isCustom?`(auto : ${autoTotal.toLocaleString('fr-FR')} €)`:'';
   if(total<=0&&!isCustom){el.style.display='none';return;}
   el.style.display='block';
@@ -10608,7 +10757,10 @@ function updateModalTotal(){
     }
     if(extTotal>0||tsAmount>0||dinCount>0)rows+=`<div class="btot-line sep"><span>Total</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
   } else {
-    if(rate>0)rows+=`<div class="btot-line"><span>${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${offB?' <span style="opacity:.6">(petit-déj inclus)</span>':''}</span><span>${(nights*rate).toLocaleString('fr-FR')} €</span></div>`;
+    if(rate>0){
+      accDet.groups.forEach(g=>{rows+=`<div class="btot-line"><span>${g.n} nuit${g.n>1?'s':''}${g.tag?' <b>'+escHtml(g.tag)+'</b>':''} × ${g.price.toLocaleString('fr-FR')} €${offB?' <span style="opacity:.6">(petit-déj inclus)</span>':''}</span><span>${(Math.round(g.n*g.price*100)/100).toLocaleString('fr-FR')} €</span></div>`;});
+      if(accDet.discount>0)rows+=`<div class="btot-line"><span>Remise long séjour (${accDet.ls.minNights} nuits et +, −${accDet.ls.pct} %)</span><span>-${accDet.discount.toLocaleString('fr-FR')} €</span></div>`;
+    }
     if(noBfCount>0)rows+=`<div class="btot-line"><span>${noBfCount} nuit${noBfCount>1?'s':''} sans petit-déj</span><span>-${bfDeduction.toLocaleString('fr-FR')} €</span></div>`;
     if(dinCount>0)rows+=`<div class="btot-line"><span>${dinCount} repas × ${pax} pers × ${tariff.th} €</span><span>${(dinCount*pax*tariff.th).toLocaleString('fr-FR')} €</span></div>`;
     if(cribPrice>0)rows+=`<div class="btot-line"><span>Lit bébé × ${nights} nuit${nights>1?'s':''}</span><span>${cribPrice.toLocaleString('fr-FR')} €</span></div>`;
@@ -10693,7 +10845,7 @@ function getStayTotal(bk){
   // (comme pour un prix automatique) plutôt que supposées déjà incluses dedans.
   if(bk.prixNet!=null) return bk.prixNet+getThRevenue(bk,bk.checkIn,bk.checkOut)+getExtrasTotal(bk);
   const nights=Math.round((new Date(bk.checkOut)-new Date(bk.checkIn))/86400000);
-  return nights*getNightlyRate(bk)-getBreakfastDeduction(bk,bk.checkIn,bk.checkOut)+getThRevenue(bk,bk.checkIn,bk.checkOut)+getExtrasTotal(bk)+getBabyCribRevenue(bk);
+  return stayAccommodation(bk,bk.checkIn,bk.checkOut)-getBreakfastDeduction(bk,bk.checkIn,bk.checkOut)+getThRevenue(bk,bk.checkIn,bk.checkOut)+getExtrasTotal(bk)+getBabyCribRevenue(bk);
 }
 function getBookingRevForPeriod(bk,pStart,pEnd){
   const oStart=bk.checkIn>pStart?bk.checkIn:pStart;
@@ -10717,7 +10869,7 @@ function getBookingRevForPeriod(bk,pStart,pEnd){
     const proratedPrice=total>0?Math.round(bk.prixNet*n/total):0;
     return proratedPrice+getThRevenue(bk,pStart,pEnd);
   }
-  return n*getNightlyRate(bk)-getBreakfastDeduction(bk,pStart,pEnd)+getThRevenue(bk,pStart,pEnd);
+  return stayAccommodation(bk,oStart,oEnd)-getBreakfastDeduction(bk,pStart,pEnd)+getThRevenue(bk,pStart,pEnd);
 }
 
 // Clic sur un jour dans la grille : direction l'événement de cette
