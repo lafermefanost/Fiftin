@@ -3695,9 +3695,18 @@ function nightPriceDetail(base,R,ds,totalNights){
   const fin=ls?Math.round(pre*(1-(+ls.pct)/100)*100)/100:pre;
   return {pre,final:fin,rule,ls};
 }
+// Prix nuitée propre à un client (fiche client), ou null = tarif standard.
+// Le champ vide était enregistré comme price:0 : un 0 ne compte donc comme
+// vrai prix (séjour offert) que s'il a été saisi depuis ce correctif
+// (priceSet), sans quoi les fiches existantes passeraient toutes à 0 €.
+function guestPrice(g){
+  if(!g)return null;
+  if(g.priceSet)return +g.price||0;
+  return g.price>0?+g.price:null;
+}
 function bookingRules(bk){
   const g=guest(bk.guestId);
-  if(g&&g.price)return null; // prix client : appliqué tel quel, sans saison
+  if(guestPrice(g)!=null)return null; // prix client : appliqué tel quel, sans saison
   const R=tariffRules(getRoomTariffForDate(bk.roomId,bk.checkIn||todayISO()));
   return (R.seasons.length||R.longStay.length)?R:null;
 }
@@ -3737,8 +3746,8 @@ function getNightlyRate(bk){
   // Source "sans tarif nuitée" (réglages → Sources, ex. échange, personnel) :
   // aucun prix calculé sur la nuitée, quel que soit le prix client/chambre.
   if(isSourceNoRevenue(bk.source))return 0;
-  const g=guest(bk.guestId);
-  if(g&&g.price)return g.price;
+  const gp=guestPrice(guest(bk.guestId));
+  if(gp!=null)return gp;
   return getRoomPriceForDate(bk.roomId,bk.checkIn||todayISO(),bk.nbPersons||2);
 }
 // Le petit-déjeuner est inclus par défaut dans le tarif nuitée (1/2+ pers).
@@ -7317,7 +7326,8 @@ function openGuestEdit(id){
   byId('gePhone').value=g?g.phone||'':'';
   byId('geEmail').value=g?g.email||'':'';
   byId('geAddress').value=g?g.address||'':'';
-  byId('gePrice').value=g?g.price||'':'';
+  const gp=guestPrice(g);
+  byId('gePrice').value=gp!=null?String(gp):'';
   byId('geNotes').value=g?g.notes||'':'';
   byId('geThNotes').value=g?g.thNotes||'':'';
   geRating=g?g.rating||null:null;
@@ -7383,7 +7393,8 @@ function saveGuest(){
   if(!nm){alert('Nom requis');return;}
   const data={name:nm,color:byId('geColor').value,phone:byId('gePhone').value,
     email:byId('geEmail').value,address:byId('geAddress').value,
-    price:parseFloat(byId('gePrice').value)||0,
+    price:byId('gePrice').value.trim()===''?0:(parseFloat(byId('gePrice').value)||0),
+    priceSet:byId('gePrice').value.trim()!=='',
     notes:byId('geNotes').value,thNotes:byId('geThNotes').value,rating:geRating};
   if(editGid){
     const i=S.guests.findIndex(g=>g.id===editGid);
@@ -9909,7 +9920,7 @@ function exportClientsCSV(){
   [...S.guests].sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
     const gBookings=S.bookings.filter(b=>b.guestId===g.id);
     const totalCA=gBookings.reduce((s,bk)=>s+getStayTotal(bk),0);
-    rows.push([g.name,g.phone||'',g.email||'',g.address||'',g.price||'',g.notes||'',gBookings.length,Math.round(totalCA)]);
+    rows.push([g.name,g.phone||'',g.email||'',g.address||'',(guestPrice(g)??''),g.notes||'',gBookings.length,Math.round(totalCA)]);
   });
   downloadCSV('clients.csv',rows);
 }
