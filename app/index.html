@@ -4086,7 +4086,12 @@ let remoteReady=false;
 // + modification annulée avec un message, plutôt qu'une perte silencieuse.
 let connectSlow=false,offlineMsgAt=0;
 function offlineBlocked(){
-  if(!currentUid||!db||remoteReady||currentRole==='personnel')return false;
+  if(!currentUid||!db||currentRole==='personnel')return false;
+  // Bloqué aussi après la première connexion : coupure de réseau en cours
+  // d'utilisation, ou retour sur l'app tant que la relecture du serveur
+  // n'est pas faite (syncStale) — sans quoi l'envoi d'un planning périmé
+  // écraserait ce qui a été fait entre-temps sur un autre appareil.
+  if(remoteReady&&!syncStale&&navigator.onLine)return false;
   if(Date.now()-offlineMsgAt>3000){
     offlineMsgAt=Date.now();
     alert(navigator.onLine
@@ -4105,7 +4110,7 @@ function offlineBlocked(){
 function updateOfflineUI(){
   const bar=byId('offlineBar');
   if(!bar)return;
-  const show=!!currentUid&&!remoteReady&&(!navigator.onLine||connectSlow);
+  const show=!!currentUid&&(!navigator.onLine||(!remoteReady&&connectSlow));
   if(show){
     let when='';
     const last=localStorage.getItem('ff2_lastSync');
@@ -4125,7 +4130,9 @@ function markServerSync(){
   try{localStorage.setItem('ff2_lastSync',new Date().toISOString());}catch(e){}
   updateOfflineUI();
 }
-window.addEventListener('online',updateOfflineUI);
+// Retour du réseau : ce qui a changé ailleurs pendant la coupure doit être
+// relu avant toute nouvelle modification (voir syncStale).
+window.addEventListener('online',()=>{if(remoteReady){syncStale=true;lastVisRefresh=0;refreshFromServer();}updateOfflineUI();});
 window.addEventListener('offline',updateOfflineUI);
 
 // Copie locale du planning (ff2_data) : relue au démarrage (loadLocal) et
@@ -4835,6 +4842,7 @@ function connectFirestoreForUser(){
       // Avant applyRemoteData : ses propres envois (migrations) partent APRÈS
       // que S a été remplacé par le contenu du serveur.
       remoteReady=true;
+      if(!(snap.metadata&&snap.metadata.fromCache))syncStale=false;
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
       markServerSync();
       onOk();
@@ -4854,6 +4862,11 @@ function sharedOpsRef(){
 // restée gelée/coupée pendant la mise en veille. On force ici une relecture
 // directe sur le serveur pour être sûr d'avoir les dernières données.
 let lastVisRefresh=0;
+// Données possiblement périmées (retour sur l'app après une mise en veille,
+// retour du réseau) : modifications bloquées (offlineBlocked) jusqu'à la
+// prochaine lecture réussie du serveur.
+let syncStale=false;
+let hiddenAt=0;
 function refreshFromServer(){
   if(!db||!currentUid)return;
   const now=Date.now();
@@ -4864,6 +4877,7 @@ function refreshFromServer(){
   const apply=currentRole==='personnel'?applySharedOpsData:applyRemoteData;
   ref.get({source:'server'}).then(snap=>{
     if(currentRole!=='personnel')remoteReady=true;
+    syncStale=false;
     if(snap.exists) apply(snap.data(),snap.metadata);
     if(currentRole!=='personnel')markServerSync();
     const delayTxt=lastSyncDelayMs!=null?` (δ ${Math.round(lastSyncDelayMs/1000)}s)`:'';
@@ -4875,10 +4889,22 @@ function refreshFromServer(){
     console.error(err);
   });
 }
+// Mise en veille de plus de 10 s : la connexion temps réel a pu geler, le
+// planning affiché est peut-être périmé — relecture forcée avant toute
+// modification.
+function markStaleIfLongHidden(){
+  if(hiddenAt&&Date.now()-hiddenAt>10000&&remoteReady){syncStale=true;lastVisRefresh=0;}
+  hiddenAt=0;
+}
 document.addEventListener('visibilitychange',()=>{
-  if(document.visibilityState==='visible') refreshFromServer();
+  if(document.visibilityState==='hidden'){hiddenAt=Date.now();return;}
+  markStaleIfLongHidden();
+  refreshFromServer();
 });
-window.addEventListener('pageshow',refreshFromServer);
+window.addEventListener('pageshow',e=>{
+  if(e&&e.persisted&&remoteReady){syncStale=true;lastVisRefresh=0;}
+  refreshFromServer();
+});
 window.addEventListener('focus',refreshFromServer);
 
 function pushToFirebase(){
