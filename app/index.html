@@ -5715,7 +5715,7 @@ function stayCard(b,ds,sub){
 // Jour et vue Semaine (voir stayCard ci-dessus pour le scoping des id par date).
 function extDinerStayCard(e,ds){
   const eg=guest(e.guestId);
-  const xd=getExtDinerExtrasTotal(e);
+  const xd=getExtDinerExtrasTotal(e,ds);
   const extLabel=xd>0?`<span class="extbtn-total">${xd.toLocaleString('fr-FR')} €</span>`:`<span class="extbtn-add">+</span>`;
   return`<div class="tcard">
     <div class="tbar" style="background:${eg?eg.color:'#B5A07A'}"></div>
@@ -7959,13 +7959,32 @@ function setExtraEv(evId,ds,itemId,delta){
 // dans les choix d'extras, mais gardé dans S.catalog pour que les ventes déjà
 // enregistrées gardent leur montant. Reste affiché là où il a une quantité,
 // pour pouvoir la corriger.
+// Prix d'un article à une date de vente : item.priceHistory (versions datées,
+// voir updateCatalogItem) s'il existe, sinon item.price. Un changement de prix
+// ne s'applique ainsi qu'à partir de sa date — les ventes passées gardent
+// leur montant. item.price reste toujours le prix actuel.
+function catalogPrice(item,ds){
+  const h=item&&item.priceHistory;
+  if(!Array.isArray(h)||!h.length)return item?(+item.price||0):0;
+  let cur=h[0];
+  h.forEach(v=>{if(v.from<=ds)cur=v;});
+  return +cur.price||0;
+}
+// Article vendu un jour antérieur à `before` (réservations, événements,
+// personnes extérieures) ?
+function catalogSoldBefore(id,before){
+  const inDays=x=>Object.keys(x||{}).some(ds=>ds<before&&x[ds]&&x[ds][id]>0);
+  if(S.bookings.some(bk=>inDays(bk.extras)))return true;
+  if((S.events||[]).some(ev=>inDays(ev.extras)))return true;
+  return Object.keys(S.extDiners||{}).some(ds=>ds<before&&(S.extDiners[ds]||[]).some(e=>e.extras&&e.extras[id]>0));
+}
 function catalogForPicker(qtyById){
   return S.catalog.filter(c=>!c.archived||((qtyById&&qtyById[c.id])||0)>0);
 }
 function getExtrasDayTotalEv(ev,ds){
   if(!ev.extras||!ev.extras[ds])return 0;
   return Object.entries(ev.extras[ds]).reduce((s,[id,qty])=>{
-    const item=S.catalog.find(c=>c.id===id);return s+(item?item.price*qty:0);},0);
+    const item=S.catalog.find(c=>c.id===id);return s+(item?catalogPrice(item,ds)*qty:0);},0);
 }
 function getExtrasTotalEv(ev){
   if(!ev.extras)return 0;
@@ -7985,7 +8004,7 @@ function extrasHTMLForEv(ev,ds){
     items.forEach(item=>{
       const qty=dayX[item.id]||0;
       xh+=`<button class="xchip${qty>0?' on':''}" onclick="event.stopPropagation();setExtraEv('${ev.id}','${ds}','${item.id}',1)">
-        ${item.emoji} ${item.name}<span class="xchip-price">${item.price}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtraEv('${ev.id}','${ds}','${item.id}',-1)">×${qty}</span>`:''}
+        ${item.emoji} ${item.name}<span class="xchip-price">${catalogPrice(item,ds)}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtraEv('${ev.id}','${ds}','${item.id}',-1)">×${qty}</span>`:''}
       </button>`;
     });
     xh+=`</div>`;
@@ -8043,7 +8062,7 @@ function updateEvTotal(){
       const itemLines=Object.entries(ev.extras[ds]).filter(([,qty])=>qty).map(([id,qty])=>{
         const item=S.catalog.find(c=>c.id===id);
         if(!item)return'';
-        return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(item.price*qty).toLocaleString('fr-FR')} €</span></div>`;
+        return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(catalogPrice(item,ds)*qty).toLocaleString('fr-FR')} €</span></div>`;
       }).join('');
       return `<div class="btot-line btot-subline"><span>${fmtDate(ds)}</span><span>${dayTotal.toLocaleString('fr-FR')} €</span></div>${itemLines}`;
     }).join('');
@@ -8075,7 +8094,7 @@ function buildEventNoteText(ev){
       Object.entries(ev.extras[ds]).filter(([,qty])=>qty).forEach(([id,qty])=>{
         const item=S.catalog.find(c=>c.id===id);
         if(!item)return;
-        lines.push(`  ${qty}× ${item.emoji||''} ${item.name} — ${(item.price*qty).toLocaleString('fr-FR')} €`);
+        lines.push(`  ${qty}× ${item.emoji||''} ${item.name} — ${(catalogPrice(item,ds)*qty).toLocaleString('fr-FR')} €`);
       });
       lines.push(`  Sous-total : ${dayTotal.toLocaleString('fr-FR')} €`);
     });
@@ -8378,10 +8397,10 @@ function setExtDinerExtra(ds,extId,itemId,delta){
   if(S.view==='week')renderWeek();
   if(S.view==='month')renderMonth();
 }
-function getExtDinerExtrasTotal(e){
+function getExtDinerExtrasTotal(e,ds){
   if(!e.extras)return 0;
   return Object.entries(e.extras).reduce((s,[id,qty])=>{
-    const item=S.catalog.find(c=>c.id===id);return s+(item?item.price*qty:0);
+    const item=S.catalog.find(c=>c.id===id);return s+(item?catalogPrice(item,ds)*qty:0);
   },0);
 }
 function extDinerExtrasHTMLFor(ds,e){
@@ -8397,12 +8416,12 @@ function extDinerExtrasHTMLFor(ds,e){
     items.forEach(item=>{
       const qty=(e.extras&&e.extras[item.id])||0;
       xh+=`<button type="button" class="xchip${qty>0?' on':''}" onclick="event.stopPropagation();setExtDinerExtra('${ds}','${e.id}','${item.id}',1)">
-        ${item.emoji} ${item.name}<span class="xchip-price">${item.price}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtDinerExtra('${ds}','${e.id}','${item.id}',-1)">×${qty}</span>`:''}
+        ${item.emoji} ${item.name}<span class="xchip-price">${catalogPrice(item,ds)}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtDinerExtra('${ds}','${e.id}','${item.id}',-1)">×${qty}</span>`:''}
       </button>`;
     });
     xh+=`</div>`;
   });
-  const dt=getExtDinerExtrasTotal(e);
+  const dt=getExtDinerExtrasTotal(e,ds);
   if(dt>0)xh+=`<div class="extras-total-row"><span class="extras-total">Ce jour : ${dt.toLocaleString('fr-FR')} €</span></div>`;
   return xh;
 }
@@ -8410,7 +8429,7 @@ function extDinerExtrasHTMLFor(ds,e){
 // les agrégats de revenus (semaine/mois), au même titre que getExtrasDayTotal
 // pour les réservations.
 function extDinersExtrasTotalForDate(ds){
-  return ((S.extDiners&&S.extDiners[ds])||[]).reduce((s,e)=>s+getExtDinerExtrasTotal(e),0);
+  return ((S.extDiners&&S.extDiners[ds])||[]).reduce((s,e)=>s+getExtDinerExtrasTotal(e,ds),0);
 }
 // Consommations d'un événement pour un jour donné — pour les mêmes agrégats
 // de revenus (semaine/mois), au même titre que les extras des réservations.
@@ -9704,7 +9723,7 @@ function renderSettings(){
   const catActive=S.catalog.filter(c=>!c.archived);
   const catArchived=S.catalog.filter(c=>c.archived);
   const catCats=[...new Set(catActive.map(c=>c.cat))];
-  let catalogBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Articles proposés en extra dans le modal de réservation (boissons, options petit-déjeuner, lit bébé…), regroupés par catégorie. Choisissez une catégorie existante ou créez-en une nouvelle.</div>`;
+  let catalogBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Articles proposés en extra dans le modal de réservation (boissons, options petit-déjeuner, lit bébé…), regroupés par catégorie. Choisissez une catégorie existante ou créez-en une nouvelle. Un changement de prix s'applique à partir d'aujourd'hui : les ventes passées gardent leur prix.</div>`;
   if(!catActive.length)catalogBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 8px">Catalogue vide.</div>`;
   catCats.forEach(cat=>{
     catalogBody+=`<div class="set-card-sub-title" style="margin-top:12px">${cat.replace(/</g,'&lt;')}</div>`;
@@ -10513,7 +10532,22 @@ function openCatalogSettings(){
 function updateCatalogItem(id,field,value){
   const i=S.catalog.findIndex(c=>c.id===id);
   if(i===-1)return;
-  S.catalog[i][field]=value;
+  const item=S.catalog[i];
+  if(field==='price'){
+    if(+value===+item.price)return;
+    // Déjà vendu avant aujourd'hui : nouveau prix daté d'aujourd'hui, les
+    // ventes passées gardent l'ancien. Jamais vendu avant : simple correction.
+    const today=todayISO();
+    if(catalogSoldBefore(id,today)){
+      if(!Array.isArray(item.priceHistory)||!item.priceHistory.length)item.priceHistory=[{from:'2000-01-01',price:+item.price||0}];
+      const last=item.priceHistory[item.priceHistory.length-1];
+      if(last.from===today)last.price=value;
+      else item.priceHistory.push({from:today,price:value});
+    }else if(Array.isArray(item.priceHistory)&&item.priceHistory.length){
+      item.priceHistory[item.priceHistory.length-1].price=value;
+    }
+  }
+  item[field]=value;
   saveCatalog();
   if(db)pushToFirebase();
   // Le catalogue se modifie aussi depuis le lien "Modifier le catalogue"
@@ -10631,7 +10665,7 @@ function setExtra(bid,ds,itemId,delta){
 function getExtrasDayTotal(bk,ds){
   if(!bk.extras||!bk.extras[ds])return 0;
   return Object.entries(bk.extras[ds]).reduce((s,[id,qty])=>{
-    const item=S.catalog.find(c=>c.id===id);return s+(item?item.price*qty:0);},0);
+    const item=S.catalog.find(c=>c.id===id);return s+(item?catalogPrice(item,ds)*qty:0);},0);
 }
 function extrasHTMLFor(b,ds){
   const dayX=b.extras&&b.extras[ds]?b.extras[ds]:{};
@@ -10653,7 +10687,7 @@ function extrasHTMLFor(b,ds){
     items.forEach(item=>{
       const qty=dayX[item.id]||0;
       xh+=`<button class="xchip${qty>0?' on':''}" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',1)"${ro}>
-        ${item.emoji} ${item.name}<span class="xchip-price">${item.price}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',-1)"${ro}>×${qty}</span>`:''}
+        ${item.emoji} ${item.name}<span class="xchip-price">${catalogPrice(item,ds)}€</span>${qty>0?`<span class="xchip-qty" onclick="event.stopPropagation();setExtra('${b.id}','${ds}','${item.id}',-1)"${ro}>×${qty}</span>`:''}
       </button>`;
     });
     xh+=`</div>`;
@@ -10701,7 +10735,7 @@ function buildStayNoteText(bk){
       Object.entries(bk.extras[ds]).filter(([,qty])=>qty).forEach(([id,qty])=>{
         const item=S.catalog.find(c=>c.id===id);
         if(!item)return;
-        lines.push(`  ${qty}× ${item.emoji||''} ${item.name} — ${(item.price*qty).toLocaleString('fr-FR')} €`);
+        lines.push(`  ${qty}× ${item.emoji||''} ${item.name} — ${(catalogPrice(item,ds)*qty).toLocaleString('fr-FR')} €`);
       });
       lines.push(`  Sous-total : ${dayTotal.toLocaleString('fr-FR')} €`);
     });
@@ -10818,7 +10852,7 @@ function updateModalTotal(){
         const itemLines=Object.entries(bk.extras[ds]).filter(([,qty])=>qty).map(([id,qty])=>{
           const item=S.catalog.find(c=>c.id===id);
           if(!item)return'';
-          return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(item.price*qty).toLocaleString('fr-FR')} €</span></div>`;
+          return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(catalogPrice(item,ds)*qty).toLocaleString('fr-FR')} €</span></div>`;
         }).join('');
         return `<div class="btot-line btot-subline"><span>${fmtDate(ds)}</span><span>${dayTotal.toLocaleString('fr-FR')} €</span></div>${itemLines}`;
       }).join('');
@@ -10841,7 +10875,7 @@ function updateModalTotal(){
         const itemLines=Object.entries(bk.extras[ds]).filter(([,qty])=>qty).map(([id,qty])=>{
           const item=S.catalog.find(c=>c.id===id);
           if(!item)return'';
-          return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(item.price*qty).toLocaleString('fr-FR')} €</span></div>`;
+          return `<div class="btot-line btot-subitem"><span>${qty}× ${item.emoji||''} ${item.name}</span><span>${(catalogPrice(item,ds)*qty).toLocaleString('fr-FR')} €</span></div>`;
         }).join('');
         return `<div class="btot-line btot-subline"><span>${fmtDate(ds)}</span><span>${dayTotal.toLocaleString('fr-FR')} €</span></div>${itemLines}`;
       }).join('');
