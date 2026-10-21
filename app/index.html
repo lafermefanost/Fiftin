@@ -7432,9 +7432,19 @@ function saveGuest(){
 function delGuest(){
   if(!editGid)return;
   const nb=S.bookings.filter(b=>b.guestId===editGid).length;
-  if(nb&&!confirm(`Ce client a ${nb} réservation(s). Supprimer quand même ?`))return;
+  // Venues à la table d'hôtes comme personne extérieure : supprimées avec le
+  // client, sinon elles restaient affichées (« ? ») et comptées dans le CA.
+  const extDays=Object.keys(S.extDiners||{}).filter(ds=>(S.extDiners[ds]||[]).some(e=>e.guestId===editGid));
+  const parts=[];
+  if(nb)parts.push(`${nb} réservation(s)`);
+  if(extDays.length)parts.push(`${extDays.length} repas en table d'hôtes comme personne extérieure`);
+  if(parts.length&&!confirm(`Ce client a ${parts.join(' et ')}. Supprimer quand même ?`))return;
   S.guests=S.guests.filter(g=>g.id!==editGid);
   if(nb) S.bookings=S.bookings.filter(b=>b.guestId!==editGid);
+  extDays.forEach(ds=>{
+    S.extDiners[ds]=S.extDiners[ds].filter(e=>e.guestId!==editGid);
+    if(!S.extDiners[ds].length)delete S.extDiners[ds];
+  });
   persist();closeM('modalGuestEdit');renderGrid();
   // Idem saveGuest : les réservations de ce client (si supprimées avec lui)
   // doivent disparaître immédiatement des autres vues, pas seulement de la
