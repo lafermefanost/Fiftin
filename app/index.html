@@ -7955,6 +7955,13 @@ function setExtraEv(evId,ds,itemId,delta){
   if(S.view==='week')renderWeek();
   if(S.view==='month')renderMonth();
 }
+// Article retiré de la vente (archived, voir delCatalogItem) : plus proposé
+// dans les choix d'extras, mais gardé dans S.catalog pour que les ventes déjà
+// enregistrées gardent leur montant. Reste affiché là où il a une quantité,
+// pour pouvoir la corriger.
+function catalogForPicker(qtyById){
+  return S.catalog.filter(c=>!c.archived||((qtyById&&qtyById[c.id])||0)>0);
+}
 function getExtrasDayTotalEv(ev,ds){
   if(!ev.extras||!ev.extras[ds])return 0;
   return Object.entries(ev.extras[ds]).reduce((s,[id,qty])=>{
@@ -7966,12 +7973,13 @@ function getExtrasTotalEv(ev){
 }
 function extrasHTMLForEv(ev,ds){
   const dayX=ev.extras&&ev.extras[ds]?ev.extras[ds]:{};
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(dayX);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   let xh=`<div class="tcard-extras-hd">
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()">Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
@@ -8377,12 +8385,13 @@ function getExtDinerExtrasTotal(e){
   },0);
 }
 function extDinerExtrasHTMLFor(ds,e){
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(e.extras);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   let xh=`<div class="tcard-extras-hd">
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()">Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
@@ -9692,12 +9701,14 @@ function renderSettings(){
   h+=settingsPanel('messages','Messages aux clients',msgTemplatesSettingsHTML());
 
   // — Catalogue extras (boissons, options, lit bébé…), vendu à la nuit ou au séjour —
-  const catCats=[...new Set(S.catalog.map(c=>c.cat))];
+  const catActive=S.catalog.filter(c=>!c.archived);
+  const catArchived=S.catalog.filter(c=>c.archived);
+  const catCats=[...new Set(catActive.map(c=>c.cat))];
   let catalogBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Articles proposés en extra dans le modal de réservation (boissons, options petit-déjeuner, lit bébé…), regroupés par catégorie. Choisissez une catégorie existante ou créez-en une nouvelle.</div>`;
-  if(!S.catalog.length)catalogBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 8px">Catalogue vide.</div>`;
+  if(!catActive.length)catalogBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 8px">Catalogue vide.</div>`;
   catCats.forEach(cat=>{
     catalogBody+=`<div class="set-card-sub-title" style="margin-top:12px">${cat.replace(/</g,'&lt;')}</div>`;
-    S.catalog.filter(c=>c.cat===cat).forEach(item=>{
+    catActive.filter(c=>c.cat===cat).forEach(item=>{
       catalogBody+=`<div class="set-card set-card-row">
         <input class="set-fi" style="flex:0 0 36px;width:36px;text-align:center;padding:7px 0" maxlength="2" value="${(item.emoji||'').replace(/"/g,'&quot;')}" onblur="updateCatalogItem('${item.id}','emoji',this.value)">
         <input class="set-fi" style="flex:1 1 120px" value="${item.name.replace(/"/g,'&quot;')}" placeholder="Nom" onblur="updateCatalogItem('${item.id}','name',this.value)">
@@ -9711,6 +9722,16 @@ function renderSettings(){
       </div>`;
     });
   });
+  if(catArchived.length){
+    catalogBody+=`<div class="set-card-sub-title" style="margin-top:12px">Articles retirés de la vente</div>
+      <div style="font-size:11px;color:var(--gray);margin-bottom:6px">Déjà vendus : gardés pour que les montants passés restent justes, mais plus proposés en extra.</div>`;
+    catArchived.forEach(item=>{
+      catalogBody+=`<div class="set-card set-card-row" style="opacity:.7">
+        <span style="flex:1 1 auto">${item.emoji||''} ${(item.name||'').replace(/</g,'&lt;')} · ${item.price} €</span>
+        <button class="set-add" style="width:auto;flex:0 0 auto;margin:0;padding:6px 10px;font-size:12px" onclick="restoreCatalogItem('${item.id}')">Remettre en vente</button>
+      </div>`;
+    });
+  }
   catalogBody+=`<div class="set-card set-card-new" style="margin-top:12px">
     <div class="set-card-row" style="margin-bottom:8px">
       <input class="set-fi" id="newCatEmoji" style="flex:0 0 36px;width:36px;text-align:center;padding:7px 0" maxlength="2" placeholder="🍷">
@@ -10537,18 +10558,26 @@ function delCatalogItem(id){
   // introuvable dans S.catalog) : la quantité reste, mais son revenu
   // disparaît silencieusement des totaux déjà enregistrés.
   const item=S.catalog.find(c=>c.id===id);
+  // Article déjà vendu : retiré de la vente (archived) au lieu d'être
+  // supprimé, pour ne jamais faire disparaître un revenu déjà compté.
   let nb=0;
-  S.bookings.forEach(bk=>{
-    if(!bk.extras)return;
-    Object.values(bk.extras).forEach(dayX=>{if(dayX[id])nb+=dayX[id];});
-  });
+  const countDays=x=>Object.values(x||{}).forEach(dayX=>{if(dayX&&dayX[id])nb+=dayX[id];});
+  S.bookings.forEach(bk=>countDays(bk.extras));
+  (S.events||[]).forEach(ev=>countDays(ev.extras));
   Object.values(S.extDiners||{}).forEach(list=>{
     (list||[]).forEach(e=>{if(e.extras&&e.extras[id])nb+=e.extras[id];});
   });
-  const msg=nb
-    ?`${nb} unité(s) de "${item?item.name:'cet article'}" déjà vendue(s). Leur revenu disparaîtra des totaux une fois l'article supprimé. Supprimer quand même ?`
-    :'Supprimer cet article ?';
-  if(!confirm(msg))return;
+  const name=item?item.name:'cet article';
+  if(nb){
+    if(!confirm(`« ${name} » a déjà été vendu (${nb} unité${nb>1?'s':''}). Il sera retiré de la vente mais gardé pour que les montants déjà enregistrés restent justes. Continuer ?`))return;
+    if(item)item.archived=true;
+    saveCatalog();
+    if(db)pushToFirebase();
+    renderSettings();
+    if(S.view==='week')renderWeek();
+    return;
+  }
+  if(!confirm(`Supprimer « ${name} » ?`))return;
   S.catalog=S.catalog.filter(c=>c.id!==id);
   if(DEFAULT_CATALOG.some(d=>d.id===id)){
     if(!Array.isArray(S.settings.catalogRemoved))S.settings.catalogRemoved=[];
@@ -10559,6 +10588,16 @@ function delCatalogItem(id){
   if(db)pushToFirebase();
   renderSettings();
   // Voir updateCatalogItem juste au-dessus.
+  if(S.view==='week')renderWeek();
+}
+
+function restoreCatalogItem(id){
+  const item=S.catalog.find(c=>c.id===id);
+  if(!item)return;
+  delete item.archived;
+  saveCatalog();
+  if(db)pushToFirebase();
+  renderSettings();
   if(S.view==='week')renderWeek();
 }
 
@@ -10596,7 +10635,8 @@ function getExtrasDayTotal(bk,ds){
 }
 function extrasHTMLFor(b,ds){
   const dayX=b.extras&&b.extras[ds]?b.extras[ds]:{};
-  const cats=[...new Set(S.catalog.map(c=>c.cat))];
+  const vis=catalogForPicker(dayX);
+  const cats=[...new Set(vis.map(c=>c.cat))];
   // Rendu désactivé directement au niveau du HTML pour un compte Staff — pas
   // seulement dans le modal (voir personnelLockExtrasBody) : ce même HTML est
   // aussi injecté tel quel dans la vue Jour (renderToday), qui n'a pas son
@@ -10607,7 +10647,7 @@ function extrasHTMLFor(b,ds){
     <button class="catalog-link" onclick="event.stopPropagation();openCatalogSettings()"${ro}>Modifier le catalogue</button>
   </div>`;
   cats.forEach(cat=>{
-    const items=S.catalog.filter(c=>c.cat===cat);
+    const items=vis.filter(c=>c.cat===cat);
     if(!items.length)return;
     xh+=`<div class="extras-cat">${cat}</div><div class="extras-chips">`;
     items.forEach(item=>{
