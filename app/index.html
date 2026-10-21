@@ -2035,6 +2035,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-card-sub{border-top:1px solid #EEEAE3;margin-top:14px;padding-top:12px;}
 .set-card-sub-title{color:var(--green);font-size:10.5px;margin-bottom:8px;}
 .set-hint{font-size:11px;color:var(--gray);margin:-4px 0 8px;line-height:1.35;}
+.set-svc-chk{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;cursor:pointer;}
+.set-svc-chk input{width:16px;height:16px;accent-color:var(--green);}
+.set-svc-row{display:flex;gap:14px;flex-wrap:wrap;padding:2px 0 8px;border-bottom:1px solid var(--light);}
+.set-svc-price{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray);}
+.set-card .set-svc-price .set-fi-sm{width:52px;padding:5px 4px;}
 .set-card-room .set-card-top{margin-bottom:0;}
 .set-card-room .set-card-body{display:none;margin-top:12px;}
 .set-card-room.open .set-card-body{display:block;}
@@ -2427,7 +2432,7 @@ Gardez la main.</div>
       <div class="fg">
         <div class="bline-head"><label class="fl">Location</label><label class="fl">Voyageurs</label><label class="fl bline-price-head">Prix €</label><span class="bline-del-sp" id="bLinesDelHead" style="display:none"></span></div>
         <div class="bline">
-          <select class="fsel" id="bRoom" onchange="clampPax0();chkConflict();renderBLines();updateModalTotal()">
+          <select class="fsel" id="bRoom" onchange="clampPax0();chkConflict();renderBLines();updateModalTotal();updateSvcVisibility()">
           </select>
           <div class="stepper">
             <button type="button" onclick="stepPax(-1)">−</button>
@@ -3600,6 +3605,35 @@ function breakfastEnabled(){
 function taxeSejourEnabled(){
   return S.settings.taxeSejourEnabled!==false;
 }
+// ── Services par location ──────────────────────────────────────────────
+// Chaque location peut ne pas proposer le petit-déjeuner / la table d'hôtes
+// (room.noBreakfastService / room.noDinnerService, cases de Réglages →
+// Locations), en plus des interrupteurs généraux de Réglages → Services.
+// Prix : ceux de Réglages → Services s'appliquent à toutes les locations ;
+// une location peut avoir les siens (th / bf dans chaque version de son
+// tarif nuitée, donc historisés comme le prix de la nuit) — vide = prix commun.
+// Aucune donnée existante n'est réinterprétée : les repas / petits-déjeuners
+// déjà enregistrés sur une réservation restent comptés tels quels, même si la
+// location cesse de proposer le service (on masque seulement la saisie).
+function roomOffers(roomId,svc){
+  if(svc==='breakfast'&&!breakfastEnabled())return false;
+  if(svc==='dinner'&&!dinnerEnabled())return false;
+  const r=ROOMS.find(x=>x.id===roomId);
+  if(!r)return true;
+  return svc==='breakfast'?!r.noBreakfastService:!r.noDinnerService;
+}
+// Tarif des services pour une location à une date : prix commun (Réglages →
+// Services) sauf prix propre renseigné dans la version de tarif de la
+// location en vigueur à cette date.
+function serviceTariff(roomId,ds){
+  const g=getTariffForDate(ds);
+  if(!roomId)return g;
+  const r=ROOMS.find(x=>x.id===roomId);
+  if(!r||!r.tariffHistory||!r.tariffHistory.length)return g;
+  const e=getRoomTariffForDate(roomId,ds)||{};
+  const num=v=>(v===''||v==null||isNaN(+v))?null:+v;
+  return {...g,th:num(e.th)??g.th,bf:num(e.bf)??g.bf};
+}
 function getBabyCribRevenue(bk){
   if(!bk.babyCrib)return 0;
   const room=ROOMS.find(r=>r.id===bk.roomId);
@@ -3626,7 +3660,7 @@ function getBreakfastDeduction(bk,fromDate,toDate){
   // de séjour ferait passer son total en négatif (0 - déduction), alors
   // qu'il n'y a jamais eu de tarif nuitée facturé pour commencer.
   if(isSourceNoRevenue(bk.source))return 0;
-  const t=getTariffForDate(bk.checkIn||fromDate);
+  const t=serviceTariff(bk.roomId,bk.checkIn||fromDate);
   const bfPrice=t.bf!=null?t.bf:5;
   return Object.keys(bk.noBreakfast)
     .filter(ds=>ds>=fromDate&&ds<toDate&&bk.noBreakfast[ds])
@@ -3634,7 +3668,7 @@ function getBreakfastDeduction(bk,fromDate,toDate){
 }
 function getThRevenue(bk,fromDate,toDate){
   if(!bk.dinnerNights)return 0;
-  const t=getTariffForDate(bk.checkIn||fromDate);
+  const t=serviceTariff(bk.roomId,bk.checkIn||fromDate);
   return Object.keys(bk.dinnerNights)
     .filter(ds=>ds>=fromDate&&ds<toDate&&bk.dinnerNights[ds])
     .length*(bk.nbPersons||2)*t.th;
@@ -6112,6 +6146,18 @@ function resetBLines(){
   byId('bTotFixRow').style.display='none';byId('bTotFixBtn').style.display='';
   renderBLines();
 }
+// Au moins une des locations de la fiche propose ce service ?
+function bAnyOffers(svc){
+  return allBLines().some(l=>roomOffers(l.roomId,svc));
+}
+// Affiche / masque les blocs petit-déj / table d'hôtes quand les locations
+// de la fiche changent, sans reconstruire les cases (garde la saisie).
+function updateSvcVisibility(){
+  const ci=byId('bIn').value,co=byId('bOut').value,ok=ci&&co&&ci<co;
+  const b=byId('breakfastListFg'),d=byId('dinnerListFg');
+  if(b&&breakfastEnabled()&&ok)b.style.display=bAnyOffers('breakfast')?'block':'none';
+  if(d&&dinnerEnabled()&&ok)d.style.display=bAnyOffers('dinner')?'block':'none';
+}
 function allBLines(){
   return [{bid:editBid,roomId:byId('bRoom').value,pax:parseInt(byId('bPersons').value)||1,price:byId('bLinePrice0').value},...bkLines];
 }
@@ -6121,7 +6167,7 @@ function roomBusyForBooking(rid,ci,co){
 function bLineAutoPrice(rid,pax){
   const ci=byId('bIn').value,co=byId('bOut').value;
   if(!ci||!co||ci>=co)return 0;
-  const tmp={checkIn:ci,checkOut:co,roomId:rid,nbPersons:pax,guestId:selGid,source:bkSource,noBreakfast:breakfastEnabled()?getNoBreakfastNights():{}};
+  const tmp={checkIn:ci,checkOut:co,roomId:rid,nbPersons:pax,guestId:selGid,source:bkSource,noBreakfast:roomOffers(rid,'breakfast')?getNoBreakfastNights():{}};
   return Math.max(0,daysBetween(ci,co)*getNightlyRate(tmp)-getBreakfastDeduction(tmp,ci,co));
 }
 // Prix hébergement de chaque ligne (null = tarif automatique).
@@ -6257,7 +6303,10 @@ function saveBGroup(primary,prices,rawNotes,taxeSejour){
     const fields={
       guestId:primary.guestId,checkIn:primary.checkIn,checkOut:primary.checkOut,arrivalTime:primary.arrivalTime,departureTime:primary.departureTime||'',
       status:primary.status,payment:primary.payment,source:primary.source,ghost:primary.ghost,taxeSejour:primary.taxeSejour,
-      dinnerNights:{...(primary.dinnerNights||{})},noBreakfast:{...(primary.noBreakfast||{})},
+      // Chaque location du groupe selon ce qu'elle propose : saisie de la
+      // fiche si elle propose le service, sinon ses valeurs déjà enregistrées.
+      dinnerNights:!dinnerEnabled()?{...(primary.dinnerNights||{})}:roomOffers(l.roomId,'dinner')?getDinnerNights():{...((l.bid&&S.bookings.find(b=>b.id===l.bid)||{}).dinnerNights||{})},
+      noBreakfast:!breakfastEnabled()?{...(primary.noBreakfast||{})}:roomOffers(l.roomId,'breakfast')?getNoBreakfastNights():{...((l.bid&&S.bookings.find(b=>b.id===l.bid)||{}).noBreakfast||{})},
       notes:syncTaxeSejourNote(rawNotes,taxeSejour,ts),groupId:gid,
       roomId:l.roomId,nbPersons:l.pax,prixNet:prices[i+1]
     };
@@ -6857,8 +6906,8 @@ function doModalSwap(){
   // Si la table d'hôte / le petit-déjeuner est désactivé(e), les cases ne sont pas
   // affichées : on garde les données existantes plutôt que de les écraser par une
   // lecture vide du formulaire.
-  const dn=dinnerEnabled()?getDinnerNights():bk.dinnerNights;
-  const nbf=breakfastEnabled()?getNoBreakfastNights():bk.noBreakfast;
+  const dn=roomOffers(rid,'dinner')?getDinnerNights():bk.dinnerNights;
+  const nbf=roomOffers(rid,'breakfast')?getNoBreakfastNights():bk.noBreakfast;
   const i=S.bookings.findIndex(b=>b.id===editBid);
   if(i!==-1)S.bookings[i]={...S.bookings[i],roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:selGid||bk.guestId};
   persist();closeM('modalBooking');renderGrid();
@@ -6931,8 +6980,8 @@ function saveBooking(){
     // Si la table d'hôte / le petit-déjeuner est désactivé(e), les cases ne sont
     // pas affichées : on garde les données existantes plutôt que de les écraser
     // par une lecture vide du formulaire.
-    const dn=dinnerEnabled()?getDinnerNights():(i!==-1?S.bookings[i].dinnerNights:{});
-    const nbf=breakfastEnabled()?getNoBreakfastNights():(i!==-1?S.bookings[i].noBreakfast:{});
+    const dn=roomOffers(rid,'dinner')?getDinnerNights():(i!==-1?S.bookings[i].dinnerNights:{});
+    const nbf=roomOffers(rid,'breakfast')?getNoBreakfastNights():(i!==-1?S.bookings[i].noBreakfast:{});
     if(i!==-1) S.bookings[i]={...S.bookings[i],roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,departureTime:dt,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour};
   }else{
     // Le petit-déjeuner est inclus par défaut (checkboxes cochées à la création) :
@@ -6940,8 +6989,8 @@ function saveBooking(){
     // décoché avant même la première sauvegarde. Idem pour la table d'hôte, qui
     // peut très bien être cochée dès la création plutôt qu'après un premier
     // enregistrement.
-    const nbf=getNoBreakfastNights();
-    const dn=dinnerEnabled()?getDinnerNights():{};
+    const nbf=roomOffers(rid,'breakfast')?getNoBreakfastNights():{};
+    const dn=roomOffers(rid,'dinner')?getDinnerNights():{};
     S.bookings.push({id:uid(),roomId:rid,checkIn:ci,checkOut:co,arrivalTime:at,departureTime:dt,status:st,nbPersons:np,dinnerNights:dn,noBreakfast:nbf,notes:nt,guestId:gid,payment:pay,depositAmount:depositAmt,source,ghost,prixNet,taxeSejour,createdAt:new Date().toISOString()});
   }
   const primaryBk=editBid?S.bookings.find(b=>b.id===editBid):S.bookings[S.bookings.length-1];
@@ -6989,7 +7038,7 @@ function renderBreakfastList(){
   const container=byId('breakfastList');
   if(!breakfastEnabled()){fg.style.display='none';return;}
   if(!ci||!co||ci>=co){fg.style.display='none';return;}
-  fg.style.display='block';
+  fg.style.display=bAnyOffers('breakfast')?'block':'none';
 
   // Petit-déjeuner inclus par défaut : on ne stocke que les nuits où il a été décoché.
   const existing=editBid?S.bookings.find(b=>b.id===editBid)?.noBreakfast||{}:{};
@@ -7038,7 +7087,7 @@ function renderDinnerList(){
   const container=byId('dinnerList');
   if(!dinnerEnabled()){fg.style.display='none';return;}
   if(!ci||!co||ci>=co){fg.style.display='none';return;}
-  fg.style.display='block';
+  fg.style.display=bAnyOffers('dinner')?'block':'none';
 
   // Get existing dinnerNights state for this booking
   const existing=editBid?S.bookings.find(b=>b.id===editBid)?.dinnerNights||{}:{};
@@ -9184,10 +9233,46 @@ function roomTariffHTML(r){
       ${cols.map(p=>`<input class="set-fi-sm" type="number" value="${t.prices&&t.prices[p]!=null?t.prices[p]:''}" onblur="updateRoomTariffPrice('${r.id}','${t.id}',${p},+this.value)">`).join('')}
       <button class="set-del" ${canDel?'':'disabled style="opacity:.3"'} onclick="delRoomTariff('${r.id}','${t.id}')">×</button>
     </div>`;
+    // Prix des services propres à cette location pour cette période — vide
+    // = prix commun de Réglages → Services (affiché en grisé).
+    const g=getTariffForDate(t.from);
+    const svc=[];
+    if(roomOffers(r.id,'dinner'))svc.push(`<label class="set-svc-price">Repas <input class="set-fi-sm" type="number" min="0" step="0.5" value="${t.th!=null&&t.th!==''?t.th:''}" placeholder="${g.th}" onblur="updateRoomTariffSvc('${r.id}','${t.id}','th',this.value)"> €/pers</label>`);
+    if(roomOffers(r.id,'breakfast'))svc.push(`<label class="set-svc-price">P-déj <input class="set-fi-sm" type="number" min="0" step="0.5" value="${t.bf!=null&&t.bf!==''?t.bf:''}" placeholder="${g.bf!=null?g.bf:5}" onblur="updateRoomTariffSvc('${r.id}','${t.id}','bf',this.value)"> €</label>`);
+    if(svc.length)h+=`<div class="set-svc-row">${svc.join('')}</div>`;
   });
+  if(roomOffers(r.id,'dinner')||roomOffers(r.id,'breakfast'))h+=`<div class="set-hint" style="margin-top:6px">Repas / P-déj vides = prix communs (Services), affichés en grisé.</div>`;
   h+=`<button class="set-add" onclick="addRoomTariff('${r.id}')">+ Nouveau tarif pour cette location</button>
   </div>`;
   return h;
+}
+// Services proposés par une location (Réglages → Locations → Services).
+function roomServicesHTML(r){
+  const items=[];
+  if(breakfastEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noBreakfastService?'':'checked'} onchange="setRoomService('${r.id}','noBreakfastService',!this.checked)"> Petit-déjeuner proposé</label>`);
+  if(dinnerEnabled())items.push(`<label class="set-svc-chk"><input type="checkbox" ${r.noDinnerService?'':'checked'} onchange="setRoomService('${r.id}','noDinnerService',!this.checked)"> Table d'hôtes proposée</label>`);
+  if(!items.length)return '';
+  return `<div class="set-card-sub">
+    <div class="set-card-sub-title">Services</div>
+    <div class="set-hint">Décochez ce que cette location ne propose pas : l'option disparaît de ses réservations. Les repas déjà enregistrés restent comptés.</div>
+    ${items.join('')}
+  </div>`;
+}
+function setRoomService(roomId,field,off){
+  const r=S.settings.rooms.find(x=>x.id===roomId);if(!r)return;
+  if(off)r[field]=true;else delete r[field];
+  saveSettings();applySettings();renderSettings();refreshRevenueViews();
+}
+function updateRoomTariffSvc(roomId,tid,field,val){
+  const r=S.settings.rooms.find(x=>x.id===roomId);
+  const t=r&&r.tariffHistory&&r.tariffHistory.find(x=>x.id===tid);
+  if(!t)return;
+  const v=String(val).trim();
+  const next=v===''?undefined:+v;
+  if((t[field]===undefined||t[field]===null||t[field]==='')&&next===undefined)return;
+  if(t[field]===next)return;
+  if(next===undefined||isNaN(next))delete t[field];else t[field]=next;
+  saveSettings();refreshRevenueViews();
 }
 
 function renderSettings(){
@@ -9330,6 +9415,7 @@ function renderSettings(){
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box" placeholder="Adresse, code de la boîte à clés, wifi, parking…" onblur="updateRoom('${r.id}','arrivalInfo',this.value)">${(r.arrivalInfo||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
         <textarea class="set-fi" style="width:100%;min-height:52px;resize:vertical;font-family:inherit;box-sizing:border-box;margin-top:6px" placeholder="English version — address, key box code, wifi…" onblur="updateRoom('${r.id}','arrivalInfoEn',this.value)">${(r.arrivalInfoEn||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
       </div>
+      ${roomServicesHTML(r)}
       ${roomTariffHTML(r)}
       ${roomIcalHTML(r)}
       <button class="mdel-link" style="margin-top:14px" onclick="delRoom('${r.id}')">Supprimer cette location</button>
@@ -9354,7 +9440,7 @@ function renderSettings(){
       </label>
     </div>
     <div style="font-size:11px;color:var(--gray);margin:-2px 0 12px 2px">Décochez pour les hébergements sans prestation petit-déjeuner (ex : gîtes) : masque l'option dans les réservations. Les données déjà enregistrées ne sont pas supprimées.</div>
-    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Tarifs communs à toutes les locations, appliqués selon la date de début du séjour. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque location) n'est utilisé que si le petit-déjeuner est activé.</div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">Prix communs à toutes les locations, appliqués selon la date de début du séjour. Une location peut avoir ses propres prix, ou ne pas proposer un service : Réglages → Locations → Modifier. « Repas € » n'est utilisé que si la table d'hôte est activée ci-dessus, pour les clients en séjour. « Repas ext. € » est le tarif appliqué aux personnes extérieures (ne dormant pas sur place) cochées pour le repas dans le modal Table d'hôtes. « P-déj € » (montant déduit par nuit lorsqu'il est décoché — voir tarif nuitée dans chaque location) n'est utilisé que si le petit-déjeuner est activé.</div>
     <div class="set-card">
     <div class="set-tariff-hd" style="grid-template-columns:1fr 48px 48px 48px 24px">
       <span>À partir du</span><span>Repas €</span><span>Repas ext. €</span><span>P-déj €</span><span></span>
@@ -10371,7 +10457,7 @@ function buildStayNoteText(bk){
   const name=g?g.name:'Client';
   const nights=Math.round((new Date(bk.checkOut)-new Date(bk.checkIn))/86400000);
   const rate=getNightlyRate(bk);
-  const tariff=getTariffForDate(bk.checkIn);
+  const tariff=serviceTariff(bk.roomId,bk.checkIn);
   const pax=bk.nbPersons||2;
   const dinCount=Object.keys(bk.dinnerNights||{}).filter(ds=>bk.dinnerNights[ds]).length;
   const thRevenue=getThRevenue(bk,bk.checkIn,bk.checkOut);
@@ -10386,7 +10472,7 @@ function buildStayNoteText(bk){
     lines.push(`Prix personnalisé : ${bk.prixNet.toLocaleString('fr-FR')} €`,'');
     if(dinCount>0)lines.push(`${dinCount} repas × ${pax} pers × ${tariff.th} € — ${thRevenue.toLocaleString('fr-FR')} €`);
   } else {
-    if(rate>0)lines.push(`${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${breakfastEnabled()?' (petit-déj inclus)':''} — ${(nights*rate).toLocaleString('fr-FR')} €`);
+    if(rate>0)lines.push(`${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${roomOffers(bk.roomId,'breakfast')?' (petit-déj inclus)':''} — ${(nights*rate).toLocaleString('fr-FR')} €`);
     if(noBfCount>0)lines.push(`${noBfCount} nuit${noBfCount>1?'s':''} sans petit-déj — -${bfDeduction.toLocaleString('fr-FR')} €`);
     if(dinCount>0)lines.push(`${dinCount} repas × ${pax} pers × ${tariff.th} € — ${thRevenue.toLocaleString('fr-FR')} €`);
     if(cribRevenue>0)lines.push(`Lit bébé × ${nights} nuit${nights>1?'s':''} — ${cribRevenue.toLocaleString('fr-FR')} €`);
@@ -10457,7 +10543,8 @@ function updateModalTotal(){
   const prixNetRaw=byId('prixNet').value;
   const prixNetVal=prixNetRaw===''?null:(parseFloat(prixNetRaw)||0);
   const rid=byId('bRoom')?.value;
-  const tariff=getTariffForDate(ci);
+  const tariff=serviceTariff(rid,ci);
+  const offD=roomOffers(rid,'dinner'),offB=roomOffers(rid,'breakfast');
   const pax=parseInt(byId('bPersons')?.value)||2;
   const tempBk={...(bk||{}),checkIn:ci,checkOut:co,guestId:selGid,source:bkSource,prixNet:prixNetVal,roomId:rid,nbPersons:pax};
   // Taxe de séjour : comprise dans le total séjour affiché au client (c'est bien
@@ -10474,9 +10561,12 @@ function updateModalTotal(){
     tsBox.style.marginTop=taxeSejourOn?'6px':'0';
   }
   const rate=getNightlyRate(tempBk);
-  const dinnerNights=getDinnerNights(); // read from DOM checkboxes, not saved booking
+  // Cases de la fiche si la location propose le service ; sinon, comme à
+  // l'enregistrement (saveBooking), les valeurs déjà enregistrées.
+  const truthy=o=>Object.keys(o||{}).filter(k=>o[k]);
+  const dinnerNights=offD?getDinnerNights():Object.fromEntries(truthy(bk&&bk.dinnerNights).map(k=>[k,true]));
   const dinCount=Object.keys(dinnerNights).length;
-  const noBreakfastNights=getNoBreakfastNights(); // idem, petit-déj inclus par défaut
+  const noBreakfastNights=offB?getNoBreakfastNights():Object.fromEntries(truthy(bk&&bk.noBreakfast).map(k=>[k,true]));
   const noBfCount=Object.keys(noBreakfastNights).length;
   const bfPrice=tariff.bf!=null?tariff.bf:5;
   const bfDeduction=noBfCount*bfPrice;
@@ -10518,7 +10608,7 @@ function updateModalTotal(){
     }
     if(extTotal>0||tsAmount>0||dinCount>0)rows+=`<div class="btot-line sep"><span>Total</span><span>${total.toLocaleString('fr-FR')} €</span></div>`;
   } else {
-    if(rate>0)rows+=`<div class="btot-line"><span>${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${breakfastEnabled()?' <span style="opacity:.6">(petit-déj inclus)</span>':''}</span><span>${(nights*rate).toLocaleString('fr-FR')} €</span></div>`;
+    if(rate>0)rows+=`<div class="btot-line"><span>${nights} nuit${nights>1?'s':''} × ${rate.toLocaleString('fr-FR')} €${offB?' <span style="opacity:.6">(petit-déj inclus)</span>':''}</span><span>${(nights*rate).toLocaleString('fr-FR')} €</span></div>`;
     if(noBfCount>0)rows+=`<div class="btot-line"><span>${noBfCount} nuit${noBfCount>1?'s':''} sans petit-déj</span><span>-${bfDeduction.toLocaleString('fr-FR')} €</span></div>`;
     if(dinCount>0)rows+=`<div class="btot-line"><span>${dinCount} repas × ${pax} pers × ${tariff.th} €</span><span>${(dinCount*pax*tariff.th).toLocaleString('fr-FR')} €</span></div>`;
     if(cribPrice>0)rows+=`<div class="btot-line"><span>Lit bébé × ${nights} nuit${nights>1?'s':''}</span><span>${cribPrice.toLocaleString('fr-FR')} €</span></div>`;
@@ -10556,7 +10646,6 @@ function updateGroupTotal(){
   const bk=editBid?S.bookings.find(b=>b.id===editBid):null;
   const lines=allBLines();
   const prices=bLinesPrices();
-  const tariff=getTariffForDate(ci);
   const dinCount=Object.keys(getDinnerNights()).length;
   const taxeSejourOn=taxeSejourEnabled()&&bkTaxeSejour;
   let tsTotal=0,acc=0,autoSum=0,rows='';
@@ -10564,7 +10653,8 @@ function updateGroupTotal(){
     const auto=bLineAutoPrice(l.roomId,l.pax);
     autoSum+=auto;
     const a=prices[i]!=null?prices[i]:auto;
-    const din=dinCount*l.pax*tariff.th;
+    const tariff=serviceTariff(l.roomId,ci);
+    const din=roomOffers(l.roomId,'dinner')?dinCount*l.pax*tariff.th:0;
     acc+=a+din;
     if(taxeSejourOn)tsTotal+=getTaxeSejourAmount({checkIn:ci,checkOut:co,nbPersons:l.pax,roomId:l.roomId,guestId:selGid,source:bkSource,taxeSejour:true});
     rows+=`<div class="btot-line"><span>${escHtml(room(l.roomId)?.name||'')} · ${l.pax} pers.${prices[i]!=null?'':' <span style="opacity:.6">(tarif auto)</span>'}</span><span>${a.toLocaleString('fr-FR')} €</span></div>`;
@@ -10742,7 +10832,7 @@ function renderWeek(){
           const pax=bk.nbPersons||2;
           totalRepas+=pax;
           // Custom-price (prixNet) bookings already fold their meal share into periodRevTotal above.
-          if(bk.prixNet==null) repasRevenueFromBookings+=pax*getTariffForDate(ds).th;
+          if(bk.prixNet==null) repasRevenueFromBookings+=pax*serviceTariff(bk.roomId,ds).th;
         }
       }
     }
@@ -11211,7 +11301,7 @@ function getMonthStats(y,m){
         if(bk.dinnerNights[ds]){
           const pax=bk.nbPersons||2;
           totalRepas+=pax;
-          if(bk.prixNet==null) repasRevenueFromBookings+=pax*getTariffForDate(ds).th;
+          if(bk.prixNet==null) repasRevenueFromBookings+=pax*serviceTariff(bk.roomId,ds).th;
         }
       }
     }
