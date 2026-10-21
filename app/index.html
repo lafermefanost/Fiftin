@@ -4887,7 +4887,7 @@ function pushToFirebase(){
   // Jamais d'écriture avant d'avoir reçu au moins une fois le document du
   // compte depuis le serveur pour cette connexion : avant, S peut contenir
   // des réglages d'usine ou des données restées d'une session précédente,
-  // et l'envoi écraserait le vrai document (merge:true remplace
+  // et l'envoi écraserait le vrai document (mergeFields remplace
   // settings.rooms, bookings… en entier). Voir remoteReady.
   if(!remoteReady){console.warn('[sync] envoi ignoré : document du compte pas encore reçu');return;}
   // Un compte Personnel est en lecture seule (v1) : aucune écriture possible,
@@ -4916,10 +4916,16 @@ function pushToFirebase(){
   // à chaque synchro. Repéré en préparant l'intégration Stripe : createdAt
   // (posé une seule fois à l'inscription, voir bootstrapHostAccount() côté
   // sejours/index.html) ne doit jamais être réécrit ici.
+  // mergeFields plutôt que merge:true : merge:true fusionne aussi À
+  // L'INTÉRIEUR de chaque champ, si bien qu'une clé retirée localement
+  // (journée de S.extDiners devenue vide, menu effacé, réglage supprimé…)
+  // restait sur le serveur et revenait à la synchro suivante. mergeFields
+  // remplace entièrement chacun des champs envoyés, sans toucher aux autres
+  // (createdAt, billing…).
   db.collection('accounts').doc(currentUid).set({
     ...JSON.parse(payload),
     updated:new Date().toISOString()
-  }, {merge:true}).then(()=>{
+  }, {mergeFields:[...Object.keys(payloadObj),'updated']}).then(()=>{
     lastWriteMs=Date.now()-t0;
     console.log(`[sync] écriture confirmée par le serveur en ${lastWriteMs}ms`);
     setSyncPip('ok','Synchronisé ✓');
