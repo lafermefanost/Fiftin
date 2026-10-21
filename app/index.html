@@ -11481,69 +11481,15 @@ function renderWeek(){
       <div class="tsec-body">${roomsToPrep?`<div class="mng-rooms">${roomsToPrep}</div>`:''}${menageBodyHTML}</div>
     </div>`;
 
-    // "Table d'hôtes" — remplace l'ancien "Menu du jour" (champs à taper
-    // directement dans la vue Semaine) par un petit résumé en lecture seule
-    // de ce que contient déjà le modal Table d'hôtes (openTHModal) : qui
-    // mange, le menu du jour, et un bouton pour l'ouvrir et tout modifier
-    // au même endroit plutôt qu'en double à deux endroits différents.
-    const dm=getMenu(ds);
-    const menuHas=!!(dm.entree||dm.plat||dm.dessert);
-    const thExtList=((S.extDiners&&S.extDiners[ds])||[]).filter(e=>e.dinner!==false);
-    const thPeople=[
-      ...S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds]).map(b=>{
-        const g=guest(b.guestId), rm=room(b.roomId);
-        return{name:g?g.name:'?',color:g?g.color:'#999',sub:rm?rm.short:'',n:b.nbPersons||2,bid:b.id};
-      }),
-      ...thExtList.map(e=>{
-        const eg=guest(e.guestId);
-        return{name:eg?eg.name:(e.name||'?'),color:eg?eg.color:'#999',sub:'Ext.',n:e.count||1};
-      })
-    ];
-    const thTotal=thPeople.reduce((s,p)=>s+p.n,0);
-    const thHas=thTotal>0||menuHas;
-    const thCollapsed=panelCollapsed(ds,'th',true);
-    // Un client interne (p.bid) a une vraie fiche réservation à ouvrir — pas
-    // un client externe (table d'hôtes seule, aucune chambre/réservation
-    // derrière), qui reste donc non cliquable comme avant (curseur par
-    // défaut plutôt que le "pointer" hérité de .day-chip, sans quoi la
-    // carte aurait l'air cliquable sans l'être).
-    const thPeopleHTML=thPeople.length?`<div class="thsum-people">${thPeople.map(p=>`<div class="day-chip"${p.bid?` onclick="openEditModal('${p.bid}','${ds}')"`:' style="cursor:default"'}>
-        <div class="tbar" style="background:${p.color}"></div>
-        <div class="day-chip-content">
-          <span class="bname">${p.name}</span>
-          <span class="bcont-init" style="flex:0 0 auto;opacity:.7">${p.sub}</span>
-        </div>
-      </div>`).join('')}</div>`:'<div class="tsec-empty">Aucun couvert ce soir</div>';
-    // Le menu reste modifiable ici, sans passer par le modal — une ligne par
-    // plat (superposées, plus lisibles qu'une seule ligne à trois colonnes
-    // étroites), chacune avec son nom dans un petit cartouche coloré à
-    // gauche (comme .mtag) plutôt qu'un libellé au-dessus ou un simple
-    // placeholder qui disparaît une fois rempli. Chaque champ propose aussi
-    // les plats déjà servis (list=, voir refreshMenuDatalists) et le lien
-    // "Mes recettes" ouvre le livre complet avec les dates (openRecipeBook)
-    // — voir CLAUDE.md/commentaires de setMenuField : ce dernier redessine
-    // bien la vue depuis le correctif de mise à jour en direct, donc pas de
-    // risque de perdre le volet ouvert en tapant ici.
-    const escAttr=s=>(s||'').replace(/"/g,'&quot;');
-    const dlFor={entree:'dlEntree',plat:'dlPlat',dessert:'dlDessert'};
-    const thMenuRow=(tag,field,val)=>`<div class="thsum-menu-row">
-      <span class="thsum-menu-tag">${tag}</span>
-      <input class="thsum-menu-input" list="${dlFor[field]}" placeholder="—" value="${escAttr(val)}" onchange="setMenuField('${ds}','${field}',this.value)">
-    </div>`;
-    const thMenuHTML=`<div class="thsum-menu-rows">
-      <button type="button" class="catalog-link" style="display:block;margin:0 0 6px auto;font-size:12px" onclick="openRecipeBook('${ds}')">${RECIPE_ICON_SM} Mes recettes</button>
-      ${thMenuRow('Entrée','entree',dm.entree)}
-      ${thMenuRow('Plat','plat',dm.plat)}
-      ${thMenuRow('Dessert','dessert',dm.dessert)}
-    </div>`;
-    h+=`<div class="tsec-panel th${thCollapsed?' collapsed':''}">
-      <div class="tsec-hd${thHas?' has-items':''}" onclick="toggleTsecPanel('${ds}','th',true)">
-        ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal}</span></span><span class="tsec-chev">▾</span>
-      </div>
-      <div class="tsec-body">
-        ${thPeopleHTML}
-        ${thMenuHTML}
-        <div class="tsec-add" onclick="openTHModal('${ds}')">✎ Modifier la table de ce soir</div>
+    // "Table d'hôtes" : un simple bouton (même allure qu'un volet replié)
+    // qui ouvre la fenêtre Table d'hôtes du jour (openTHModal), comme depuis
+    // la Grille — seul endroit où l'on modifie la table (couverts, personnes
+    // extérieures, menu), pour qu'il n'y ait jamais deux façons de faire.
+    const thTotal=S.bookings.filter(b=>activeOn(b,ds)&&b.dinnerNights&&b.dinnerNights[ds])
+      .reduce((s,b)=>s+(b.nbPersons||2),0)+extDinersCount(ds);
+    h+=`<div class="tsec-panel th collapsed">
+      <div class="tsec-hd${thTotal>0?' has-items':''}" onclick="openTHModal('${ds}')">
+        ${MEAL_ICON} Table d'hôtes<span class="tsec-count"><span>${thTotal}</span></span><span class="tsec-chev" style="transform:none;font-size:18px;opacity:.8">›</span>
       </div>
     </div>`;
 
