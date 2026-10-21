@@ -1927,6 +1927,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   color:var(--green);}
 .ev-today-mark::before,.ev-today-mark::after{content:'';flex:1;height:1px;
   background:var(--green);opacity:.35;}
+.ev-past{filter:grayscale(1);opacity:.5;} /* événement / jour passé (voir evPastCls) */
 .evcard{display:flex;align-items:center;gap:12px;padding:10px 0;
   border-bottom:1px solid var(--light);cursor:pointer;transition:opacity .15s,background-color .4s;
   border-radius:8px;}
@@ -5575,14 +5576,15 @@ function renderGrid(){
     // échéance fiscale suit le même principe (une pastille, en lecture
     // seule), avec la couleur propre à l'échéance plutôt que le gris neutre
     // des jours fériés — pour la distinguer au premier coup d'œil.
+    const pastCls=ds<todayISO()?' ev-past':'';
     if(dayEvs.length){
       const ec=evCategoryColor(dayEvs[0]);
       const evTitles=dayEvs.map(ev=>ev.title).join(', ');
-      dayTd.innerHTML=`<div class="ev-circle" style="background:${ec};color:#fff" title="${evTitles}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="ev-circle${pastCls}" style="background:${ec};color:#fff" title="${evTitles}">${date.getDate()}</div>`;
     } else if(holidayName){
-      dayTd.innerHTML=`<div class="holiday-daynum" title="${holidayName}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="holiday-daynum${pastCls}" title="${holidayName}">${date.getDate()}</div>`;
     } else if(fiscalEv){
-      dayTd.innerHTML=`<div class="holiday-daynum" style="background:${evCategoryColor(fiscalEv)}" title="${fiscalEv.title}">${date.getDate()}</div>`;
+      dayTd.innerHTML=`<div class="holiday-daynum${pastCls}" style="background:${evCategoryColor(fiscalEv)}" title="${fiscalEv.title}">${date.getDate()}</div>`;
     } else {
       dayTd.innerHTML=date.getDate();
     }
@@ -5706,10 +5708,11 @@ function renderGrid(){
     // événements peuvent tomber le même jour, chacun doit ouvrir sa propre
     // fiche — jusqu'ici rien n'était cliquable ici du tout (contrairement à
     // la pastille du numéro de jour, qui ouvre déjà openDayEvent).
+    const evPast=ds<todayISO()?' ev-past':'';
     let evTdHtml=evs.length?evs.map(ev=>{
       const col=evCategoryColor(ev);
-      return`<span class="etag" style="background:${col};color:#FFF" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
-    }).join(' '):(holidayName?`<span class="holiday-tag">${holidayName}</span>`:'');
+      return`<span class="etag${evPast}" style="background:${col};color:#FFF" onclick="event.stopPropagation();openEventEdit('${ev.id}')">${ev.title}</span>`;
+    }).join(' '):(holidayName?`<span class="holiday-tag${evPast}">${holidayName}</span>`:'');
     evTd.innerHTML=evTdHtml;
     tr.appendChild(evTd);
 
@@ -7548,6 +7551,9 @@ const evBadge=(ds,col)=>{
 // événement comme les autres depuis le retour utilisateur "ne fais plus
 // de différence" : seul le jour férié garde sa carte à part (jamais un
 // vrai événement, purement informatif, voir getHolidayPseudoEvents).
+// Événement terminé (dernier jour avant aujourd'hui) : carte/pastille grisée,
+// pour repérer d'un coup d'œil le passage entre passé et à venir.
+function evPastCls(ev){return (ev.endDate||ev.startDate)<todayISO()?' ev-past':'';}
 function evCardHTML(ev){
   const col=ev.isHoliday?'#6B6B6B':evCategoryColor(ev);
   const isSingle=ev.startDate===ev.endDate;
@@ -7555,7 +7561,7 @@ function evCardHTML(ev){
     ? evBadge(ev.startDate,col)
     : `<div class="evdate-range">${evBadge(ev.startDate,col)}<span class="evdate-arrow">→</span>${evBadge(ev.endDate,col)}</div>`;
   if(ev.isHoliday){
-    return`<div class="evcard evcard-holiday">
+    return`<div class="evcard evcard-holiday${evPastCls(ev)}">
       ${dateHtml}
       <div class="evcard-info">
         <div class="evcard-title">${ev.title}</div>
@@ -7564,7 +7570,7 @@ function evCardHTML(ev){
     </div>`;
   }
   const timeStr=ev.startTime?(ev.endTime?`${ev.startTime} – ${ev.endTime}`:ev.startTime):'';
-  return`<div class="evcard" data-evid="${ev.id}" onclick="openEventEdit('${ev.id}')">
+  return`<div class="evcard${evPastCls(ev)}" data-evid="${ev.id}" onclick="openEventEdit('${ev.id}')">
     ${dateHtml}
     <div class="evcard-info">
       <div class="evcard-title">${ev.title}</div>
@@ -11250,7 +11256,7 @@ function renderWeek(){
       : `<div class="evdate-range">${evDayBadge(ev.startDate,col)}<span class="evdate-arrow">→</span>${evDayBadge(ev.endDate,col)}</div>`;
     const timeStr=ev.startTime?(ev.endTime?`${ev.startTime} – ${ev.endTime}`:ev.startTime):'';
     if(ev.isHoliday){
-      return`<div class="evcard evcard-holiday">
+      return`<div class="evcard evcard-holiday${evPastCls(ev)}">
         ${dateHtml}
         <div class="evcard-info">
           <div class="evcard-title">${ev.title}</div>
@@ -11259,7 +11265,7 @@ function renderWeek(){
       </div>`;
     }
     if(ev.isFiscal){
-      return`<div class="evcard evcard-holiday">
+      return`<div class="evcard evcard-holiday${evPastCls(ev)}">
         ${dateHtml}
         <div class="evcard-info">
           <div class="evcard-title">${ev.title}</div>
@@ -11267,7 +11273,7 @@ function renderWeek(){
         </div>
       </div>`;
     }
-    return`<div class="evcard" onclick="openEventEdit('${ev.id}')">
+    return`<div class="evcard${evPastCls(ev)}" onclick="openEventEdit('${ev.id}')">
       ${dateHtml}
       <div class="evcard-info">
         <div class="evcard-title">${ev.title}</div>
