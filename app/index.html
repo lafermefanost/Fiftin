@@ -12778,7 +12778,7 @@ function irSimHTML(){
   return`<div class="yr-section irs${irSim.open?'':' collapsed'}" id="irsBox">
     <div class="irs-hd" onclick="irSimToggle()"><div class="yr-section-title">Simulateur impôt sur le revenu</div><span class="irs-chev">▾</span></div>
     <div class="irs-body">
-      <div class="irs-note">Indiquez le revenu net imposable estimé de votre foyer pour obtenir le montant théorique de votre impôt. Faites glisser le curseur pour comparer.</div>
+      <div class="irs-note">Indiquez le revenu net imposable estimé de votre foyer pour obtenir le montant théorique de votre impôt. Faites glisser le curseur pour comparer.<br><b>Attention :</b> pour des salaires, c'est le montant après l'abattement de 10&nbsp;% pour frais professionnels (ex. 30&nbsp;000&nbsp;€ de salaires nets imposables ≈ 27&nbsp;000&nbsp;€ à indiquer ici).</div>
       <div class="irs-lbl">Situation</div>
       <div class="irs-seg">${seg('couple',false,'Seul(e)')}${seg('couple',true,'En couple')}</div>
       <div class="irs-lbl">Enfants à charge</div>
