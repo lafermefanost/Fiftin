@@ -11913,12 +11913,13 @@ function renderMonth(){
   // remplissage).
   h+=`<div class="wsm-row" style="grid-template-columns:repeat(${mRevItems.length},1fr)">${mRevItems.join('')}</div>`;
 
-  // Financial summary (charges + marge) — only if charges configured. Reste
-  // global lui aussi (bankCharges couvre déjà toutes les structures) — pas
-  // le ménage, comme avant cette refonte (voir cleanCostTotal plus bas,
-  // désormais calculé par structure et non plus additionné ici).
+  // Financial summary (charges + marge) — only if charges configured.
+  // Charges = relevé bancaire (toutes structures) + ménage de chaque
+  // structure (structCleaningCostMonth, même total que les volets
+  // « Charges réelles » par structure plus bas).
   const bankCharges=variableChargesForMonth(mStart,mEndExact);
-  const totalCh=bankCharges.total;
+  const monthClean=structs.reduce((t,x)=>t+structCleaningCostMonth(x.id).total,0);
+  const totalCh=bankCharges.total+monthClean;
   if(totalCh>0){
     const marge=totalRev-totalCh;
     const margeClass=marge>=0?'pos':'neg';
@@ -11926,7 +11927,7 @@ function renderMonth(){
       <div class="mfin-card">
         <div class="mfin-val mfin-val-strong"><span class="money">${Math.round(totalCh).toLocaleString('fr-FR')}</span> €</div>
         <div class="mfin-sub">charges / mois</div>
-        <div class="mfin-detail">relevé bancaire</div>
+        <div class="mfin-detail">${monthClean>0?'banque + ménage':'relevé bancaire'}</div>
       </div>
       <div class="mfin-card${margeClass==='neg'?' mfin-danger':''}">
         <div class="mfin-val mfin-val-strong"><span class="money">${totalRev>0?marge.toLocaleString('fr-FR')+' €':'—'}</span></div>
@@ -12875,10 +12876,11 @@ function renderYear(){
     const platLimit=nightsThr[0]?.amount||120;
     const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#1D2820',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
-    // Charges réelles / marge nette de CETTE structure : même calcul que
-    // l'encart global (globalCard — relevé bancaire seul, sans le ménage),
-    // filtré sur la structure ; la somme des structures redonne le global.
-    const stCharges=variableChargesForMonth(yStart,yEnd,gid).total;
+    // Charges réelles / marge nette de CETTE structure : relevé bancaire +
+    // ménage de la structure (même total que « Répartition des charges »
+    // plus bas) ; la somme des structures redonne l'encart global.
+    const stClean=structCleaningCost(gid);
+    const stCharges=variableChargesForMonth(yStart,yEnd,gid).total+stClean;
     const stMargin=st.realCA-stCharges;
     const stMarginPct=st.realCA>0?Math.round(stMargin/st.realCA*100):0;
     const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
@@ -12965,7 +12967,7 @@ function renderYear(){
           <div class="mstat-card mstat-rev">
             <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(stCharges).toLocaleString('fr-FR')}</span> €</div>
             <div class="mstat-sub">charges réelles</div>
-            <div class="mstat-detail">relevé bancaire</div>
+            <div class="mstat-detail">${stClean>0?'banque + ménage':'relevé bancaire'}</div>
           </div>
           <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
             <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(stMargin).toLocaleString('fr-FR')}</span> € <span style="font-size:16px;font-weight:500;opacity:.8">(${stMarginPct}%)</span></div>
@@ -12998,7 +13000,10 @@ function renderYear(){
     const elapsedEnd=today<yEnd?today:yEnd;
     const elapsedCap=totalRooms*daysBetween(yStart,elapsedEnd);
     const occRate=elapsedCap>0?Math.round(realNights/elapsedCap*100):0;
-    const yearCharges=variableChargesForMonth(yStart,yEnd).total;
+    // Charges réelles = relevé bancaire + ménage de chaque structure (même
+    // somme que les cartes par structure ci-dessous, voir groupCard).
+    const yearClean=structs.reduce((t,x)=>t+structCleaningCost(x.id),0);
+    const yearCharges=variableChargesForMonth(yStart,yEnd).total+yearClean;
     const netMargin=realCA-yearCharges;
     const netMarginPct=realCA>0?Math.round(netMargin/realCA*100):0;
     return`<div class="yr-group yr-total">
@@ -13021,7 +13026,7 @@ function renderYear(){
         <div class="mstat-card mstat-rev">
           <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(yearCharges).toLocaleString('fr-FR')}</span> €</div>
           <div class="mstat-sub">charges réelles</div>
-          <div class="mstat-detail">relevé bancaire</div>
+          <div class="mstat-detail">${yearClean>0?'banque + ménage':'relevé bancaire'}</div>
         </div>
         <div class="mstat-card mstat-rev" style="grid-column:1/-1">
           <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(netMargin).toLocaleString('fr-FR')}</span> € <span style="font-size:16px;font-weight:500;opacity:.8">(${netMarginPct}%)</span></div>
