@@ -12738,12 +12738,16 @@ function irCompute(R,couple,kids){
   const withParts=parts*irTax1(R/parts);
   const withBase=base*irTax1(R/base);
   const halves=(parts-base)/.5;
-  let tax=Math.max(withParts,withBase-halves*IR_BAREME.halfPartCap);
+  const capped=withBase-halves*IR_BAREME.halfPartCap;
+  let tax=Math.max(withParts,capped);
+  // Plafonnement atteint : l'impôt suit alors le calcul sur les parts de
+  // base, donc la tranche marginale aussi (sinon elle serait sous-estimée).
+  const marg=capped>withParts?irMarginal(R/base):irMarginal(R/parts);
   const d=couple?IR_BAREME.decote.couple:IR_BAREME.decote.single;
   if(tax<d.seuil)tax=Math.max(0,tax-(d.base-IR_BAREME.decote.taux*tax));
   tax=Math.round(tax);
   if(tax<IR_BAREME.minRecouvrement)tax=0;
-  return{tax,parts,avg:R>0?tax/R:0,marg:irMarginal(R/parts),net:R-tax};
+  return{tax,parts,avg:R>0?tax/R:0,marg,net:R-tax};
 }
 function irSimResultsHTML(){
   const c=irCompute(irSim.r,irSim.couple,irSim.kids);
