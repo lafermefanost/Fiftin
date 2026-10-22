@@ -2161,6 +2161,25 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .yr-gauge-real{position:absolute;top:0;left:0;height:100%;border-radius:3px;transition:width .3s;}
 .yr-gauge-bot{display:flex;justify-content:space-between;margin-top:3px;}
 .yr-section{background:#fff;border-radius:12px;border:1.5px solid var(--light);padding:14px;}
+.irs-hd{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.irs-hd .yr-section-title{margin:0;flex:1;}
+.irs-chev{font-size:11px;color:var(--gray);transition:transform .2s;}
+.irs.collapsed .irs-chev{transform:rotate(-90deg);}
+.irs.collapsed .irs-body{display:none;}
+.irs-body{margin-top:12px;}
+.irs-note{font-size:12px;color:var(--gray);line-height:1.45;margin-bottom:12px;}
+.irs-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin:12px 0 6px;}
+.irs-seg{display:flex;gap:6px;flex-wrap:wrap;}
+.irs-seg button{flex:1;min-width:38px;padding:8px 6px;border:1.5px solid var(--light);border-radius:10px;background:#fff;
+  font-family:'Jost',sans-serif;font-size:13px;font-weight:600;color:var(--gray);cursor:pointer;}
+.irs-seg button.on{background:var(--green);border-color:var(--green);color:#fff;}
+.irs-rev{display:flex;align-items:baseline;gap:6px;margin-top:4px;}
+.irs-rev input[type=number]{width:120px;border:none;border-bottom:1.5px solid var(--light);font-family:'Jost',sans-serif;
+  font-size:22px;font-weight:700;color:var(--green);background:transparent;text-align:right;padding:2px 0;}
+.irs-range{width:100%;accent-color:var(--green);margin:8px 0 2px;}
+.irs-res{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.irs-res .mstat-card{margin:0;}
+.irs-foot{font-size:10.5px;color:var(--gray);line-height:1.45;margin-top:12px;}
 .yr-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gray);margin-bottom:10px;}
 .yr-chart{display:flex;gap:3px;align-items:flex-end;height:96px;margin-bottom:6px;}
 .yr-bar-col{flex:1;display:flex;flex-direction:column;align-items:stretch;height:100%;}
@@ -12678,6 +12697,100 @@ function toggleYearGroup(gid,multiStruct){
   yearOpenGroups.set(gid,!yearGroupCollapsed(gid,multiStruct));
   renderYear();
 }
+// ═══════════════════════════════════════════════════════════════
+//  SIMULATEUR IMPÔT SUR LE REVENU (vue Année) — aide à se projeter : impôt
+//  théorique d'après le barème progressif, le quotient familial (avec son
+//  plafonnement) et la décote. Hors réductions/crédits d'impôt et
+//  situations particulières (parent isolé, invalidité…), annoncé comme tel.
+//  Barème à mettre à jour chaque année ICI seulement (CGI art. 197 ;
+//  loi de finances pour 2026, revenus 2025 — vérifié sur service-public.fr
+//  F1419 et BOFiP BOI-IR-LIQ-20-10 / 20-20-30).
+// ═══════════════════════════════════════════════════════════════
+const IR_BAREME={
+  label:'barème 2026 (revenus 2025)',
+  tranches:[[11600,0],[29579,.11],[84577,.30],[181917,.41],[Infinity,.45]],
+  halfPartCap:1807,          // plafonnement du quotient familial par demi-part
+  decote:{single:{seuil:1982,base:897},couple:{seuil:3277,base:1483},taux:.4525},
+  minRecouvrement:61,        // impôt inférieur : non mis en recouvrement
+};
+let irSim=(()=>{try{return Object.assign({r:40000,couple:false,kids:0,open:false},JSON.parse(localStorage.getItem('ff2_irsim')||'{}'));}catch(e){return{r:40000,couple:false,kids:0,open:false};}})();
+function irSimSave(){try{localStorage.setItem('ff2_irsim',JSON.stringify(irSim));}catch(e){}}
+function irParts(couple,kids){
+  let p=couple?2:1;
+  for(let i=0;i<kids;i++)p+=i<2?.5:1; // 1er et 2e enfant : ½ part ; à partir du 3e : 1 part
+  return p;
+}
+function irTax1(q){ // impôt pour une part de revenu q
+  let t=0,prev=0;
+  for(const[lim,rate] of IR_BAREME.tranches){
+    if(q>prev)t+=(Math.min(q,lim)-prev)*rate;
+    prev=lim;
+  }
+  return t;
+}
+function irMarginal(q){
+  for(const[lim,rate] of IR_BAREME.tranches)if(q<=lim)return rate;
+  return IR_BAREME.tranches[IR_BAREME.tranches.length-1][1];
+}
+function irCompute(R,couple,kids){
+  R=Math.max(0,+R||0);
+  const parts=irParts(couple,kids),base=couple?2:1;
+  const withParts=parts*irTax1(R/parts);
+  const withBase=base*irTax1(R/base);
+  const halves=(parts-base)/.5;
+  const capped=withBase-halves*IR_BAREME.halfPartCap;
+  let tax=Math.max(withParts,capped);
+  // Plafonnement atteint : l'impôt suit alors le calcul sur les parts de
+  // base, donc la tranche marginale aussi (sinon elle serait sous-estimée).
+  const marg=capped>withParts?irMarginal(R/base):irMarginal(R/parts);
+  const d=couple?IR_BAREME.decote.couple:IR_BAREME.decote.single;
+  if(tax<d.seuil)tax=Math.max(0,tax-(d.base-IR_BAREME.decote.taux*tax));
+  tax=Math.round(tax);
+  if(tax<IR_BAREME.minRecouvrement)tax=0;
+  return{tax,parts,avg:R>0?tax/R:0,marg,net:R-tax};
+}
+function irSimResultsHTML(){
+  const c=irCompute(irSim.r,irSim.couple,irSim.kids);
+  const eur=v=>Math.round(v).toLocaleString('fr-FR')+' €';
+  const pct=v=>(Math.round(v*1000)/10).toLocaleString('fr-FR')+' %';
+  return`<div class="mstat-card mstat-rev" style="grid-column:1/-1">
+      <div class="mstat-val mstat-val-strong"><span class="money">${eur(c.tax)}</span></div>
+      <div class="mstat-sub">impôt estimé</div>
+      <div class="mstat-detail">${c.parts.toLocaleString('fr-FR')} part${c.parts>1?'s':''} fiscale${c.parts>1?'s':''}</div>
+    </div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${pct(c.avg)}</div><div class="mstat-sub">taux moyen</div></div>
+    <div class="mstat-card mstat-rev"><div class="mstat-val">${Math.round(c.marg*100)} %</div><div class="mstat-sub">tranche marginale</div></div>
+    <div class="mstat-card mstat-rev" style="grid-column:1/-1"><div class="mstat-val"><span class="money">${eur(c.net)}</span></div><div class="mstat-sub">revenu après impôt</div></div>`;
+}
+// Mise à jour en direct sans redessiner toute la vue (le curseur garde le doigt).
+function irSimSet(field,val){
+  if(field==='r'){irSim.r=Math.max(0,Math.min(1000000,Math.round(+val||0)));}
+  else irSim[field]=val;
+  irSimSave();
+  const res=byId('irsRes');if(res)res.innerHTML=irSimResultsHTML();
+  const rng=byId('irsRange'),num=byId('irsNum');
+  if(field==='r'){if(rng&&document.activeElement!==rng)rng.value=Math.min(irSim.r,200000);if(num&&document.activeElement!==num)num.value=irSim.r;}
+  if(field!=='r'){document.querySelectorAll('[data-irs]').forEach(b=>{const[f,v]=b.dataset.irs.split(':');b.classList.toggle('on',String(irSim[f])===v);});}
+}
+function irSimToggle(){irSim.open=!irSim.open;irSimSave();byId('irsBox')?.classList.toggle('collapsed',!irSim.open);}
+function irSimHTML(){
+  const seg=(f,v,l)=>`<button type="button" data-irs="${f}:${v}" class="${String(irSim[f])===String(v)?'on':''}" onclick="irSimSet('${f}',${v})">${l}</button>`;
+  return`<div class="yr-section irs${irSim.open?'':' collapsed'}" id="irsBox">
+    <div class="irs-hd" onclick="irSimToggle()"><div class="yr-section-title">Simulateur impôt sur le revenu</div><span class="irs-chev">▾</span></div>
+    <div class="irs-body">
+      <div class="irs-note">Indiquez le revenu net imposable estimé de votre foyer pour obtenir le montant théorique de votre impôt. Faites glisser le curseur pour comparer.<br><b>Attention :</b> pour des salaires, c'est le montant après l'abattement de 10&nbsp;% pour frais professionnels (ex. 30&nbsp;000&nbsp;€ de salaires nets imposables ≈ 27&nbsp;000&nbsp;€ à indiquer ici).</div>
+      <div class="irs-lbl">Situation</div>
+      <div class="irs-seg">${seg('couple',false,'Seul(e)')}${seg('couple',true,'En couple')}</div>
+      <div class="irs-lbl">Enfants à charge</div>
+      <div class="irs-seg">${[0,1,2,3,4].map(k=>seg('kids',k,k===4?'4+':String(k))).join('')}</div>
+      <div class="irs-lbl">Revenu net imposable du foyer</div>
+      <div class="irs-rev"><input type="number" id="irsNum" min="0" step="500" value="${irSim.r}" oninput="irSimSet('r',this.value)"><span style="font-size:18px;font-weight:700;color:var(--green)">€</span></div>
+      <input type="range" class="irs-range" id="irsRange" min="0" max="200000" step="500" value="${Math.min(irSim.r,200000)}" oninput="irSimSet('r',this.value)">
+      <div id="irsRes" class="irs-res">${irSimResultsHTML()}</div>
+      <div class="irs-foot">Estimation selon le ${IR_BAREME.label} : barème progressif, quotient familial et décote. Hors réductions et crédits d'impôt, contribution sur les hauts revenus et situations particulières (parent isolé, invalidité…). Ne remplace pas votre avis d'imposition.</div>
+    </div>
+  </div>`;
+}
 function renderYear(){
   const year=S.year;
   if(yearOpenGroupsFor!==year){
@@ -13122,6 +13235,7 @@ function renderYear(){
     ${globalHTML}
     ${structureCardsHTML}
     ${taxeSejourYearHTML}
+    ${irSimHTML()}
   </div>`;
   briefAutoArm('year');
 }
