@@ -12875,6 +12875,12 @@ function renderYear(){
     const platLimit=nightsThr[0]?.amount||120;
     const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#1D2820',t.label)).join('')
       +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
+    // Charges réelles / marge nette de CETTE structure : même calcul que
+    // l'encart global (globalCard — relevé bancaire seul, sans le ménage),
+    // filtré sur la structure ; la somme des structures redonne le global.
+    const stCharges=variableChargesForMonth(yStart,yEnd,gid).total;
+    const stMargin=st.realCA-stCharges;
+    const stMarginPct=st.realCA>0?Math.round(stMargin/st.realCA*100):0;
     const platStatHTML=showPlatform?`<div class="mstat-card mstat-rev">
           <div class="mstat-val mstat-val-light">${st.platNights}</div>
           <div class="mstat-sub">nuits plateformes</div>
@@ -12950,12 +12956,22 @@ function renderYear(){
             <div class="mstat-sub">CA projeté</div>
             <div class="mstat-detail">${st.projNights} nuits totales</div>
           </div>
-          <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
+          <div class="mstat-card mstat-rev">
             <div class="mstat-val mstat-val-light">${st.occRate}%</div>
             <div class="mstat-sub">occupation à ce jour</div>
             <div class="mstat-detail">${st.rooms.length} location${st.rooms.length>1?'s':''}</div>
           </div>
           ${platStatHTML}
+          <div class="mstat-card mstat-rev">
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(stCharges).toLocaleString('fr-FR')}</span> €</div>
+            <div class="mstat-sub">charges réelles</div>
+            <div class="mstat-detail">relevé bancaire</div>
+          </div>
+          <div class="mstat-card mstat-rev"${showPlatform?'':' style="grid-column:1/-1"'}>
+            <div class="mstat-val mstat-val-strong"><span class="money">${Math.round(stMargin).toLocaleString('fr-FR')}</span> € <span style="font-size:16px;font-weight:500;opacity:.8">(${stMarginPct}%)</span></div>
+            <div class="mstat-sub">marge nette</div>
+            <div class="mstat-detail">CA réalisé − charges</div>
+          </div>
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,'var(--green)'))}
