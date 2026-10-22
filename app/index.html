@@ -9439,7 +9439,7 @@ function toggleRoomCard(id){roomCardOpen[id]=!roomCardOpen[id];renderSettings();
 function settingsPanel(id,title,bodyHtml){
   const open=!!settingsPanelOpen[id];
   const icon=SETTINGS_PANEL_ICONS[id];
-  const iconHTML=icon?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${icon}</svg>`:'';
+  const iconHTML=icon?`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${icon}</svg>`:'';
   return`<div class="set-sec yr-regl${open?' open':''}" id="setpanel-${id}">
     <div class="set-sec-title" onclick="toggleSettingsPanel('${id}')">
       <span style="display:flex;align-items:center;gap:6px">${iconHTML}${title}</span>
@@ -9950,8 +9950,8 @@ function renderSettings(){
     resas:'<path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/>',
     events:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
     figures:'<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
-    save:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
-    load:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+    arrowIn:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+    arrowOut:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
     restore:'<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   };
   const expTile=(ico,label,sub,onclick,wide)=>wide
@@ -9966,8 +9966,8 @@ function renderSettings(){
     </div>
     <div class="exp-note exp-sep">Sauvegarde complète en un seul fichier : réservations, clients, événements, réglages, catalogue et comptabilité — pour garder une copie ou transférer ce planning vers un autre compte.</div>
     <div class="exp-grid">
-      ${expTile('save','Sauvegarder','Fichier JSON','doExport()')}
-      ${expTile('load','Importer','Fichier JSON',"byId('importFile').click()")}
+      ${expTile('arrowOut','Sauvegarder','Fichier JSON','doExport()')}
+      ${expTile('arrowIn','Importer','Fichier JSON',"byId('importFile').click()")}
     </div>
     <div class="exp-note exp-sep">Restaure seulement les réglages (locations, tarifs, structures…) et le catalogue depuis une sauvegarde. Réservations, clients, événements, ménage, table d'hôtes et comptabilité actuels ne sont <b>pas</b> touchés.</div>
     <div class="exp-grid">
