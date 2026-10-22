@@ -9439,7 +9439,7 @@ function toggleRoomCard(id){roomCardOpen[id]=!roomCardOpen[id];renderSettings();
 function settingsPanel(id,title,bodyHtml){
   const open=!!settingsPanelOpen[id];
   const icon=SETTINGS_PANEL_ICONS[id];
-  const iconHTML=icon?`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${icon}</svg>`:'';
+  const iconHTML=icon?`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">${icon}</svg>`:'';
   return`<div class="set-sec yr-regl${open?' open':''}" id="setpanel-${id}">
     <div class="set-sec-title" onclick="toggleSettingsPanel('${id}')">
       <span style="display:flex;align-items:center;gap:6px">${iconHTML}${title}</span>
