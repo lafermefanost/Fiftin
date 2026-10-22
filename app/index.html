@@ -201,7 +201,7 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
    (logo ~61% de la largeur du cartouche, contre ~87% avant ce réglage).
    Ratio conservé (28/22 ≈ 34/27 ≈ 1.26). Pas de translateX correctif
    (contrairement à l'inline style="transform:translateX(-4px)" sur
-   .logo-tile, lockScreen/siteGate plus bas) : logo-fiftin-mark.png est en
+   .logo-tile, lockScreen/siteGate plus bas) : logo-fiftin-mark-glass.png est en
    fait symétrique (marges internes quasi identiques des deux côtés,
    vérifié pixel à pixel sur le fichier source) — le centrage de .app-icon
    dans .app-icon-tile (flex align-items/justify-content:center ci-dessus)
@@ -2258,7 +2258,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
     var p=v.play();
     if(p&&p.catch)p.catch(function(){});
   })();</script>
-  <div class="logo-tile"><img src="../assets/logo-fiftin-mark.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
+  <div class="logo-tile"><img src="../assets/logo-fiftin-mark-glass.png" width="83" height="64" alt="Fiftin" style="transform:translateX(-4px)"></div>
   <div class="lock-sub" id="lockSub">Votre activité évolue chaque jour.
 Gardez la main.</div>
   <div class="lock-box" id="lockBox">
@@ -2277,7 +2277,7 @@ Gardez la main.</div>
 
 <!-- ─── HEADER ─────────────────────────────────────────────── -->
 <header>
-  <div class="app-icon-tile"><img class="app-icon" src="../assets/logo-fiftin-mark.png" width="34" height="27" alt="Fiftin"></div>
+  <div class="app-icon-tile"><img class="app-icon" src="../assets/logo-fiftin-mark-glass.png" width="34" height="27" alt="Fiftin"></div>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
   <button class="hbtn" id="settingsBtn" onclick="openSettings()" title="Paramètres">

@@ -15,13 +15,13 @@
  *    jamais mis en cache — ce sont des données vivantes.
  *
  * Changer CACHE_VERSION force le remplacement complet des copies gardées. */
-const CACHE_VERSION = "fiftin-app-v1";
+const CACHE_VERSION = "fiftin-app-v2";
 const PAGE_URL = new URL("./index.html", self.location).href;
 const PRECACHE = [
   "./",
   "./index.html",
   "./manifest.json",
-  "../assets/logo-fiftin-mark.png",
+  "../assets/logo-fiftin-mark-glass.png",
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js",
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js",
   "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js",
