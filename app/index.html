@@ -2168,6 +2168,7 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .irs.collapsed .irs-body{display:none;}
 .irs-body{margin-top:12px;}
 .irs-note{font-size:12px;color:var(--gray);line-height:1.45;margin-bottom:12px;}
+.irs-warn{background:#F7F5F1;border-radius:10px;padding:10px 12px;color:var(--dark);}
 .irs-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin:12px 0 6px;}
 .irs-seg{display:flex;gap:6px;flex-wrap:wrap;}
 .irs-seg button{flex:1;min-width:38px;padding:8px 6px;border:1.5px solid var(--light);border-radius:10px;background:#fff;
@@ -12778,6 +12779,7 @@ function irSimHTML(){
   return`<div class="yr-section irs${irSim.open?'':' collapsed'}" id="irsBox">
     <div class="irs-hd" onclick="irSimToggle()"><div class="yr-section-title">Simulateur impôt sur le revenu</div><span class="irs-chev">▾</span></div>
     <div class="irs-body">
+      <div class="irs-note irs-warn"><b>À titre d'information uniquement.</b> Ce simulateur donne une estimation théorique : ce n'est ni un conseil fiscal, ni un engagement sur le montant de votre impôt. Vérifiez votre situation auprès de l'administration fiscale (impots.gouv.fr) ou d'un professionnel avant toute décision. Fiftin ne saurait être tenu responsable des décisions prises sur la base de ce résultat.</div>
       <div class="irs-note">Indiquez le revenu net imposable estimé de votre foyer pour obtenir le montant théorique de votre impôt. Faites glisser le curseur pour comparer.<br><b>Attention :</b> pour des salaires, c'est le montant après l'abattement de 10&nbsp;% pour frais professionnels (ex. 30&nbsp;000&nbsp;€ de salaires nets imposables ≈ 27&nbsp;000&nbsp;€ à indiquer ici).</div>
       <div class="irs-lbl">Situation</div>
       <div class="irs-seg">${seg('couple',false,'Seul(e)')}${seg('couple',true,'En couple')}</div>
