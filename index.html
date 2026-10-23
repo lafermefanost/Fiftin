@@ -3512,6 +3512,30 @@ var firebaseSDKCallbacks = [];
    utilisateur avec bannière de debug). Désormais : un seul chargement
    partagé, tous les appelants concurrents mettent juste leur callback en
    file et sont tous notifiés une fois ce chargement unique terminé. */
+// Stockage IndexedDB du navigateur figé (constaté sur Safari Mac après de
+// nombreux onglets, ou fenêtre normale bloquée alors que la navigation
+// privée fonctionne) : Firebase Auth y garde la session et attend sans fin,
+// d'où une connexion qui « ne répond pas ». Sonde rapide AVANT de charger le
+// SDK : si IndexedDB ne répond pas en 2,5 s, on le masque pour cette page —
+// Firebase garde alors la session dans localStorage et la connexion passe.
+function probeIndexedDB(cb){
+  var done=false;
+  function fin(ok){
+    if(done)return;done=true;
+    if(!ok){
+      try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});}catch(e){}
+      console.warn('[auth] IndexedDB ne répond pas : session gardée dans localStorage pour cette page');
+    }
+    cb();
+  }
+  try{
+    if(!window.indexedDB){fin(true);return;}
+    var req=window.indexedDB.open('fiftin-idb-probe');
+    req.onsuccess=function(){try{req.result.close();}catch(e){}fin(true);};
+    req.onerror=function(){fin(false);};
+  }catch(e){fin(false);return;}
+  setTimeout(function(){fin(false);},2500);
+}
 function loadFirebaseSDK(cb){
   if(typeof firebase!=="undefined"){ cb(); return; }
   firebaseSDKCallbacks.push(cb);
@@ -3521,6 +3545,7 @@ function loadFirebaseSDK(cb){
     var cbs = firebaseSDKCallbacks; firebaseSDKCallbacks = [];
     cbs.forEach(function(fn){ fn(); });
   }
+  probeIndexedDB(function(){
   var s1 = document.createElement("script");
   s1.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js";
   s1.onload = function(){
@@ -3548,6 +3573,7 @@ function loadFirebaseSDK(cb){
     document.head.appendChild(s2);
   };
   document.head.appendChild(s1);
+  });
 }
 
 // Force le long-polling au lieu de se fier à la détection automatique de
@@ -7710,7 +7736,7 @@ function submitAuthSheet(){
     var settled = false;
     var slowTimer = setTimeout(function(){
       if(settled) return;
-      errEl.textContent = "La connexion ne répond pas. Rechargez la page (⌘R / ↻) puis réessayez — si ça persiste, fermez les autres onglets fiftin.fr.";
+      errEl.textContent = "La connexion ne répond pas. Fermez complètement le navigateur (⌘Q sur Mac), rouvrez-le puis réessayez.";
       btn.disabled = false; btn.textContent = label;
     }, 15000);
     firebase.auth().signInWithEmailAndPassword(email, password)

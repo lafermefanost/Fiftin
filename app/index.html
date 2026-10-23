@@ -4289,12 +4289,37 @@ let currentUid=null,currentUserEmail=null;
 // pour un propriétaire, égal au compte qui l'a invité pour le personnel.
 let currentRole='owner',ownerUid=null;
 
+// Stockage IndexedDB du navigateur figé (constaté sur Safari Mac après de
+// nombreux onglets, ou fenêtre normale bloquée alors que la navigation
+// privée fonctionne) : Firebase Auth y garde la session et attend sans fin,
+// d'où une connexion qui « ne répond pas ». Sonde rapide AVANT de charger le
+// SDK : si IndexedDB ne répond pas en 2,5 s, on le masque pour cette page —
+// Firebase garde alors la session dans localStorage et la connexion passe.
+function probeIndexedDB(cb){
+  var done=false;
+  function fin(ok){
+    if(done)return;done=true;
+    if(!ok){
+      try{Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});}catch(e){}
+      console.warn('[auth] IndexedDB ne répond pas : session gardée dans localStorage pour cette page');
+    }
+    cb();
+  }
+  try{
+    if(!window.indexedDB){fin(true);return;}
+    var req=window.indexedDB.open('fiftin-idb-probe');
+    req.onsuccess=function(){try{req.result.close();}catch(e){}fin(true);};
+    req.onerror=function(){fin(false);};
+  }catch(e){fin(false);return;}
+  setTimeout(function(){fin(false);},2500);
+}
 function loadFirebaseSDK(cb){
   if(typeof firebase!=='undefined'){cb();return;}
   const onFail=()=>{
     const el=byId('lockErr');
     if(el)el.textContent="Impossible de charger Firebase — vérifiez votre connexion internet et rechargez la page.";
   };
+  probeIndexedDB(()=>{
   const s1=document.createElement('script');
   s1.src='https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js';
   s1.onload=()=>{
@@ -4322,6 +4347,7 @@ function loadFirebaseSDK(cb){
   };
   s1.onerror=onFail;
   document.head.appendChild(s1);
+  });
 }
 
 // Point d'entrée de l'appli (remplace l'ancien checkAccessGate) : le vrai
@@ -13324,10 +13350,14 @@ function submitAuth(){
       .finally(()=>{const b=byId('authSubmitBtn');if(b)b.disabled=false;});
   }else{
     byId('authSubmitBtn').disabled=true;
+    // Jamais de bouton muet : message explicite si Firebase ne répond pas
+    // (voir probeIndexedDB plus haut pour la cause la plus fréquente).
+    let settled=false;
+    const slow=setTimeout(()=>{if(settled)return;errEl.textContent="La connexion ne répond pas. Fermez complètement le navigateur (⌘Q sur Mac), rouvrez-le puis réessayez.";const b=byId('authSubmitBtn');if(b)b.disabled=false;},15000);
     firebase.auth().signInWithEmailAndPassword(email,password)
       .then(()=>{})
       .catch(err=>{errEl.textContent=authErrorMessage(err);})
-      .finally(()=>{const b=byId('authSubmitBtn');if(b)b.disabled=false;});
+      .finally(()=>{settled=true;clearTimeout(slow);const b=byId('authSubmitBtn');if(b)b.disabled=false;});
   }
 }
 function forgotPassword(){
