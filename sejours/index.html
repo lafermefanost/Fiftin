@@ -55,7 +55,7 @@
   --danger:#B2543B;
   --gray-mid:#9A9789;
   /* Hauteur de la rangée collante du pictogramme d'accueil (.sej-home). */
-  --sej-home-h:calc(52px + env(safe-area-inset-top,0px));
+  --sej-home-h:calc(62px + env(safe-area-inset-top,0px));
   /* Grain des photos d'annonce (fil + repli sans photo de la fiche détail,
      voir .cover .grain et le "slide" de secours dans openDetail() plus
      bas) — réglage centralisé pour n'ajuster qu'ici (retour utilisateur :
@@ -2360,15 +2360,15 @@ body.map-fullscreen{overflow:hidden;}
    barre de filtres, Profil (.profile-stats) et le dégradé .fade-edge-top
    se calent juste en dessous via --sej-home-h. Pastille : même verre que le
    grand logo de l'accueil (.hl-logo dans index.html), en petit, mais en
-   nuances de gris (aucune teinte verte ni liseré coloré) ; lettrage assombri en gris
-   (brightness) qui garde son dégradé et son contour d'origine. Rangée de la
+   nuances de gris (aucune teinte verte ni liseré coloré), lettrage blanc pur (sans le
+   dégradé de l'image, plus lisible sur fond clair). Rangée de la
    même couleur que la barre de filtres qui suit. */
 .sej-home{position:sticky; top:0; z-index:72; height:var(--sej-home-h); display:flex; align-items:flex-end; justify-content:center;
-  padding:0 18px 5px; background:var(--cream);}
+  padding:0 18px 9px; background:var(--cream);}
 /* Filtres masqués (Profil, Mes séjours, espace hôte…) : la rangée prend le
    fond clair de la vue qui suit plutôt que celui de la barre de filtres. */
 #app:has(#filter-bar.chrome-collapsed):has(#feed.feed-map) .sej-home{background:var(--cream-light);}
-.sej-home span{width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+.sej-home span{width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(18,18,18,.1) 68%, rgba(18,18,18,.26) 100%),
@@ -2387,7 +2387,7 @@ body.map-fullscreen{overflow:hidden;}
 .sej-home span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
-.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(.42);}
+.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(0) invert(1);}
 </style>
 
 <script>
