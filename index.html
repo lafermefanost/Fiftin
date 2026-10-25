@@ -190,6 +190,28 @@ img{display:block; max-width:100%;}
   .hl-band{justify-content:center;}
   .hl-story{grid-template-columns:1fr; margin:40px 0 60px;}
 }
+
+/* ── Connexion directement sur l'accueil (bouton « Se connecter ») ── */
+.hl-auth{position:fixed; inset:0; z-index:100; display:none; align-items:center; justify-content:center; padding:20px;
+  background:rgba(20,26,20,.45); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);}
+.hl-auth.open{display:flex;}
+.hl-auth-card{position:relative; width:100%; max-width:400px; background:var(--cream); border-radius:24px; padding:28px 24px 22px;
+  box-shadow:0 24px 60px rgba(0,0,0,.25);}
+.hl-auth-card h3{margin:0 0 4px; font-size:24px; font-weight:600; color:var(--sauge-deep);}
+.hl-auth-sub{margin:0 0 20px; font-size:14.5px; color:var(--muted);}
+.hl-auth-close{position:absolute; top:14px; right:14px; width:34px; height:34px; border-radius:50%; border:none; background:var(--cream-deep);
+  font-size:18px; line-height:1; color:var(--ink); cursor:pointer;}
+.hl-auth label{display:block; margin:0 0 6px; font-size:13px; font-weight:600; color:var(--ink);}
+.hl-auth input{width:100%; margin:0 0 14px; padding:13px 14px; border:1.5px solid var(--cream-deep); border-radius:14px; background:#fff;
+  font:400 16px 'Jost',sans-serif; color:var(--ink); box-sizing:border-box;}
+.hl-auth input:focus{outline:none; border-color:var(--sauge-light);}
+.hl-auth-err{min-height:18px; margin:0 0 10px; font-size:13.5px; color:#B2543B;}
+.hl-auth-err.ok{color:var(--sauge-deep);}
+.hl-auth-submit{width:100%; padding:15px; border:none; border-radius:16px; background:var(--sauge-deep); color:var(--cream);
+  font:600 15.5px 'Jost',sans-serif; cursor:pointer;}
+.hl-auth-submit:disabled{opacity:.6; cursor:default;}
+.hl-auth-links{display:flex; flex-direction:column; align-items:center; gap:6px; margin-top:14px;}
+.hl-auth-links button{border:none; background:none; padding:4px; font:500 14px 'Jost',sans-serif; color:var(--sauge); cursor:pointer; text-decoration:underline; text-underline-offset:3px;}
 </style>
 </head>
 <body>
@@ -337,6 +359,28 @@ img{display:block; max-width:100%;}
   </section>
 </main>
 
+<div class="hl-auth" id="hlAuth" role="dialog" aria-modal="true" aria-labelledby="hlAuthTitle">
+  <form class="hl-auth-card" id="hlAuthForm" novalidate>
+    <button type="button" class="hl-auth-close" id="hlAuthClose" aria-label="Fermer">×</button>
+    <h3 id="hlAuthTitle">Se connecter</h3>
+    <p class="hl-auth-sub">Un seul compte pour Fiftin Séjours et Fiftin Planning.</p>
+    <label for="hlAuthEmail">E-mail</label>
+    <input type="email" id="hlAuthEmail" autocomplete="email" required>
+    <label for="hlAuthPw">Mot de passe</label>
+    <input type="password" id="hlAuthPw" autocomplete="current-password" required>
+    <div id="hlAuthPw2Row" hidden>
+      <label for="hlAuthPw2">Confirmer le mot de passe</label>
+      <input type="password" id="hlAuthPw2" autocomplete="new-password">
+    </div>
+    <div class="hl-auth-err" id="hlAuthErr" role="status"></div>
+    <button type="submit" class="hl-auth-submit" id="hlAuthSubmit">Se connecter</button>
+    <div class="hl-auth-links">
+      <button type="button" id="hlAuthToggle">Pas encore de compte ? En créer un</button>
+      <button type="button" id="hlAuthForgot">Mot de passe oublié ?</button>
+    </div>
+  </form>
+</div>
+
 <script>
 var FIFTIN_FIREBASE_CONFIG = {
   apiKey:"AIzaSyBr0AdydzhN_PLgTVb3yNoFeZC8RQMo854",
@@ -390,9 +434,83 @@ function hlLoadFirebase(cb){
 var hlUser=null;
 var hlBtn=document.getElementById("hlAccBtn"), hlMenu=document.getElementById("hlMenu");
 hlBtn.addEventListener("click",function(e){
-  if(!hlUser) return; // non connecté : lien vers la connexion (sejours/?login=1)
   e.preventDefault();
+  if(!hlUser){ hlOpenAuth(); return; } // non connecté : encart de connexion sur place
   hlMenu.classList.toggle("open");
+});
+
+/* Connexion sur l'accueil même (plus de détour par Séjours) : même compte
+   Firebase, mêmes messages et même comportement que le volet de connexion
+   de Séjours (submitAuthSheet() dans sejours/index.html). Une fois
+   connecté, le bouton devient « Mon compte » et son menu s'ouvre. */
+var HL_AUTH_ERRORS = {
+  "auth/email-already-in-use":"Un compte existe déjà avec cet e-mail — connectez-vous plutôt.",
+  "auth/invalid-email":"Adresse e-mail invalide.",
+  "auth/weak-password":"Mot de passe trop court (6 caractères minimum).",
+  "auth/user-not-found":"Aucun compte avec cet e-mail.",
+  "auth/wrong-password":"Mot de passe incorrect.",
+  "auth/invalid-credential":"E-mail ou mot de passe incorrect.",
+  "auth/invalid-login-credentials":"E-mail ou mot de passe incorrect.",
+  "auth/too-many-requests":"Trop de tentatives — réessayez dans quelques minutes.",
+  "auth/network-request-failed":"Problème de connexion internet — réessayez."
+};
+function hlAuthMsg(err){ return HL_AUTH_ERRORS[err.code] || ("Erreur : "+(err.message||err.code||"inconnue")); }
+var hlAuth=document.getElementById("hlAuth"), hlAuthMode="signin";
+function hlAuthEl(id){ return document.getElementById(id); }
+function hlSetErr(t, ok){ var e=hlAuthEl("hlAuthErr"); e.textContent=t||""; e.classList.toggle("ok",!!ok); }
+function hlRenderAuthMode(){
+  var up = hlAuthMode==="signup";
+  hlAuthEl("hlAuthTitle").textContent = up ? "Créer un compte" : "Se connecter";
+  hlAuthEl("hlAuthSubmit").textContent = up ? "Créer le compte" : "Se connecter";
+  hlAuthEl("hlAuthToggle").textContent = up ? "Déjà un compte ? Se connecter" : "Pas encore de compte ? En créer un";
+  hlAuthEl("hlAuthForgot").hidden = up;
+  hlAuthEl("hlAuthPw2Row").hidden = !up;
+  hlAuthEl("hlAuthPw").setAttribute("autocomplete", up ? "new-password" : "current-password");
+  hlSetErr("");
+}
+function hlOpenAuth(){
+  hlAuthMode="signin"; hlRenderAuthMode();
+  hlAuth.classList.add("open");
+  setTimeout(function(){ hlAuthEl("hlAuthEmail").focus(); }, 50);
+}
+function hlCloseAuth(){ hlAuth.classList.remove("open"); }
+hlAuthEl("hlAuthClose").addEventListener("click", hlCloseAuth);
+hlAuth.addEventListener("click", function(e){ if(e.target===hlAuth) hlCloseAuth(); });
+document.addEventListener("keydown", function(e){ if(e.key==="Escape") hlCloseAuth(); });
+hlAuthEl("hlAuthToggle").addEventListener("click", function(){ hlAuthMode = hlAuthMode==="signup"?"signin":"signup"; hlRenderAuthMode(); });
+hlAuthEl("hlAuthForgot").addEventListener("click", function(){
+  var email=hlAuthEl("hlAuthEmail").value.trim();
+  if(!email){ hlSetErr("Entrez d'abord votre e-mail ci-dessus."); return; }
+  if(typeof firebase==="undefined"){ hlSetErr("Connexion indisponible pour le moment — réessayez dans un instant."); return; }
+  firebase.auth().sendPasswordResetEmail(email)
+    .then(function(){ hlSetErr("E-mail envoyé — vérifiez votre boîte de réception.", true); })
+    .catch(function(err){ hlSetErr(hlAuthMsg(err)); });
+});
+hlAuthEl("hlAuthForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  var email=hlAuthEl("hlAuthEmail").value.trim(), pw=hlAuthEl("hlAuthPw").value, btn=hlAuthEl("hlAuthSubmit");
+  hlSetErr("");
+  if(!email || !pw){ hlSetErr("Renseignez e-mail et mot de passe."); return; }
+  if(typeof firebase==="undefined"){ hlSetErr("Connexion indisponible pour le moment — réessayez dans un instant."); return; }
+  var label=btn.textContent, settled=false;
+  function done(){ settled=true; clearTimeout(slow); btn.disabled=false; btn.textContent=label; }
+  function fail(err){ done(); hlSetErr(hlAuthMsg(err)); }
+  function ok(){ done(); hlCloseAuth(); hlAuthEl("hlAuthPw").value=""; hlAuthEl("hlAuthPw2").value=""; hlMenu.classList.add("open"); }
+  // Même filet que Séjours : jamais un bouton muet si le stockage du navigateur ne répond plus.
+  var slow=setTimeout(function(){
+    if(settled) return;
+    done(); hlSetErr("La connexion ne répond pas. Fermez complètement le navigateur (⌘Q sur Mac), rouvrez-le puis réessayez.");
+  }, 15000);
+  btn.disabled=true; btn.textContent = hlAuthMode==="signup" ? "Création…" : "Connexion…";
+  if(hlAuthMode==="signup"){
+    if(pw!==hlAuthEl("hlAuthPw2").value){ done(); hlSetErr("Les deux mots de passe ne correspondent pas."); return; }
+    firebase.auth().createUserWithEmailAndPassword(email, pw).then(function(cred){
+      cred.user.sendEmailVerification().catch(function(err){ console.error("[auth] sendEmailVerification a échoué", err); });
+      ok();
+    }).catch(fail);
+  } else {
+    firebase.auth().signInWithEmailAndPassword(email, pw).then(ok).catch(fail);
+  }
 });
 document.addEventListener("click",function(e){ if(!e.target.closest(".hl-account")) hlMenu.classList.remove("open"); });
 document.getElementById("hlSignOut").addEventListener("click",function(){
