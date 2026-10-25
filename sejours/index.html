@@ -96,13 +96,12 @@ a{color:inherit; text-decoration:none;}
    animé, entièrement retiré : .brand-mesh/.blob/@keyframes brandDrift*
    n'existent plus nulle part dans ce fichier). .brand-bg-video (juste en
    dessous) est LE MÊME <video> réutilisé à l'identique partout où ce
-   fond de marque apparaissait : ici, .mkt-page .cover et .mkt-page
-   .close (voir leurs sections plus bas) — orientation (portrait/paysage)
+   fond de marque apparaissait (la page commerciale, désormais dans
+   planning/index.html, en garde sa propre copie) — orientation (portrait/paysage)
    choisie en JS via fiftinSetBrandVideoSrc(), déclarée une fois ici,
    appelée à chaque endroit où un <video class="brand-bg-video"> apparaît
    (inline juste après pour #hero, statique donc le <script> qui suit
-   s'exécute ; depuis renderHostMarketingPage() pour .cover/.close,
-   injectés via innerHTML où un <script> inline ne s'exécuterait pas).
+   s'exécute).
    Élément de flux normal (pas position:fixed) : le scroll classique
    du navigateur le fait défiler et découvrir le fil en dessous, sans
    JS de "scroll-hijack". */
@@ -138,9 +137,9 @@ a{color:inherit; text-decoration:none;}
    si le fichier est petit), donc plus jamais d'aplat uni visible. Variante
    portrait/paysage choisie par @media(orientation), même logique que
    fiftinSetBrandVideoSrc() en JS pour la vraie source vidéo. */
-#hero, .mkt-page .cover, .mkt-page .close{background-size:cover; background-position:center;}
-@media(orientation:portrait){#hero, .mkt-page .cover, .mkt-page .close{background-image:url(data:image/webp;base64,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)}}
-@media(orientation:landscape){#hero, .mkt-page .cover, .mkt-page .close{background-image:url(data:image/webp;base64,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)}}
+#hero{background-size:cover; background-position:center;}
+@media(orientation:portrait){#hero{background-image:url(data:image/webp;base64,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)}}
+@media(orientation:landscape){#hero{background-image:url(data:image/webp;base64,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)}}
 /* Grain épaissi (retour utilisateur, capture de référence à l'appui :
    "j'aime beaucoup le grain de cette image, le même pour atténuer un peu
    la texture saccadée des dégradés") — posé en CSS par-dessus la vidéo
@@ -2353,249 +2352,20 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card li:nth-child(5n+4)::before{background:#D88A9A;}
 .plan-card li:nth-child(5n+5)::before{background:var(--yellow);}
 
-/* ---------- page commerciale portee (ex index.html racine) ----------
-   Retour utilisateur : "fiftin.fr dirige directement le voyageur sur
-   sejours ; quand un hote sur formule simple atteint App gestion, la
-   premiere page qu'il voit est la page commerciale". Toute classe ici
-   est scopee sous .mkt-page (ancetre) plutot que renommee : .cover et
-   .blob existent deja ailleurs dans ce fichier avec un sens totalement
-   different (carte photo d'annonce / mesh du bandeau marque) -- la
-   portee .mkt-page X{} les isole sans toucher a l'existant. Couleurs :
-   memes variables que le reste du fichier (meme charte), pas de nouveau
-   :root -- --terracotta(-soft)/--lavender-strong de la page d'origine
-   n'existaient que comme alias des memes valeurs hex que --sauge-deep/
-   --lavender-soft/--lavender ici, renommes en consequence ci-dessous. */
-/* Retour utilisateur, capture à l'appui : "le hero d'entrée n'est pas
-   full screen sur la page commerciale, il semble y avoir une marge sur
-   toute la page" — confirmé : #feed (voir plus bas) a 18px de padding
-   latéral par défaut, pour les vues en cartes (Explorer collé à 0 via
-   .feed-explore, mais Profil/Espace hôtes — dont "App gestion" fait
-   partie, voir renderHostTabContent() — gardent volontairement ce
-   padding pour LEUR contenu en cartes). .mkt-page est pensée plein
-   écran (vidéos/fonds .cover/.dark/.close en bord à bord, .inner
-   recentre déjà son propre contenu à l'intérieur) : jamais compensé
-   jusqu'ici, ce qui la faisait flotter avec 18px de fond crème visible
-   de chaque côté au lieu d'être vraiment bord à bord. Marge négative
-   == le padding de #feed, pour redonner à .mkt-page toute la largeur
-   de l'écran quel que soit le padding du parent. */
-#feed .mkt-page{margin:0 -18px;}
-.mkt-page{background:var(--cream); color:var(--ink);}
-.mkt-page section{padding:72px 24px; border-bottom:1px solid var(--line); --section-bg:var(--cream);}
-.mkt-page section.mkt-tight-bottom{padding-bottom:0;}
-.mkt-page .inner{max-width:940px; margin:0 auto;}
-.mkt-page .kicker{font-weight:800; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:18px;}
-.mkt-page h2{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(26px,4vw,38px); line-height:1.12; margin:0 0 20px; letter-spacing:-0.01em;}
-.mkt-page h2 em{font-style:italic; font-weight:500;}
-.mkt-page p.big{font-size:17px; line-height:1.6; max-width:640px; color:rgba(46,43,34,0.8); margin:0 0 16px;}
-.mkt-page p.small{font-size:14.5px; line-height:1.6; color:rgba(46,43,34,0.72); margin:0;}
-
-/* background-color (longhand), pas le raccourci "background" : ce dernier
-   réinitialiserait background-image à "none" et effacerait le poster
-   inliné en base64 posé sur .cover/.close plus haut (voir le commentaire
-   sur #hero, .mkt-page .cover, .mkt-page .close juste après
-   .brand-bg-video) — règle plus tardive dans la feuille de style, donc
-   prioritaire à spécificité égale. */
-
-.mkt-page .cover, .mkt-page .dark, .mkt-page .close{background-color:var(--sauge-light); z-index:0;}
-.mkt-page .mesh-bg{position:absolute;inset:0;overflow:hidden;z-index:-2;pointer-events:none;container-type:size;}
-.mkt-page .mesh-bg .blob{position:absolute;border-radius:50%;aspect-ratio:1;filter:blur(60px);}
-.mkt-page .mesh-bg .b1{width:63cqmin;background:var(--lavender);
-  top:-18vh;left:-12%;animation:mktMeshDrift1 18s ease-in-out infinite;}
-.mkt-page .mesh-bg .b2{width:57cqmin;
-  background:radial-gradient(circle at 50% 45%,#fff 0%,var(--yellow) 42%,transparent 76%);
-  filter:blur(38px);top:6vh;right:-16%;animation:mktMeshDrift2 21s ease-in-out infinite -6s;}
-.mkt-page .mesh-bg .b3{width:72cqmin;background:var(--sauge-deep);filter:blur(54px) saturate(1.3);
-  top:65vh;left:7%;animation:mktMeshDrift3 19s ease-in-out infinite -11s;}
-.mkt-page .mesh-bg .streak{position:absolute;width:150%;height:38%;top:-8vh;left:-25%;
-  background:linear-gradient(100deg,transparent 42%,rgba(239,238,234,.4) 50%,transparent 58%);
-  filter:blur(25px);animation:mktMeshStreak 18s ease-in-out infinite -4s;}
-@keyframes mktMeshDrift1{
-  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.66;}
-  25%{transform:translate(16%,9%) scale(1.35,.68) rotate(18deg);opacity:.78;}
-  50%{transform:translate(21%,14%) scale(1.1,1.3) rotate(-10deg);opacity:.86;}
-  75%{transform:translate(-9%,17%) scale(.7,.92) rotate(6deg);opacity:.46;}
-  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.66;}}
-@keyframes mktMeshDrift2{
-  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.7;}
-  20%{transform:translate(-12%,9%) scale(1.35,.6) rotate(-20deg);opacity:.58;}
-  40%{transform:translate(-18%,15%) scale(.68,.72) rotate(0deg);opacity:.48;}
-  58%{transform:translate(3%,-4%) scale(.62,1.55) rotate(16deg);opacity:.68;}
-  75%{transform:translate(13%,-12%) scale(1.35,1.3) rotate(0deg);opacity:.94;}
-  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.7;}}
-@keyframes mktMeshDrift3{
-  0%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.84;}
-  28%{transform:translate(13%,-9%) scale(1.4,.75) rotate(12deg);opacity:.88;}
-  50%{transform:translate(16%,-17%) scale(1.05,1.3) rotate(-8deg);opacity:.92;}
-  75%{transform:translate(-11%,11%) scale(.78,.92) rotate(0deg);opacity:.66;}
-  100%{transform:translate(0,0) scale(1,1) rotate(0deg);opacity:.84;}}
-@keyframes mktMeshStreak{
-  0%{transform:rotate(-18deg) translateY(0);opacity:1;}
-  50%{transform:rotate(-5deg) translateY(20%);opacity:.48;}
-  100%{transform:rotate(-18deg) translateY(0);opacity:1;}}
-/* Même grain épaissi ET animé (seed de feTurbulence animé en SMIL, voir
-   #hero/.brand-grain et son commentaire — un vrai bruit différent à
-   chaque palier, pas un panning sur un motif figé) que .brand-grain
-   (#hero) — repris ici à l'identique pour que .cover/.dark/.close
-   restent le même système visuel que #hero plutôt que deux textures
-   différentes. */
-.mkt-page .cover::before, .mkt-page .dark::before, .mkt-page .close::before{content:'';position:absolute;inset:0;z-index:-1;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.5' numOctaves='3' stitchTiles='stitch' seed='0'%3E%3Canimate attributeName='seed' values='0;7;3;9;2;8;1;6;4;0' dur='.5s' calcMode='discrete' repeatCount='indefinite'/%3E%3C/feTurbulence%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  mix-blend-mode:overlay;opacity:.22;pointer-events:none;}
-/* .cover et .close ont été basculés sur la même vidéo de fond que #hero
-   (retour utilisateur) — leur .mesh-bg est remplacé par un <video
-   class="brand-bg-video"> (même z-index -2 que l'ancien .mesh-bg, pour
-   rester sous le grain ::before ci-dessus). .dark n'a pas de logo-tile et
-   garde donc son .mesh-bg animé tel quel, inchangé. */
-.mkt-page .cover .brand-bg-video, .mkt-page .close .brand-bg-video{z-index:-2;}
-
-.mkt-page .cover{color:var(--cream); border-bottom:none; padding:72px 24px 0; --section-bg:var(--sauge-deep); overflow:hidden; contain:paint; position:relative;}
-.mkt-page .logo{display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:40px; flex-wrap:wrap;}
-/* Même effet "verre liquide" que #hero .brand-logo, repris À L'IDENTIQUE —
-   retour utilisateur : "partout où tu vois le picto fiftin en image de
-   marque comme l'intro du site". .sm (section .close) garde juste sa
-   taille réduite. --iris-angle/@keyframes irisSpin déjà déclarés une fois
-   pour #hero .brand-logo, réutilisés ici. */
-.mkt-page .logo-tile{position:relative; width:112px; height:112px; border-radius:30px; border:none;
-  flex:none; display:flex; align-items:center; justify-content:center; overflow:hidden;
-  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
-      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
-    rgba(29,40,32,.14);
-  backdrop-filter:blur(9px) saturate(1.4);
-  -webkit-backdrop-filter:blur(9px) saturate(1.4);
-  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
-    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
-    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
-.mkt-page .logo-tile::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
-  background:conic-gradient(from var(--iris-angle,0deg),
-    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
-    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
-  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite:exclude;
-  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite:xor;
-  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.mkt-page .logo-tile::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
-  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
-  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
-.mkt-page .logo-tile img{width:61%; height:auto; display:block;}
-.mkt-page .logo-tile.sm{width:72px; height:72px; border-radius:18px; margin:0 auto 26px;}
-.mkt-page .cover h1{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(30px,6.2vw,46px); line-height:1.08; margin:0 0 20px; letter-spacing:-0.02em;}
-.mkt-page .cover h1 em{font-style:italic; font-weight:500; color:var(--lavender-soft);}
-.mkt-page .cover p{font-size:18px; line-height:1.5; font-weight:500; color:rgba(245,240,229,0.94); max-width:580px; margin:0; letter-spacing:-0.005em;}
-
-/* Visuel hero ramené au composant .phone-stage/.phone2 standard (retour
-   utilisateur : "remplace par une vue de face comme les autres" — l'ancienne
-   capture au rendu incliné/3D, shot-hero.webp, montrait de vraies données
-   client en trop petit pour être retouchée proprement ; supprimée, cette
-   section réutilise désormais shot-planning.webp, déjà anonymisée). */
-.mkt-page .hero-flex{display:flex; flex-direction:column; align-items:center;}
-
-.mkt-page .stat-row{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin:30px 0 8px;}
-.mkt-page .stat{background:#fff; border:1px solid var(--line); border-radius:16px; padding:20px;}
-.mkt-page .stat .n{font-family:'Jost',sans-serif; font-weight:800; font-size:34px; line-height:1; color:var(--lavender); letter-spacing:-0.03em; margin-bottom:8px;}
-.mkt-page .stat .l{font-size:13.5px; line-height:1.5; color:rgba(46,43,34,0.72);}
-
-.mkt-page .dark{color:var(--cream); --section-bg:var(--sauge-deep); position:relative; overflow:hidden;}
-.mkt-page .dark h2{color:var(--cream);}
-.mkt-page .dark p.big, .mkt-page .dark p.small{color:rgba(245,240,229,0.84);}
-.mkt-page .dark .kicker{color:var(--lavender-soft);}
-
-.mkt-page .mods{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; margin-top:30px;}
-.mkt-page .mod{background:#fff; border:1px solid var(--line); border-radius:16px; padding:22px;}
-.mkt-page .mod h3{font-family:'Jost',sans-serif; font-size:18px; font-weight:600; margin:0 0 6px;}
-.mkt-page .mod .claim{font-family:'Fraunces',serif; font-style:italic; font-size:14.5px; color:var(--sauge-deep); margin:0 0 12px;}
-.mkt-page .mod p{font-size:13.5px; line-height:1.55; color:rgba(46,43,34,0.7); margin:0;}
-.mkt-page .mod.mod-sauge{
-  background:
-    radial-gradient(circle at 18% 12%, rgba(123,148,232,.28) 0%, transparent 42%),
-    radial-gradient(circle at 88% 92%, rgba(29,40,32,.55) 0%, transparent 50%),
-    linear-gradient(155deg, var(--sauge) 0%, var(--sauge-deep) 100%);
-  border-color:transparent;}
-.mkt-page .mod.mod-sauge h3{color:var(--cream);}
-.mkt-page .mod.mod-sauge p{color:rgba(245,240,229,0.82);}
-.mkt-page .mod.mod-lav{
-  background-image:url("assets/bg-card-lavender.webp");
-  background-size:cover; background-position:center;
-  border-color:transparent;}
-.mkt-page .mod.mod-lav h3{color:var(--cream);}
-.mkt-page .mod.mod-lav p{color:rgba(245,240,229,0.85);}
-
-.mkt-page .mods-visual{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:18px; margin-top:30px;}
-.mkt-page .mod-visual{
-  background:
-    radial-gradient(circle at 18% 10%, rgba(123,148,232,.26) 0%, transparent 40%),
-    radial-gradient(circle at 90% 96%, rgba(29,40,32,.5) 0%, transparent 48%),
-    linear-gradient(155deg, var(--sauge) 0%, var(--sauge-deep) 100%);
-  color:var(--cream); border:none; border-radius:16px; overflow:hidden;
-  height:560px; padding:22px 22px 0; display:flex; flex-direction:column; align-items:center;}
-.mkt-page .mod-visual .mv-text{width:100%;}
-.mkt-page .mod-visual h3{font-family:'Jost',sans-serif; font-size:18px; font-weight:600; margin:0 0 6px; color:var(--cream);}
-.mkt-page .mod-visual .claim{font-family:'Fraunces',serif; font-style:italic; font-size:14.5px; color:var(--lavender-soft); margin:0 0 12px;}
-.mkt-page .mod-visual p{font-size:13.5px; line-height:1.55; color:rgba(245,240,229,0.82); margin:0;}
-.mkt-page .mod-visual .mv-shot{width:100%; flex:1; min-height:0; display:flex; justify-content:center; align-items:flex-end; margin-top:18px;}
-
-.mkt-page .cmp-hd{margin-top:26px; padding:0 0 6px; font-size:11.5px; text-transform:uppercase;
-  letter-spacing:.07em; color:rgba(46,43,34,0.5); font-weight:800;}
-.mkt-page .compare-grid{display:flex; flex-direction:column;}
-.mkt-page .cmp-row{padding:12px 0; border-bottom:1px solid var(--line);}
-.mkt-page .cmp-label{display:block; font-weight:600; font-size:14px; margin-bottom:9px;}
-.mkt-page .cmp-pills{display:flex; gap:10px; flex-wrap:wrap;}
-.mkt-page .cmp-pill{flex:1; min-width:124px; text-align:center; font-size:12.5px; font-weight:700;
-  padding:6px 10px; border-radius:20px;}
-.mkt-page .cmp-pill b{font-weight:800;}
-.mkt-page .cmp-pill.yes{color:var(--cream); background:var(--sauge);}
-.mkt-page .cmp-pill.no{color:rgba(46,43,34,0.45); background:rgba(46,43,34,0.05); font-weight:600;}
-.mkt-page .cmp-pill.no b{font-weight:700;}
-
-.mkt-page .plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin-top:30px;}
-.mkt-page .plan{background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; position:relative;}
-.mkt-page .plan.mkt-plan-current{border-color:var(--sauge); box-shadow:0 0 0 1.5px var(--sauge) inset;}
-.mkt-page .plan .name{font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-.mkt-page .plan .mkt-plan-tag{background:var(--sauge); color:var(--cream); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:none; padding:3px 8px; border-radius:20px;}
-.mkt-page .plan .price{font-family:'Jost',sans-serif; font-weight:800; font-size:36px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px;}
-.mkt-page .plan .per{font-size:13.5px; color:rgba(46,43,34,0.6); margin-bottom:16px;}
-.mkt-page .plan ul{margin:0; padding:0; list-style:none;}
-.mkt-page .plan li{font-size:13.5px; line-height:1.5; padding:6px 0 6px 18px; position:relative; color:rgba(46,43,34,0.78);}
-.mkt-page .plan li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:13px; border-radius:2.5px; background:var(--sauge-deep);}
-.mkt-page .plan li:nth-child(5n+1)::before{background:var(--lavender);}
-.mkt-page .plan li:nth-child(5n+2)::before{background:#C97B5C;}
-.mkt-page .plan li:nth-child(5n+3)::before{background:#6B8F71;}
-.mkt-page .plan li:nth-child(5n+4)::before{background:#D88A9A;}
-.mkt-page .plan li:nth-child(5n+5)::before{background:var(--yellow);}
-.mkt-page .plan .mkt-plan-cta{width:100%; margin-top:16px; padding:13px; font-size:13px;}
-
-.mkt-page .phone2{width:200px; flex:none; position:relative;}
-.mkt-page .phone2 img{display:block; width:100%; height:auto;}
-.mkt-page .phone-stage{position:relative; overflow:hidden; contain:paint; height:294px;}
-.mkt-page .phone-stage .phone2{will-change:transform;}
-.mkt-page .mod-visual .phone2, .mkt-page .phone-stage.mkt-lg .phone2{width:240px;}
-.mkt-page .mod-visual .phone-stage, .mkt-page .phone-stage.mkt-lg{height:353px;}
-
-.mkt-page .shot-row{display:flex; gap:28px; flex-wrap:wrap; justify-content:center; margin-top:34px;}
-
-.mkt-page .quote{font-family:'Jost',sans-serif; font-size:clamp(20px,3.2vw,28px); line-height:1.35; font-weight:400; max-width:720px; margin:0;}
-.mkt-page .quote em{font-style:italic; color:var(--lavender-soft);}
-.mkt-page .quote-lead{font-family:'Jost',sans-serif; font-weight:600; font-size:clamp(26px,4.8vw,38px); line-height:1.22; max-width:760px; margin:0; letter-spacing:-0.01em;}
-
-.mkt-page .close{color:var(--cream); text-align:center; border-bottom:none; padding:72px 24px 80px; position:relative; overflow:hidden;}
-.mkt-page .close h2{color:var(--cream); font-size:clamp(30px,6.5vw,46px); margin:0 0 22px; letter-spacing:-0.02em;}
-.mkt-page .close-punch{font-family:'Jost',sans-serif; font-size:clamp(17px,2.6vw,21px); line-height:1.45; color:rgba(245,240,229,0.85); max-width:560px; margin:0 auto;}
-@media (max-width:640px){
-  .mkt-page .mod-visual{height:480px; padding:18px 18px 0;}
-  .mkt-page .phone2{width:170px;} .mkt-page .phone-stage{height:251px;}
-}
-/* Lien « Fiftin. » vers la page d'accueil, en tête du fil (voir .sej-home dans le HTML). */
-.sej-home{display:block; padding:calc(12px + env(safe-area-inset-top,0px)) 18px 6px; font-family:'Jost',sans-serif; font-weight:700;
-  font-size:22px; letter-spacing:-.01em; color:var(--sauge-deep); text-decoration:none; background:#fff;}
+/* Pictogramme Fiftin centré en tête du fil : retour à l'accueil fiftin.fr
+   (même repère en haut de toutes les pages du site, voir .sej-home dans le HTML). */
+.sej-home{display:flex; justify-content:center; padding:calc(10px + env(safe-area-inset-top,0px)) 18px 4px; background:#fff;}
+.sej-home span{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(145deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 45%, rgba(16,22,18,.18) 100%), var(--sauge);
+  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.4), inset 0 -3px 6px rgba(8,13,10,.3), 0 4px 12px rgba(29,40,32,.16);}
+.sej-home img{width:62%; height:auto; display:block;}
 </style>
 
 <script>
-// Fond vidéo de marque (#hero, .mkt-page .cover, .mkt-page .close) — voir
+// Fond vidéo de marque (#hero) — voir
 // le commentaire sur .brand-bg-video plus haut. Déclarée ici (tout premier
 // <script> du <body>, avant le <video> de #hero juste en dessous) pour que
-// l'appel inline de #hero puisse la trouver, et pour qu'elle reste
-// accessible plus tard depuis renderHostMarketingPage() (fonction globale,
-// visible même depuis l'IIFE du script applicatif en fin de fichier).
+// l'appel inline de #hero puisse la trouver.
 function fiftinSetBrandVideoSrc(id){
   var v=document.getElementById(id);
   if(v){
@@ -2631,8 +2401,8 @@ function fiftinSetBrandVideoSrc(id){
 <div id="app">
 
   <!-- Ancienne intro (#hero) retirée : la page d'accueil fiftin.fr/ joue ce
-       rôle. Le nom de marque en tête ramène à cet accueil (base href="/"). -->
-  <a class="sej-home" href="./">Fiftin.</a>
+       rôle. Le pictogramme en tête ramène à cet accueil (base href="/"). -->
+  <a class="sej-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><span><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span></a>
 
 
 
@@ -3053,7 +2823,7 @@ var authContext = "traveler";
 /* Les 3 formules hôte, affichées en lecture seule dans le profil hôte
    (planCardHtml(), voir plus bas — retour utilisateur : "fais la partie
    formule dans la vue profile exactement comme sur fiftin app") et sur la
-   page commerciale (mktPlanCardHtml()). name/price/desc : hérités de
+   page commerciale (planning/index.html, sa propre copie). name/price/desc : hérités de
    l'ancien sélecteur à l'inscription (retiré, voir kind==="auth"), plus
    utilisés nulle part — gardés tels quels dans ces objets plutôt que
    retirés un par un, aucun risque à les laisser inertes. Texte des
@@ -3536,7 +3306,7 @@ function loadFirebaseSDK(cb){
         s4.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js";
         s4.onload = function(){
           // firebase-functions-compat : nécessaire pour startCheckoutFromProfile()
-          // (openHostGestionApp() -> formule payante) et mktPlanCardHtml() — appel
+          // et startCheckoutFromSejours() (cartes formule du Profil hôte) — appel
           // direct à createCheckoutSession, même Cloud Function que côté app/.
           var s5 = document.createElement("script");
           s5.src = "https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js";
@@ -3765,14 +3535,14 @@ function fetchPublishedListings(cb){
          repéré en revenant de Fiftin app via #backToSejoursBtn (rechargement
          complet de la page, donc ce listener repart de zéro pendant que la
          session hôte se restaure). */
-      if(!state.hostMode && !hostPreviewMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
-      else if(!state.hostMode && !hostPreviewMode && state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
+      if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+      else if(!state.hostMode && state.tab==="likes") renderTabContent(); // Favoris (tuiles de collection) peut dépendre des photos de LISTINGS, tout juste arrivées
       // savedListingsCount() dépend de LISTINGS : au tout premier rendu du
       // badge (renderTabbar() au boot), LISTINGS est encore vide — sans
       // ce ré-appel, un favori valide resterait compté 0 jusqu'à la
       // prochaine interaction qui appelle renderLikeBadge() par ailleurs.
       renderLikeBadge();
-      if(!state.hostMode && !hostPreviewMode) maybeOpenDeepLink(); // idem : un lien partagé (?listing=) ne doit jamais ouvrir une fiche par-dessus une session hôte (ni par-dessus l'aperçu /hotes)
+      if(!state.hostMode) maybeOpenDeepLink(); // idem : un lien partagé (?listing=) ne doit jamais ouvrir une fiche par-dessus une session hôte
       settle();
     }).catch(function(err){
       /* Silencieux : le fil statique (listings.json) reste affiché tel quel. */
@@ -3841,9 +3611,9 @@ function fetchListingIndex(){
       if(!state.loading){
         // Même garde qu'au listener de fetchPublishedListings() ci-dessus :
         // ne jamais écraser #feed avec le fil voyageur pendant une session
-        // hôte restaurée (ni pendant l'aperçu /hotes, voir hostPreviewMode).
-        if(!state.hostMode && !hostPreviewMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
-        else if(!state.hostMode && !hostPreviewMode && state.tab==="likes") renderTabContent();
+        // hôte restaurée.
+        if(!state.hostMode && state.tab==="explore"){ renderFeed(); renderResultLine(); }
+        else if(!state.hostMode && state.tab==="likes") renderTabContent();
       }
       if(snap.empty){
         // Filet de secours — voir aussi matchingIndexListings() : un
@@ -6728,7 +6498,7 @@ function closeDetail(){
    principalement être dans la vue profile, en cliquant sur les cartes ...
    ça fait très loin comme chemin [en passant par app/ Réglages]. La base
    devrait être sur la vue profile -> espace hôte") — même bouton/span que
-   mktPlanCardHtml() (même gabarit <span> attendu par startCheckoutFromSejours()/
+   la page commerciale (même gabarit <span> attendu par startCheckoutFromSejours()/
    openBillingPortalFromSejours(), voir leur wiring dans renderHostProfile()).
    Carte active : "Gérer mon abonnement" (data-manage-billing) au lieu de
    rien du tout si la formule est payante — retour utilisateur : "nulle
@@ -7673,6 +7443,9 @@ function submitAuthSheet(){
   var btn = document.getElementById("sheet-apply");
   btn.disabled = true;
   var afterAuth = function(){
+    // Connexion demandée par une autre page du site (?next=, voir les
+    // entrées depuis l'accueil en fin de fichier) : on y retourne.
+    if(authNextUrl){ location.href = authNextUrl; return; }
     closeSheet();
     // switchTab("profile"), pas renderProfile() directement : renderProfile()
     // ne fait que réécrire #feed, sans jamais toucher #filter-bar/#result-line
@@ -9525,13 +9298,6 @@ function renderTabContent(){
 }
 
 function switchTab(tab){
-  // Sortie de l'aperçu de la page commerciale (/planning/, voir
-  // previewHostMarketingPage) vers un onglet voyageur : le fil reprend la
-  // main et l'adresse redevient celle de Séjours.
-  if(hostPreviewMode){
-    hostPreviewMode = false;
-    if(location.pathname.indexOf("/planning")===0) history.replaceState(null, "", "/sejours/");
-  }
   // Retour utilisateur : "à chaque passage sur cette vue séjour, un scroll
   // left et right automatique pour montrer aux gens que c'est en faisant ce
   // geste qu'ils accèdent à d'autres réglages" — capturé AVANT state.tab=tab
@@ -9754,42 +9520,6 @@ function renderTabbar(){
 }
 
 /* ---------------- espace hôtes ---------------- */
-/* Aperçu public (sans compte) de la page commerciale hôte, point d'entrée
-   depuis /hotes (voir hotes/index.html, un simple redirect vers
-   /?hotes=1, et la détection de ce paramètre juste après le boot plus
-   bas) — retour utilisateur : les visiteurs ne pouvaient plus du tout
-   atteindre cette page tant qu'enterHostMode() exige authState.uid, alors
-   que "très vite on doit proposer notre service de gestion aux hôtes".
-   Reprend seulement les effets de bord d'enterHostMode() qui n'ont pas
-   besoin d'un compte (hero/map-back-btn masqués, filtres repliés, #feed
-   basculé sur le fond clair) puis appelle renderHostMarketingPage()
-   directement. NE touche PAS à state.hostMode ni à renderTabbar() :
-   HOST_TABS_HTML (Profil/Mes annonces/App gestion) suppose un compte déjà
-   connecté et n'aurait aucun sens pour un visiteur anonyme — la barre
-   d'onglets voyageur reste donc affichée telle quelle, pour qu'il puisse
-   toujours repartir vers Explorer d'un clic. hostPreviewMode (var module,
-   jamais persistée dans state/localStorage : un simple aperçu, pas un vrai
-   mode) sert uniquement de garde dans maybeFinishInitialLoad(), même
-   mécanique que state.hostMode (voir son commentaire) — sans elle, le fil
-   voyageur écraserait cet aperçu dès que listings.json/Firestore
-   répondent. */
-var hostPreviewMode = false;
-function previewHostMarketingPage(){
-  hostPreviewMode = true;
-  window.scrollTo(0,0);
-  if(!heroDismissed){
-    heroDismissed = true;
-    var heroEl = document.getElementById("hero");
-    if(heroEl) heroEl.hidden = true;
-  }
-  var mapBackBtnPreview = document.getElementById("map-back-btn");
-  if(mapBackBtnPreview) mapBackBtnPreview.hidden = true;
-  document.getElementById("filter-bar").classList.add("chrome-collapsed");
-  document.getElementById("result-line").classList.add("chrome-collapsed");
-  document.getElementById("feed").classList.remove("feed-explore");
-  document.getElementById("feed").classList.add("feed-map");
-  renderHostMarketingPage();
-}
 /* Bascule déclenchée depuis Profil → Espace hôtes (connecté) : remplace la
    barre d'onglets et le contenu de #feed, masque le bandeau de filtres
    (qui n'a pas de sens ici) — sans toucher au reste de la mécanique
@@ -9864,7 +9594,10 @@ function renderHostTabContent(){
   // n'est pas concerné (déjà le cas avant la fusion du calendrier dedans) :
   // ses propres cartes (.admin-card) et, une fois dépliée, la carte blanche
   // du calendrier (.cal-card) se détachent très bien du fond crème normal.
-  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile"||state.hostTab==="app");
+  // "app" : ancienne vue page commerciale (désormais /planning/), encore
+  // possible dans un état restauré depuis localStorage.
+  if(state.hostTab==="app") state.hostTab = "profile";
+  document.getElementById("feed").classList.toggle("feed-map", state.hostTab==="profile");
   // feed-explore (dégradés .fade-edge-top/.fade-edge-bottom + cartes pleine
   // largeur du fil Explorer, voir leur CSS) n'a de sens que côté voyageur,
   // posée par switchTab() — jamais retirée en entrant en mode hôte quand
@@ -9873,7 +9606,6 @@ function renderHostTabContent(){
   // plaqué en haut du Profil hôte (bug réel vu en usage).
   document.getElementById("feed").classList.remove("feed-explore");
   if(state.hostTab==="profile") renderHostProfile();
-  else if(state.hostTab==="app") renderHostMarketingPage();
   else renderHostListings();
 }
 /* Onglet central "App gestion" (HOST_TABS_HTML) : direction différente
@@ -9881,7 +9613,8 @@ function renderHostTabContent(){
    resolveHostAccount()) — retour utilisateur, "si essentiel ou avancé,
    l'app s'ouvre, sinon la page commerciale". Un compte gestion
    (essentiel/pro) part directement sur Fiftin app ; une formule Hôte
-   simple (ou aucun compte gestion) atterrit sur renderHostMarketingPage().
+   simple (ou aucun compte gestion) atterrit sur la page commerciale
+   Fiftin Planning (planning/index.html, page autonome).
    location.href, PAS window.open() (retour utilisateur : "il ouvre un
    popup et fait comme si on redirigeait vers un autre site, ça ne doit
    pas être le cas, ça doit sembler être un même site") — navigation
@@ -9895,89 +9628,23 @@ function openHostGestionApp(openSettings){
     if(plan==="essentiel" || plan==="pro"){
       location.href = "app/" + (openSettings ? "?openSettings=1" : "");
     } else {
-      switchHostTab("app");
+      location.href = "planning/";
     }
-  });
-}
-/* Page commerciale portée depuis l'ancien index.html racine (retour
-   utilisateur : "fiftin.fr devient directement sejours ; quand un hôte
-   formule simple atteint App gestion, la première page qu'il voit c'est
-   la page commerciale"). Classes identiques à l'original, scopées sous
-   .mkt-page en CSS (voir le bloc juste avant </style>) plutôt que
-   renommées : .cover/.blob existent déjà ici avec un sens totalement
-   différent, l'ancêtre .mkt-page les isole sans toucher au reste.
-   Chemins assets en "assets/..." : encore vrai tant que ce fichier vit
-   sous /sejours/ ; à corriger en "assets/..." (sans ../) au moment du
-   déménagement vers la racine (voir le chantier associé).
-   Nav du haut (Se connecter/Créer un compte) et CTA de fin ("Essayer 15
-   jours") volontairement absents : on arrive ici déjà connecté, déjà
-   dans le tabbar hôte, et les 3 formules juste en dessous font office de
-   vraie conclusion — pas la peine de dupliquer l'action. Parallax scroll
-   + compteurs animés de la page d'origine non repris : script à nettoyer
-   à chaque re-render (SPA, pas un chargement unique) pour ne pas
-   accumuler des listeners sur des nœuds détachés à chaque aller-retour
-   vers cet onglet — complexité non justifiée pour un effet décoratif,
-   le contenu statique (ex. "15,5 %") reste parfaitement lisible sans.
-   mktPlanCardHtml() réutilise HOST_FORMULAS (même source que
-   planCardHtml() du Profil hôte) : Formule Hôte toujours "votre formule
-   actuelle" ici (cette vue n'est atteinte QUE par un compte sans plan
-   essentiel/pro, voir openHostGestionApp()) ; Essentiel/Avancé cliquables
-   depuis que Stripe est branché (voir startCheckoutFromSejours() et
-   wireHostMarketingPage() plus bas) — déclenchent un vrai paiement. */
-function mktPlanCardHtml(f){
-  var current = f.value==="simple";
-  var payable = f.value!=="simple";
-  return '<div class="plan'+(current?' mkt-plan-current':'')+(payable?' mkt-plan-payable':'')+'"'+(payable?' data-mkt-plan="'+esc(f.value)+'"':'')+'>'+
-    '<div class="name">'+esc(f.planName)+(current?'<span class="mkt-plan-tag">Votre formule actuelle</span>':'')+'</div>'+
-    '<div class="price">'+esc(f.planPrice)+'</div>'+
-    '<div class="per">'+esc(f.planPer)+'</div>'+
-    '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
-    (payable ? '<button type="button" class="btn primary mkt-plan-cta" data-mkt-plan-btn="'+esc(f.value)+'"><span>Passer à cette formule</span></button>' : '')+
-  '</div>';
-}
-function renderHostMarketingPage(){
-  var feed = document.getElementById("feed");
-  var tarifs = '<section>'+
-    '<div class="inner">'+
-      '<div class="kicker">Tarifs</div>'+
-      '<h2>Tout est <em>in</em>.<br>Aucune commission.</h2>'+
-      '<p class="quote" style="margin:16px 0 26px;">On l\'a construit pour nous.<br><em>Il est maintenant prêt pour vous.</em></p>'+
-      '<div class="plans">'+HOST_FORMULAS.map(mktPlanCardHtml).join("")+'</div>'+
-      '<p class="small" style="margin-top:18px;">Deux mois offerts en facturation annuelle sur les formules de gestion. Vos données restent exportables à tout moment.</p>'+
-    '</div>'+
-  '</section>';
-  feed.innerHTML = '<div class="mkt-page">'+
-    MKT_SECTIONS.join("")+
-    tarifs+
-  '</div>';
-  // Injecté via innerHTML : un <script> inline n'y exécuterait rien, donc
-  // la source vidéo (portrait/paysage) est posée ici plutôt qu'en inline
-  // comme pour #hero (statique, lui, au premier rendu de la page).
-  fiftinSetBrandVideoSrc("mktCoverVideo");
-  fiftinSetBrandVideoSrc("mktCloseVideo");
-  wireHostMarketingPage();
-}
-// Un seul bouton par carte (data-mkt-plan-btn), posé uniquement sur
-// Essentiel/Avancé par mktPlanCardHtml() — jamais sur "Formule Hôte"
-// actuelle, donc pas besoin de distinguer ici.
-function wireHostMarketingPage(){
-  Array.prototype.forEach.call(document.querySelectorAll("[data-mkt-plan-btn]"), function(btn){
-    btn.addEventListener("click", function(){ startCheckoutFromSejours(btn.getAttribute("data-mkt-plan-btn"), btn); });
   });
 }
 // Déclenche un vrai paiement Stripe (createCheckoutSession, même Cloud
 // Function que côté app/ — voir startCheckout() dans app/index.html) et y
-// redirige. Utilisé depuis la page "App gestion" (mktPlanCardHtml) pour un
+// redirige. Utilisé depuis les cartes formule du Profil hôte pour un
 // compte encore en Formule Hôte (simple), seul cas où une formule payante
 // n'est pas accessible depuis app/ lui-même (qui suppose déjà un compte de
-// gestion existant).
+// gestion existant). Après paiement : directement l'outil (app/).
 function startCheckoutFromSejours(plan, btn){
   if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
   if(btn){ btn.disabled = true; btn.querySelector("span").textContent = "Préparation du paiement…"; }
   loadFirebaseSDK(function(){
     firebase.functions().httpsCallable("createCheckoutSession")({
       plan: plan,
-      successUrl: location.origin + location.pathname,
+      successUrl: location.origin + "/app/",
       cancelUrl: location.origin + location.pathname
     }).then(function(res){ location.href = res.data.url; }).catch(function(err){
       console.error("[billing] createCheckoutSession a échoué", err);
@@ -10007,16 +9674,6 @@ function openBillingPortalFromSejours(btn){
     });
   });
 }
-var MKT_SECTIONS = [
-    '<section class="cover">\n  <video class="brand-bg-video" id="mktCoverVideo" autoplay muted loop playsinline aria-hidden="true"></video>\n  <div class="hero-flex">\n    <div class="inner">\n      <div class="logo">\n        <div class="logo-tile"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt="Fiftin"></div>\n      </div>\n      <h1>Le planning qui ne s\'arrête pas<br><em>aux réservations.</em></h1>\n      <p>Pensé pour les chambres d\'hôtes et gîtes. Retrouvez votre temps, votre autonomie et votre rentabilité.</p>\n    </div>\n    <div class="phone-stage mkt-lg"><div class="phone2"><img src="assets/shot-planning.webp" alt="Fiftin — La grille, en situation"></div></div>\n  </div>\n</section>',
-    '<section>\n  <div class="inner">\n    <div class="kicker">D\'où vient le nom</div>\n    <p class="quote-lead">15, c\'est à peu de chose près ce que les plateformes prélèvent aujourd\'hui sur chaque réservation.</p>\n    <p class="big" style="margin-top:30px;">Fiftin est né dans une maison d\'hôtes familiale de cinq chambres et un gîte, tenue par Marine et César — une juriste et un designer graphique partis en quête d\'indépendance. Comme beaucoup, on a fait confiance aux plateformes avant de regarder ce que leur commission représentait vraiment. 15 est resté le chiffre-repère : le coût de ne pas être pleinement propriétaire de son activité. C\'est pour ça que Fiftin existe — pas seulement pour les réservations, pour toute l\'activité.</p>\n    <div class="stat-row" style="margin-top:28px; max-width:420px;">\n      <div class="stat">\n        <div class="n">15,5&nbsp;%</div>\n        <div class="l">Commission unique hôte Airbnb, 18,6 % TTC, depuis octobre 2026.</div>\n      </div>\n      <div class="stat">\n        <div class="n" style="color:var(--sauge);">0 %</div>\n        <div class="l">Ce que vous payez sur une réservation prise en direct.</div>\n      </div>\n    </div>\n  </div>\n</section>',
-    '<section>\n  <div class="inner">\n    <div class="kicker">Le vrai problème</div>\n    <h2>Les plateformes sont un détail.<br><em>La vision d\'ensemble est la clé.</em></h2>\n    <p class="big">Réservations, ménage, clients, extras, TVA, charges, imprévus : une activité d\'hôte, ce sont des centaines de tâches chaque semaine — un carnet ici, un tableur là, le reste dans la tête.</p>\n    <p class="big">Pas un manque de sérieux : un manque de recul sur une information éclatée partout, qui empêche d\'en garder vraiment le contrôle.</p>\n  </div>\n</section>',
-    '<section>\n  <div class="inner">\n    <div class="kicker">Ce que Fiftin fait</div>\n    <h2>Un seul outil,<br><em>de la réservation au bilan.</em></h2>\n    <div class="mods-visual">\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Le planning &amp; la réservation</h3>\n          <p class="claim">« Toute votre année, instantanément. »</p>\n          <p>Une grille en barres colorées, chaque séjour lisible d\'un coup d\'œil. Une réservation se saisit en 15 secondes, pendant que le voyageur est encore en ligne.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/shot-planning.webp" alt="Fiftin — La grille"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Le fichier client</h3>\n          <p class="claim">« Vos habitués, toujours reconnus. »</p>\n          <p>Une réservation sur plateforme reste un séjour anonyme. Une réservation en direct devient un client à vous : nom, email, préférences, historique — prêt à être fidélisé sans repasser par personne.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/shot-clients.webp" alt="Fiftin — Fiche client"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>La comptabilité</h3>\n          <p class="claim">« Une longueur d\'avance sur votre comptable. »</p>\n          <p>CA réalisé, seuil de TVA suivi en direct, marge par location. Charges importées du relevé bancaire.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/shot-comptabilite.webp" alt="Fiftin — Année"></div></div></div>\n      </div>\n      <div class="mod-visual">\n        <div class="mv-text">\n          <h3>Les consommations</h3>\n          <p class="claim">« Rien ne se perd, rien ne s\'oublie. »</p>\n          <p>Table d\'hôtes, boissons, extras : notés d\'un geste, au moment où ça se passe.</p>\n        </div>\n        <div class="mv-shot"><div class="phone-stage"><div class="phone2"><img src="assets/shot-consommations.webp" alt="Fiftin — Consommations"></div></div></div>\n      </div>\n    </div>\n  </div>\n</section>',
-    '<section class="dark mkt-tight-bottom">\n  <div class="mesh-bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="streak"></span></div>\n  <div class="inner">\n    <div class="kicker">Votre vraie vie</div>\n    <h2>Votre bureau, c\'est votre vie.<br><em>Fiftin la simplifie.</em></h2>\n    <p class="big">Le téléphone sonne à la buanderie, au marché, en pleine ménage. Fiftin est là, prêt en un geste — pas cantonné à un bureau que vous n\'avez jamais.</p>\n    <p class="big">Le plombier, la piscine, l\'anniversaire qu\'on ne déplace pas : ça pèse sur votre planning autant qu\'une réservation. Tout au même endroit, pour que les conflits sautent aux yeux avant d\'accepter — pas le matin même.</p>\n    <div class="shot-row">\n      <div><div class="phone-stage mkt-lg"><div class="phone2"><img src="assets/shot-evenements.webp" alt="Fiftin — Vos événements, à côté des séjours"></div></div></div>\n    </div>\n  </div>\n</section>',
-    '<section>\n  <div class="inner">\n    <div class="kicker">Ce qui nous distingue</div>\n    <h2>Les outils généralistes vous apportent<br>des réservations. <em>Fiftin pilote tout ce qu\'il y a autour.</em></h2>\n    <div class="cmp-hd">Fiftin — face aux outils de gestion généralistes</div>\n    <div class="compare-grid">\n      <div class="cmp-row"><span class="cmp-label">Seuils personnalisables, suivis en direct (TVA, nuitées, chiffre d\'affaires)</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Classement par structure fiscale (EI, SASU, SARL)</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Table d\'hôtes, extras et consommations</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Rarement</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Charges et rentabilité par logement</span><div class="cmp-pills"><span class="cmp-pill yes"><b>Fiftin</b> — Oui</span><span class="cmp-pill no"><b>Généralistes</b> — Non</span></div></div>\n      <div class="cmp-row"><span class="cmp-label">Synchronisation automatique des plateformes</span><div class="cmp-pills"><span class="cmp-pill no"><b>Fiftin</b> — Non, volontairement</span><span class="cmp-pill yes"><b>Généralistes</b> — Oui</span></div></div>\n    </div>\n    <p class="small" style="margin-top:18px;">Les channel managers savent déjà très bien synchroniser des annonces sur plusieurs plateformes — ce n\'est pas notre métier. Une réservation Booking ou Airbnb se saisit ici en quelques secondes, à la main. En échange : pas de connexion fragile, pas de tarif qui grimpe, pas de dépendance à une API qu\'on ne contrôle pas.</p>\n  </div>\n</section>',
-    '<section>\n  <div class="inner">\n    <div class="kicker">Sécurité et propriété</div>\n    <h2>Vos données sont entre de bonnes mains —<br><em>les vôtres.</em></h2>\n    <p class="big">Vous confiez à Fiftin les coordonnées de vos clients, leurs séjours, vos chiffres. Cette appartenance est écrite dans le contrat — et appliquée par l\'architecture technique.</p>\n    <div class="mods">\n      <div class="mod mod-sauge">\n        <h3>Un espace scellé par établissement</h3>\n        <p>Vos données sont rattachées à votre seul compte, vérifié par le serveur à chaque requête. Hébergées sur Google Cloud (ISO 27001, SOC 2).</p>\n      </div>\n      <div class="mod mod-lav">\n        <h3>Vos identifiants, vos décisions</h3>\n        <p>Vous seul détenez vos identifiants, nous ne pouvons pas les reconstituer. Vous restez responsable du traitement RGPD ; Fiftin intervient comme sous-traitant, cadré par nos conditions d\'utilisation.</p>\n      </div>\n      <div class="mod mod-sauge">\n        <h3>Réversibilité</h3>\n        <p>Un bouton, un fichier : vos données s\'exportent à tout moment, en CSV ou en format complet. Si vous partez, vous partez avec elles.</p>\n      </div>\n    </div>\n    <p class="small" style="margin-top:20px;">Fiftin n\'exploite, ne revend et n\'analyse jamais les données de vos clients. Elles ne servent qu\'à une chose : faire fonctionner votre outil.</p>\n  </div>\n</section>',
-    '<section class="close">\n  <video class="brand-bg-video" id="mktCloseVideo" autoplay muted loop playsinline aria-hidden="true"></video>\n  <div class="inner">\n    <div class="logo-tile sm"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt="Fiftin"></div>\n    <h2>Ce n\'est pas un outil en plus.<br><em>C\'est toute votre activité, en temps réel, entre vos mains.</em></h2>\n    <p class="close-punch">Vos clients, vos chiffres, votre planning — au même endroit, sous votre seul contrôle.</p>\n  </div>\n</section>'
-];
 /* Profil côté hôte — même en-tête/bascule voyageur⇄hôtes que renderProfile()
    (le bouton #profile-switch-other y mène vers exitHostMode() plutôt que
    vers enterHostMode()/l'auth, seule différence de câblage — voir
@@ -11071,21 +10728,19 @@ if(state.hostMode){
 }
 updateHeroMenu();
 
-/* Point d'entrée /hotes (voir hotes/index.html, qui redirige vers
-   /?hotes=1) : affiche directement la page commerciale hôte à un visiteur
-   non connecté, voir previewHostMarketingPage() plus haut. history.
-   replaceState() retire le paramètre de l'URL une fois le rendu fait —
-   un partage/signet de cette page ne doit pas réafficher ?hotes=1 en
-   toolbar, et un rechargement ultérieur doit redevenir Explorer normal
-   (cet aperçu n'est volontairement jamais persisté, voir hostPreviewMode). */
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
    racine) : ?espace=voyageur → Profil voyageur ; ?espace=hote → Espace
    hôtes (connexion demandée si besoin) ; ?login=1 → volet de connexion.
-   Paramètre retiré de l'adresse aussitôt, comme ?hotes=1 ci-dessous. */
+   &next=/chemin : page du site où revenir une fois connecté (ex. la page
+   Fiftin Planning, qui y relance le paiement de la formule choisie).
+   Paramètres retirés de l'adresse aussitôt. */
+var authNextUrl = null;
 (function(){
   var q = new URLSearchParams(location.search);
-  var espace = q.get("espace"), login = q.get("login");
+  var espace = q.get("espace"), login = q.get("login"), next = q.get("next");
   if(!espace && !login) return;
+  // Chemin interne au site uniquement (jamais une autre origine).
+  if(next && /^\/(?![\/\\])/.test(next)) authNextUrl = next;
   history.replaceState(null, "", location.pathname);
   function whenAuthReady(fn){
     var tries = 0;
@@ -11096,14 +10751,12 @@ updateHeroMenu();
     if(authState.uid) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
   });
   else if(login==="1") whenAuthReady(function(){
-    if(authState.uid) switchTab("profile"); else { authContext = "traveler"; openSheet("auth"); }
+    if(authState.uid){ if(authNextUrl) location.href = authNextUrl; else switchTab("profile"); }
+    else { authContext = authNextUrl ? "host" : "traveler"; openSheet("auth"); }
   });
 })();
-if(new URLSearchParams(location.search).get("hotes")==="1"){
-  previewHostMarketingPage();
-  // Adresse propre de la page commerciale (voir planning/index.html).
-  history.replaceState(null, "", "/planning/");
-}
+// Ancienne adresse de la page commerciale (/?hotes=1, puis /sejours/?hotes=1).
+if(new URLSearchParams(location.search).get("hotes")==="1") location.replace("/planning/");
 
 /* Ne fait passer state.loading à false, et donc ne rend le tout premier
    fil, qu'une fois les DEUX sources revenues (listings.json ET l'index
@@ -11127,10 +10780,8 @@ function maybeFinishInitialLoad(){
      revenant de Fiftin app via #backToSejoursBtn (rechargement complet de
      la page, donc ce chargement initial repart de zéro pendant que la
      session hôte se restaure en parallèle) — même garde que les deux
-     listeners Firestore plus haut dans ce fichier. hostPreviewMode : même
-     logique pour l'aperçu /hotes (voir previewHostMarketingPage()), qui
-     tourne lui aussi avant que ces deux sources aient fini de répondre. */
-  if(state.hostMode || hostPreviewMode) return;
+     listeners Firestore plus haut dans ce fichier. */
+  if(state.hostMode) return;
   if(listingsJsonFailed && !LISTINGS.length){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
     return;
