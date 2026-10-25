@@ -608,16 +608,21 @@ fiftinSetBrandVideoSrc("plHeroVideo");
   window.addEventListener("scroll", req, {passive:true}); window.addEventListener("resize", req); upd();
 })();
 // Grille : le corps du planning défile dans le téléphone à mesure que la
-// page défile (du moment où le téléphone entre à l'écran à sa sortie).
+// page défile, uniquement pendant que le téléphone est entièrement visible
+// (du moment où son bas atteint le bas de la fenêtre à celui où son haut
+// atteint l'en-tête fixe) — début et fin du contenu vus téléphone entier.
 (function(){
   var els=[].slice.call(document.querySelectorAll(".da-gridscroll .gs-body img"));
   if(!els.length) return;
   var raf=0;
   function upd(){
-    raf=0; var vh=window.innerHeight;
+    raf=0; var vh=window.innerHeight, hd=document.querySelector(".pl-header,.hl-top"), head=hd?hd.getBoundingClientRect().bottom:64;
     els.forEach(function(img){
-      var box=img.parentNode, r=box.getBoundingClientRect();
-      var p=Math.min(1,Math.max(0,(vh-r.top)/(vh+r.height)));
+      var box=img.parentNode, r=img.closest(".da-phone").getBoundingClientRect();
+      var c=(r.top+r.bottom)/2, a=vh-r.height/2, z=head+r.height/2;
+      // Fenêtre trop basse pour le téléphone entier : plage centrée de 30 % vh.
+      if(a-z<vh*.3){ var m=(a+z)/2; a=m+vh*.15; z=m-vh*.15; }
+      var p=Math.min(1,Math.max(0,(a-c)/(a-z)));
       var max=Math.max(0,img.offsetHeight-box.clientHeight);
       img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
     });
