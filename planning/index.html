@@ -221,6 +221,21 @@ section[id]{scroll-margin-top:72px;}
 .pl-feature:nth-child(even) .ic svg{color:var(--lavender-deep);}
 .pl-feature h3{font-size:clamp(19px,2vw,22px); line-height:1.25; margin-bottom:8px;}
 .pl-feature p{margin:0; font-size:15.5px; line-height:1.5; color:var(--muted);}
+/* Carte mise en avant : sur mobile, celle qui passe au milieu de l'écran
+   pendant le défilement ; sur ordinateur, celle survolée. Fond dense (vert
+   sauge ou lavande foncée selon la carte), texte blanc. */
+.pl-feature{transition:background .35s ease, box-shadow .35s ease, transform .35s ease;}
+.pl-feature h3, .pl-feature p, .pl-feature .ic, .pl-feature .ic svg{transition:color .35s ease, background-color .35s ease;}
+.pl-feature.is-active{background:var(--sauge); box-shadow:0 18px 40px rgba(29,40,32,.28); transform:translateY(-2px);}
+.pl-feature:nth-child(even).is-active{background:var(--lavender-deep); box-shadow:0 18px 40px rgba(46,62,128,.3);}
+.pl-feature.is-active h3{color:#fff;}
+.pl-feature.is-active p{color:rgba(255,255,255,.85);}
+.pl-feature.is-active .ic{background:rgba(255,255,255,.14);}
+.pl-feature.is-active .ic svg, .pl-feature:nth-child(even).is-active .ic svg{color:var(--yellow);}
+@media (hover:hover){ .pl-feature:hover{background:var(--sauge); box-shadow:0 18px 40px rgba(29,40,32,.28); transform:translateY(-2px);}
+  .pl-feature:nth-child(even):hover{background:var(--lavender-deep); box-shadow:0 18px 40px rgba(46,62,128,.3);}
+  .pl-feature:hover h3{color:#fff;} .pl-feature:hover p{color:rgba(255,255,255,.85);}
+  .pl-feature:hover .ic{background:rgba(255,255,255,.14);} .pl-feature:hover .ic svg{color:var(--yellow);} }
 
 /* Sections texte + visuel */
 .pl-visual{max-width:920px; margin:clamp(36px,5vw,52px) auto 0; min-height:440px; border-radius:28px; display:flex; align-items:center; justify-content:center; padding:36px 24px; overflow:hidden;
@@ -522,6 +537,20 @@ function fiftinSetBrandVideoSrc(id){
 }
 fiftinSetBrandVideoSrc("plHeroVideo");
 
+// Mobile (cartes empilées) : la carte fonctionnalité la plus proche du
+// milieu de l'écran est mise en avant (classe .is-active).
+(function(){
+  var cards=[].slice.call(document.querySelectorAll(".pl-feature")), mq=window.matchMedia("(max-width:640px)"), raf=0;
+  function upd(){
+    raf=0;
+    if(!mq.matches){ cards.forEach(function(c){ c.classList.remove("is-active"); }); return; }
+    var mid=window.innerHeight/2, best=null, bd=Infinity;
+    cards.forEach(function(c){ var r=c.getBoundingClientRect(); var d=Math.abs((r.top+r.bottom)/2-mid); if(r.bottom>0 && r.top<window.innerHeight && d<bd){ bd=d; best=c; } });
+    cards.forEach(function(c){ c.classList.toggle("is-active", c===best); });
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll", req, {passive:true}); window.addEventListener("resize", req); upd();
+})();
 // En-tête fixe : barre crème dès qu'on quitte le haut de la vidéo.
 (function(){
   var h=document.getElementById("plHeader");
