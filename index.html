@@ -99,7 +99,7 @@ img{display:block; max-width:100%;}
 /* Bas du hero : bord droit aux extrémités arrondies (même langage que
    les cartes et pastilles du site) — la zone crème remonte sur la vidéo
    comme le haut d'une carte, coins arrondis. Remplace l'ancienne vague. */
-.hl-edge{position:absolute; left:0; right:0; bottom:-1px; z-index:2; height:44px; background:var(--cream); border-radius:44px 44px 0 0;}
+.hl-edge{position:absolute; left:0; right:0; bottom:-1px; z-index:2; height:44px; background:#fff; border-radius:44px 44px 0 0;}
 .hl-chev{position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:4; color:#fff; width:26px; height:26px; animation:hlBob 2.4s ease-in-out infinite;}
 @keyframes hlBob{50%{transform:translate(-50%,5px);}}
 
@@ -155,7 +155,12 @@ img{display:block; max-width:100%;}
 .hl-shot{width:200px; height:auto; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
 
 /* ── Bandeau marque ── */
-.hl-band{display:flex; align-items:center; gap:18px; margin:46px 0 34px;}
+.hl-band{display:flex; align-items:center; gap:18px; margin:0 0 34px;}
+/* Deux zones de fond sous le hero : blanc derrière les deux cartes (elles
+   s'en détachent mieux), puis la zone crème remonte sur le blanc avec les
+   mêmes coins arrondis que le bas du hero (.hl-edge). */
+.hl-zone-white{background:#fff; padding-bottom:calc(44px + 52px);}
+.hl-zone-grey{position:relative; background:var(--cream); border-radius:44px 44px 0 0; margin-top:-44px; padding-top:52px;}
 .hl-band::before,.hl-band::after{content:""; flex:1; height:1px; background:var(--cream-deep);}
 .hl-band > span{display:flex; align-items:center; gap:12px; padding:10px 22px 10px 12px; border-radius:999px; border:1px solid var(--cream-deep); background:rgba(255,255,255,.5); font-size:15px; font-weight:500;}
 .hl-mini{width:36px; height:36px; border-radius:10px; background:var(--sauge); display:flex; align-items:center; justify-content:center;}
@@ -284,7 +289,8 @@ img{display:block; max-width:100%;}
   <svg class="hl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
 </section>
 
-<main class="hl-wrap" id="univers">
+<main id="univers">
+<div class="hl-zone-white"><div class="hl-wrap">
   <div class="hl-cards">
     <article class="hl-card sej">
       <div>
@@ -338,7 +344,9 @@ img{display:block; max-width:100%;}
       <div class="hl-visual"><img class="hl-shot" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année des réservations"></div>
     </article>
   </div>
+</div></div>
 
+<div class="hl-zone-grey"><div class="hl-wrap">
   <div class="hl-band"><span><span class="hl-mini"><img src="assets/logo-fiftin-mark-glass.png" alt=""></span>Une même marque pour voyager et accueillir</span></div>
 
   <section class="hl-values">
@@ -358,6 +366,7 @@ img{display:block; max-width:100%;}
       <p>Une maison, une chambre, un gîte… Et surtout, des personnes qui ont choisi d'ouvrir leur porte. Avec Fiftin, nous voulons remettre l'hôte au cœur du voyage&nbsp;: des échanges simples, du respect mutuel et la liberté de s'organiser directement.</p>
     </div>
   </section>
+</div></div>
 </main>
 
 <div class="hl-auth" id="hlAuth" role="dialog" aria-modal="true" aria-labelledby="hlAuthTitle">
