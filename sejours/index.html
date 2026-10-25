@@ -2360,8 +2360,8 @@ body.map-fullscreen{overflow:hidden;}
    barre de filtres, Profil (.profile-stats) et le dégradé .fade-edge-top
    se calent juste en dessous via --sej-home-h. Pastille : même verre que le
    grand logo de l'accueil (.hl-logo dans index.html), en petit, mais en
-   nuances de gris (aucune teinte verte ni liseré coloré) et lettrage noir
-   pour la lisibilité sur les fonds clairs. Rangée de la
+   nuances de gris (aucune teinte verte ni liseré coloré) ; lettrage assombri en gris
+   (brightness) qui garde son dégradé et son contour d'origine. Rangée de la
    même couleur que la barre de filtres qui suit. */
 .sej-home{position:sticky; top:0; z-index:72; height:var(--sej-home-h); display:flex; align-items:flex-end; justify-content:center;
   padding:0 18px 5px; background:var(--cream);}
@@ -2387,7 +2387,7 @@ body.map-fullscreen{overflow:hidden;}
 .sej-home span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
-.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(0); opacity:.82;}
+.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(.42);}
 </style>
 
 <script>
