@@ -161,7 +161,17 @@ img{display:block; max-width:100%;}
    sur le blanc avec les mêmes coins arrondis que le bas du hero (.hl-edge). */
 .hl-zone-white{background:#fff; padding-bottom:calc(44px + 52px);}
 .hl-zone-grey{position:relative; background:var(--sauge); color:#fff; border-radius:44px 44px 0 0; margin-top:-44px; padding-top:60px;}
-.hl-band .hl-logo{width:84px; height:84px; margin:0;}
+.hl-band .hl-logo{width:96px; height:96px; margin:0;}
+/* Encart « Une même marque » : même logo que l'écran d'arrivée de Fiftin
+   Planning (.logo-tile de app/index.html) — coins à 25 % de la taille,
+   lettrage à 61 % décalé de 3 % vers la gauche (centrage optique du point
+   du « 1 »), et sous le verre le vert moyen que la vidéo donne là-bas
+   (sur l'aplat --sauge, le verre seul virait au vert presque noir). */
+.hl-band .hl-logo{border-radius:25%;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    linear-gradient(160deg, #A9C38F 0%, #7FA06A 45%, #577A50 100%);}
+.hl-band .hl-logo img{width:61%; transform:translateX(-3%);}
 .hl-band p{margin:0; font-size:clamp(19px,2vw,23px); font-weight:500; color:#fff; letter-spacing:-.01em;}
 
 /* ── Trois valeurs ── */
@@ -194,7 +204,7 @@ img{display:block; max-width:100%;}
   .hl-shot{width:200px;}
   .hl-values{grid-template-columns:1fr; gap:18px;}
   .hl-val .ic{width:60px; height:60px;}
-  .hl-band .hl-logo{width:72px; height:72px;}
+  .hl-band .hl-logo{width:84px; height:84px;}
   .hl-story{grid-template-columns:1fr; margin:40px 0 60px;}
 }
 
