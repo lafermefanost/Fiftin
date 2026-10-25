@@ -19,7 +19,7 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 | `fiftin.fr/planning/` | `planning/index.html` | Page commerciale Fiftin Planning, page autonome (seule copie de ce contenu). Formules : visiteur → connexion dans Séjours (`/sejours/?login=1&next=/planning/?formule=…`), retour ici et paiement Stripe relancé ; après paiement → `/app/`. Abonné : « Ouvrir Fiftin Planning ». « Se connecter » en haut → l'outil. L'onglet « App gestion » de l'espace hôte y mène pour un compte sans formule de gestion. `hotes/`, `/?hotes=1` et `/sejours/?hotes=1` renvoient ici. |
 | `fiftin.fr/app/` | `app/index.html` | L'outil Fiftin Planning. |
 
-Repère commun : le pictogramme Fiftin ramène toujours à l'accueil `fiftin.fr/`. Sur Séjours et la page Planning : petite pastille, même verre que le grand logo de l'accueil (transparente, elle prend la teinte du fond), centrée en haut et toujours visible (rangée collante dans Séjours, position fixe sur Planning). Dans l'outil : le picto du header (en haut à gauche). L'accueil garde seulement son grand logo.
+Repère commun : le pictogramme Fiftin ramène toujours à l'accueil `fiftin.fr/`. Sur Séjours et la page Planning : petite pastille, même verre que le grand logo de l'accueil mais en nuances de gris, lettrage noir, centrée en haut et toujours visible (rangée collante dans Séjours, position fixe sur Planning). Dans l'outil : le picto du header (en haut à gauche). L'accueil garde seulement son grand logo.
 
 ## Fiftin Séjours (`sejours/`) — annuaire de réservation directe
 
