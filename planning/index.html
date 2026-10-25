@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiftin Planning</title>
+<!-- Adresse publique de la page commerciale Fiftin Planning. Le rendu vit
+     dans sejours/index.html (previewHostMarketingPage, déclenchée par
+     ?hotes=1), qui remet ensuite /planning/ dans la barre d'adresse.
+     Paramètres éventuels (retour Stripe…) transmis tels quels. -->
+<meta http-equiv="refresh" content="0; url=../sejours/?hotes=1">
+<script>location.replace("../sejours/?hotes=1" + (location.search ? "&" + location.search.slice(1) : "") + location.hash);</script>
+</head>
+<body>
+<p><a href="../sejours/?hotes=1">Fiftin Planning</a></p>
+</body>
+</html>
