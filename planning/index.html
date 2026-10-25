@@ -219,7 +219,7 @@ section[id]{scroll-margin-top:72px;}
 .pl-tour-steps li span{font-size:15px; line-height:1.45;}
 .pl-tour-steps li.on{background:var(--sauge); color:rgba(255,255,255,.85); box-shadow:0 14px 30px rgba(29,40,32,.2);}
 .pl-tour-steps li.on b{color:#fff;}
-.pl-tour .da-phone{width:min(280px, 72vw);}
+.pl-tour .da-phone{width:min(260px, 72vw, calc((100vh - 64px - 300px) * .4535));}
 .pl-tour .da-scr{position:relative; overflow:hidden;}
 /* Les 5 écrans côte à côte ; seul celui de la tranche de défilement en
    cours est visible (changement immédiat, aucune transition). */
@@ -228,7 +228,7 @@ section[id]{scroll-margin-top:72px;}
 .pl-tour-dots{display:none;}
 @media (max-width:760px){
   .pl-tour-stage{grid-template-columns:1fr; grid-template-rows:auto auto; justify-items:center; gap:18px;}
-  .pl-tour .da-phone{order:-1; width:min(250px, 66vw);}
+  .pl-tour .da-phone{order:-1; width:min(240px, 66vw, calc((100vh - 64px - 260px) * .4535));}
   .pl-tour-steps li{display:none; text-align:center; padding:0;}
   .pl-tour-steps li.on{display:block; background:none; box-shadow:none; color:var(--muted);}
   .pl-tour-steps li.on b{color:var(--sauge-deep);}
@@ -637,8 +637,11 @@ fiftinSetBrandVideoSrc("plHeroVideo");
   var n=steps.length, cur=-1, raf=0;
   function upd(){
     raf=0; var vh=window.innerHeight, r=phone.getBoundingClientRect();
-    // centre du téléphone : de 85 % de la hauteur de fenêtre (entrée) à 15 % (sortie)
-    var c=(r.top+r.bottom)/2, p=Math.min(1,Math.max(0,(vh*.85-c)/(vh*.7))), i=Math.min(n-1,Math.floor(p*n));
+    // Plage où le téléphone est entièrement visible : de « bas du téléphone
+    // au bas de la fenêtre » à « haut du téléphone sous l'en-tête fixe ».
+    var head=64, c=(r.top+r.bottom)/2, a=vh-r.height/2, z=head+r.height/2;
+    if(a-z<vh*.3){ var m=(a+z)/2; a=m+vh*.15; z=m-vh*.15; }
+    var p=Math.min(1,Math.max(0,(a-c)/(a-z))), i=Math.min(n-1,Math.floor(p*n));
     if(i===cur) return; cur=i;
     strip.style.transform="translateX("+(-i*100/n)+"%)";
     [steps,dots].forEach(function(list){ list.forEach(function(el,j){ el.classList.toggle("on",j===i); }); });
