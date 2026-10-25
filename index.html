@@ -155,34 +155,32 @@ img{display:block; max-width:100%;}
 .hl-shot{width:200px; height:auto; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
 
 /* ── Bandeau marque ── */
-.hl-band{display:flex; align-items:center; gap:18px; margin:0 0 34px;}
+.hl-band{display:flex; flex-direction:column; align-items:center; gap:18px; margin:6px 0 46px; text-align:center;}
 /* Deux zones de fond sous le hero : blanc derrière les deux cartes (elles
-   s'en détachent mieux), puis la zone crème remonte sur le blanc avec les
-   mêmes coins arrondis que le bas du hero (.hl-edge). */
+   s'en détachent mieux), puis la zone vert propriétaire (--sauge) remonte
+   sur le blanc avec les mêmes coins arrondis que le bas du hero (.hl-edge). */
 .hl-zone-white{background:#fff; padding-bottom:calc(44px + 52px);}
-.hl-zone-grey{position:relative; background:var(--cream); border-radius:44px 44px 0 0; margin-top:-44px; padding-top:52px;}
-.hl-band::before,.hl-band::after{content:""; flex:1; height:1px; background:var(--cream-deep);}
-.hl-band > span{display:flex; align-items:center; gap:12px; padding:10px 22px 10px 12px; border-radius:999px; border:1px solid var(--cream-deep); background:rgba(255,255,255,.5); font-size:15px; font-weight:500;}
-.hl-mini{width:36px; height:36px; border-radius:10px; background:var(--sauge); display:flex; align-items:center; justify-content:center;}
-.hl-mini img{width:66%;}
+.hl-zone-grey{position:relative; background:var(--sauge); color:#fff; border-radius:44px 44px 0 0; margin-top:-44px; padding-top:60px;}
+.hl-band .hl-logo{width:84px; height:84px; margin:0;}
+.hl-band p{margin:0; font-size:clamp(19px,2vw,23px); font-weight:500; color:#fff; letter-spacing:-.01em;}
 
 /* ── Trois valeurs ── */
 .hl-values{display:grid; grid-template-columns:repeat(3,1fr); gap:24px;}
 .hl-val{display:flex; gap:18px; align-items:flex-start;}
-.hl-val .ic{width:72px; height:72px; border-radius:50%; background:#EAE7DF; display:flex; align-items:center; justify-content:center; flex:none;}
-.hl-val .ic svg{width:32px; height:32px; color:var(--sauge-deep);}
-.hl-val h4{margin:8px 0 6px; font-size:17px; font-weight:600;}
-.hl-val p{margin:0; font-size:15px; line-height:1.45; color:var(--muted);}
+.hl-val .ic{width:72px; height:72px; border-radius:50%; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; flex:none;}
+.hl-val .ic svg{width:32px; height:32px; color:var(--yellow);}
+.hl-val h4{margin:8px 0 6px; font-size:17px; font-weight:600; color:#fff;}
+.hl-val p{margin:0; font-size:15px; line-height:1.45; color:rgba(255,255,255,.74);}
 
 /* ── Derrière chaque lieu ── */
 .hl-story{display:grid; grid-template-columns:1.15fr 1fr; gap:clamp(24px,4vw,52px); align-items:center; margin:56px 0 80px;}
-.hl-story-img{position:relative; aspect-ratio:16/8.4; border-radius:22px; overflow:hidden; background:var(--sauge-light) url("assets/fond-poster-horizontal.webp") center/cover; box-shadow:var(--shadow);}
+.hl-story-img{position:relative; aspect-ratio:16/8.4; border-radius:22px; overflow:hidden; background:var(--sauge-light) url("assets/fond-poster-horizontal.webp") center/cover; box-shadow:0 18px 40px rgba(0,0,0,.22);}
 .hl-story-img img{position:absolute; inset:0;}
 .hl-story-img img{width:100%; height:100%; object-fit:cover;}
 .hl-story-img figcaption{position:absolute; left:14px; bottom:12px; font-size:12.5px; color:#fff; background:rgba(0,0,0,.32); padding:4px 10px; border-radius:999px; backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);}
-.hl-story .k{font-size:12.5px; font-weight:600; letter-spacing:.22em; text-transform:uppercase; color:var(--muted); margin:0 0 14px;}
-.hl-story h2{margin:0 0 16px; font-size:clamp(30px,3.6vw,42px); font-weight:600; line-height:1.12; color:var(--sauge-deep);}
-.hl-story p{margin:0; font-size:16.5px; line-height:1.6; color:#5C5A52;}
+.hl-story .k{font-size:12.5px; font-weight:600; letter-spacing:.22em; text-transform:uppercase; color:var(--yellow-light); margin:0 0 14px;}
+.hl-story h2{margin:0 0 16px; font-size:clamp(30px,3.6vw,42px); font-weight:600; line-height:1.12; color:#fff;}
+.hl-story p{margin:0; font-size:16.5px; line-height:1.6; color:rgba(255,255,255,.8);}
 
 @media (max-width:980px){
   .hl-cards{grid-template-columns:1fr;}
@@ -196,9 +194,7 @@ img{display:block; max-width:100%;}
   .hl-shot{width:200px;}
   .hl-values{grid-template-columns:1fr; gap:18px;}
   .hl-val .ic{width:60px; height:60px;}
-  .hl-band > span{font-size:14px; padding:8px 16px 8px 10px;}
-  .hl-band::before,.hl-band::after{display:none;}
-  .hl-band{justify-content:center;}
+  .hl-band .hl-logo{width:72px; height:72px;}
   .hl-story{grid-template-columns:1fr; margin:40px 0 60px;}
 }
 
@@ -347,7 +343,7 @@ img{display:block; max-width:100%;}
 </div></div>
 
 <div class="hl-zone-grey"><div class="hl-wrap">
-  <div class="hl-band"><span><span class="hl-mini"><img src="assets/logo-fiftin-mark-glass.png" alt=""></span>Une même marque pour voyager et accueillir</span></div>
+  <div class="hl-band"><div class="brand-logo hl-logo"><img src="assets/logo-fiftin-mark-glass.png" alt="Fiftin"></div><p>Une même marque pour voyager et accueillir</p></div>
 
   <section class="hl-values">
     <div class="hl-val"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg></div>
