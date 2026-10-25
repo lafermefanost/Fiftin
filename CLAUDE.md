@@ -6,7 +6,8 @@ Ce dépôt contient **deux projets distincts** qui partagent la même marque. Av
 
 Outil de planning pour hébergeurs (calendrier de réservations, fichier client, comptabilité). C'est l'application existante, utilisée par de vrais clients payants.
 
-- `index.html` (racine) — page de présentation commerciale de l'outil.
+- `index.html` (racine) — page d'accueil Fiftin « deux univers » (Séjours / Planning) : fiftin.fr/.
+- Page commerciale Fiftin Planning : fiftin.fr/planning/ (rendue par `sejours/index.html`, `?hotes=1` ; `planning/index.html` n'est qu'un renvoi, `hotes/` aussi).
 - `app/index.html` — l'outil lui-même : fiftin.fr/app/.
 - Voir le reste de ce README pour l'architecture (Firebase, comptes, règles Firestore, formules).
 - **Ne pas modifier sans consigne explicite** portant sur le planning : c'est un produit en usage réel, une régression a un impact direct sur des clients.
@@ -16,6 +17,7 @@ Outil de planning pour hébergeurs (calendrier de réservations, fichier client,
 Annuaire mobile-first de location courte durée en réservation directe pour les voyageurs : recherche filtrée (distance, lieu, prix, prestations), fiches détaillées, contact hôte pré-rempli (WhatsApp / SMS / appel).
 
 - `sejours/index.html` — l'application complète (une seule page, pas de build) : fiftin.fr/sejours/.
+- Chemins écrits depuis la racine du site grâce à `<base href="/">` en tête du fichier.
 - Prototype front-end : données d'hébergements mockées, aucun backend, aucune donnée réelle.
 - Reprend volontairement la DA de `app/` (palette, typographies Jost + Fraunces italique, logo) pour une cohérence de marque immédiate — voir les tokens CSS (`:root`) en tête de `sejours/index.html`.
 

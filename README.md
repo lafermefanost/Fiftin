@@ -10,6 +10,15 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 
 **Règle de direction artistique : `app/` fait foi.** Pour tout nouvel élément visuel de Séjours (état actif/sélectionné, couleurs, formes), s'inspirer de ce qui existe déjà dans `app/` plutôt que d'inventer — les deux partagent la même palette sous des noms de variables différents (`--green`/`--green-deep` côté app/ = `--sauge`/`--sauge-deep` côté sejours/, mêmes valeurs hexadécimales `#354B38`/`#1D2820`). Exemple concret : l'élément "actif" d'une rangée d'onglets/boutons de vue dans app/ (`.mbnav-btn.on`, `.vtab.on`) passe systématiquement en fond `--green` plein avec texte blanc — jamais fondu avec la page ni en dégradé inventé ; Séjours suit la même convention (`.detail-tab.active`) plutôt que d'improviser un traitement différent.
 
+## Arborescence du site
+
+| Adresse | Fichier | Rôle |
+|---|---|---|
+| `fiftin.fr/` | `index.html` | Page d'accueil « deux univers » : Fiftin Séjours (voyageurs) et Fiftin Planning (hôtes). Bouton unique « Se connecter » / menu « Mon compte » (Espace voyageur, Espace hôte, déconnexion). Toute ancienne adresse à paramètres (`/?listing=…`, retours de paiement) est renvoyée vers `/sejours/`, `/?hotes=1` vers `/planning/`. |
+| `fiftin.fr/sejours/` | `sejours/index.html` | Fiftin Séjours : hébergements (sans intro), profil voyageur, espace hôtes. Entrées : `?espace=voyageur`, `?espace=hote`, `?login=1`, `?listing=…`. |
+| `fiftin.fr/planning/` | `planning/index.html` (renvoi) | Page commerciale Fiftin Planning, rendue par `sejours/index.html?hotes=1`, adresse remise à `/planning/`. `hotes/` renvoie ici. |
+| `fiftin.fr/app/` | `app/index.html` | L'outil Fiftin Planning. |
+
 ## Fiftin Séjours (`sejours/`) — annuaire de réservation directe
 
 Projet frère de l'outil de planning, même marque mais codebase et périmètre séparés (voir `CLAUDE.md`) : un annuaire mobile-first pour que les voyageurs trouvent un hébergement et contactent l'hôte directement (WhatsApp, SMS, appel), sans commission ni intermédiaire — dans l'esprit de Cybevasion, en mieux.
