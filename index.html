@@ -126,8 +126,13 @@ img{display:block; max-width:100%;}
 .hl-visual{display:flex; align-items:center; justify-content:center;}
 
 /* Téléphone Fiftin Séjours (contenu réel : une de nos annonces publiées) */
-.hl-phone{width:196px; aspect-ratio:9/19.3; border-radius:36px; background:#1B1B1B; padding:7px; box-shadow:0 24px 50px rgba(29,40,32,.28), inset 0 0 0 1.5px #3a3a3a; transform:rotate(3deg);}
-.hl-scr{position:relative; width:100%; height:100%; border-radius:30px; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
+/* Cadre réaliste extrait des maquettes de l'outil (assets/phone-frame.webp,
+   écran évidé) : l'écran HTML ci-dessous se place dans l'évidement, le
+   cadre passe par-dessus. Téléphone droit, comme partout sur le site. */
+.hl-phone{position:relative; width:200px; aspect-ratio:1369/2910; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
+.hl-phone::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; background:url("assets/phone-frame.webp") center/100% 100% no-repeat;}
+.hl-scr{position:absolute; left:2.19%; top:1.24%; width:94.38%; height:97.46%; border-radius:11.6% / 5.3%; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
+.hl-scr::before{content:""; position:absolute; top:1.3%; left:50%; transform:translateX(-50%); width:31%; height:3.3%; border-radius:999px; background:#0b0b0b; z-index:3;}
 .hl-sb{display:flex; justify-content:space-between; padding:9px 18px 0; font-size:10px; font-weight:600;}
 .hl-url{margin:4px auto 6px; font-size:8.5px; color:#555; background:#F1F1F1; border-radius:6px; padding:2px 10px;}
 .hl-chips{display:flex; gap:4px; padding:0 7px 6px; }
@@ -146,7 +151,7 @@ img{display:block; max-width:100%;}
 .hl-ov .bt span{font-size:6.8px; padding:3px 6px; border-radius:999px; border:1px solid rgba(255,255,255,.7); background:rgba(255,255,255,.12);}
 .hl-tabs{display:flex; justify-content:space-around; align-items:center; padding:7px 8px 10px; font-size:6.5px; color:#888;}
 .hl-tabs b{width:22px; height:22px; border-radius:7px; background:#1B1B1B; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px;}
-.hl-shot{width:220px; filter:drop-shadow(0 24px 40px rgba(29,40,32,.25)); transform:rotate(3deg);}
+.hl-shot{width:200px; height:auto; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
 
 /* ── Bandeau marque ── */
 .hl-band{display:flex; align-items:center; gap:18px; margin:46px 0 34px;}
@@ -330,7 +335,7 @@ img{display:block; max-width:100%;}
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Outils complets<br>pour votre activité</li>
         </ul>
       </div>
-      <div class="hl-visual"><img class="hl-shot" src="assets/shot-planning.webp" alt="Le planning de Fiftin Planning sur téléphone"></div>
+      <div class="hl-visual"><img class="hl-shot" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année des réservations"></div>
     </article>
   </div>
 
