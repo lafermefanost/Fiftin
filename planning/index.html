@@ -197,11 +197,44 @@ section[id]{scroll-margin-top:72px;}
    ou contenu HTML) est l'enfant direct. */
 .da-phone{position:relative; width:250px; flex:none; padding:1.4%; border-radius:12.8% / 5.85%; background:#151816;
   box-shadow:0 0 0 1px rgba(255,255,255,.5), 0 24px 50px rgba(29,40,32,.22);}
-.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:11.8% / 5.35%; overflow:hidden; background:#fff;}
+.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:390/860; border-radius:11.8% / 5.35%; overflow:hidden; background:#fff;}
 /* Deux téléphones : le second décalé vers le bas. */
 .pl-mock + .pl-mock{margin:70px 0 0 -40px;}
 .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
 
+/* Grille de l'outil dont le contenu défile avec la page (.da-gridscroll) :
+   en-tête et barre d'onglets de l'outil fixes, corps du planning qui
+   défile dans l'écran à mesure que la page défile (voir le script). */
+.da-gridscroll > .da-scr{display:flex !important; flex-direction:column; position:relative;}
+.da-gridscroll .gs-top, .da-gridscroll .gs-bot{display:block; width:100%; height:auto; flex:none; position:relative; z-index:1;}
+.da-gridscroll .gs-body{flex:1; min-height:0; overflow:hidden; position:relative; background:#fff;}
+.da-gridscroll .gs-body img{position:absolute; top:0; left:0; width:100%; height:auto; will-change:transform;}
+/* Visuel principal : le téléphone reste à l'écran pendant que l'on fait
+   défiler la section, et passe d'une vue de l'outil à l'autre (5 vues). */
+.pl-tour{position:relative; height:calc(5 * 80vh); margin:0 0 clamp(40px,6vw,64px);}
+.pl-tour-stage{position:sticky; top:64px; height:calc(100vh - 64px); display:grid; grid-template-columns:1fr auto; gap:clamp(32px,6vw,80px); align-items:center; max-width:920px; margin:0 auto;}
+.pl-tour-steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+.pl-tour-steps li{padding:16px 20px; border-radius:20px; transition:background-color .35s ease, color .35s ease, box-shadow .35s ease; color:var(--muted);}
+.pl-tour-steps li b{display:block; font-size:clamp(18px,1.8vw,21px); font-weight:600; color:var(--sauge-deep); margin-bottom:2px; transition:color .35s ease;}
+.pl-tour-steps li span{font-size:15px; line-height:1.45;}
+.pl-tour-steps li.on{background:var(--sauge); color:rgba(255,255,255,.85); box-shadow:0 14px 30px rgba(29,40,32,.2);}
+.pl-tour-steps li.on b{color:#fff;}
+.pl-tour .da-phone{width:min(280px, calc((100vh - 64px - 80px) * .4535));}
+.pl-tour .da-scr{position:relative;}
+.pl-tour .da-scr img{position:absolute; inset:0; width:100%; height:100%; opacity:0; transition:opacity .45s ease;}
+.pl-tour .da-scr img.on{opacity:1;}
+.pl-tour .da-scr img:first-child{position:relative;}
+.pl-tour-dots{display:none;}
+@media (max-width:760px){
+  .pl-tour-stage{grid-template-columns:1fr; grid-template-rows:auto auto; justify-items:center; align-content:center; gap:18px;}
+  .pl-tour .da-phone{order:-1; width:min(250px, calc((100vh - 64px - 190px) * .4535));}
+  .pl-tour-steps li{display:none; text-align:center; padding:0;}
+  .pl-tour-steps li.on{display:block; background:none; box-shadow:none; color:var(--muted);}
+  .pl-tour-steps li.on b{color:var(--sauge-deep);}
+  .pl-tour-dots{display:flex; gap:8px; justify-content:center; margin-top:10px;}
+  .pl-tour-dots i{width:8px; height:8px; border-radius:50%; background:var(--cream-deep); transition:background-color .3s ease, width .3s ease;}
+  .pl-tour-dots i.on{width:22px; border-radius:999px; background:var(--sauge);}
+}
 /* Bandeau (même rôle que « Une même marque » de l'accueil) */
 .pl-ribbon{text-align:center; color:var(--sauge-mid); font-weight:600; font-size:clamp(15px,1.6vw,17px); margin:0 0 clamp(44px,6vw,64px);}
 .pl-ribbon span{margin:0 12px; color:var(--sauge-light);}
@@ -349,6 +382,27 @@ section[id]{scroll-margin-top:72px;}
 <section class="da-zone white" id="fonctionnalites">
   <div class="da-wrap">
     <p class="pl-ribbon">Un planning <span>·</span> Vos clients <span>·</span> Vos chiffres <span>·</span> Votre liberté</p>
+    <div class="pl-tour" id="plTour">
+      <div class="pl-tour-stage">
+        <div>
+          <ol class="pl-tour-steps">
+            <li class="on"><b>Grille</b><span>Toute la saison d'un coup d'œil, chambre par chambre.</span></li>
+            <li><b>Location</b><span>Chaque logement en détail : occupation, revenus, durée moyenne des séjours.</span></li>
+            <li><b>Semaine</b><span>Arrivées, départs, repas et extras de la semaine, jour par jour.</span></li>
+            <li><b>Mois</b><span>Le bilan du mois : revenus, occupation, charges et marge.</span></li>
+            <li><b>Année</b><span>L'année entière : chiffre d'affaires réalisé et projeté, marge nette, structures.</span></li>
+          </ol>
+          <div class="pl-tour-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="da-phone"><div class="da-scr">
+          <img class="on" src="assets/app-grille.webp" width="600" height="1323" alt="Vue Grille de Fiftin Planning">
+          <img src="assets/app-location.webp" width="600" height="1323" alt="Vue Location de Fiftin Planning" loading="lazy">
+          <img src="assets/app-semaine.webp" width="600" height="1323" alt="Vue Semaine de Fiftin Planning" loading="lazy">
+          <img src="assets/app-mois.webp" width="600" height="1323" alt="Vue Mois de Fiftin Planning" loading="lazy">
+          <img src="assets/app-annee.webp" width="600" height="1323" alt="Vue Année de Fiftin Planning" loading="lazy">
+        </div></div>
+      </div>
+    </div>
     <div class="pl-head">
       <p class="da-kicker">Un seul outil, plusieurs métiers</p>
       <h2 class="da-h2">Bien plus qu'un calendrier.</h2>
@@ -384,8 +438,8 @@ section[id]{scroll-margin-top:72px;}
       </ul>
     </div>
     <div class="pl-visual">
-      <div class="da-phone pl-mock"><img src="assets/screen-annee.webp" width="520" height="1147" loading="lazy" alt="Vue Année de Fiftin Planning : les réservations de toute l'année en un écran"></div>
-      <div class="da-phone pl-mock"><img src="assets/screen-reservation.webp" width="520" height="1147" loading="lazy" alt="Fiche réservation de Fiftin Planning, nom du client masqué"></div>
+      <div class="da-phone pl-mock da-gridscroll" role="img" aria-label="La grille de Fiftin Planning : toute la saison, chambre par chambre"><div class="da-scr"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="3829" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div></div>
+      <div class="da-phone pl-mock"><img src="assets/app-reservation.webp" width="600" height="1323" loading="lazy" alt="Fiche réservation de Fiftin Planning"></div>
     </div>
     <p class="pl-small pl-below">Les captures sont issues de l'application.</p>
   </div>
@@ -427,8 +481,8 @@ section[id]{scroll-margin-top:72px;}
       </ul>
     </div>
     <div class="pl-visual">
-      <div class="da-phone pl-mock"><img src="assets/screen-bilan-annee.webp" width="520" height="1147" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, occupation"></div>
-      <div class="da-phone pl-mock"><img src="assets/screen-mois.webp" width="520" height="1147" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées"></div>
+      <div class="da-phone pl-mock"><img src="assets/app-mois.webp" width="600" height="1323" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, occupation, charges, marge"></div>
+      <div class="da-phone pl-mock"><img src="assets/app-annee.webp" width="600" height="1323" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, marge nette"></div>
     </div>
     <p class="pl-notice">Les indicateurs et alertes constituent une aide au suivi, pas un conseil fiscal individualisé ni une comptabilité certifiée.</p>
   </div>
@@ -443,7 +497,8 @@ section[id]{scroll-margin-top:72px;}
       <p class="da-text">Fiftin a été pensé dans une vraie maison d'hôtes, pour les journées qui ne se passent jamais exactement comme prévu.</p>
     </div>
     <div class="pl-visual lavender">
-      <div class="da-phone pl-mock"><img src="assets/screen-semaine.webp" width="520" height="1147" loading="lazy" alt="Vue Semaine de Fiftin Planning : événements, repas et extras de la semaine"></div>
+      <div class="da-phone pl-mock"><img src="assets/app-semaine.webp" width="600" height="1323" loading="lazy" alt="Vue Semaine de Fiftin Planning : arrivées, départs, repas et extras"></div>
+      <div class="da-phone pl-mock"><img src="assets/app-clients.webp" width="600" height="1323" loading="lazy" alt="Fichier clients de Fiftin Planning"></div>
     </div>
   </div>
 </section>
@@ -550,6 +605,40 @@ fiftinSetBrandVideoSrc("plHeroVideo");
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
   window.addEventListener("scroll", req, {passive:true}); window.addEventListener("resize", req); upd();
+})();
+// Grille : le corps du planning défile dans le téléphone à mesure que la
+// page défile (du moment où le téléphone entre à l'écran à sa sortie).
+(function(){
+  var els=[].slice.call(document.querySelectorAll(".da-gridscroll .gs-body img"));
+  if(!els.length) return;
+  var raf=0;
+  function upd(){
+    raf=0; var vh=window.innerHeight;
+    els.forEach(function(img){
+      var box=img.parentNode, r=box.getBoundingClientRect();
+      var p=Math.min(1,Math.max(0,(vh-r.top)/(vh+r.height)));
+      var max=Math.max(0,img.offsetHeight-box.clientHeight);
+      img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
+    });
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
+  els.forEach(function(i){ i.addEventListener("load",req); }); upd();
+})();
+// Visuel principal : la vue affichée dans le téléphone suit la progression
+// du défilement dans la section (5 vues de l'outil).
+(function(){
+  var t=document.getElementById("plTour"); if(!t) return;
+  var imgs=[].slice.call(t.querySelectorAll(".da-scr img")), steps=[].slice.call(t.querySelectorAll(".pl-tour-steps li")), dots=[].slice.call(t.querySelectorAll(".pl-tour-dots i"));
+  var cur=0, raf=0;
+  function upd(){
+    raf=0; var r=t.getBoundingClientRect(), span=Math.max(1,r.height-window.innerHeight);
+    var p=Math.min(.999,Math.max(0,-r.top/span)), i=Math.floor(p*imgs.length);
+    if(i===cur) return; cur=i;
+    [imgs,steps,dots].forEach(function(list){ list.forEach(function(el,k){ el.classList.toggle("on",k===i); }); });
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req); upd();
 })();
 // En-tête fixe : barre crème dès qu'on quitte le haut de la vidéo.
 (function(){

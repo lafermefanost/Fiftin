@@ -139,7 +139,7 @@ img{display:block; max-width:100%;}
    ou contenu HTML) est l'enfant direct. */
 .da-phone{position:relative; width:250px; flex:none; padding:1.4%; border-radius:12.8% / 5.85%; background:#151816;
   box-shadow:0 0 0 1px rgba(255,255,255,.5), 0 24px 50px rgba(29,40,32,.22);}
-.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:11.8% / 5.35%; overflow:hidden; background:#fff;}
+.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:390/860; border-radius:11.8% / 5.35%; overflow:hidden; background:#fff;}
 .hl-phone{width:200px;}
 .da-phone > .hl-scr{display:flex; flex-direction:column; position:relative;}
 .hl-sb{display:flex; justify-content:space-between; padding:9px 18px 0; font-size:10px; font-weight:600;}
@@ -162,6 +162,13 @@ img{display:block; max-width:100%;}
 .hl-tabs b{width:22px; height:22px; border-radius:7px; background:#1B1B1B; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px;}
 .hl-shot{width:200px;}
 
+/* Grille de l'outil dont le contenu défile avec la page (.da-gridscroll) :
+   en-tête et barre d'onglets de l'outil fixes, corps du planning qui
+   défile dans l'écran à mesure que la page défile (voir le script). */
+.da-gridscroll > .da-scr{display:flex !important; flex-direction:column; position:relative;}
+.da-gridscroll .gs-top, .da-gridscroll .gs-bot{display:block; width:100%; height:auto; flex:none; position:relative; z-index:1;}
+.da-gridscroll .gs-body{flex:1; min-height:0; overflow:hidden; position:relative; background:#fff;}
+.da-gridscroll .gs-body img{position:absolute; top:0; left:0; width:100%; height:auto; will-change:transform;}
 /* ── Bandeau marque ── */
 .hl-band{display:flex; flex-direction:column; align-items:center; gap:18px; margin:6px 0 46px; text-align:center;}
 /* Deux zones de fond sous le hero : blanc derrière les deux cartes (elles
@@ -375,7 +382,7 @@ img{display:block; max-width:100%;}
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Outils complets<br>pour votre activité</li>
         </ul>
       </div>
-      <div class="hl-visual"><div class="da-phone hl-shot"><img src="assets/screen-annee.webp" width="520" height="1147" alt="Fiftin Planning sur téléphone : vue Année des réservations"></div></div>
+      <div class="hl-visual"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="La grille de Fiftin Planning : toute la saison, chambre par chambre"><div class="da-scr"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="3829" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div></div></div>
     </article>
   </div>
 </div></div>
@@ -486,6 +493,25 @@ function hlLoadFirebase(cb){
     })();
   });
 }
+// Grille : le corps du planning défile dans le téléphone à mesure que la
+// page défile (du moment où le téléphone entre à l'écran à sa sortie).
+(function(){
+  var els=[].slice.call(document.querySelectorAll(".da-gridscroll .gs-body img"));
+  if(!els.length) return;
+  var raf=0;
+  function upd(){
+    raf=0; var vh=window.innerHeight;
+    els.forEach(function(img){
+      var box=img.parentNode, r=box.getBoundingClientRect();
+      var p=Math.min(1,Math.max(0,(vh-r.top)/(vh+r.height)));
+      var max=Math.max(0,img.offsetHeight-box.clientHeight);
+      img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
+    });
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
+  els.forEach(function(i){ i.addEventListener("load",req); }); upd();
+})();
 // En-tête fixe : barre crème dès qu'on quitte le haut de la vidéo.
 (function(){
   var h=document.querySelector(".hl-top");
