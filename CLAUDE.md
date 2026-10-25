@@ -22,6 +22,15 @@ Annuaire mobile-first de location courte durée en réservation directe pour les
 - Prototype front-end : données d'hébergements mockées, aucun backend, aucune donnée réelle.
 - Reprend volontairement la DA de `app/` (palette, typographies Jost + Fraunces italique, logo) pour une cohérence de marque immédiate — voir les tokens CSS (`:root`) en tête de `sejours/index.html`.
 
+## DA commune des pages publiques (accueil, Séjours, Planning — pas l'outil)
+
+- Palette : mêmes jetons partout (`--cream #EFEEEA`, `--sauge #354B38`, `--sauge-mid`, `--sauge-light`, `--lavender*`, `--yellow*`, `--muted #6F6C62`), identiques à Séjours et à l'outil.
+- Police : Jost uniquement sur l'accueil et Planning (Fraunces italique reste propre aux accroches d'annonces dans Séjours).
+- Sur-titre 12,5 px / 600 / interlettrage 0,2em / capitales ; titres h2 `clamp(30px,3.8vw,44px)` 600 ; texte 16,5 px `--muted` ; boutons pilules 15×24 px, 16 px 600 (jaune, sauge, blanc, verre).
+- Vidéo de marque réservée aux heros, même voile vert (`rgba(29,40,32,.20→.32→.24)`), image fixe de secours.
+- Fonds : hero vidéo → zones blanc / crème qui se chevauchent avec coins arrondis de 44 px → zone finale vert sauge avec le pied de page commun (`.da-foot`). Cartes : dégradés sauge (#EDF1E8→#E3E9DE) et lavande (#EEF0FA→#E2E6F6), rayon 28 px.
+- Logo en verre : proportions de l'écran d'arrivée de l'outil (coins 25 %, lettrage 61 % décalé de −3 %). Téléphones : uniquement les maquettes `assets/phone-*.webp`, droites.
+
 ## Relation entre les deux projets
 
 - Marque commune, codebases indépendantes : un changement dans `sejours/` ne doit jamais toucher `app/` ni `index.html` (racine), et inversement, sauf demande explicite couvrant les deux.
