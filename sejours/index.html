@@ -2361,13 +2361,14 @@ body.map-fullscreen{overflow:hidden;}
    se calent juste en dessous via --sej-home-h. Pastille : même verre que le
    grand logo de l'accueil (.hl-logo dans index.html), en petit, mais en
    nuances de gris (aucune teinte verte ni liseré coloré), lettrage blanc pur (sans le
-   dégradé de l'image, plus lisible sur fond clair). Rangée de la
-   même couleur que la barre de filtres qui suit. */
+   dégradé de l'image, plus lisible sur fond clair). Rangée construite
+   comme la barre d'onglets du bas (fond, flou, liseré). */
 .sej-home{position:sticky; top:0; z-index:72; height:var(--sej-home-h); display:flex; align-items:flex-end; justify-content:center;
-  padding:0 18px 9px; background:var(--cream);}
-/* Filtres masqués (Profil, Mes séjours, espace hôte…) : la rangée prend le
-   fond clair de la vue qui suit plutôt que celui de la barre de filtres. */
-#app:has(#filter-bar.chrome-collapsed):has(#feed.feed-map) .sej-home{background:var(--cream-light);}
+  padding:0 18px 9px;
+  /* Même construction que la barre d'onglets du bas (nav.tabbar) : fond
+     crème translucide flouté, liseré --line (ici en bas). */
+  background:rgba(239,238,234,0.94); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);}
 .sej-home span{width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
