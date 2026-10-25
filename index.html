@@ -94,16 +94,16 @@ img{display:block; max-width:100%;}
 .hl-logo{width:clamp(78px,9vw,100px); height:clamp(78px,9vw,100px); margin-bottom:22px;}
 .hl-kicker{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; opacity:.95; margin:0 0 14px;}
 .hl-hero h1{margin:0; font-weight:600; font-size:clamp(40px,7vw,76px); line-height:1.04; letter-spacing:-.02em; text-shadow:0 2px 24px rgba(0,0,0,.18);}
-.hl-hero p.hl-lead{margin:20px 0 30px; font-size:clamp(16px,2vw,21px); line-height:1.45; max-width:640px; opacity:.97;}
-.hl-cta-white{display:inline-flex; align-items:center; gap:10px; padding:15px 30px; border-radius:999px; background:#fff; color:var(--sauge-deep);
-  font-weight:600; font-size:17px; text-decoration:none; box-shadow:0 8px 24px rgba(0,0,0,.14);}
-.hl-cta-white svg{width:19px; height:19px;}
+.hl-hero p.hl-lead{margin:20px 0 0; font-size:clamp(16px,2vw,21px); line-height:1.45; max-width:640px; opacity:.97;}
 /* Bas du hero : bord droit aux extrémités arrondies (même langage que
    les cartes et pastilles du site) — la zone crème remonte sur la vidéo
    comme le haut d'une carte, coins arrondis. Remplace l'ancienne vague. */
 .hl-edge{position:absolute; left:0; right:0; bottom:-1px; z-index:2; height:44px; background:#fff; border-radius:44px 44px 0 0;}
-.hl-chev{position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:4; color:#fff; width:26px; height:26px; animation:hlBob 2.4s ease-in-out infinite;}
-@keyframes hlBob{50%{transform:translate(-50%,5px);}}
+/* Invitation à découvrir la suite : simple texte + flèche (plus de bouton). */
+.hl-scroll{position:absolute; bottom:60px; left:50%; transform:translateX(-50%); z-index:4; display:flex; flex-direction:column; align-items:center; gap:4px;
+  color:#fff; text-decoration:none; font-size:15px; font-weight:500; letter-spacing:.02em; text-shadow:0 1px 12px rgba(0,0,0,.2); white-space:nowrap;}
+.hl-scroll svg{width:24px; height:24px; animation:hlBob 2.4s ease-in-out infinite;}
+@keyframes hlBob{50%{transform:translateY(5px);}}
 
 /* ── Deux univers ── */
 .hl-wrap{max-width:1180px; margin:0 auto; padding:0 clamp(16px,3vw,28px);}
@@ -129,13 +129,15 @@ img{display:block; max-width:100%;}
 .hl-visual{display:flex; align-items:center; justify-content:center;}
 
 /* Téléphone Fiftin Séjours (contenu réel : une de nos annonces publiées) */
-/* Cadre réaliste extrait des maquettes de l'outil (assets/phone-frame.webp,
-   écran évidé) : l'écran HTML ci-dessous se place dans l'évidement, le
-   cadre passe par-dessus. Téléphone droit, comme partout sur le site. */
-.hl-phone{position:relative; width:200px; aspect-ratio:1369/2910; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
-.hl-phone::after{content:""; position:absolute; inset:0; z-index:2; pointer-events:none; background:url("assets/phone-frame.webp") center/100% 100% no-repeat;}
-.hl-scr{position:absolute; left:2.19%; top:1.24%; width:94.38%; height:97.46%; border-radius:11.6% / 5.3%; overflow:hidden; background:#fff; display:flex; flex-direction:column;}
-.hl-scr::before{content:""; position:absolute; top:1.3%; left:50%; transform:translateX(-50%); width:31%; height:3.3%; border-radius:999px; background:#0b0b0b; z-index:3;}
+/* Téléphone simple (maquette maison, commune à l'accueil et Planning) :
+   contour sombre fin, coins arrondis, bord d'écran normal, petit haut-parleur
+   en haut. L'écran (capture de l'outil ou contenu HTML) se place dedans. */
+.da-phone{position:relative; width:250px; flex:none; padding:6% 3.6% 3.6%; border-radius:14.4% / 6.7%; background:#262B28;
+  box-shadow:0 22px 40px rgba(29,40,32,.22), inset 0 0 0 1.5px rgba(255,255,255,.07);}
+.da-phone::before{content:""; position:absolute; top:1.15%; left:50%; transform:translateX(-50%); width:22%; height:4px; border-radius:999px; background:rgba(255,255,255,.2);}
+.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:11.5% / 5.2%; overflow:hidden; background:#fff;}
+.hl-phone{width:200px;}
+.da-phone > .hl-scr{display:flex; flex-direction:column; position:relative;}
 .hl-sb{display:flex; justify-content:space-between; padding:9px 18px 0; font-size:10px; font-weight:600;}
 .hl-url{margin:4px auto 6px; font-size:8.5px; color:#555; background:#F1F1F1; border-radius:6px; padding:2px 10px;}
 .hl-chips{display:flex; gap:4px; padding:0 7px 6px; }
@@ -154,7 +156,7 @@ img{display:block; max-width:100%;}
 .hl-ov .bt span{font-size:6.8px; padding:3px 6px; border-radius:999px; border:1px solid rgba(255,255,255,.7); background:rgba(255,255,255,.12);}
 .hl-tabs{display:flex; justify-content:space-around; align-items:center; padding:7px 8px 10px; font-size:6.5px; color:#888;}
 .hl-tabs b{width:22px; height:22px; border-radius:7px; background:#1B1B1B; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px;}
-.hl-shot{width:200px; height:auto; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
+.hl-shot{width:200px;}
 
 /* ── Bandeau marque ── */
 .hl-band{display:flex; flex-direction:column; align-items:center; gap:18px; margin:6px 0 46px; text-align:center;}
@@ -218,6 +220,18 @@ img{display:block; max-width:100%;}
   .hl-val .ic{width:60px; height:60px;}
   .hl-band .hl-logo{width:84px; height:84px;}
   .hl-story{grid-template-columns:1fr; margin:40px 0 0;}
+  /* Mobile : tout le contenu centré, dans la continuité du hero. */
+  .hl-card > div:first-child{text-align:center;}
+  .hl-card .hl-pill, .hl-card .hl-btn{margin-left:auto; margin-right:auto;}
+  .hl-card .hl-btn{display:flex;}
+  .hl-feats{align-items:center;}
+  .hl-feats li{text-align:left;}
+  .hl-val{flex-direction:column; align-items:center; text-align:center; gap:12px;}
+  .hl-val h4{margin-top:0;}
+  .hl-story > div{text-align:center;}
+  .da-foot{flex-direction:column; text-align:center;}
+  .da-foot-brand{flex-direction:column; gap:10px;}
+  .da-foot nav{justify-content:center;}
 }
 
 /* ── Connexion directement sur l'accueil (bouton « Se connecter ») ── */
@@ -300,11 +314,9 @@ img{display:block; max-width:100%;}
     <p class="hl-kicker">Deux univers, une même philosophie</p>
     <h1>Voyager. Accueillir.<br>Tout simplement.</h1>
     <p class="hl-lead">Fiftin réunit voyageurs et hôtes autour d'une même envie&nbsp;: des séjours plus simples, plus humains et plus directs.</p>
-    <a class="hl-cta-white" href="#univers">Découvrir Fiftin
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
   <div class="hl-edge" aria-hidden="true"></div>
-  <svg class="hl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+  <a class="hl-scroll" href="#univers">Découvrir Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></a>
 </section>
 
 <main id="univers">
@@ -325,7 +337,7 @@ img{display:block; max-width:100%;}
         </ul>
       </div>
       <div class="hl-visual">
-        <div class="hl-phone" aria-hidden="true"><div class="hl-scr">
+        <div class="da-phone hl-phone" aria-hidden="true"><div class="da-scr hl-scr">
           <div class="hl-sb"><span>10:25</span><span>●●● ▮</span></div>
           <div class="hl-url">fiftin.fr</div>
           <div class="hl-chips"><span>Lieu</span><span>Dates</span><span>Distance</span><span>Prix</span></div>
@@ -359,7 +371,7 @@ img{display:block; max-width:100%;}
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Outils complets<br>pour votre activité</li>
         </ul>
       </div>
-      <div class="hl-visual"><img class="hl-shot" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année des réservations"></div>
+      <div class="hl-visual"><div class="da-phone hl-shot"><img src="assets/screen-annee.webp" width="520" height="1147" alt="Fiftin Planning sur téléphone : vue Année des réservations"></div></div>
     </article>
   </div>
 </div></div>
