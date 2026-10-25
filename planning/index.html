@@ -181,16 +181,15 @@ section[id]{scroll-margin-top:72px;}
 @keyframes plBob{50%{transform:translate(-50%,5px);}}
 .pl-hero + .da-zone{margin-top:0; border-radius:0; padding-top:clamp(24px,4vw,40px);}
 
-/* Téléphone « borderless » (maquette maison, commune à l'accueil et
-   Planning) : pas de cadre, juste l'écran aux coins arrondis, un liseré
-   clair très fin et une ombre douce. L'écran (capture de l'outil ou
-   contenu HTML) est l'enfant direct. */
-.da-phone{position:relative; width:250px; flex:none;}
-.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:11% / 5%; overflow:hidden; background:#fff;
-  box-shadow:0 0 0 1px rgba(29,40,32,.10), 0 0 0 6px rgba(255,255,255,.55), 0 26px 50px rgba(29,40,32,.22);}
+/* Téléphone maison (commun à l'accueil et Planning) : cadre noir très fin,
+   coins arrondis, liseré clair et ombre douce. L'écran (capture de l'outil
+   ou contenu HTML) est l'enfant direct. */
+.da-phone{position:relative; width:250px; flex:none; padding:2.4%; border-radius:12.6% / 5.8%; background:#151816;
+  box-shadow:0 0 0 1px rgba(255,255,255,.5), 0 24px 50px rgba(29,40,32,.22);}
+.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:10.5% / 4.8%; overflow:hidden; background:#fff;}
 /* Deux téléphones : le second décalé vers le bas. */
 .pl-hero .pl-mock{justify-self:center; width:280px;}
-.pl-hero .pl-mock > img{box-shadow:0 0 0 1px rgba(255,255,255,.25), 0 0 0 6px rgba(255,255,255,.22), 0 30px 60px rgba(10,20,14,.4);}
+.pl-hero .pl-mock{box-shadow:0 0 0 1px rgba(255,255,255,.35), 0 30px 60px rgba(10,20,14,.4);}
 .pl-mock + .pl-mock{margin:70px 0 0 -40px;}
 .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
 
