@@ -147,12 +147,25 @@ h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
 .pl-hero p{font-size:clamp(16.5px,1.6vw,18.5px); max-width:580px; color:rgba(255,255,255,.94);}
 .pl-hero-note{font-size:13px!important; color:rgba(255,255,255,.78)!important; margin-top:18px;}
 
-/* Téléphones (captures réelles de l'outil) */
-.pl-phone{width:230px; flex:none; border:7px solid #1B1B1B; border-radius:32px; overflow:hidden; background:#fff;
-  box-shadow:0 26px 50px rgba(29,40,32,.28); transform:rotate(-4deg);}
-.pl-phone img{display:block; width:100%; height:auto;}
-.pl-hero .pl-phone{justify-self:center; width:270px; transform:rotate(4deg); box-shadow:0 30px 70px rgba(10,20,14,.45);}
-.pl-phone.second{transform:rotate(5deg); margin:44px 0 0 -26px; width:210px;}
+/* Téléphones : maquettes réalistes de l'outil (assets/phone-*.webp, tirées
+   des mockup_SCREEN*.png fournis), toujours droites, cadre et écran déjà
+   inclus dans l'image. Deux téléphones : le second décalé vers le bas. */
+.pl-mock{display:block; width:250px; height:auto; flex:none; filter:drop-shadow(0 26px 34px rgba(29,40,32,.24));}
+.pl-hero .pl-mock{justify-self:center; width:290px; filter:drop-shadow(0 30px 50px rgba(10,20,14,.45));}
+.pl-mock + .pl-mock{margin:70px 0 0 -40px;}
+.pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
+
+/* Schéma iCal (aucune capture de l'outil ne montre cet échange) */
+.pl-sync{display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; max-width:340px;}
+.pl-sync-row{display:flex; gap:12px; width:100%;}
+.pl-sync-box{flex:1; background:#fff; border-radius:18px; padding:16px; text-align:center; font-weight:600; color:var(--sauge-deep);
+  box-shadow:0 10px 26px rgba(29,40,32,.10);}
+.pl-sync-box small{display:block; font-weight:400; font-size:12.5px; color:var(--muted); margin-top:2px;}
+.pl-sync-arrows{display:flex; gap:26px; color:var(--lavender-deep);}
+.pl-sync-arrows svg{width:26px; height:26px;}
+.pl-sync-box.main{background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:20px;}
+.pl-sync-box.main small{color:rgba(255,255,255,.8);}
+.pl-sync-box.main img{width:30px; height:auto; filter:brightness(0) invert(1);}
 
 /* Bandeau */
 .pl-ribbon{background:var(--sauge-bg); padding:20px 16px; text-align:center; color:var(--sauge); font-weight:600; font-size:16px;}
@@ -238,7 +251,7 @@ h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
   .pl-hero-in, .pl-split, .pl-split.reverse{grid-template-columns:1fr;}
   .pl-split.reverse .pl-visual{order:0;}
   .pl-hero-in{padding-top:calc(96px + env(safe-area-inset-top,0px)); padding-bottom:64px; gap:34px;}
-  .pl-hero .pl-phone{width:210px;}
+  .pl-hero .pl-mock{width:230px;}
   .pl-features{grid-template-columns:1fr 1fr;}
   .pl-dual{grid-template-columns:1fr;}
   .pl-visual{min-height:380px;}
@@ -248,8 +261,9 @@ h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
   .pl-feature{padding:24px;}
   .pl-btn{width:100%; justify-content:center;}
   .pl-visual{min-height:0; padding:28px 12px;}
-  .pl-phone{width:180px;}
-  .pl-phone.second{width:160px; margin:36px 0 0 -30px;}
+  .pl-mock{width:170px;}
+  .pl-mock + .pl-mock{margin:50px 0 0 -30px;}
+  .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:50px;}
   .pl-ribbon{font-size:13.5px; padding:18px 10px;}
   .pl-ribbon span{margin:0 4px;}
   .pl-login span{display:none;} .pl-login{padding:9px;}
@@ -285,7 +299,7 @@ section[id]{scroll-margin-top:72px;}
       </div>
       <p class="pl-hero-note">Conçu et utilisé par des hébergeurs indépendants.</p>
     </div>
-    <div class="pl-phone"><img src="assets/shot-planning.webp" width="700" height="1081" alt="Capture de la grille de réservations Fiftin Planning"></div>
+    <img class="pl-mock" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année, les réservations de toute l'année en un écran">
   </div>
 </section>
 
@@ -318,8 +332,7 @@ section[id]{scroll-margin-top:72px;}
 <section class="pl-section alt">
   <div class="pl-wrap pl-split">
     <div class="pl-visual">
-      <div class="pl-phone"><img src="assets/shot-planning.webp" width="700" height="1081" loading="lazy" alt="Vue grille de Fiftin Planning avec réservations colorées"></div>
-      <div class="pl-phone second"><img src="assets/shot-reservation.webp" width="700" height="1081" loading="lazy" alt="Formulaire de réservation Fiftin Planning, nom du client masqué"></div>
+      <img class="pl-mock" src="assets/phone-reservation.webp" width="600" height="1275" loading="lazy" alt="Fiche réservation de Fiftin Planning, nom du client masqué">
     </div>
     <div>
       <div class="pl-kicker">Réservations &amp; disponibilités</div>
@@ -338,7 +351,11 @@ section[id]{scroll-margin-top:72px;}
 <section class="pl-section">
   <div class="pl-wrap pl-split reverse">
     <div class="pl-visual lavender">
-      <div class="pl-phone"><img src="assets/shot-annee.webp" width="700" height="1081" loading="lazy" alt="Vue Année de Fiftin Planning : les réservations de toute l'année en un écran"></div>
+      <div class="pl-sync" role="img" aria-label="Échange iCal dans les deux sens entre Airbnb, Booking.com et Fiftin Planning">
+        <div class="pl-sync-row"><div class="pl-sync-box">Airbnb<small>calendrier iCal</small></div><div class="pl-sync-box">Booking.com<small>calendrier iCal</small></div></div>
+        <div class="pl-sync-arrows" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
+        <div class="pl-sync-box main"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""><span>Fiftin Planning<small>import et export iCal</small></span></div>
+      </div>
     </div>
     <div>
       <div class="pl-kicker">Calendriers connectés</div>
@@ -357,8 +374,8 @@ section[id]{scroll-margin-top:72px;}
 <section class="pl-section alt">
   <div class="pl-wrap pl-split">
     <div class="pl-visual yellow">
-      <div class="pl-phone"><img src="assets/shot-comptabilite.webp" width="700" height="1081" loading="lazy" alt="Tableau de bord annuel de Fiftin Planning"></div>
-      <div class="pl-phone second"><img src="assets/shot-mois.webp" width="700" height="1081" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées"></div>
+      <img class="pl-mock" src="assets/phone-bilan-annee.webp" width="600" height="1275" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, occupation">
+      <img class="pl-mock" src="assets/phone-mois.webp" width="600" height="1275" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées">
     </div>
     <div>
       <div class="pl-kicker">Chiffres &amp; prévisions</div>
@@ -377,8 +394,7 @@ section[id]{scroll-margin-top:72px;}
 <section class="pl-section">
   <div class="pl-wrap pl-split reverse">
     <div class="pl-visual lavender">
-      <div class="pl-phone"><img src="assets/shot-consommations.webp" width="700" height="1081" loading="lazy" alt="Saisie des consommations et extras dans Fiftin Planning"></div>
-      <div class="pl-phone second"><img src="assets/shot-evenements.webp" width="700" height="1081" loading="lazy" alt="Événements personnels et professionnels dans Fiftin Planning"></div>
+      <img class="pl-mock" src="assets/phone-semaine.webp" width="600" height="1275" loading="lazy" alt="Vue Semaine de Fiftin Planning : événements, repas et extras de la semaine">
     </div>
     <div>
       <div class="pl-kicker">La réalité du métier</div>
