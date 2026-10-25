@@ -4,8 +4,9 @@
 <meta charset="UTF-8">
 <!-- Page commerciale Fiftin Planning (fiftin.fr/planning/), page autonome.
      Textes : refonte fournie par César (oct. 2026), mise en page alignée
-     sur la DA du site (Jost/Fraunces, palette sauge/lavande/jaune, vidéo de
-     marque, pastille d'accueil). Bloc formules + paiement Stripe conservé
+     sur la DA commune du site (classes .da-*, mêmes valeurs que l'accueil :
+     Jost, palette sauge/lavande/jaune, vidéo de marque en hero, zones de fond
+     blanc/crème/vert qui se chevauchent avec coins arrondis, pastille d'accueil). Bloc formules + paiement Stripe conservé
      (#tarifs). Chemins écrits depuis la racine du site (base href) : les
      ancres internes sont donc écrites « planning/#… ». -->
 <base href="/">
@@ -16,7 +17,7 @@
 <link rel="icon" type="image/png" href="assets/logo-fiftin-mark-glass.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
   --cream:#EFEEEA; --cream-deep:#E4E1D9; --cream-light:#F7F6F4; --ink:#2E2B22;
@@ -26,7 +27,8 @@
   --line:rgba(46,43,34,0.14);
   --danger:#B2543B;
   --gray-mid:#9A9789;
-  --muted:#627468;
+  --muted:#6F6C62;
+  --shadow:0 10px 30px rgba(29,40,32,.10);
   /* Grain des photos d'annonce (fil + repli sans photo de la fiche détail,
      voir .cover .grain et le "slide" de secours dans openDetail() plus
      bas) — réglage centralisé pour n'ajuster qu'ici (retour utilisateur :
@@ -39,9 +41,9 @@
   --grain-bg:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
 }
 .brand-bg-video{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; pointer-events:none;}
-.pl-hero, .pl-story{background-size:cover; background-position:center;}
-@media(orientation:portrait){.pl-hero, .pl-story{background-image:url(data:image/webp;base64,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)}}
-@media(orientation:landscape){.pl-hero, .pl-story{background-image:url(data:image/webp;base64,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)}}
+.pl-hero{background-size:cover; background-position:center;}
+@media(orientation:portrait){.pl-hero{background-image:url(data:image/webp;base64,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)}}
+@media(orientation:landscape){.pl-hero{background-image:url(data:image/webp;base64,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)}}
 @property --iris-angle{syntax:'<angle>'; inherits:false; initial-value:0deg;}
 @keyframes irisSpin{to{--iris-angle:360deg;}}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
@@ -78,15 +80,64 @@ button{font-family:inherit; cursor:pointer;}
 a{color:inherit; text-decoration:none;}
 p{line-height:1.6; margin:0 0 14px;}
 h1,h2,h3{margin:0; font-weight:600; letter-spacing:-.02em; color:var(--sauge-deep);}
-h1{font-size:clamp(38px,5.6vw,66px); line-height:1.04;}
-h2{font-size:clamp(30px,4vw,46px); line-height:1.1; margin-bottom:18px;}
-h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
+section[id]{scroll-margin-top:72px;}
+
+/* ── DA commune du site (mêmes valeurs que l'accueil, index.html) ──
+   Sur-titre, titres, texte courant, boutons, logo en verre, voile vidéo,
+   zones de fond qui se chevauchent avec coins arrondis de 44 px. */
+.da-kicker{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--sauge-mid); margin:0 0 14px;}
+.da-h2{font-size:clamp(30px,3.8vw,44px); line-height:1.1; margin:0 0 18px;}
+.da-text{font-size:16.5px; line-height:1.6; color:var(--muted);}
+.da-btns{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
+.da-btn{display:inline-flex; align-items:center; gap:12px; padding:15px 24px; border-radius:999px; font-weight:600; font-size:16px; white-space:nowrap; max-width:100%;}
+.da-btn svg{width:18px; height:18px; flex:none;}
+.da-btn.yellow{background:var(--yellow); color:var(--sauge-deep);}
+.da-btn.dark{background:var(--sauge); color:#fff;}
+.da-btn.white{background:#fff; color:var(--sauge-deep); box-shadow:0 8px 24px rgba(0,0,0,.14);}
+.da-btn.glass{color:#fff; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.42);
+  backdrop-filter:blur(10px) saturate(1.3); -webkit-backdrop-filter:blur(10px) saturate(1.3);}
+.da-wrap{max-width:1180px; margin:0 auto; padding:0 clamp(16px,3vw,28px);}
+/* Zones : chacune remonte sur la précédente avec des coins arrondis. */
+.da-zone{position:relative; border-radius:44px 44px 0 0; margin-top:-44px; padding:clamp(76px,9vw,104px) 0 calc(44px + clamp(56px,7vw,80px));}
+.da-zone.white{background:#fff;}
+.da-zone.cream{background:var(--cream);}
+.da-zone.green{background:var(--sauge); color:#fff; padding-bottom:0;}
+.da-zone.green h2,.da-zone.green h3{color:#fff;}
+.da-zone.green .da-kicker{color:var(--yellow-light);}
+.da-zone.green .da-text{color:rgba(255,255,255,.8);}
+/* Logo en verre : proportions de l'écran d'arrivée de l'outil (.logo-tile). */
+.da-logo{position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:25%;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    linear-gradient(160deg, #A9C38F 0%, #7FA06A 45%, #577A50 100%);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(8,13,10,.38), inset -7px 0 13px rgba(8,13,10,.24),
+    0 10px 26px rgba(29,40,32,.22), 0 2px 6px rgba(29,40,32,.16);}
+.da-logo::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.4px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.da-logo::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none;}
+.da-logo img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%);}
+/* Pied de page commun (dans la zone verte de fin de page). */
+.da-foot{margin-top:clamp(56px,7vw,80px); border-top:1px solid rgba(255,255,255,.14); padding:28px 0 calc(30px + env(safe-area-inset-bottom,0px));
+  display:flex; justify-content:space-between; align-items:center; gap:20px; flex-wrap:wrap;}
+.da-foot-brand{display:flex; align-items:center; gap:14px;}
+.da-foot-brand .da-logo{width:40px; height:40px; box-shadow:none;}
+.da-foot-brand p{margin:0; font-size:14px; color:rgba(255,255,255,.8);}
+.da-foot nav{display:flex; gap:20px; flex-wrap:wrap; font-size:14px;}
+.da-foot nav a{color:rgba(255,255,255,.9);}
 
 /* Pictogramme Fiftin centré en haut de page, toujours visible (fixe) :
-   retour à l'accueil fiftin.fr. Même verre que le grand logo de l'accueil,
-   en petit, en nuances de gris, lettrage blanc pur (sans dégradé). */
+   retour à l'accueil fiftin.fr. Même verre que le grand logo, en petit,
+   en nuances de gris, lettrage blanc pur ; mêmes proportions (25 %, 61 %). */
 .ff-home{position:fixed; top:calc(14px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); z-index:30;
-  width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
+  width:44px; height:44px; border-radius:25%; display:flex; align-items:center; justify-content:center;
   overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(18,18,18,.1) 68%, rgba(18,18,18,.26) 100%),
@@ -105,57 +156,68 @@ h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
 .ff-home::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
-.ff-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(0) invert(1);}
-/* « Se connecter » (clients existants) : ouvre l'outil, qui a son propre écran de connexion. */
-.pl-login{position:absolute; top:calc(16px + env(safe-area-inset-top,0px)); right:clamp(14px,4vw,40px); z-index:30;
-  display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:999px; font:500 13.5px 'Jost',sans-serif; color:#fff;
+.ff-home img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
+/* « Se connecter » : même bouton que l'accueil (.hl-acc-btn). */
+.pl-login{position:absolute; top:calc(18px + env(safe-area-inset-top,0px)); right:clamp(18px,4vw,48px); z-index:30;
+  display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; font:500 14px 'Jost',sans-serif; color:#fff;
   background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.42);
   backdrop-filter:blur(10px) saturate(1.3); -webkit-backdrop-filter:blur(10px) saturate(1.3);}
-.pl-login svg{width:16px; height:16px;}
+.pl-login svg{width:17px; height:17px;}
 
-/* ── Gabarit ── */
-.pl-wrap{max-width:1140px; margin:0 auto; padding:0 clamp(20px,3vw,28px);}
-.pl-section{padding:clamp(70px,9vw,104px) 0;}
-.pl-section.alt{background:var(--cream-light);}
-.pl-kicker{font-size:12px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--sauge-mid); margin-bottom:16px;}
-.pl-center{text-align:center;}
-.pl-lead{font-size:clamp(16.5px,1.6vw,18.5px); line-height:1.55; color:var(--muted); max-width:720px;}
-.pl-center .pl-lead{margin:0 auto;}
-.pl-small{font-size:13.5px; color:var(--muted);}
-.pl-notice{border-left:3px solid var(--sauge-light); padding:2px 0 2px 16px; font-size:14px; line-height:1.55; color:var(--muted); margin-top:22px;}
-
-/* Boutons (mêmes pilules que l'accueil) */
-.pl-btns{display:flex; flex-wrap:wrap; gap:12px; margin-top:28px;}
-.pl-btn{display:inline-flex; align-items:center; gap:10px; padding:14px 24px; border-radius:999px; font-weight:600; font-size:15.5px;
-  box-shadow:0 8px 24px rgba(0,0,0,.12); transition:transform .2s ease;}
-.pl-btn:hover{transform:translateY(-2px);}
-.pl-btn svg{width:18px; height:18px; flex:none;}
-.pl-btn.yellow{background:var(--yellow); color:var(--sauge-deep);}
-.pl-btn.glass{color:#fff; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.45); box-shadow:none;
-  backdrop-filter:blur(10px) saturate(1.3); -webkit-backdrop-filter:blur(10px) saturate(1.3);}
-.pl-btn.dark{background:var(--sauge); color:#fff;}
-
-/* ── Hero : vidéo de marque + voile pour la lisibilité ── */
-.pl-hero{position:relative; overflow:hidden; color:#fff; background-color:var(--sauge-light); background-size:cover; background-position:center;}
+/* ── Hero : vidéo de marque + même voile que l'accueil ── */
+.pl-hero{position:relative; overflow:hidden; color:#fff; min-height:min(92vh,860px); display:flex; align-items:center;
+  background-color:var(--sauge-light); background-size:cover; background-position:center;}
 .pl-hero::after{content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
-  background:linear-gradient(110deg, rgba(29,40,32,.66) 0%, rgba(29,40,32,.42) 52%, rgba(29,40,32,.2) 100%);}
-.pl-hero-in{position:relative; z-index:2; display:grid; grid-template-columns:1.15fr .85fr; gap:44px; align-items:center;
-  padding-top:calc(120px + env(safe-area-inset-top,0px)); padding-bottom:96px;}
-.pl-hero .pl-kicker{color:var(--yellow-light);}
-.pl-hero h1{color:#fff; text-shadow:0 2px 24px rgba(0,0,0,.15);}
-.pl-hero .claim{font-family:'Fraunces',serif; font-style:italic; font-size:clamp(20px,2.2vw,26px); color:var(--yellow-light); margin:22px 0 12px;}
-.pl-hero p{font-size:clamp(16.5px,1.6vw,18.5px); max-width:580px; color:rgba(255,255,255,.94);}
-.pl-hero-note{font-size:13px!important; color:rgba(255,255,255,.78)!important; margin-top:18px;}
+  background:linear-gradient(180deg, rgba(29,40,32,.20) 0%, rgba(29,40,32,.32) 60%, rgba(29,40,32,.24) 100%);}
+.pl-hero-in{position:relative; z-index:3; width:100%; display:grid; grid-template-columns:1.15fr .85fr; gap:44px; align-items:center;
+  padding-top:calc(110px + env(safe-area-inset-top,0px)); padding-bottom:150px;}
+.pl-hero .da-kicker{color:#fff; opacity:.95;}
+.pl-hero h1{color:#fff; font-size:clamp(40px,6vw,68px); line-height:1.04; text-shadow:0 2px 24px rgba(0,0,0,.18);}
+.pl-hero .claim{font-size:clamp(19px,2vw,23px); font-weight:500; margin:22px 0 12px; color:#fff;}
+.pl-hero p{font-size:clamp(16px,1.8vw,19px); line-height:1.5; max-width:580px; color:rgba(255,255,255,.95);}
+.pl-hero-note{font-size:13px!important; color:rgba(255,255,255,.8)!important; margin-top:18px;}
+.pl-edge{position:absolute; left:0; right:0; bottom:-1px; z-index:2; height:44px; background:#fff; border-radius:44px 44px 0 0;}
+.pl-chev{position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:4; color:#fff; width:26px; height:26px; animation:plBob 2.4s ease-in-out infinite;}
+@keyframes plBob{50%{transform:translate(-50%,5px);}}
+.pl-hero + .da-zone{margin-top:0; border-radius:0; padding-top:clamp(24px,4vw,40px);}
 
-/* Téléphones : maquettes réalistes de l'outil (assets/phone-*.webp, tirées
-   des mockup_SCREEN*.png fournis), toujours droites, cadre et écran déjà
-   inclus dans l'image. Deux téléphones : le second décalé vers le bas. */
-.pl-mock{display:block; width:250px; height:auto; flex:none; filter:drop-shadow(0 26px 34px rgba(29,40,32,.24));}
-.pl-hero .pl-mock{justify-self:center; width:290px; filter:drop-shadow(0 30px 50px rgba(10,20,14,.45));}
+/* Téléphones : maquettes réalistes de l'outil (assets/phone-*.webp), toujours
+   droites ; deux téléphones : le second décalé vers le bas. */
+.pl-mock{display:block; width:250px; height:auto; flex:none; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
+.pl-hero .pl-mock{justify-self:center; width:280px; filter:drop-shadow(0 30px 50px rgba(10,20,14,.45));}
 .pl-mock + .pl-mock{margin:70px 0 0 -40px;}
 .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
 
-/* Schéma iCal (aucune capture de l'outil ne montre cet échange) */
+/* Bandeau (même rôle que « Une même marque » de l'accueil) */
+.pl-ribbon{text-align:center; color:var(--sauge-mid); font-weight:600; font-size:clamp(15px,1.6vw,17px); margin:0 0 clamp(44px,6vw,64px);}
+.pl-ribbon span{margin:0 12px; color:var(--sauge-light);}
+
+/* Six fonctionnalités : cartes comme les deux cartes de l'accueil */
+.pl-center{text-align:center;}
+.pl-center .da-text{max-width:720px; margin:0 auto;}
+.pl-features{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:44px;}
+.pl-feature{border-radius:28px; padding:clamp(22px,3vw,30px); background:linear-gradient(160deg,#EDF1E8 0%,#E3E9DE 100%); box-shadow:var(--shadow);}
+.pl-feature:nth-child(even){background:linear-gradient(160deg,#EEF0FA 0%,#E2E6F6 100%);}
+.pl-feature .ic{width:56px; height:56px; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; margin-bottom:18px;}
+.pl-feature .ic svg{width:26px; height:26px; color:var(--sauge-deep);}
+.pl-feature:nth-child(even) .ic svg{color:var(--lavender-deep);}
+.pl-feature h3{font-size:clamp(19px,2vw,22px); line-height:1.25; margin-bottom:8px;}
+.pl-feature p{margin:0; font-size:15.5px; line-height:1.5; color:var(--muted);}
+
+/* Sections texte + visuel */
+.pl-split{display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(36px,6vw,72px); align-items:center;}
+.pl-split.reverse .pl-visual{order:2;}
+.pl-visual{min-height:440px; border-radius:28px; display:flex; align-items:center; justify-content:center; padding:36px 24px; overflow:hidden;
+  background:linear-gradient(160deg,#EDF1E8 0%,#E3E9DE 100%); box-shadow:var(--shadow);}
+.pl-visual.lavender{background:linear-gradient(160deg,#EEF0FA 0%,#E2E6F6 100%);}
+.pl-check{list-style:none; margin:22px 0 24px; padding:0; display:grid; gap:12px;}
+.pl-check li{display:flex; gap:12px; align-items:flex-start; line-height:1.5; font-size:16px; color:var(--ink);}
+.pl-check li::before{content:""; flex:0 0 24px; height:24px; border-radius:50%; margin-top:1px;
+  background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/13px no-repeat;}
+.pl-small{font-size:13.5px; color:var(--muted);}
+.pl-notice{border-left:3px solid var(--sauge-light); padding:2px 0 2px 16px; font-size:14px; line-height:1.55; color:var(--muted); margin-top:22px;}
+
+/* Schéma iCal (aucune maquette ne montre cet échange) */
 .pl-sync{display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; max-width:340px;}
 .pl-sync-row{display:flex; gap:12px; width:100%;}
 .pl-sync-box{flex:1; background:#fff; border-radius:18px; padding:16px; text-align:center; font-weight:600; color:var(--sauge-deep);
@@ -163,117 +225,75 @@ h3{font-size:clamp(19px,2vw,23px); line-height:1.25; margin-bottom:8px;}
 .pl-sync-box small{display:block; font-weight:400; font-size:12.5px; color:var(--muted); margin-top:2px;}
 .pl-sync-arrows{display:flex; gap:26px; color:var(--lavender-deep);}
 .pl-sync-arrows svg{width:26px; height:26px;}
-.pl-sync-box.main{background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:20px;}
+.pl-sync-box.main{background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:18px;}
 .pl-sync-box.main small{color:rgba(255,255,255,.8);}
-.pl-sync-box.main img{width:30px; height:auto; filter:brightness(0) invert(1);}
-
-/* Bandeau */
-.pl-ribbon{background:var(--sauge-bg); padding:20px 16px; text-align:center; color:var(--sauge); font-weight:600; font-size:16px;}
-.pl-ribbon span{margin:0 12px; color:var(--sauge-light);}
-
-/* Six fonctionnalités */
-.pl-features{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; margin-top:48px;}
-.pl-feature{background:#fff; border:1px solid var(--line); border-radius:24px; padding:28px;}
-.pl-feature .ic{width:56px; height:56px; border-radius:50%; background:var(--cream-deep); display:flex; align-items:center; justify-content:center; margin-bottom:20px;}
-.pl-feature .ic svg{width:26px; height:26px; color:var(--sauge-deep);}
-.pl-feature p{margin:0; font-size:15px; color:var(--muted);}
-
-/* Sections texte + visuel */
-.pl-split{display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(36px,6vw,72px); align-items:center;}
-.pl-split.reverse .pl-visual{order:2;}
-.pl-split p{color:var(--muted); font-size:16.5px;}
-.pl-visual{min-height:440px; border-radius:30px; display:flex; align-items:center; justify-content:center; padding:36px 24px; overflow:hidden;
-  background:var(--sauge-bg);}
-.pl-visual.lavender{background:var(--lavender-bg);}
-.pl-visual.yellow{background:var(--yellow-light);}
-.pl-check{list-style:none; margin:22px 0 24px; padding:0; display:grid; gap:12px;}
-.pl-check li{display:flex; gap:12px; align-items:flex-start; line-height:1.5; font-size:16px;}
-.pl-check li::before{content:""; flex:0 0 24px; height:24px; border-radius:50%; margin-top:1px;
-  background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/13px no-repeat;}
+.pl-sync-box.main .da-logo{width:40px; height:40px; flex:none; box-shadow:none;}
 
 /* Vos données */
 .pl-dual{display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:34px;}
-.pl-dual article{border-radius:24px; padding:32px; background:#fff; border:1px solid var(--line);}
-.pl-dual article:last-child{background:var(--sauge-bg); border-color:transparent;}
+.pl-dual article{border-radius:28px; padding:clamp(24px,3vw,32px); background:#fff; box-shadow:var(--shadow);}
+.pl-dual h3{font-size:clamp(19px,2vw,22px); margin-bottom:8px;}
 .pl-dual p{margin:0; color:var(--muted);}
 
-/* Notre histoire : même fond vidéo que le haut de page */
-.pl-story{position:relative; overflow:hidden; border-radius:32px; padding:clamp(34px,6vw,64px); color:#fff;
-  background-color:var(--sauge); background-size:cover; background-position:center;}
-.pl-story::after{content:""; position:absolute; inset:0; z-index:1; background:rgba(29,40,32,.62); pointer-events:none;}
-.pl-story > div{position:relative; z-index:2; max-width:760px;}
-.pl-story .pl-kicker{color:var(--yellow-light);}
-.pl-story h2{color:#fff;}
-.pl-story p{color:rgba(255,255,255,.92); font-size:17px;}
-
-/* Passerelle Séjours (même pastille que la carte Séjours de l'accueil) */
-.pl-pill{display:inline-flex; align-items:center; gap:8px; padding:8px 14px; border-radius:999px; font-size:14px; font-weight:600;
+/* Passerelle Séjours : même pastille que la carte Séjours de l'accueil */
+.pl-pill{display:inline-flex; align-items:center; gap:10px; padding:9px 16px; border-radius:999px; font-size:13.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
   background:var(--yellow-light); color:var(--sauge-deep);}
-.pl-pill svg{width:16px; height:16px;}
-.pl-sej-card{background:#fff; border-radius:28px; padding:34px 30px; text-align:center; max-width:380px; box-shadow:0 18px 40px rgba(29,40,32,.10);}
-.pl-sej-card h3{margin:16px 0 10px; font-size:24px;}
-.pl-sej-card p{margin:0; font-family:'Fraunces',serif; font-style:italic; color:var(--muted);}
+.pl-pill svg{width:20px; height:20px;}
+.pl-sej-card{background:#fff; border-radius:28px; padding:34px 30px; text-align:center; max-width:380px; box-shadow:var(--shadow);}
+.pl-sej-card h3{margin:16px 0 10px; font-size:clamp(19px,2vw,23px); font-weight:500; line-height:1.3;}
+.pl-sej-card p{margin:0; color:var(--muted);}
 
 /* Formules */
-.pl-offer{background:var(--yellow-light); border-radius:32px; padding:clamp(30px,5vw,56px);}
 .pl-plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin-top:30px;}
-.pl-plans .plan{background:#fff; border:1px solid var(--line); border-radius:18px; padding:24px; position:relative;}
-.pl-plans .plan.mkt-plan-current{border-color:var(--sauge); box-shadow:0 0 0 1.5px var(--sauge) inset;}
-.pl-plans .plan .name{font-size:11.5px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
-.pl-plans .plan .mkt-plan-tag{background:var(--sauge); color:var(--cream); font-size:10px; font-weight:800; letter-spacing:.04em; text-transform:none; padding:3px 8px; border-radius:20px;}
-.pl-plans .plan .price{font-weight:800; font-size:36px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px;}
-.pl-plans .plan .per{font-size:13.5px; color:rgba(46,43,34,0.6); margin-bottom:16px;}
+.pl-plans .plan{background:#fff; border-radius:28px; padding:26px; position:relative; box-shadow:var(--shadow);}
+.pl-plans .plan.mkt-plan-current{box-shadow:0 0 0 2px var(--sauge) inset, var(--shadow);}
+.pl-plans .plan .name{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.pl-plans .plan .mkt-plan-tag{background:var(--sauge); color:#fff; font-size:10.5px; font-weight:600; letter-spacing:.02em; text-transform:none; padding:3px 9px; border-radius:20px;}
+.pl-plans .plan .price{font-weight:700; font-size:38px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px; color:var(--sauge-deep);}
+.pl-plans .plan .per{font-size:14px; color:var(--muted); margin-bottom:16px;}
 .pl-plans .plan ul{margin:0; padding:0; list-style:none;}
-.pl-plans .plan li{font-size:13.5px; line-height:1.5; padding:6px 0 6px 18px; position:relative; color:rgba(46,43,34,0.78);}
-.pl-plans .plan li::before{content:''; position:absolute; left:0; top:11px; width:5px; height:13px; border-radius:2.5px; background:var(--sauge-deep);}
-.pl-plans .plan li:nth-child(5n+1)::before{background:var(--lavender);}
-.pl-plans .plan li:nth-child(5n+2)::before{background:#C97B5C;}
-.pl-plans .plan li:nth-child(5n+3)::before{background:#6B8F71;}
-.pl-plans .plan li:nth-child(5n+4)::before{background:#D88A9A;}
-.pl-plans .plan li:nth-child(5n+5)::before{background:var(--yellow);}
-.pl-plans .plan .mkt-plan-cta{width:100%; margin-top:16px; padding:13px; font-size:13px;
-  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%,
-    rgba(255,255,255,.04) 48%, rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%), var(--lavender-deep);}
-.pl-plans .plan .mkt-plan-link{display:block; width:100%; margin-top:16px; padding:12px; border-radius:16px; text-align:center;
-  font-weight:700; font-size:13px; color:var(--sauge-deep); border:1.5px solid var(--line);}
+.pl-plans .plan li{font-size:14.5px; line-height:1.45; padding:6px 0 6px 34px; position:relative; color:var(--ink);}
+.pl-plans .plan li::before{content:""; position:absolute; left:0; top:5px; width:22px; height:22px; border-radius:50%;
+  background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/12px no-repeat;}
+.pl-plans .plan .mkt-plan-cta{display:flex; justify-content:center; align-items:center; width:100%; margin-top:18px; padding:15px; border:none; border-radius:999px;
+  background:var(--yellow); color:var(--sauge-deep); font:600 15.5px 'Jost',sans-serif;}
+.pl-plans .plan .mkt-plan-cta::before,.pl-plans .plan .mkt-plan-cta::after{content:none;}
+.pl-plans .plan .mkt-plan-cta{box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;}
+.pl-plans .plan .mkt-plan-link{display:block; width:100%; margin-top:18px; padding:14px; border-radius:999px; text-align:center;
+  font-weight:600; font-size:15.5px; background:var(--sauge); color:#fff;}
 
-/* Pied de page */
-.pl-footer{background:var(--sauge); color:#fff; padding:40px 0 calc(40px + env(safe-area-inset-bottom,0px));}
-.pl-footer .pl-wrap{display:flex; justify-content:space-between; align-items:center; gap:22px; flex-wrap:wrap;}
-.pl-foot-brand{display:flex; align-items:center; gap:14px;}
-.pl-foot-brand .mini{width:38px; height:38px; border-radius:11px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); display:flex; align-items:center; justify-content:center;}
-.pl-foot-brand .mini img{width:62%; height:auto; filter:brightness(0) invert(1);}
-.pl-foot-brand p{margin:0; font-size:14px; color:rgba(255,255,255,.82);}
-.pl-footer nav{display:flex; gap:20px; flex-wrap:wrap; font-size:14px;}
-.pl-footer nav a{color:rgba(255,255,255,.9);}
+/* Notre histoire (zone verte de fin, comme l'accueil) */
+.pl-story{max-width:780px; margin:0 auto; text-align:center; display:flex; flex-direction:column; align-items:center;}
+.pl-story .da-logo{width:96px; height:96px; margin-bottom:26px;}
+.pl-story .da-text{font-size:17px;}
+.pl-story strong{color:#fff;}
 
-@media (max-width:900px){
+@media (max-width:980px){
   .pl-hero-in, .pl-split, .pl-split.reverse{grid-template-columns:1fr;}
   .pl-split.reverse .pl-visual{order:0;}
-  .pl-hero-in{padding-top:calc(96px + env(safe-area-inset-top,0px)); padding-bottom:64px; gap:34px;}
-  .pl-hero .pl-mock{width:230px;}
   .pl-features{grid-template-columns:1fr 1fr;}
   .pl-dual{grid-template-columns:1fr;}
   .pl-visual{min-height:380px;}
 }
-@media (max-width:600px){
+@media (max-width:640px){
+  .pl-hero{min-height:0;}
+  .pl-hero-in{padding-top:calc(100px + env(safe-area-inset-top,0px)); padding-bottom:130px; gap:34px;}
+  .pl-hero .pl-mock{width:220px;}
   .pl-features{grid-template-columns:1fr;}
-  .pl-feature{padding:24px;}
-  .pl-btn{width:100%; justify-content:center;}
+  .da-btn{width:100%; justify-content:center;}
   .pl-visual{min-height:0; padding:28px 12px;}
   .pl-mock{width:170px;}
   .pl-mock + .pl-mock{margin:50px 0 0 -30px;}
   .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:50px;}
-  .pl-ribbon{font-size:13.5px; padding:18px 10px;}
-  .pl-ribbon span{margin:0 4px;}
-  .pl-login span{display:none;} .pl-login{padding:9px;}
+  .pl-ribbon{font-size:13px; letter-spacing:-.01em;}
+  .pl-ribbon span{margin:0 3px;}
+  .pl-login{padding:9px 14px; font-size:13.5px;}
+  .pl-story .da-logo{width:84px; height:84px;}
 }
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto;}
   *,*::before,*::after{animation:none!important; transition:none!important;}
 }
-
-section[id]{scroll-margin-top:72px;}
 </style>
 </head>
 <body>
@@ -286,58 +306,59 @@ section[id]{scroll-margin-top:72px;}
 <main>
 <section class="pl-hero">
   <video class="brand-bg-video" id="plHeroVideo" autoplay muted loop playsinline aria-hidden="true"></video>
-  <div class="pl-wrap pl-hero-in">
+  <div class="da-wrap pl-hero-in">
     <div>
-      <div class="pl-kicker">Fiftin Planning · Pour les chambres d'hôtes et gîtes</div>
+      <p class="da-kicker">Fiftin Planning · Pour les chambres d'hôtes et gîtes</p>
       <h1>Toute votre activité d'hébergeur.<br>Au même endroit.</h1>
       <p class="claim">Le plaisir d'accueillir. La liberté de gérer.</p>
       <p>Réservations, disponibilités, clients, repas, finances et prévisions : un seul outil pour garder votre activité en main, où que vous soyez.</p>
-      <div class="pl-btns">
-        <a class="pl-btn yellow" href="planning/#fonctionnalites">Découvrir les fonctionnalités
+      <div class="da-btns">
+        <a class="da-btn yellow" href="planning/#fonctionnalites">Découvrir les fonctionnalités
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
-        <a class="pl-btn glass" href="planning/#tarifs">Découvrir les formules</a>
+        <a class="da-btn glass" href="planning/#tarifs">Découvrir les formules</a>
       </div>
       <p class="pl-hero-note">Conçu et utilisé par des hébergeurs indépendants.</p>
     </div>
     <img class="pl-mock" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année, les réservations de toute l'année en un écran">
   </div>
+  <div class="pl-edge" aria-hidden="true"></div>
+  <a class="pl-chev" href="planning/#fonctionnalites" aria-label="Voir les fonctionnalités"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></a>
 </section>
 
-<div class="pl-ribbon">Un planning <span>·</span> Vos clients <span>·</span> Vos chiffres <span>·</span> Votre liberté</div>
-
-<section class="pl-section" id="fonctionnalites">
-  <div class="pl-wrap">
+<section class="da-zone white" id="fonctionnalites">
+  <div class="da-wrap">
+    <p class="pl-ribbon">Un planning <span>·</span> Vos clients <span>·</span> Vos chiffres <span>·</span> Votre liberté</p>
     <div class="pl-center">
-      <div class="pl-kicker">Un seul outil, plusieurs métiers</div>
-      <h2>Bien plus qu'un calendrier.</h2>
-      <p class="pl-lead">L'activité d'un hébergeur ne s'arrête pas à une réservation. Fiftin rassemble les informations dont vous avez besoin pour accueillir, vous organiser et prendre les bonnes décisions.</p>
+      <p class="da-kicker">Un seul outil, plusieurs métiers</p>
+      <h2 class="da-h2">Bien plus qu'un calendrier.</h2>
+      <p class="da-text">L'activité d'un hébergeur ne s'arrête pas à une réservation. Fiftin rassemble les informations dont vous avez besoin pour accueillir, vous organiser et prendre les bonnes décisions.</p>
     </div>
     <div class="pl-features">
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h3M8 18h6"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M8 14h3M8 18h6"/></svg></div>
         <h3>Organiser les réservations</h3><p>Une grille visuelle ou une vue par location, pour réserver de la façon qui vous convient.</p></article>
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg></div>
         <h3>Connecter vos calendriers</h3><p>Synchronisation iCal en import et en export avec les calendriers Airbnb et Booking.com.</p></article>
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
         <h3>Retrouver vos clients</h3><p>Coordonnées, historique et informations utiles, pour une relation plus directe et personnelle.</p></article>
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><path d="M6 1v3M10 1v3M14 1v3"/></svg></div>
         <h3>Suivre les séjours</h3><p>Table d'hôtes, consommations, extras et événements, au même endroit que les réservations.</p></article>
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></div>
         <h3>Piloter votre activité</h3><p>Chiffre d'affaires réalisé ou prévisionnel, occupation, charges et indicateurs de rentabilité.</p></article>
-      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+      <article class="pl-feature"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
         <h3>Organiser votre quotidien</h3><p>Rendez-vous personnels, interventions et activité professionnelle réunis dans votre calendrier.</p></article>
     </div>
   </div>
 </section>
 
-<section class="pl-section alt">
-  <div class="pl-wrap pl-split">
+<section class="da-zone cream">
+  <div class="da-wrap pl-split">
     <div class="pl-visual">
       <img class="pl-mock" src="assets/phone-reservation.webp" width="600" height="1275" loading="lazy" alt="Fiche réservation de Fiftin Planning, nom du client masqué">
     </div>
     <div>
-      <div class="pl-kicker">Réservations &amp; disponibilités</div>
-      <h2>Une activité complexe. Un planning qui reste simple.</h2>
-      <p>Visualisez toute votre année en un coup d'œil. Créez une réservation depuis la grille ou depuis la vue par location, puis retrouvez les informations de séjour sans multiplier les outils.</p>
+      <p class="da-kicker">Réservations &amp; disponibilités</p>
+      <h2 class="da-h2">Une activité complexe. Un planning qui reste simple.</h2>
+      <p class="da-text">Visualisez toute votre année en un coup d'œil. Créez une réservation depuis la grille ou depuis la vue par location, puis retrouvez les informations de séjour sans multiplier les outils.</p>
       <ul class="pl-check">
         <li>Deux façons de saisir et consulter vos réservations</li>
         <li>Des couleurs qui facilitent la lecture des séjours</li>
@@ -348,19 +369,19 @@ section[id]{scroll-margin-top:72px;}
   </div>
 </section>
 
-<section class="pl-section">
-  <div class="pl-wrap pl-split reverse">
+<section class="da-zone white">
+  <div class="da-wrap pl-split reverse">
     <div class="pl-visual lavender">
       <div class="pl-sync" role="img" aria-label="Échange iCal dans les deux sens entre Airbnb, Booking.com et Fiftin Planning">
         <div class="pl-sync-row"><div class="pl-sync-box">Airbnb<small>calendrier iCal</small></div><div class="pl-sync-box">Booking.com<small>calendrier iCal</small></div></div>
         <div class="pl-sync-arrows" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
-        <div class="pl-sync-box main"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""><span>Fiftin Planning<small>import et export iCal</small></span></div>
+        <div class="pl-sync-box main"><span class="da-logo"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span><span>Fiftin Planning<small>import et export iCal</small></span></div>
       </div>
     </div>
     <div>
-      <div class="pl-kicker">Calendriers connectés</div>
-      <h2>Vos plateformes restent connectées. Vous gardez la main.</h2>
-      <p>Fiftin Planning importe et exporte vos disponibilités au format iCal avec Airbnb et Booking.com. Vos calendriers sont ainsi mieux coordonnés pour limiter les risques de doublons.</p>
+      <p class="da-kicker">Calendriers connectés</p>
+      <h2 class="da-h2">Vos plateformes restent connectées. Vous gardez la main.</h2>
+      <p class="da-text">Fiftin Planning importe et exporte vos disponibilités au format iCal avec Airbnb et Booking.com. Vos calendriers sont ainsi mieux coordonnés pour limiter les risques de doublons.</p>
       <ul class="pl-check">
         <li>Import des périodes occupées depuis les plateformes</li>
         <li>Export du calendrier Fiftin vers les plateformes</li>
@@ -371,16 +392,16 @@ section[id]{scroll-margin-top:72px;}
   </div>
 </section>
 
-<section class="pl-section alt">
-  <div class="pl-wrap pl-split">
-    <div class="pl-visual yellow">
+<section class="da-zone cream">
+  <div class="da-wrap pl-split">
+    <div class="pl-visual">
       <img class="pl-mock" src="assets/phone-bilan-annee.webp" width="600" height="1275" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, occupation">
       <img class="pl-mock" src="assets/phone-mois.webp" width="600" height="1275" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées">
     </div>
     <div>
-      <div class="pl-kicker">Chiffres &amp; prévisions</div>
-      <h2>Ne suivez pas seulement vos nuits. Comprenez votre activité.</h2>
-      <p>Retrouvez les chiffres essentiels au même endroit : chiffre d'affaires réalisé et projeté, nuitées, taux d'occupation, charges et marge estimée. Prenez des décisions avec une meilleure visibilité sur ce qui vient.</p>
+      <p class="da-kicker">Chiffres &amp; prévisions</p>
+      <h2 class="da-h2">Ne suivez pas seulement vos nuits. Comprenez votre activité.</h2>
+      <p class="da-text">Retrouvez les chiffres essentiels au même endroit : chiffre d'affaires réalisé et projeté, nuitées, taux d'occupation, charges et marge estimée. Prenez des décisions avec une meilleure visibilité sur ce qui vient.</p>
       <ul class="pl-check">
         <li>Suivi de la performance passée et prévisionnelle</li>
         <li>Indicateurs par activité ou structure selon votre configuration</li>
@@ -391,24 +412,24 @@ section[id]{scroll-margin-top:72px;}
   </div>
 </section>
 
-<section class="pl-section">
-  <div class="pl-wrap pl-split reverse">
+<section class="da-zone white">
+  <div class="da-wrap pl-split reverse">
     <div class="pl-visual lavender">
       <img class="pl-mock" src="assets/phone-semaine.webp" width="600" height="1275" loading="lazy" alt="Vue Semaine de Fiftin Planning : événements, repas et extras de la semaine">
     </div>
     <div>
-      <div class="pl-kicker">La réalité du métier</div>
-      <h2>Les petits détails font les grands séjours.</h2>
-      <p>Retrouvez vos clients, leurs séjours et vos services. Notez les repas, consommations et extras, gérez vos événements et préservez une vue d'ensemble sur votre organisation personnelle et professionnelle.</p>
-      <p>Fiftin a été pensé dans une vraie maison d'hôtes, pour les journées qui ne se passent jamais exactement comme prévu.</p>
+      <p class="da-kicker">La réalité du métier</p>
+      <h2 class="da-h2">Les petits détails font les grands séjours.</h2>
+      <p class="da-text">Retrouvez vos clients, leurs séjours et vos services. Notez les repas, consommations et extras, gérez vos événements et préservez une vue d'ensemble sur votre organisation personnelle et professionnelle.</p>
+      <p class="da-text">Fiftin a été pensé dans une vraie maison d'hôtes, pour les journées qui ne se passent jamais exactement comme prévu.</p>
     </div>
   </div>
 </section>
 
-<section class="pl-section alt">
-  <div class="pl-wrap">
-    <div class="pl-kicker">Vos données, vos choix</div>
-    <h2>Restez libre, jusque dans vos données.</h2>
+<section class="da-zone cream">
+  <div class="da-wrap">
+    <p class="da-kicker">Vos données, vos choix</p>
+    <h2 class="da-h2">Restez libre, jusque dans vos données.</h2>
     <div class="pl-dual">
       <article><h3>Gardez votre historique</h3><p>Réservations, clients et chiffres réunis dans votre espace de gestion, sans dépendre d'un carnet, de plusieurs tableurs ou d'une messagerie de plateforme.</p></article>
       <article><h3>Exportez quand vous voulez</h3><p>Exports CSV et sauvegarde complète au format JSON disponibles dans les paramètres, pour conserver une copie de vos informations.</p></article>
@@ -416,30 +437,16 @@ section[id]{scroll-margin-top:72px;}
   </div>
 </section>
 
-<section class="pl-section" id="histoire">
-  <div class="pl-wrap">
-    <div class="pl-story">
-      <video class="brand-bg-video" id="plStoryVideo" autoplay muted loop playsinline aria-hidden="true"></video>
-      <div>
-        <div class="pl-kicker">Notre histoire</div>
-        <h2>Imaginé dans une maison d'hôtes.<br>Pour celles et ceux qui accueillent.</h2>
-        <p>À La Ferme Fanost, entre réservations, repas, clients fidèles, charges et imprévus, nous avions besoin d'un outil qui nous ressemble. Pas seulement d'un calendrier, mais d'une vision d'ensemble de notre activité.</p>
-        <p><strong>C'est de cette expérience qu'est né Fiftin Planning.</strong></p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="pl-section alt">
-  <div class="pl-wrap pl-split">
+<section class="da-zone white">
+  <div class="da-wrap pl-split">
     <div>
-      <div class="pl-kicker">Deux univers, une même philosophie</div>
-      <h2>Vous accueillez. Vous voyagez aussi.</h2>
-      <p>Fiftin Planning vous aide à gérer votre activité. Et lorsque c'est à votre tour de partir, Fiftin Séjours vous permet de découvrir des hébergements indépendants et de contacter les hôtes en direct, sans commission Fiftin.</p>
-      <div class="pl-btns"><a class="pl-btn dark" href="sejours/">Découvrir Fiftin Séjours
+      <p class="da-kicker">Deux univers, une même philosophie</p>
+      <h2 class="da-h2">Vous accueillez. Vous voyagez aussi.</h2>
+      <p class="da-text">Fiftin Planning vous aide à gérer votre activité. Et lorsque c'est à votre tour de partir, Fiftin Séjours vous permet de découvrir des hébergements indépendants et de contacter les hôtes en direct, sans commission Fiftin.</p>
+      <div class="da-btns"><a class="da-btn dark" href="sejours/">Découvrir Fiftin Séjours
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
-    <div class="pl-visual yellow">
+    <div class="pl-visual">
       <div class="pl-sej-card">
         <span class="pl-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg>Fiftin Séjours</span>
         <h3>Le plaisir de voyager.<br>La liberté d'échanger.</h3>
@@ -449,33 +456,42 @@ section[id]{scroll-margin-top:72px;}
   </div>
 </section>
 
-<section class="pl-section" id="tarifs">
-  <div class="pl-wrap">
-    <div class="pl-offer">
-      <div class="pl-kicker">Fiftin Planning</div>
-      <h2>Plus de visibilité. Moins de dispersion.</h2>
-      <p class="pl-lead">Découvrez les formules de gestion et choisissez celle qui correspond à votre activité.</p>
-      <div class="pl-plans" id="plPlans"></div>
-      <p class="pl-small" style="margin:18px 0 0;">Deux mois offerts en facturation annuelle sur les formules de gestion. Tarifs et conditions à consulter avant souscription.</p>
+<section class="da-zone cream" id="tarifs">
+  <div class="da-wrap">
+    <div class="pl-center">
+      <p class="da-kicker">Fiftin Planning</p>
+      <h2 class="da-h2">Plus de visibilité. Moins de dispersion.</h2>
+      <p class="da-text">Découvrez les formules de gestion et choisissez celle qui correspond à votre activité.</p>
     </div>
+    <div class="pl-plans" id="plPlans"></div>
+    <p class="pl-small pl-center" style="margin:22px 0 0;">Deux mois offerts en facturation annuelle sur les formules de gestion. Tarifs et conditions à consulter avant souscription.</p>
+  </div>
+</section>
+
+<section class="da-zone green" id="histoire">
+  <div class="da-wrap">
+    <div class="pl-story">
+      <span class="da-logo"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt="Fiftin"></span>
+      <p class="da-kicker">Notre histoire</p>
+      <h2 class="da-h2">Imaginé dans une maison d'hôtes.<br>Pour celles et ceux qui accueillent.</h2>
+      <p class="da-text">À La Ferme Fanost, entre réservations, repas, clients fidèles, charges et imprévus, nous avions besoin d'un outil qui nous ressemble. Pas seulement d'un calendrier, mais d'une vision d'ensemble de notre activité.</p>
+      <p class="da-text"><strong>C'est de cette expérience qu'est né Fiftin Planning.</strong></p>
+    </div>
+    <footer class="da-foot">
+      <div class="da-foot-brand">
+        <a class="da-logo" href="./" aria-label="Accueil Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
+        <p>Voyager. Accueillir. Tout simplement.</p>
+      </div>
+      <nav aria-label="Pied de page">
+        <a href="./">Accueil</a>
+        <a href="sejours/">Séjours</a>
+        <a href="planning/#fonctionnalites">Fonctionnalités</a>
+        <a href="planning/#tarifs">Formules</a>
+      </nav>
+    </footer>
   </div>
 </section>
 </main>
-
-<footer class="pl-footer">
-  <div class="pl-wrap">
-    <div class="pl-foot-brand">
-      <a class="mini" href="./" aria-label="Accueil Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
-      <p>Voyager. Accueillir. Tout simplement.</p>
-    </div>
-    <nav aria-label="Pied de page">
-      <a href="./">Accueil</a>
-      <a href="sejours/">Séjours</a>
-      <a href="planning/#fonctionnalites">Fonctionnalités</a>
-      <a href="planning/#tarifs">Formules</a>
-    </nav>
-  </div>
-</footer>
 
 <script>
 function fiftinSetBrandVideoSrc(id){
