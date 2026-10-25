@@ -303,14 +303,30 @@ img{max-width:100%;}
 [hidden]{display:none!important;}
 button{font-family:inherit; cursor:pointer;}
 a{color:inherit; text-decoration:none;}
-/* Pictogramme Fiftin centré en haut de page : retour à l'accueil fiftin.fr
-   (même repère sur toutes les pages du site). */
-.ff-home{position:absolute; top:calc(14px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); z-index:30;
-  width:42px; height:42px; border-radius:13px; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(145deg, rgba(255,255,255,.45) 0%, rgba(255,255,255,.12) 45%, rgba(16,22,18,.14) 100%), rgba(29,40,32,.16);
-  backdrop-filter:blur(10px) saturate(1.4); -webkit-backdrop-filter:blur(10px) saturate(1.4);
-  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.55), inset 0 -3px 6px rgba(8,13,10,.25), 0 6px 16px rgba(29,40,32,.18);}
-.ff-home img{width:62%; height:auto; display:block;}
+/* Pictogramme Fiftin centré en haut de page, toujours visible (fixe) :
+   retour à l'accueil fiftin.fr. Même verre que le grand logo de l'accueil,
+   en petit, en nuances de gris, lettrage gris (dégradé et contour d'origine). */
+.ff-home{position:fixed; top:calc(12px + env(safe-area-inset-top,0px)); left:50%; transform:translateX(-50%); z-index:30;
+  width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(18,18,18,.1) 68%, rgba(18,18,18,.26) 100%),
+    rgba(30,30,30,.14);
+  backdrop-filter:blur(9px) saturate(1); -webkit-backdrop-filter:blur(9px) saturate(1);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
+    inset 0 -3px 5px rgba(10,10,10,.38), inset -2px 0 4px rgba(10,10,10,.24),
+    0 3px 9px rgba(30,30,30,.22), 0 1px 2px rgba(30,30,30,.16);}
+.ff-home::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, rgba(160,160,160,.8) 55deg, rgba(255,255,255,.9) 95deg, rgba(200,200,200,.8) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, rgba(120,120,120,.7) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.ff-home::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
+.ff-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(.42);}
 /* « Se connecter » (clients existants) : ouvre l'outil, qui a son propre écran de connexion. */
 .pl-login{position:absolute; top:calc(16px + env(safe-area-inset-top,0px)); right:clamp(14px,4vw,40px); z-index:30;
   display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:999px; font:500 13.5px 'Jost',sans-serif; color:#fff;

@@ -54,6 +54,8 @@
   --line:rgba(46,43,34,0.14);
   --danger:#B2543B;
   --gray-mid:#9A9789;
+  /* Hauteur de la rangée collante du pictogramme d'accueil (.sej-home). */
+  --sej-home-h:calc(52px + env(safe-area-inset-top,0px));
   /* Grain des photos d'annonce (fil + repli sans photo de la fiche détail,
      voir .cover .grain et le "slide" de secours dans openDetail() plus
      bas) — réglage centralisé pour n'ajuster qu'ici (retour utilisateur :
@@ -327,9 +329,9 @@ a{color:inherit; text-decoration:none;}
    revient sur Profil — visible et gênant, signalé par l'hôte ("la page
    saute"). max-height+opacity animés à la place : même résultat final,
    mais la réapparition/disparition se voit glisser plutôt que sauter. */
-.filters{position:sticky; top:0; z-index:70;
+.filters{position:sticky; top:var(--sej-home-h); z-index:70;
   background:var(--cream); border-bottom:1px solid var(--line);
-  padding:calc(10px + env(safe-area-inset-top,0px)) 18px 12px; display:flex; gap:8px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
+  padding:6px 18px 12px; display:flex; gap:8px; overflow-x:auto; overflow-y:hidden; -webkit-overflow-scrolling:touch;
   max-height:80px; opacity:1; transition:max-height .22s ease, opacity .18s ease, padding .22s ease, border-color .22s ease;}
 .filters.chrome-collapsed{max-height:0; opacity:0; padding-top:0; padding-bottom:0; border-color:transparent;}
 /* Fond blanc plutôt que --cream (même couleur que la barre elle-même,
@@ -1303,7 +1305,7 @@ body.detail-open nav.tabbar{z-index:220;}
    (.3->.15 / .36->.18, arrêts intermédiaires idem). Puis "baisse encore
    très légèrement, et après c'est bon" : dernier petit ajustement
    (.15->.12 / .18->.14) — point d'arrêt de ce réglage. */
-.fade-edge-top{top:calc(55px + env(safe-area-inset-top,0px)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.12), rgba(20,26,20,.06) 55%, transparent);}
+.fade-edge-top{top:calc(51px + var(--sej-home-h)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.12), rgba(20,26,20,.06) 55%, transparent);}
 .fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
 .tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
@@ -1608,7 +1610,7 @@ body.map-fullscreen{overflow:hidden;}
    repris à l'identique en interne. Fond crème repeint par-dessus les
    cartes qui défilent dessous, bordure basse comme .filters. Pas de
    margin-bottom : le gap:18px de #feed espace déjà du contenu suivant. */
-.profile-stats{display:flex; gap:10px; margin:-10px -14px 0; padding:10px 14px 14px; position:sticky; top:0; z-index:60; background:var(--cream); border-bottom:1px solid var(--line);}
+.profile-stats{display:flex; gap:10px; margin:-10px -14px 0; padding:10px 14px 14px; position:sticky; top:var(--sej-home-h); z-index:60; background:var(--cream); border-bottom:1px solid var(--line);}
 .stat-tile{flex:1; background:var(--cream-deep); border:none; border-radius:16px; padding:14px; text-align:center; font-family:'Jost',sans-serif;}
 .stat-tile b{font-size:22px; font-weight:800; color:var(--sauge-deep);}
 .stat-tile span{font-size:13px; color:var(--sauge); font-weight:600;}
@@ -2352,13 +2354,40 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card li:nth-child(5n+4)::before{background:#D88A9A;}
 .plan-card li:nth-child(5n+5)::before{background:var(--yellow);}
 
-/* Pictogramme Fiftin centré en tête du fil : retour à l'accueil fiftin.fr
-   (même repère en haut de toutes les pages du site, voir .sej-home dans le HTML). */
-.sej-home{display:flex; justify-content:center; padding:calc(10px + env(safe-area-inset-top,0px)) 18px 4px; background:#fff;}
-.sej-home span{width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(145deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 45%, rgba(16,22,18,.18) 100%), var(--sauge);
-  box-shadow:inset 0 1.5px 2px rgba(255,255,255,.4), inset 0 -3px 6px rgba(8,13,10,.3), 0 4px 12px rgba(29,40,32,.16);}
-.sej-home img{width:62%; height:auto; display:block;}
+/* Pictogramme Fiftin centré en tête de page : retour à l'accueil fiftin.fr
+   (même repère en haut de toutes les pages du site, voir .sej-home dans le
+   HTML). Rangée collante (toujours visible, sans avoir à remonter) : la
+   barre de filtres, Profil (.profile-stats) et le dégradé .fade-edge-top
+   se calent juste en dessous via --sej-home-h. Pastille : même verre que le
+   grand logo de l'accueil (.hl-logo dans index.html), en petit, mais en
+   nuances de gris (aucune teinte verte ni liseré coloré) ; lettrage assombri en gris
+   (brightness) qui garde son dégradé et son contour d'origine. Rangée de la
+   même couleur que la barre de filtres qui suit. */
+.sej-home{position:sticky; top:0; z-index:72; height:var(--sej-home-h); display:flex; align-items:flex-end; justify-content:center;
+  padding:0 18px 5px; background:var(--cream);}
+/* Filtres masqués (Profil, Mes séjours, espace hôte…) : la rangée prend le
+   fond clair de la vue qui suit plutôt que celui de la barre de filtres. */
+#app:has(#filter-bar.chrome-collapsed):has(#feed.feed-map) .sej-home{background:var(--cream-light);}
+.sej-home span{width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center;
+  position:relative; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(18,18,18,.1) 68%, rgba(18,18,18,.26) 100%),
+    rgba(30,30,30,.14);
+  backdrop-filter:blur(9px) saturate(1); -webkit-backdrop-filter:blur(9px) saturate(1);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
+    inset 0 -3px 5px rgba(10,10,10,.38), inset -2px 0 4px rgba(10,10,10,.24),
+    0 3px 9px rgba(30,30,30,.22), 0 1px 2px rgba(30,30,30,.16);}
+.sej-home span::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, rgba(160,160,160,.8) 55deg, rgba(255,255,255,.9) 95deg, rgba(200,200,200,.8) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, rgba(120,120,120,.7) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.sej-home span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
+.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block; filter:brightness(.42);}
 </style>
 
 <script>
