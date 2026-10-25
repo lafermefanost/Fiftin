@@ -2358,16 +2358,35 @@ body.map-fullscreen{overflow:hidden;}
    (même repère en haut de toutes les pages du site, voir .sej-home dans le
    HTML). Rangée collante (toujours visible, sans avoir à remonter) : la
    barre de filtres, Profil (.profile-stats) et le dégradé .fade-edge-top
-   se calent juste en dessous via --sej-home-h. Pastille en verre dépoli
-   gris/blanc, discrète sur les fonds clairs du site. */
+   se calent juste en dessous via --sej-home-h. Pastille : même verre que le
+   grand logo de l'accueil (.hl-logo dans index.html), en petit — transparente,
+   elle prend la teinte du fond (gris ici, vert sur la vidéo). Rangée de la
+   même couleur que la barre de filtres qui suit. */
 .sej-home{position:sticky; top:0; z-index:72; height:var(--sej-home-h); display:flex; align-items:flex-end; justify-content:center;
   padding:0 18px 5px; background:var(--cream);}
+/* Filtres masqués (Profil, Mes séjours, espace hôte…) : la rangée prend le
+   fond clair de la vue qui suit plutôt que celui de la barre de filtres. */
+#app:has(#filter-bar.chrome-collapsed):has(#feed.feed-map) .sej-home{background:var(--cream-light);}
 .sej-home span{width:40px; height:40px; border-radius:13px; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(145deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.5) 50%, rgba(225,223,217,.6) 100%);
-  border:1px solid rgba(46,43,34,.08);
-  backdrop-filter:blur(14px) saturate(1.2); -webkit-backdrop-filter:blur(14px) saturate(1.2);
-  box-shadow:inset 0 1px 1px #fff, inset 0 -2px 4px rgba(46,43,34,.06), 0 4px 14px rgba(46,43,34,.10);}
-.sej-home img{width:60%; height:auto; display:block; filter:brightness(.5) saturate(0); opacity:.85;}
+  position:relative; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4); -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
+    inset 0 -3px 5px rgba(8,13,10,.38), inset -2px 0 4px rgba(8,13,10,.24),
+    0 3px 9px rgba(29,40,32,.22), 0 1px 2px rgba(29,40,32,.16);}
+.sej-home span::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.sej-home span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
+.sej-home img{position:relative; z-index:1; width:59%; height:auto; display:block;}
 </style>
 
 <script>
