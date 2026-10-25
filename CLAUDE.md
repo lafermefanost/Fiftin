@@ -8,7 +8,7 @@ Outil de planning pour hébergeurs (calendrier de réservations, fichier client,
 
 - `index.html` (racine) — page d'accueil Fiftin « deux univers » (Séjours / Planning) : fiftin.fr/.
 - Page commerciale Fiftin Planning : fiftin.fr/planning/ = `planning/index.html`, page autonome (`hotes/` y renvoie).
-- Pictogramme Fiftin en haut de chaque page (accueil, Séjours, Planning, outil) : lien de retour vers l'accueil fiftin.fr/.
+- Pictogramme Fiftin toujours visible en haut de Séjours, de Planning et de l'outil : lien de retour vers l'accueil fiftin.fr/ (l'accueil n'a que son grand logo).
 - `app/index.html` — l'outil lui-même : fiftin.fr/app/.
 - Voir le reste de ce README pour l'architecture (Firebase, comptes, règles Firestore, formules).
 - **Ne pas modifier sans consigne explicite** portant sur le planning : c'est un produit en usage réel, une régression a un impact direct sur des clients.
