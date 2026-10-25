@@ -10816,7 +10816,11 @@ function maybeFinishInitialLoad(){
     document.getElementById("feed").innerHTML = '<div class="empty-state"><p>Impossible de charger les hébergements pour le moment.<br>Vérifiez votre connexion et réessayez.</p></div>';
     return;
   }
-  renderFilterBar(); renderFeed(); renderResultLine();
+  renderFilterBar(); renderResultLine();
+  // Onglet déjà quitté avant la fin du chargement (ex. arrivée par
+  // ?espace=voyageur depuis l'accueil, qui ouvre Profil tout de suite) :
+  // re-rendre CET onglet, jamais le fil Explorer par-dessus.
+  if(state.tab==="profile") renderProfile(); else renderTabContent();
   renderLikeBadge(); // voir commentaire de savedListingsCount() : LISTINGS était vide au tout premier rendu du badge
   maybeOpenDeepLink();
 }

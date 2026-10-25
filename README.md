@@ -14,7 +14,7 @@ Outil de planning pour locations courte durée / chambres d'hôtes.
 
 | Adresse | Fichier | Rôle |
 |---|---|---|
-| `fiftin.fr/` | `index.html` | Page d'accueil « deux univers » : Fiftin Séjours (voyageurs) et Fiftin Planning (hôtes). Bouton unique « Se connecter » / menu « Mon compte » (Espace voyageur, Espace hôte, déconnexion). Toute ancienne adresse à paramètres (`/?listing=…`, retours de paiement) est renvoyée vers `/sejours/`, `/?hotes=1` vers `/planning/`. |
+| `fiftin.fr/` | `index.html` | Page d'accueil « deux univers » : Fiftin Séjours (voyageurs) et Fiftin Planning (hôtes). Bouton unique « Se connecter » (encart de connexion / création de compte sur l'accueil même) / menu « Mon compte » (Espace voyageur, Espace hôte, déconnexion). Toute ancienne adresse à paramètres (`/?listing=…`, retours de paiement) est renvoyée vers `/sejours/`, `/?hotes=1` vers `/planning/`. |
 | `fiftin.fr/sejours/` | `sejours/index.html` | Fiftin Séjours : hébergements (sans intro), profil voyageur, espace hôtes. Entrées : `?espace=voyageur`, `?espace=hote`, `?login=1`, `?listing=…`. |
 | `fiftin.fr/planning/` | `planning/index.html` | Page commerciale Fiftin Planning, page autonome (seule copie de ce contenu). Formules : visiteur → connexion dans Séjours (`/sejours/?login=1&next=/planning/?formule=…`), retour ici et paiement Stripe relancé ; après paiement → `/app/`. Abonné : « Ouvrir Fiftin Planning ». « Se connecter » en haut → l'outil. L'onglet « App gestion » de l'espace hôte y mène pour un compte sans formule de gestion. `hotes/`, `/?hotes=1` et `/sejours/?hotes=1` renvoient ici. |
 | `fiftin.fr/app/` | `app/index.html` | L'outil Fiftin Planning. |
