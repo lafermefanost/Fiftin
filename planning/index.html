@@ -181,10 +181,15 @@ section[id]{scroll-margin-top:72px;}
 @keyframes plBob{50%{transform:translate(-50%,5px);}}
 .pl-hero + .da-zone{margin-top:0; border-radius:0; padding-top:clamp(24px,4vw,40px);}
 
-/* Téléphones : maquettes réalistes de l'outil (assets/phone-*.webp), toujours
-   droites ; deux téléphones : le second décalé vers le bas. */
-.pl-mock{display:block; width:250px; height:auto; flex:none; filter:drop-shadow(0 24px 36px rgba(29,40,32,.25));}
-.pl-hero .pl-mock{justify-self:center; width:280px; filter:drop-shadow(0 30px 50px rgba(10,20,14,.45));}
+/* Téléphone simple (maquette maison, commune à l'accueil et Planning) :
+   contour sombre fin, coins arrondis, bord d'écran normal, petit haut-parleur
+   en haut. L'écran (capture de l'outil ou contenu HTML) se place dedans. */
+.da-phone{position:relative; width:250px; flex:none; padding:6% 3.6% 3.6%; border-radius:14.4% / 6.7%; background:#262B28;
+  box-shadow:0 22px 40px rgba(29,40,32,.22), inset 0 0 0 1.5px rgba(255,255,255,.07);}
+.da-phone::before{content:""; position:absolute; top:1.15%; left:50%; transform:translateX(-50%); width:22%; height:4px; border-radius:999px; background:rgba(255,255,255,.2);}
+.da-phone > img, .da-phone > .da-scr{display:block; width:100%; height:auto; aspect-ratio:520/1147; border-radius:11.5% / 5.2%; overflow:hidden; background:#fff;}
+/* Deux téléphones : le second décalé vers le bas. */
+.pl-hero .pl-mock{justify-self:center; width:280px; box-shadow:0 30px 60px rgba(10,20,14,.4), inset 0 0 0 1.5px rgba(255,255,255,.07);}
 .pl-mock + .pl-mock{margin:70px 0 0 -40px;}
 .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
 
@@ -319,7 +324,7 @@ section[id]{scroll-margin-top:72px;}
       </div>
       <p class="pl-hero-note">Conçu et utilisé par des hébergeurs indépendants.</p>
     </div>
-    <img class="pl-mock" src="assets/phone-annee.webp" width="600" height="1275" alt="Fiftin Planning sur téléphone : vue Année, les réservations de toute l'année en un écran">
+    <div class="da-phone pl-mock"><img src="assets/screen-annee.webp" width="520" height="1147" alt="Fiftin Planning sur téléphone : vue Année, les réservations de toute l'année en un écran"></div>
   </div>
   <div class="pl-edge" aria-hidden="true"></div>
   <a class="pl-chev" href="planning/#fonctionnalites" aria-label="Voir les fonctionnalités"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></a>
@@ -353,7 +358,7 @@ section[id]{scroll-margin-top:72px;}
 <section class="da-zone cream">
   <div class="da-wrap pl-split">
     <div class="pl-visual">
-      <img class="pl-mock" src="assets/phone-reservation.webp" width="600" height="1275" loading="lazy" alt="Fiche réservation de Fiftin Planning, nom du client masqué">
+      <div class="da-phone pl-mock"><img src="assets/screen-reservation.webp" width="520" height="1147" loading="lazy" alt="Fiche réservation de Fiftin Planning, nom du client masqué"></div>
     </div>
     <div>
       <p class="da-kicker">Réservations &amp; disponibilités</p>
@@ -395,8 +400,8 @@ section[id]{scroll-margin-top:72px;}
 <section class="da-zone cream">
   <div class="da-wrap pl-split">
     <div class="pl-visual">
-      <img class="pl-mock" src="assets/phone-bilan-annee.webp" width="600" height="1275" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, occupation">
-      <img class="pl-mock" src="assets/phone-mois.webp" width="600" height="1275" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées">
+      <div class="da-phone pl-mock"><img src="assets/screen-bilan-annee.webp" width="520" height="1147" loading="lazy" alt="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, occupation"></div>
+      <div class="da-phone pl-mock"><img src="assets/screen-mois.webp" width="520" height="1147" loading="lazy" alt="Bilan du mois dans Fiftin Planning : revenus, remplissage, nuitées"></div>
     </div>
     <div>
       <p class="da-kicker">Chiffres &amp; prévisions</p>
@@ -415,7 +420,7 @@ section[id]{scroll-margin-top:72px;}
 <section class="da-zone white">
   <div class="da-wrap pl-split reverse">
     <div class="pl-visual lavender">
-      <img class="pl-mock" src="assets/phone-semaine.webp" width="600" height="1275" loading="lazy" alt="Vue Semaine de Fiftin Planning : événements, repas et extras de la semaine">
+      <div class="da-phone pl-mock"><img src="assets/screen-semaine.webp" width="520" height="1147" loading="lazy" alt="Vue Semaine de Fiftin Planning : événements, repas et extras de la semaine"></div>
     </div>
     <div>
       <p class="da-kicker">La réalité du métier</p>
