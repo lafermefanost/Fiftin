@@ -96,8 +96,11 @@ img{display:block; max-width:100%;}
 .hl-cta-white{display:inline-flex; align-items:center; gap:10px; padding:15px 30px; border-radius:999px; background:#fff; color:var(--sauge-deep);
   font-weight:600; font-size:17px; text-decoration:none; box-shadow:0 8px 24px rgba(0,0,0,.14);}
 .hl-cta-white svg{width:19px; height:19px;}
-.hl-wave{position:absolute; left:0; right:0; bottom:-1px; z-index:2; width:100%; height:110px; display:block;}
-.hl-chev{position:absolute; bottom:26px; left:50%; transform:translateX(-50%); z-index:4; color:var(--sauge); width:26px; height:26px; animation:hlBob 2.4s ease-in-out infinite;}
+/* Bas du hero : bord droit aux extrémités arrondies (même langage que
+   les cartes et pastilles du site) — la zone crème remonte sur la vidéo
+   comme le haut d'une carte, coins arrondis. Remplace l'ancienne vague. */
+.hl-edge{position:absolute; left:0; right:0; bottom:-1px; z-index:2; height:44px; background:var(--cream); border-radius:44px 44px 0 0;}
+.hl-chev{position:absolute; bottom:64px; left:50%; transform:translateX(-50%); z-index:4; color:#fff; width:26px; height:26px; animation:hlBob 2.4s ease-in-out infinite;}
 @keyframes hlBob{50%{transform:translate(-50%,5px);}}
 
 /* ── Deux univers ── */
@@ -277,7 +280,7 @@ img{display:block; max-width:100%;}
     <a class="hl-cta-white" href="#univers">Découvrir Fiftin
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
-  <svg class="hl-wave" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true"><path fill="#F3F1EB" d="M0,40 C240,10 420,8 600,42 C780,76 900,104 1100,92 C1260,82 1360,64 1440,58 L1440,110 L0,110 Z"/></svg>
+  <div class="hl-edge" aria-hidden="true"></div>
   <svg class="hl-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
 </section>
 
