@@ -208,16 +208,6 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
    suffit déjà (retour utilisateur : "centre-le bien visuellement dans son
    cartouche", confirmé après coup sur capture). */
 .app-icon{flex-shrink:0; position:relative; z-index:1; width:28px; height:22px;}
-/* Petit picto = icône de l'écran d'accueil du téléphone (même fichier que
-   l'icône installée, logo-fiftin-icon-144.png), comme sur tout le site :
-   l'anneau irisé animé reste, le verre et le reflet ajoutés disparaissent
-   (l'icône a déjà son propre relief). Le grand logo (.logo-tile) reste en
-   verre. */
-.app-icon-tile{border-radius:23%; background:none; backdrop-filter:none; -webkit-backdrop-filter:none;
-  box-shadow:0 3px 9px rgba(0,0,0,.22), 0 1px 2px rgba(0,0,0,.16);}
-.app-icon-tile::after{display:none;}
-.app-icon-tile::before{z-index:2;}
-.app-icon-tile .app-icon{width:100%; height:100%;}
 .logo{font-family:'Jost',sans-serif;font-size:17px;font-weight:500;
   letter-spacing:.05em;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 /* Nom de l'établissement du client — seul texte du logo dans l'appli (voir
@@ -2292,7 +2282,7 @@ Gardez la main.</div>
 <!-- ─── HEADER ─────────────────────────────────────────────── -->
 <header>
   <!-- Picto Fiftin : retour à l'accueil fiftin.fr (même repère sur toutes les pages du site). -->
-  <a class="app-icon-tile" href="../" title="Accueil Fiftin" aria-label="Accueil Fiftin"><img class="app-icon" src="../assets/logo-fiftin-icon-144.png" width="144" height="144" alt=""></a>
+  <a class="app-icon-tile" href="../" title="Accueil Fiftin" aria-label="Accueil Fiftin"><img class="app-icon" src="../assets/logo-fiftin-mark-glass.png" width="34" height="27" alt=""></a>
   <div class="logo" id="appName"><b>Fiftin</b> — Planning</div>
   <span class="sync-pip" id="syncPip" title="Synchronisation locale" onclick="showSyncDebug()" style="cursor:pointer"></span>
   <button class="hbtn" id="settingsBtn" onclick="openSettings()" title="Paramètres">
