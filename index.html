@@ -43,9 +43,9 @@ img{display:block; max-width:100%;}
   height:calc(64px + env(safe-area-inset-top,0px)); padding:env(safe-area-inset-top,0px) clamp(18px,4vw,48px) 0;
   border-bottom:1px solid transparent; transition:background-color .25s ease, border-color .25s ease;}
 /* En-tête fixe (même que la page Planning) : transparent sur la vidéo, puis
-   barre crème translucide dès qu'on fait défiler, compte toujours accessible. */
-.hl-top.scrolled{background:rgba(239,238,234,0.94); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom-color:rgba(46,43,34,0.14);}
-.hl-top.scrolled .hl-acc-btn{color:var(--sauge-deep); background:#fff; border-color:rgba(46,43,34,0.14);}
+   barre vert sauge (couleur propriétaire) dès qu'on fait défiler, compte toujours accessible. */
+.hl-top.scrolled{background:rgba(53,75,56,0.97); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom-color:rgba(255,255,255,0.10);}
+.hl-top.scrolled .hl-acc-btn{color:var(--sauge-deep); background:#fff; border-color:#fff;}
 .hl-account{position:relative;}
 .hl-acc-btn{display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; cursor:pointer;
   font:500 14px 'Jost',sans-serif; color:#fff; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.42);
@@ -168,7 +168,7 @@ img{display:block; max-width:100%;}
 /* Accès direct au dépôt d'annonce dans l'en-tête (ordinateur seulement ;
    sur mobile, il passe par la section ci-dessus et le menu du compte). */
 .hl-top-link{margin-right:14px; padding:10px 6px; font-size:14px; font-weight:500; color:#fff; text-decoration:none; text-shadow:0 1px 10px rgba(0,0,0,.18);}
-.hl-top.scrolled .hl-top-link{color:var(--sauge-deep); text-shadow:none;}
+.hl-top.scrolled .hl-top-link{color:#fff; text-shadow:none;}
 .hl-top-link:hover{text-decoration:underline; text-underline-offset:4px;}
 
 /* Téléphone maison (commun à l'accueil et Planning) : cadre noir ultra fin (façon iPhone),

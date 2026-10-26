@@ -158,12 +158,12 @@ section[id]{scroll-margin-top:72px;}
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
 .ff-home img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
 /* En-tête fixe : pastille d'accueil + « Se connecter », toujours accessibles.
-   Transparent sur la vidéo du haut, puis barre crème translucide (même
-   construction que l'en-tête de Séjours) dès qu'on fait défiler. */
+   Transparent sur la vidéo du haut, puis barre vert sauge (couleur
+   propriétaire, même bandeau que Séjours) dès qu'on fait défiler. */
 .pl-header{position:fixed; top:0; left:0; right:0; z-index:40; height:calc(64px + env(safe-area-inset-top,0px));
   border-bottom:1px solid transparent; transition:background-color .25s ease, border-color .25s ease;}
-.pl-header.scrolled{background:rgba(239,238,234,0.94); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom-color:var(--line);}
-.pl-header.scrolled .pl-login{color:var(--sauge-deep); background:#fff; border-color:var(--line);}
+.pl-header.scrolled{background:rgba(53,75,56,0.97); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom-color:rgba(255,255,255,0.10);}
+.pl-header.scrolled .pl-login{color:var(--sauge-deep); background:#fff; border-color:#fff;}
 /* « Se connecter » : même bouton que l'accueil (.hl-acc-btn). */
 .pl-login{position:absolute; top:calc(12px + env(safe-area-inset-top,0px)); right:clamp(18px,4vw,48px); z-index:30; transition:color .25s ease, background-color .25s ease;
   display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; font:500 14px 'Jost',sans-serif; color:#fff;
