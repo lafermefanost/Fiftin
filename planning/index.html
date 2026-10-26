@@ -555,8 +555,8 @@ section[id]{scroll-margin-top:72px;}
       </ul>
     </div>
     <div class="pl-visual">
-      <div class="da-phone pl-mock da-gridscroll" role="img" aria-label="La grille de Fiftin Planning : toute la saison, chambre par chambre"><div class="da-scr"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div></div>
-      <div class="da-phone pl-mock da-gridscroll" role="img" aria-label="Fiche réservation de Fiftin Planning : client, séjour, services, consommations du séjour et paiement"><div class="da-scr"><img class="gs-top" src="assets/app-reservation-haut.webp" width="600" height="89" alt=""><div class="gs-body"><img src="assets/app-reservation-corps.webp" width="600" height="3052" alt="" loading="lazy"></div></div></div>
+      <div class="da-phone pl-mock da-gridscroll gs-fixed" role="img" aria-label="La grille de Fiftin Planning : toute la saison, chambre par chambre"><div class="da-scr"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div></div>
+      <div class="da-phone pl-mock da-gridscroll gs-late" role="img" aria-label="Fiche réservation de Fiftin Planning : client, séjour, services, consommations du séjour et paiement"><div class="da-scr"><img class="gs-top" src="assets/app-reservation-haut.webp" width="600" height="89" alt=""><div class="gs-body"><img src="assets/app-reservation-corps.webp" width="600" height="3052" alt="" loading="lazy"></div></div></div>
     </div>
     <p class="pl-small pl-below">Les captures sont issues de l'application.</p>
   </div>
@@ -759,7 +759,9 @@ var hlSpring=(function(){
 function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.getBoundingClientRect().bottom : 52; }
 // Téléphones des sections : le contenu défile sur toute la traversée de
 // l'écran (dès que le téléphone apparaît en bas jusqu'à ce qu'il passe
-// sous l'en-tête), comme sur l'accueil. La vue Mois (.gs-fixed) reste fixe.
+// sous l'en-tête), comme sur l'accueil. La grille et la vue Mois (.gs-fixed)
+// restent fixes ; la fiche réservation (.gs-late) ne défile que pendant que
+// le téléphone est entièrement visible, pour qu'on en voie bien le début.
 (function(){
   var els=[].slice.call(document.querySelectorAll(".pl-visual .da-gridscroll:not(.gs-fixed) .gs-body img"));
   if(!els.length) return;
@@ -767,8 +769,10 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
   function upd(){
     raf=0; var vh=window.innerHeight, head=plHead();
     els.forEach(function(img){
-      var box=img.parentNode, r=img.closest(".da-phone").getBoundingClientRect();
-      var p=Math.min(1,Math.max(0,(vh-r.top)/(vh-head+r.height)));
+      var ph=img.closest(".da-phone"), box=img.parentNode, r=ph.getBoundingClientRect();
+      var late=ph.classList.contains("gs-late") && vh-head-r.height>40;
+      var p=late ? (vh-r.bottom)/(vh-head-r.height) : (vh-r.top)/(vh-head+r.height);
+      p=Math.min(1,Math.max(0,p));
       var max=Math.max(0,img.offsetHeight-box.clientHeight);
       hlSpring(img, hlEase(p), function(v){ img.style.transform="translateY("+(-v*max).toFixed(1)+"px)"; });
     });
