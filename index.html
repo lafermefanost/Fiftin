@@ -589,7 +589,7 @@ function hlLoadFirebase(cb){
           // au zoom maximal.
           var pzz=Math.max(0,(pz-0.4)/0.6), smax=Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pzz*pzz;
           phone.style.transform="scale("+sc.toFixed(3)+")";
-          phone.style.opacity=(0.3+0.7*pz).toFixed(3);
+          phone.style.opacity=(0.6+0.4*pz).toFixed(3);
           phone.style.filter=pz<1 ? "blur("+(2.4*(1-pz)).toFixed(2)+"px)" : "";
           zoom.closest(".hl-sub").style.setProperty("--zs",(pzz*pzz).toFixed(3));
         } else { phone.style.transform=""; phone.style.opacity=""; phone.style.filter=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
