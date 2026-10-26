@@ -384,18 +384,34 @@ section[id]{scroll-margin-top:72px;}
 .pl-notice{max-width:640px; margin:22px auto 0; text-align:center; font-size:13.5px; line-height:1.55; color:var(--muted);}
 
 /* Schéma iCal (aucune maquette ne montre cet échange) */
-.pl-sync{display:flex; flex-direction:column; align-items:center; gap:14px; width:100%; max-width:340px;}
-.pl-sync-row{display:flex; gap:12px; width:100%;}
-.pl-sync-box{flex:1; background:#fff; border-radius:18px; padding:16px; text-align:center; font-weight:600; color:var(--sauge-deep);
+.pl-sync{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); grid-template-areas:"ab bk sej" "aab abk asej" "main main main";
+  gap:14px 12px; justify-items:center; width:100%; max-width:560px;}
+.pl-sync-box{width:100%; box-sizing:border-box; background:#fff; border-radius:18px; padding:16px; text-align:center; font-weight:600; color:var(--sauge-deep);
   box-shadow:0 10px 26px rgba(29,40,32,.10);}
-.pl-sync-box small{display:block; font-weight:400; font-size:12.5px; color:var(--muted); margin-top:2px;}
-.pl-sync-arrows{display:flex; gap:26px; color:var(--lavender-deep);}
-.pl-sync-arrows svg{width:26px; height:26px; overflow:visible;}
+.pl-sync-box small{display:block; font-weight:400; font-size:12.5px; line-height:1.35; color:var(--muted); margin-top:2px;}
+.pl-sync-box.ab, .pl-sync-box.bk, .pl-sync-box.sej{display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.pl-sync-box.ab{grid-area:ab;} .pl-sync-box.bk{grid-area:bk;} .pl-sync-box.sej{grid-area:sej;}
+.pl-sync-arr.ab{grid-area:aab;} .pl-sync-arr.bk{grid-area:abk;} .pl-sync-arr.sej{grid-area:asej;}
+/* Fiftin Séjours : même écosystème que Planning, mis en valeur en sauge.
+   Liaison interne (pas d'iCal), à sens unique : Planning → Séjours. */
+.pl-sync-box.sej{background:linear-gradient(160deg,#EDF1E8 0%,#E3E9DE 100%); box-shadow:0 10px 26px rgba(29,40,32,.10), inset 0 0 0 1.5px rgba(53,75,56,.35);}
+.pl-sync-box.sej small{color:#4A5A4C;}
+.pl-sync-tag{display:block; width:max-content; margin:0 auto 6px; padding:2px 8px; border-radius:999px; background:var(--sauge); color:#fff; font-size:10.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;}
+.pl-sync-arr{display:flex; justify-content:center; color:var(--lavender-deep);}
+.pl-sync-arr.sej{color:var(--sauge);}
+.pl-sync-arr svg{width:26px; height:26px; overflow:visible;}
 /* Flèches en parallaxe au défilement (voir le script) : la descendante
    glisse vers Fiftin, la montante vers les plateformes, sans clignotement. */
-.pl-sync-arrows path{will-change:transform;}
-.pl-sync-box.main{background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:18px;}
+.pl-sync-arr path{will-change:transform;}
+.pl-sync-box.main{grid-area:main; background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:18px;}
 .pl-sync-box.main small{color:rgba(255,255,255,.8);}
+/* Mobile : Airbnb et Booking côte à côte au-dessus de Planning, Fiftin
+   Séjours en dessous (flèche Planning → Séjours vers le bas). */
+@media (max-width:640px){
+  .pl-sync{grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-areas:"ab bk" "aab abk" "main main" "asej asej" "sej sej"; max-width:360px;}
+  .pl-sync-box.sej{max-width:300px;}
+  .pl-sync-arr.sej svg{transform:rotate(180deg);}
+}
 .pl-sync-box.main .da-logo{width:40px; height:40px; flex:none; box-shadow:none;}
 
 /* Vos données */
@@ -579,7 +595,7 @@ section[id]{scroll-margin-top:72px;}
     <div class="pl-head">
       <p class="da-kicker">Calendriers connectés</p>
       <h2 class="da-h2">Vos plateformes restent connectées.<br>Vous gardez la main.</h2>
-      <p class="da-text">Fiftin Planning importe et exporte vos disponibilités au format iCal avec Airbnb et Booking.com. Vos calendriers sont ainsi mieux coordonnés pour limiter les risques de doublons.</p>
+      <p class="da-text">Fiftin Planning centralise les disponibilités de vos hébergements. Synchronisez vos calendriers avec Airbnb et Booking.com grâce à iCal, et pilotez également les disponibilités de vos annonces Fiftin Séjours depuis votre planning. Un seul endroit pour tout organiser et limiter les risques de doubles réservations.</p>
       <ul class="pl-check">
         <li>Import des périodes occupées depuis les plateformes</li>
         <li>Export du calendrier Fiftin vers les plateformes</li>
@@ -587,13 +603,17 @@ section[id]{scroll-margin-top:72px;}
       </ul>
     </div>
     <div class="pl-visual lavender">
-      <div class="pl-sync" role="img" aria-label="Échange iCal dans les deux sens entre Airbnb, Booking.com et Fiftin Planning">
-        <div class="pl-sync-row"><div class="pl-sync-box">Airbnb<small>calendrier iCal</small></div><div class="pl-sync-box">Booking.com<small>calendrier iCal</small></div></div>
-        <div class="pl-sync-arrows" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
-        <div class="pl-sync-box main"><span class="da-logo da-icon"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span><span>Fiftin Planning<small>import et export iCal</small></span></div>
+      <div class="pl-sync" role="img" aria-label="Fiftin Planning au centre : échange iCal dans les deux sens avec Airbnb et Booking.com, et disponibilités envoyées automatiquement vers votre annonce Fiftin Séjours">
+        <div class="pl-sync-box ab">Airbnb<small>Synchronisation iCal</small></div>
+        <div class="pl-sync-box bk">Booking.com<small>Synchronisation iCal</small></div>
+        <div class="pl-sync-box sej"><span class="pl-sync-tag">Écosystème Fiftin</span>Fiftin Séjours<small>Disponibilités de votre annonce connectées à Planning</small></div>
+        <div class="pl-sync-arr ab" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
+        <div class="pl-sync-arr bk" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
+        <div class="pl-sync-arr sej" aria-hidden="true"><svg class="one" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V4M8 8l4-4 4 4"/></svg></div>
+        <div class="pl-sync-box main"><span class="da-logo da-icon"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span><span>Fiftin Planning<small>Toutes vos disponibilités au même endroit</small></span></div>
       </div>
     </div>
-    <p class="pl-notice">La synchronisation iCal n'est pas instantanée et ne synchronise pas les tarifs ni les paiements. Un délai entre mises à jour peut laisser subsister un risque de double réservation.</p>
+    <p class="pl-notice">Avec Airbnb et Booking.com, la synchronisation iCal n'est pas instantanée et ne synchronise pas les tarifs ni les paiements. Un délai entre mises à jour peut laisser subsister un risque de double réservation. Avec Fiftin Séjours, pas d'iCal : les dates occupées de la chambre liée à votre annonce sont republiées automatiquement depuis votre planning, réservations Airbnb et Booking importées comprises.</p>
   </div>
 </section>
 
@@ -877,11 +897,15 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
   window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
   views.forEach(function(v){ v.querySelector(".gs-body img").addEventListener("load",req); }); upd();
 })();
-// Encart iCal : flèches en parallaxe — pendant la traversée de l'écran, la
-// flèche descendante descend et la montante monte (±6 px), amorties.
+// Schéma des calendriers connectés : flèches en parallaxe — pendant la
+// traversée de l'écran, la flèche descendante descend et la montante monte
+// (±6 px), amorties. La flèche Planning → Séjours (svg.one, à sens unique)
+// glisse vers Séjours (vers le haut, ou vers le bas sur mobile où elle est
+// retournée).
 (function(){
-  var box=document.querySelector(".pl-sync-arrows"); if(!box) return;
-  var down=[].slice.call(box.querySelectorAll("path:first-child")), up=[].slice.call(box.querySelectorAll("path:last-child")), raf=0;
+  var box=document.querySelector(".pl-sync"); if(!box) return;
+  var down=[].slice.call(box.querySelectorAll(".pl-sync-arr svg:not(.one) path:first-child")),
+      up=[].slice.call(box.querySelectorAll(".pl-sync-arr svg:not(.one) path:last-child, .pl-sync-arr svg.one path")), raf=0;
   function upd(){
     raf=0; var vh=window.innerHeight, head=plHead(), r=box.getBoundingClientRect();
     var p=Math.min(1,Math.max(0,(vh-r.top)/(vh-head+r.height)));
