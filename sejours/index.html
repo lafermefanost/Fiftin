@@ -2390,6 +2390,14 @@ body.map-fullscreen{overflow:hidden;}
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
 .sej-home img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
+/* Petit picto = icône de l'écran d'accueil du téléphone
+   (logo-fiftin-icon-*.png, la même que l'icône installée), avec son anneau
+   irisé animé ; plus de verre ni de reflet ajoutés par-dessus. */
+.sej-home span{border-radius:23%; background:none; border:none; box-shadow:0 3px 9px rgba(20,26,20,.22), 0 1px 2px rgba(20,26,20,.16);
+  backdrop-filter:none; -webkit-backdrop-filter:none;}
+.sej-home span img{width:100%; height:100%; transform:none; filter:none;}
+.sej-home span::after{display:none;}
+.sej-home span::before{z-index:2;}
 </style>
 
 <script>
@@ -2429,7 +2437,7 @@ function fiftinSetBrandVideoSrc(id){
 
   <!-- Ancienne intro (#hero) retirée : la page d'accueil fiftin.fr/ joue ce
        rôle. Le pictogramme en tête ramène à cet accueil (base href="/"). -->
-  <a class="sej-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><span><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span></a>
+  <a class="sej-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><span><img src="assets/logo-fiftin-icon-144.png" width="144" height="144" alt=""></span></a>
 
 
 
