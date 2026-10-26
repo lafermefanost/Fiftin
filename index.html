@@ -221,9 +221,10 @@ img{display:block; max-width:100%;}
 .hl-sub-split .hl-feats li{font-size:15px;}
 /* Pictos des points forts dans des pastilles rondes : même recette que
    celle du titre de l'encart (.hl-sub-hd .ic), en plus petit — dégradé
-   sauge côté voyageurs, lavande côté hôtes. */
+   sauge côté voyageurs, lavande côté hôtes. overflow:visible : sans lui,
+   Safari rognait le trait du picto aux bords de son cadre arrondi. */
 .hl-sub-split .hl-feats li{align-items:center;}
-.hl-sub-split .hl-feats svg{width:38px; height:38px; padding:9px; box-sizing:border-box; border-radius:50%;
+.hl-sub-split .hl-feats svg{width:40px; height:40px; padding:10px; box-sizing:border-box; border-radius:50%; overflow:visible;
   background:linear-gradient(160deg,#EDF1E8 0%,#E3E9DE 100%); color:var(--sauge-deep);}
 .plan .hl-sub-split .hl-feats svg{background:linear-gradient(160deg,#EEF0FA 0%,#E2E6F6 100%); color:var(--lavender-deep);}
 .hl-note{margin:0 0 18px; font-size:13.5px; line-height:1.5; color:var(--muted);}
