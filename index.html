@@ -45,7 +45,7 @@ img{display:block; max-width:100%;}
   border-bottom:1px solid transparent; transition:background-color .25s ease, border-color .25s ease;}
 /* En-tête fixe (même que la page Planning) : transparent sur la vidéo, puis
    barre vert sauge (couleur propriétaire) dès qu'on fait défiler, compte toujours accessible. */
-.hl-top.scrolled{background:rgba(53,75,56,0.97); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); border-bottom-color:rgba(255,255,255,0.10);}
+.hl-top.scrolled{background:#354B38; border-bottom-color:rgba(255,255,255,0.10);}
 .hl-top.scrolled .hl-acc-btn{color:var(--sauge-deep); background:#fff; border-color:#fff;}
 .hl-account{position:relative;}
 .hl-acc-btn{display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; cursor:pointer;
@@ -61,6 +61,54 @@ img{display:block; max-width:100%;}
 .hl-menu svg{width:18px; height:18px; flex:none; margin-top:2px; color:var(--sauge);}
 .hl-menu small{display:block; font-size:12.5px; font-weight:400; color:var(--muted); margin-top:1px;}
 .hl-menu .hl-menu-mail{padding:8px 12px 10px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--cream-deep); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis;}
+
+/* Petit logo = le même verre que le logo moyen/grand, aux mesures du
+   picto de l'en-tête de l'outil (.app-icon-tile de app/index.html :
+   40 px, coins 13 px, lettrage 28×22), anneau irisé animé compris. */
+.hl-home{width:40px; height:40px; border-radius:13px; border:none;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4); -webkit-backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
+    inset 0 -3px 5px rgba(8,13,10,.38), inset -2px 0 4px rgba(8,13,10,.24),
+    0 3px 9px rgba(29,40,32,.22), 0 1px 2px rgba(29,40,32,.16);}
+.hl-home::before{padding:1px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);}
+.hl-home::after{display:block; filter:blur(1.5px);}
+.hl-home img{width:28px; height:22px; transform:none; filter:none;}
+/* Picto à gauche du bandeau, comme sur Planning et dans l'outil : absent
+   sur la vidéo du hero (le grand logo y est déjà), il apparaît avec le
+   bandeau vert. */
+.hl-home{position:absolute; left:clamp(14px,4vw,48px); top:calc(6px + env(safe-area-inset-top,0px));
+  display:flex; align-items:center; justify-content:center; overflow:hidden; transition:opacity .25s ease;}
+.hl-home::before{content:""; position:absolute; inset:0; border-radius:inherit; opacity:.9; pointer-events:none;
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  animation:irisSpin 9s linear infinite;}
+.hl-home::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+  background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
+  border-radius:50%; transform:rotate(-6deg); pointer-events:none;}
+.hl-home img{position:relative; z-index:1; display:block;}
+.hl-top:not(.scrolled) .hl-home{opacity:0; pointer-events:none;}
+
+/* Téléphone Fiftin Planning de l'accueil : les 5 vues de l'outil défilent
+   au fil de la page (comme #plTour sur la page Planning) — bascule
+   immédiate d'une vue à l'autre pendant que le téléphone est entièrement
+   visible, et léger défilement vertical de chaque vue pendant son passage
+   (voir le script). Pastilles du nom de la vue sous le téléphone. */
+.hl-tour{display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;}
+.hl-tour-phone > .da-scr{position:relative;}
+.hl-view{position:absolute; inset:0; display:flex; flex-direction:column; visibility:hidden;}
+.hl-view.on{visibility:visible;}
+.hl-view .gs-top, .hl-view .gs-bot{display:block; width:100%; height:auto; flex:none; position:relative; z-index:1;}
+.hl-view .gs-body{flex:1; min-height:0; overflow:hidden; position:relative; background:#fff;}
+.hl-view .gs-body img{position:absolute; top:0; left:0; width:100%; height:auto; will-change:transform;}
+.hl-tour-tabs{display:flex; flex-wrap:nowrap; justify-content:center; gap:3px;}
+.hl-tour-tabs span{padding:4px 7px; border-radius:999px; font-size:11px; white-space:nowrap; font-weight:600; color:var(--muted); background:rgba(53,75,56,.06); transition:background-color .2s ease, color .2s ease;}
+.hl-tour-tabs span.on{background:var(--sauge); color:#fff;}
 
 /* ── Hero ── */
 .hl-hero{position:relative; min-height:min(92vh,860px); display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -315,6 +363,7 @@ img{display:block; max-width:100%;}
 <body>
 
 <header class="hl-top">
+  <a class="hl-home" href="./" aria-label="Haut de la page d'accueil" title="Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
   <a class="hl-top-link" href="sejours/?espace=hote">Déposer une annonce</a>
   <div class="hl-account">
     <a class="hl-acc-btn" id="hlAccBtn" href="sejours/?login=1">
@@ -446,7 +495,7 @@ img{display:block; max-width:100%;}
           <p class="hl-note">Calendriers iCal synchronisés dans les deux sens avec Airbnb et Booking.com, pour limiter les risques de doubles réservations (synchronisation périodique, pas instantanée).</p>
           <a class="hl-btn" href="planning/">Découvrir Fiftin Planning <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </div>
-        <div class="hl-visual"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="La grille de Fiftin Planning : toute la saison, chambre par chambre"><div class="da-scr"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div></div></div>
+        <div class="hl-visual"><div class="hl-tour"><div class="da-phone hl-shot hl-tour-phone" role="img" aria-label="Fiftin Planning : Grille, Location, Semaine, Mois et Année, les 5 vues de l'outil"><div class="da-scr"><div class="hl-view on"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt=""></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-location-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-location-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-location-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-semaine-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-semaine-corps.webp" width="600" height="1629" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-semaine-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-mois-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-mois-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-mois-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-annee-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-annee-corps.webp" width="600" height="3214" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-annee-bas.webp" width="600" height="83" alt=""></div></div></div><div class="hl-tour-tabs" aria-hidden="true"><span class="on">Grille</span><span>Location</span><span>Semaine</span><span>Mois</span><span>Année</span></div></div></div>
       </section>
     </article>
   </div>
@@ -599,6 +648,29 @@ function hlLoadFirebase(cb){
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
   window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
   els.forEach(function(i){ i.addEventListener("load",req); }); upd();
+})();
+// Téléphone Fiftin Planning (carte hôtes) : la position du téléphone dans
+// la fenêtre choisit la vue (Grille → Location → Semaine → Mois → Année),
+// sur la plage où il est entièrement visible sous l'en-tête ; pendant le
+// passage d'une vue, son contenu défile un peu (35 % de la hauteur visible
+// au plus), pour éviter un écran figé sans tout dérouler.
+(function(){
+  var tour=document.querySelector(".hl-tour"); if(!tour) return;
+  var phone=tour.querySelector(".hl-tour-phone"), views=[].slice.call(tour.querySelectorAll(".hl-view")), tabs=[].slice.call(tour.querySelectorAll(".hl-tour-tabs span"));
+  var n=views.length, cur=-1, raf=0;
+  function upd(){
+    raf=0; var vh=window.innerHeight, hd=document.querySelector(".hl-top"), head=hd?hd.getBoundingClientRect().bottom:52;
+    var r=phone.getBoundingClientRect(), c=(r.top+r.bottom)/2, a=vh-r.height/2, z=head+r.height/2;
+    if(a-z<vh*.3){ var m=(a+z)/2; a=m+vh*.15; z=m-vh*.15; }
+    var p=Math.min(1,Math.max(0,(a-c)/(a-z))), x=p*n, i=Math.min(n-1,Math.floor(x)), t=Math.min(1,x-i);
+    if(i!==cur){ cur=i; views.forEach(function(v,j){ v.classList.toggle("on",j===i); }); tabs.forEach(function(e,j){ e.classList.toggle("on",j===i); }); }
+    var body=views[i].querySelector(".gs-body"), img=body.querySelector("img");
+    var shift=Math.min(Math.max(0,img.offsetHeight-body.clientHeight), body.clientHeight*.35);
+    img.style.transform="translateY("+(-t*shift).toFixed(1)+"px)";
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
+  views.forEach(function(v){ v.querySelector(".gs-body img").addEventListener("load",req); }); upd();
 })();
 // En-tête fixe : barre crème dès qu'on quitte le haut de la vidéo.
 (function(){
