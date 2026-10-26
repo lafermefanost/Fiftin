@@ -617,6 +617,29 @@ function hlLoadFirebase(cb){
     })();
   });
 }
+// Douceur des animations liées au défilement : chaque valeur (défilement
+// dans un téléphone, zoom, voile) suit une courbe en S (départ et arrivée
+// en douceur, plus d'à-coup aux bornes) et rejoint sa cible avec un léger
+// amorti image par image plutôt que de sauter à chaque cran de molette.
+var hlEase=function(t){ t=Math.min(1,Math.max(0,t)); return t*t*(3-2*t); };
+var hlSpring=(function(){
+  var items=[], raf=0, reduce=window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function step(){
+    raf=0;
+    items=items.filter(function(it){
+      var d=it.el._tg-it.el._cv;
+      if(Math.abs(d)<0.0004){ it.el._cv=it.el._tg; it.apply(it.el._cv); return false; }
+      it.el._cv+=d*0.14; it.apply(it.el._cv); return true;
+    });
+    if(items.length) raf=requestAnimationFrame(step);
+  }
+  return function(el, target, apply, snap){
+    el._tg=target;
+    if(el._cv==null || snap || reduce){ el._cv=target; apply(target); items=items.filter(function(it){ return it.el!==el; }); return; }
+    if(!items.some(function(it){ return it.el===el; })) items.push({el:el, apply:apply});
+    if(!raf) raf=requestAnimationFrame(step);
+  };
+})();
 // Téléphones de l'accueil : le contenu défile sur toute la traversée de
 // l'écran — dès que le téléphone apparaît en bas jusqu'à ce qu'il passe
 // sous l'en-tête fixe. Carte collante (Séjours sur ordinateur) : la
@@ -634,7 +657,7 @@ function hlLoadFirebase(cb){
       var r=track.getBoundingClientRect();
       var p=Math.min(1,Math.max(0,(vh-r.top)/(vh-head+r.height)));
       var max=Math.max(0,img.offsetHeight-box.clientHeight);
-      img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
+      hlSpring(img, hlEase(p), function(v){ img.style.transform="translateY("+(-v*max).toFixed(1)+"px)"; });
     });
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
@@ -657,12 +680,14 @@ function hlLoadFirebase(cb){
       var phone=zoom.querySelector(".da-phone"), sub=zoom.closest(".hl-sub");
       if(!mq.matches){ phone.style.transform=""; phone.style.opacity=""; phone.style.filter=""; if(sub) sub.style.removeProperty("--zs"); return; }
       var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
-      var pf=Math.min(1,pz/0.4), pzz=Math.max(0,(pz-0.4)/0.6);
-      var smax=1+(Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth))-1)*0.5, sc=1+(smax-1)*pzz*pzz;
-      phone.style.transform="scale("+sc.toFixed(3)+")";
-      phone.style.opacity=(0.6+0.4*pf).toFixed(3);
-      phone.style.filter=pf<1 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
-      if(sub) sub.style.setProperty("--zs",(pzz*pzz).toFixed(3));
+      var smax=1+(Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth))-1)*0.5;
+      hlSpring(zoom, pz, function(v){
+        var pf=hlEase(v/0.4), pzz=hlEase((v-0.4)/0.6), sc=1+(smax-1)*pzz;
+        phone.style.transform="scale("+sc.toFixed(4)+")";
+        phone.style.opacity=(0.6+0.4*pf).toFixed(3);
+        phone.style.filter=pf<0.999 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
+        if(sub) sub.style.setProperty("--zs",pzz.toFixed(3));
+      });
     });
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
@@ -682,10 +707,12 @@ function hlLoadFirebase(cb){
     var r=phone.getBoundingClientRect(), c=(r.top+r.bottom)/2, a=vh-r.height/2, z=head+r.height/2;
     if(a-z<vh*.3){ var m=(a+z)/2; a=m+vh*.15; z=m-vh*.15; }
     var p=Math.min(1,Math.max(0,(a-c)/(a-z))), x=p*n, i=Math.min(n-1,Math.floor(x)), t=Math.min(1,x-i);
-    if(i!==cur){ cur=i; views.forEach(function(v,j){ v.classList.toggle("on",j===i); }); tabs.forEach(function(e,j){ e.classList.toggle("on",j===i); }); }
+    var changed=i!==cur;
+    if(changed){ cur=i; views.forEach(function(v,j){ v.classList.toggle("on",j===i); }); tabs.forEach(function(e,j){ e.classList.toggle("on",j===i); }); }
     var body=views[i].querySelector(".gs-body"), img=body.querySelector("img");
     var shift=Math.min(Math.max(0,img.offsetHeight-body.clientHeight), body.clientHeight*.35);
-    img.style.transform="translateY("+(-t*shift).toFixed(1)+"px)";
+    // Changement de vue immédiat ; défilement de la vue en courbe en S, amorti.
+    hlSpring(img, hlEase(t), function(v){ img.style.transform="translateY("+(-v*shift).toFixed(1)+"px)"; }, changed);
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
   window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
