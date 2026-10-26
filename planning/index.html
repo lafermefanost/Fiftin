@@ -381,7 +381,16 @@ section[id]{scroll-margin-top:72px;}
   box-shadow:0 10px 26px rgba(29,40,32,.10);}
 .pl-sync-box small{display:block; font-weight:400; font-size:12.5px; color:var(--muted); margin-top:2px;}
 .pl-sync-arrows{display:flex; gap:26px; color:var(--lavender-deep);}
-.pl-sync-arrows svg{width:26px; height:26px;}
+.pl-sync-arrows svg{width:26px; height:26px; overflow:visible;}
+/* Flèches animées en continu : la descendante glisse vers Fiftin, la
+   montante vers les plateformes, en alternance (échange permanent). */
+.pl-sync-arrows path{animation:plSyncDown 2.4s cubic-bezier(.45,0,.55,1) infinite;}
+.pl-sync-arrows path:last-child{animation-name:plSyncUp; animation-delay:1.2s;}
+.pl-sync-arrows svg + svg path{animation-delay:.6s;}
+.pl-sync-arrows svg + svg path:last-child{animation-delay:1.8s;}
+@keyframes plSyncDown{0%{transform:translateY(-5px); opacity:0;} 25%,60%{opacity:1;} 100%{transform:translateY(5px); opacity:0;}}
+@keyframes plSyncUp{0%{transform:translateY(5px); opacity:0;} 25%,60%{opacity:1;} 100%{transform:translateY(-5px); opacity:0;}}
+@media (prefers-reduced-motion:reduce){ .pl-sync-arrows path{animation:none;} }
 .pl-sync-box.main{background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center; gap:12px; padding:18px;}
 .pl-sync-box.main small{color:rgba(255,255,255,.8);}
 .pl-sync-box.main .da-logo{width:40px; height:40px; flex:none; box-shadow:none;}
