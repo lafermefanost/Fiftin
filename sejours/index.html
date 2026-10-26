@@ -56,7 +56,7 @@
   --danger:#B2543B;
   --gray-mid:#9A9789;
   /* Hauteur de la rangée collante du pictogramme d'accueil (.sej-home). */
-  --sej-home-h:calc(62px + env(safe-area-inset-top,0px));
+  --sej-home-h:calc(52px + env(safe-area-inset-top,0px));
   /* Grain des photos d'annonce (fil + repli sans photo de la fiche détail,
      voir .cover .grain et le "slide" de secours dans openDetail() plus
      bas) — réglage centralisé pour n'ajuster qu'ici (retour utilisateur :
@@ -2370,7 +2370,7 @@ body.map-fullscreen{overflow:hidden;}
      l'accueil et de Planning une fois la page défilée. */
   background:rgba(53,75,56,0.97); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
   border-bottom:1px solid rgba(255,255,255,0.10);}
-.sej-home span{width:44px; height:44px; border-radius:25%; display:flex; align-items:center; justify-content:center;
+.sej-home-link span{width:44px; height:44px; border-radius:25%; display:flex; align-items:center; justify-content:center;
   position:relative; overflow:hidden;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(18,18,18,.1) 68%, rgba(18,18,18,.26) 100%),
@@ -2379,21 +2379,21 @@ body.map-fullscreen{overflow:hidden;}
   box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
     inset 0 -3px 5px rgba(10,10,10,.38), inset -2px 0 4px rgba(10,10,10,.24),
     0 3px 9px rgba(30,30,30,.22), 0 1px 2px rgba(30,30,30,.16);}
-.sej-home span::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
+.sej-home-link span::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, rgba(160,160,160,.8) 55deg, rgba(255,255,255,.9) 95deg, rgba(200,200,200,.8) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, rgba(120,120,120,.7) 320deg, rgba(255,255,255,0) 360deg);
   mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.sej-home span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
+.sej-home-link span::after{content:""; position:absolute; left:-10%; top:-8%; width:120%; height:42%;
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
-.sej-home img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
+.sej-home-link img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
 /* Petit logo = le même verre que le logo moyen/grand, aux mesures du
    picto de l'en-tête de l'outil (.app-icon-tile de app/index.html :
    40 px, coins 13 px, lettrage 28×22), anneau irisé animé compris. */
-.sej-home span{width:40px; height:40px; border-radius:13px; border:none;
+.sej-home-link span{width:40px; height:40px; border-radius:13px; border:none;
   background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
       rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
     rgba(29,40,32,.14);
@@ -2401,14 +2401,33 @@ body.map-fullscreen{overflow:hidden;}
   box-shadow:inset 0 1px 2px rgba(255,255,255,.6), inset 1px 0 2px rgba(255,255,255,.3),
     inset 0 -3px 5px rgba(8,13,10,.38), inset -2px 0 4px rgba(8,13,10,.24),
     0 3px 9px rgba(29,40,32,.22), 0 1px 2px rgba(29,40,32,.16);}
-.sej-home span::before{padding:1px;
+.sej-home-link span::before{padding:1px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);}
-.sej-home span::after{display:block; filter:blur(1.5px);}
-.sej-home span img{width:28px; height:22px; transform:none; filter:none;}
+.sej-home-link span::after{display:block; filter:blur(1.5px);}
+.sej-home-link span img{width:28px; height:22px; transform:none; filter:none;}
 /* Bandeau : picto à gauche, comme dans l'en-tête de l'outil. */
-.sej-home{justify-content:flex-start; padding:0 clamp(16px,4vw,48px) 11px;}
+.sej-home{align-items:center; justify-content:space-between; padding:env(safe-area-inset-top,0px) clamp(14px,4vw,48px) 0;}
+.sej-home-link{display:block; text-decoration:none;}
+/* Bouton « Mon compte » et son menu : mêmes que sur l'accueil (.hl-account
+   dans index.html) — naviguer vers un autre espace ou se déconnecter
+   depuis n'importe quelle page. */
+.hl-account{position:relative;}
+.hl-acc-btn{display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:999px; cursor:pointer;
+  font:500 14px 'Jost',sans-serif; color:var(--sauge-deep); background:#fff; border:1px solid #fff; text-decoration:none;}
+.hl-acc-btn svg{width:17px; height:17px;}
+.hl-menu{position:absolute; right:0; top:calc(100% + 10px); min-width:250px; background:#fff; border-radius:16px; box-shadow:0 18px 40px rgba(0,0,0,.18);
+  padding:8px; display:none; z-index:200;}
+.hl-menu.open{display:block;}
+.hl-menu a,.hl-menu button{display:flex; gap:12px; align-items:flex-start; width:100%; padding:11px 12px; border:none; background:none; border-radius:10px;
+  text-align:left; text-decoration:none; font:500 15px 'Jost',sans-serif; color:var(--ink); cursor:pointer;}
+.hl-menu a:hover,.hl-menu button:hover{background:var(--cream);}
+.hl-menu svg{width:18px; height:18px; flex:none; margin-top:2px; color:var(--sauge);}
+.hl-menu small{display:block; font-size:12.5px; font-weight:400; color:var(--muted); margin-top:1px;}
+.hl-menu .hl-menu-mail{padding:8px 12px 10px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--cream-deep); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis;}
+@media (max-width:640px){ .hl-acc-btn{padding:9px 14px; font-size:13.5px;} }
+
 </style>
 
 <script>
@@ -2448,7 +2467,31 @@ function fiftinSetBrandVideoSrc(id){
 
   <!-- Ancienne intro (#hero) retirée : la page d'accueil fiftin.fr/ joue ce
        rôle. Le pictogramme en tête ramène à cet accueil (base href="/"). -->
-  <a class="sej-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><span><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span></a>
+  <div class="sej-home">
+    <a class="sej-home-link" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><span><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span></a>
+    <div class="hl-account" id="sejAccount">
+      <a class="hl-acc-btn" id="sejAccBtn" href="sejours/?login=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span id="sejAccLabel">Se connecter</span></a>
+    <div class="hl-menu" id="sejMenu" role="menu">
+      <div class="hl-menu-mail" id="sejMenuMail"></div>
+      <a href="sejours/?espace=voyageur" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
+        <span>Espace voyageur<small>Mes séjours, favoris et profil</small></span>
+      </a>
+      <a href="sejours/?espace=hote" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span>Espace hôte<small>Mes annonces sur Fiftin Séjours</small></span>
+      </a>
+      <a href="app/" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <span>Fiftin Planning<small>Ouvrir l'outil de gestion</small></span>
+      </a>
+      <button type="button" id="sejSignOut" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        <span>Se déconnecter</span>
+      </button>
+    </div>
+    </div>
+  </div>
 
 
 
@@ -3399,6 +3442,7 @@ function bootFirebaseAuth(){
       authState.ready = true;
       authState.uid = user ? user.uid : null;
       authState.email = user ? user.email : null;
+      renderTopAccount();
       // Collections propres au compte (voir plus haut) : jamais celles d'un
       // compte précédent après une déconnexion/reconnexion sous un autre
       // uid sur le même appareil. Rechargées tout de suite si connecté
@@ -3495,6 +3539,26 @@ function updateHeroMenu(){
 function signOutUser(){
   if(typeof firebase!=="undefined") firebase.auth().signOut();
 }
+/* Bouton « Mon compte » du bandeau du haut (voir .sej-home) : « Se
+   connecter » ouvre le volet de connexion ; une fois connecté, menu
+   commun à tout le site (espaces, outil, déconnexion). */
+function renderTopAccount(){
+  var label=document.getElementById("sejAccLabel"); if(!label) return;
+  label.textContent = authState.uid ? "Mon compte" : "Se connecter";
+  document.getElementById("sejMenuMail").textContent = authState.email || "";
+  if(!authState.uid) document.getElementById("sejMenu").classList.remove("open");
+}
+(function(){
+  var btn=document.getElementById("sejAccBtn"), menu=document.getElementById("sejMenu");
+  if(!btn) return;
+  btn.addEventListener("click", function(e){
+    e.preventDefault();
+    if(!authState.uid){ authContext = "traveler"; openSheet("auth"); return; }
+    menu.classList.toggle("open");
+  });
+  document.addEventListener("click", function(e){ if(!e.target.closest("#sejAccount")) menu.classList.remove("open"); });
+  document.getElementById("sejSignOut").addEventListener("click", function(){ menu.classList.remove("open"); signOutUser(); });
+})();
 
 /* Fusionne dans LISTINGS les annonces d'hôtes publiées (Firestore,
    listings/{id} status=="published") avec le fil statique (listings.json).
