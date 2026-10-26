@@ -251,6 +251,10 @@ section[id]{scroll-margin-top:72px;}
 .pl-mock + .pl-mock{margin:70px 0 0 -40px;}
 .pl-visual .pl-mock:first-child:not(:last-child){margin-bottom:70px;}
 
+/* Voile blanc d'entrée des téléphones (mobile, voir le script) : un aplat
+   blanc posé sur le téléphone, plutôt qu'une transparence qui laissait voir
+   ce qu'il y a derrière (ex. l'autre téléphone d'une paire). */
+.da-phone::after{content:""; position:absolute; inset:0; border-radius:inherit; background:#fff; opacity:var(--veil,0); pointer-events:none; z-index:3;}
 /* Grille de l'outil dont le contenu défile avec la page (.da-gridscroll) :
    en-tête et barre d'onglets de l'outil fixes, corps du planning qui
    défile dans l'écran à mesure que la page défile (voir le script). */
@@ -325,9 +329,11 @@ section[id]{scroll-margin-top:72px;}
   .pl-feature:hover .ic{background:rgba(255,255,255,.14);} .pl-feature:hover .ic svg{color:var(--yellow);} }
 
 /* Sections texte + visuel */
+/* Fond des visuels : carte blanche (plutôt que le dégradé sauge ou lavande
+   ton sur ton), comme les encarts blancs de l'accueil. */
 .pl-visual{max-width:920px; margin:clamp(36px,5vw,52px) auto 0; min-height:440px; border-radius:28px; display:flex; align-items:center; justify-content:center; padding:36px 24px; overflow:hidden;
-  background:linear-gradient(160deg,#EDF1E8 0%,#E3E9DE 100%); box-shadow:var(--shadow);}
-.pl-visual.lavender{background:linear-gradient(160deg,#EEF0FA 0%,#E2E6F6 100%);}
+  background:#fff; box-shadow:0 6px 18px rgba(29,40,32,.06);}
+.pl-visual.lavender{background:#fff;}
 .pl-check{list-style:none; margin:22px 0 24px; padding:0; display:grid; gap:12px;}
 .pl-check li{display:flex; gap:12px; align-items:flex-start; line-height:1.5; font-size:16px; color:var(--ink);}
 .pl-check li::before{content:""; flex:0 0 24px; height:24px; border-radius:50%; margin-top:1px;
@@ -747,7 +753,7 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
           var dy=ph.length>1 ? (j===0 ? off : -off) : 0;
           e.style.transform="translateY("+dy.toFixed(1)+"px)";
           var pf=mobile ? hlEase(x/0.4) : 1;
-          e.style.opacity=mobile ? (0.6+0.4*pf).toFixed(3) : "";
+          if(mobile) e.style.setProperty("--veil",(0.4*(1-pf)).toFixed(3)); else e.style.removeProperty("--veil");
           e.style.filter=mobile && pf<0.999 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
         });
       });
@@ -779,7 +785,7 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
     var pe=Math.min(1,Math.max(0,(vh-r.top)/(vh-head))), mobile=mq.matches;
     hlSpring(phone, pe, function(v){
       var pf=mobile ? hlEase(v/0.4) : 1;
-      phone.style.opacity=mobile ? (0.6+0.4*pf).toFixed(3) : "";
+      if(mobile) phone.style.setProperty("--veil",(0.4*(1-pf)).toFixed(3)); else phone.style.removeProperty("--veil");
       phone.style.filter=mobile && pf<0.999 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
     });
   }
