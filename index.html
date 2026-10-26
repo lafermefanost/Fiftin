@@ -582,10 +582,14 @@ function hlLoadFirebase(cb){
       if(zoom){
         if(window.matchMedia("(max-width:640px)").matches){
           var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
-          var smax=Math.min(1.5,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pz;
+          // Zoom progressif (ease-in : pz²) — téléphone presque entier au
+          // début, accélération en fin de course ; léger flou de profondeur
+          // au début qui se dissipe jusqu'à la netteté complète.
+          var smax=Math.min(1.5,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pz*pz;
           phone.style.transform="scale("+sc.toFixed(3)+")";
-          zoom.closest(".hl-sub").style.setProperty("--zs",pz.toFixed(3));
-        } else { phone.style.transform=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
+          phone.style.filter=pz<1 ? "blur("+(2.4*(1-pz)).toFixed(2)+"px)" : "";
+          zoom.closest(".hl-sub").style.setProperty("--zs",(pz*pz).toFixed(3));
+        } else { phone.style.transform=""; phone.style.filter=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
       }
     });
   }
