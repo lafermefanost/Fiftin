@@ -344,6 +344,9 @@ img{display:block; max-width:100%;}
      blanc du texte, posé par-dessus avec une ombre douce vers le haut —
      effet de profondeur, comme rangé dans une poche, sans fondu. */
   .hl-zoom{display:flex; justify-content:center; width:100%; position:relative; z-index:1;}
+  /* Fiftin Planning : pastilles des vues au-dessus du téléphone, qui peut
+     ainsi glisser sous le panneau du texte comme les deux autres. */
+  .hl-tour .hl-tour-tabs{order:-1;}
   .hl-zoom .da-phone{transform-origin:50% 0; will-change:transform;}
   .hl-sub-zoom{overflow:hidden;}
   .hl-sub-zoom .hl-sub-main{position:relative; z-index:2; background:#fff;
@@ -471,7 +474,7 @@ img{display:block; max-width:100%;}
         <h2 class="hl-tag">Le plaisir d'accueillir.<br>La liberté de gérer.</h2>
       </div>
 
-      <section class="hl-sub hl-sub-split" aria-labelledby="hlSubAnnonce">
+      <section class="hl-sub hl-sub-split hl-sub-zoom" aria-labelledby="hlSubAnnonce">
           <div class="hl-sub-hd"><span class="ic sej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
             <div><small>Espace hôte · Fiftin Séjours</small><h3 id="hlSubAnnonce">Votre annonce</h3></div></div>
         <div class="hl-sub-main">
@@ -481,7 +484,7 @@ img{display:block; max-width:100%;}
             <a class="hl-link" href="sejours/?espace=hote">Gérer mes annonces <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
         </div>
-        <div class="hl-visual"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="Espace hôte de Fiftin Séjours : l'annonce, ses boutons de gestion, le planning associé et le calendrier des disponibilités"><div class="da-scr"><img class="gs-top" src="assets/hote-haut.webp" width="600" height="95" alt=""><div class="gs-body"><img src="assets/hote-corps.webp" width="600" height="2949" alt="" loading="lazy"></div><img class="gs-bot" src="assets/hote-bas.webp" width="600" height="128" alt=""></div></div></div>
+        <div class="hl-visual"><div class="hl-zoom"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="Espace hôte de Fiftin Séjours : l'annonce, ses boutons de gestion, le planning associé et le calendrier des disponibilités"><div class="da-scr"><img class="gs-top" src="assets/hote-haut.webp" width="600" height="95" alt=""><div class="gs-body"><img src="assets/hote-corps.webp" width="600" height="2949" alt="" loading="lazy"></div><img class="gs-bot" src="assets/hote-bas.webp" width="600" height="128" alt=""></div></div></div></div>
       </section>
 
       <div class="hl-joint" role="img" aria-label="Fiftin Planning et votre annonce Fiftin Séjours sont connectés : les disponibilités gérées dans Planning s'affichent sur votre annonce.">
@@ -489,7 +492,7 @@ img{display:block; max-width:100%;}
         <span><b>Connectés</b> : les disponibilités de votre planning s'affichent sur votre annonce.</span>
       </div>
 
-      <section class="hl-sub hl-sub-split hl-sub-plan" aria-labelledby="hlSubPlanning">
+      <section class="hl-sub hl-sub-split hl-sub-plan hl-sub-zoom" aria-labelledby="hlSubPlanning">
           <div class="hl-sub-hd"><span class="ic plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
             <div><small>Gestion</small><h3 id="hlSubPlanning">Fiftin Planning</h3></div></div>
         <div class="hl-sub-main">
@@ -503,7 +506,7 @@ img{display:block; max-width:100%;}
           <p class="hl-note">Calendriers iCal synchronisés dans les deux sens avec Airbnb et Booking.com, pour limiter les risques de doubles réservations (synchronisation périodique, pas instantanée).</p>
           <a class="hl-btn" href="planning/">Découvrir Fiftin Planning <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         </div>
-        <div class="hl-visual"><div class="hl-tour"><div class="da-phone hl-shot hl-tour-phone" role="img" aria-label="Fiftin Planning : Grille, Location, Semaine, Mois et Année, les 5 vues de l'outil"><div class="da-scr"><div class="hl-view on"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt=""></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-location-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-location-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-location-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-semaine-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-semaine-corps.webp" width="600" height="1629" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-semaine-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-mois-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-mois-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-mois-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-annee-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-annee-corps.webp" width="600" height="3214" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-annee-bas.webp" width="600" height="83" alt=""></div></div></div><div class="hl-tour-tabs" aria-hidden="true"><span class="on">Grille</span><span>Location</span><span>Semaine</span><span>Mois</span><span>Année</span></div></div></div>
+        <div class="hl-visual"><div class="hl-tour"><div class="hl-zoom"><div class="da-phone hl-shot hl-tour-phone" role="img" aria-label="Fiftin Planning : Grille, Location, Semaine, Mois et Année, les 5 vues de l'outil"><div class="da-scr"><div class="hl-view on"><img class="gs-top" src="assets/app-grille-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/app-grille-corps.webp" width="600" height="2969" alt=""></div><img class="gs-bot" src="assets/app-grille-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-location-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-location-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-location-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-semaine-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-semaine-corps.webp" width="600" height="1629" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-semaine-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-mois-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-mois-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-mois-bas.webp" width="600" height="83" alt=""></div><div class="hl-view"><img class="gs-top" src="assets/app-annee-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-annee-corps.webp" width="600" height="3214" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-annee-bas.webp" width="600" height="83" alt=""></div></div></div></div><div class="hl-tour-tabs" aria-hidden="true"><span class="on">Grille</span><span>Location</span><span>Semaine</span><span>Mois</span><span>Année</span></div></div></div>
       </section>
     </article>
   </div>
@@ -632,30 +635,38 @@ function hlLoadFirebase(cb){
       var p=Math.min(1,Math.max(0,(vh-r.top)/(vh-head+r.height)));
       var max=Math.max(0,img.offsetHeight-box.clientHeight);
       img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
-      // Zoom avant (mobile, carte voyageurs) : de la taille actuelle quand le
-      // téléphone entre en bas de l'écran, jusqu'à presque toute la largeur
-      // de l'encart quand son haut arrive sous l'en-tête ; le bas, qui
-      // dépasse alors, est masqué (.hl-zoom).
-      if(zoom){
-        if(window.matchMedia("(max-width:640px)").matches){
-          var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
-          // Deux temps sur la même course : d'abord (0 → 40 %) le flou et le
-          // voile blanc se dissipent, téléphone entier ; ensuite seulement
-          // (40 % → 100 %) le zoom, en accélérant (ease-in), discret
-          // (×1,125 au plus, moitié de l'amplitude précédente).
-          var pf=Math.min(1,pz/0.4), pzz=Math.max(0,(pz-0.4)/0.6);
-          var smax=1+(Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth))-1)*0.5, sc=1+(smax-1)*pzz*pzz;
-          phone.style.transform="scale("+sc.toFixed(3)+")";
-          phone.style.opacity=(0.6+0.4*pf).toFixed(3);
-          phone.style.filter=pf<1 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
-          zoom.closest(".hl-sub").style.setProperty("--zs",(pzz*pzz).toFixed(3));
-        } else { phone.style.transform=""; phone.style.opacity=""; phone.style.filter=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
-      }
     });
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
   window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req);
   els.forEach(function(i){ i.addEventListener("load",req); }); upd();
+})();
+// Zoom avant des téléphones des trois encarts (mobile) : même effet
+// partout. Deux temps sur la course du téléphone (de son entrée en bas de
+// l'écran à l'arrivée de son haut sous l'en-tête) : d'abord (0 → 40 %) le
+// léger flou et le voile blanc se dissipent, téléphone entier ; ensuite
+// (40 → 100 %) le zoom, en accélérant, discret (×1,125 au plus) — le bas,
+// qui dépasse alors, glisse sous le panneau blanc du texte (.hl-sub-zoom).
+(function(){
+  var zooms=[].slice.call(document.querySelectorAll(".hl-zoom"));
+  if(!zooms.length) return;
+  var raf=0, mq=window.matchMedia("(max-width:640px)");
+  function upd(){
+    raf=0; var vh=window.innerHeight, hd=document.querySelector(".hl-top"), head=hd?hd.getBoundingClientRect().bottom:52;
+    zooms.forEach(function(zoom){
+      var phone=zoom.querySelector(".da-phone"), sub=zoom.closest(".hl-sub");
+      if(!mq.matches){ phone.style.transform=""; phone.style.opacity=""; phone.style.filter=""; if(sub) sub.style.removeProperty("--zs"); return; }
+      var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
+      var pf=Math.min(1,pz/0.4), pzz=Math.max(0,(pz-0.4)/0.6);
+      var smax=1+(Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth))-1)*0.5, sc=1+(smax-1)*pzz*pzz;
+      phone.style.transform="scale("+sc.toFixed(3)+")";
+      phone.style.opacity=(0.6+0.4*pf).toFixed(3);
+      phone.style.filter=pf<1 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
+      if(sub) sub.style.setProperty("--zs",(pzz*pzz).toFixed(3));
+    });
+  }
+  function req(){ if(!raf) raf=requestAnimationFrame(upd); }
+  window.addEventListener("scroll",req,{passive:true}); window.addEventListener("resize",req); upd();
 })();
 // Téléphone Fiftin Planning (carte hôtes) : la position du téléphone dans
 // la fenêtre choisit la vue (Grille → Location → Semaine → Mois → Année),
