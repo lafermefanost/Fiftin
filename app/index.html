@@ -1331,6 +1331,13 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 #lockScreen::after{content:""; position:absolute; inset:0; z-index:-1; pointer-events:none;
   background:rgba(16,22,18,.55); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
 #lockScreen .lock-box{max-width:none;}
+/* Chargement (session pas encore confirmée, voir showLockScreen) : comme
+   avant la fenêtre commune — vidéo de marque nette et grand logo seul,
+   sans voile, carte, titre ni croix. */
+#lockScreen.pending::after{display:none;}
+#lockScreen.pending .ff-auth-card{background:none; box-shadow:none; overflow:visible;}
+#lockScreen.pending .ff-auth-close, #lockScreen.pending .ff-auth-title, #lockScreen.pending .ff-auth-sub{display:none;}
+#lockScreen.pending .ff-auth-logo{width:136px; height:136px; border-radius:34px; margin-bottom:0;}
 /* Fond de secours peint dès le tout premier rendu, même recette que
    #hero/.mkt-page .cover/.close dans index.html — retour utilisateur :
    "les premières millisecondes, j'ai l'ancien fond qui est présent ...
@@ -13306,6 +13313,9 @@ function showLockScreen(mode){
      (pas d'écran blanc) ; le formulaire n'apparaît que si
      onAuthStateChanged confirme vraiment l'absence de session. */
   byId('lockBox').style.display=authMode==='pending'?'none':'block';
+  // Écran de chargement (en attente de la session) : grand logo seul sur la
+  // vidéo, sans la carte de connexion (voir #lockScreen.pending).
+  byId('lockScreen').classList.toggle('pending',authMode==='pending');
   if(authMode==='pending'){
     byId('lockTitle').textContent='';
     byId('lockSub').textContent='';
