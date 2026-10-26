@@ -2428,6 +2428,14 @@ body.map-fullscreen{overflow:hidden;}
 .hl-menu .hl-menu-mail{padding:8px 12px 10px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--cream-deep); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis;}
 @media (max-width:640px){ .hl-acc-btn{padding:9px 14px; font-size:13.5px;} }
 
+/* Bouton « Se connecter / Mon compte » de l'en-tête : plus compact (de
+   l'air dans le bandeau de 52 px) et jaune comme les autres boutons
+   d'action, sur la vidéo comme sur le bandeau vert. */
+.hl-acc-btn, .pl-login, .hl-top.scrolled .hl-acc-btn, .pl-header.scrolled .pl-login{
+  padding:7px 14px; gap:6px; font-size:13.5px; font-weight:600; color:var(--sauge-deep);
+  background:var(--yellow); border:1px solid var(--yellow); backdrop-filter:none; -webkit-backdrop-filter:none;}
+.hl-acc-btn svg, .pl-login svg{width:15px; height:15px;}
+.hl-acc-btn:hover, .pl-login:hover{filter:brightness(.96);}
 </style>
 
 <script>
