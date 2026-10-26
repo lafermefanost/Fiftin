@@ -99,7 +99,10 @@ img{display:block; max-width:100%;}
    immédiate d'une vue à l'autre pendant que le téléphone est entièrement
    visible, et léger défilement vertical de chaque vue pendant son passage
    (voir le script). Pastilles du nom de la vue sous le téléphone. */
-.hl-tour{display:flex; flex-direction:column; align-items:center; gap:12px; width:100%;}
+.hl-tour{display:flex; flex-direction:column; align-items:center; gap:12px;}
+/* Ordinateur : pastilles sur deux lignes à la largeur du téléphone, pour
+   ne pas élargir la colonne du visuel aux dépens du texte. */
+@media (min-width:641px){ .hl-tour-tabs{flex-wrap:wrap !important; max-width:190px;} }
 .hl-tour-phone > .da-scr{position:relative;}
 .hl-view{position:absolute; inset:0; display:flex; flex-direction:column; visibility:hidden;}
 .hl-view.on{visibility:visible;}
@@ -209,7 +212,11 @@ img{display:block; max-width:100%;}
 .hl-joint b{color:var(--sauge-deep); font-weight:600;}
 .hl-joint-ic{width:40px; height:40px; border-radius:50%; background:#fff; color:var(--sauge); display:flex; align-items:center; justify-content:center; flex:none; box-shadow:0 6px 18px rgba(29,40,32,.08);}
 .hl-joint-ic svg{width:20px; height:20px;}
-.hl-sub-split{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:16px; align-items:center;}
+.hl-sub-split{display:grid; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:1fr auto auto 1fr;
+  grid-template-areas:". vis" "hd vis" "main vis" ". vis"; column-gap:16px; align-items:center;}
+.hl-sub-split > .hl-sub-hd{grid-area:hd;}
+.hl-sub-split > .hl-sub-main{grid-area:main;}
+.hl-sub-split > .hl-visual{grid-area:vis;}
 .hl-sub-split .hl-feats{margin:0 0 16px; gap:12px;}
 .hl-sub-split .hl-feats li{font-size:15px;}
 .hl-note{margin:0 0 18px; font-size:13.5px; line-height:1.5; color:var(--muted);}
@@ -321,8 +328,9 @@ img{display:block; max-width:100%;}
   .hl-card .hl-btn{display:flex;}
   .hl-feats{align-items:center;}
   .hl-feats li{text-align:left;}
-  .hl-sub-split{grid-template-columns:1fr;}
-  .hl-sub-split .hl-visual{order:-1;}
+  /* Mobile : picto et titre d'abord, puis le téléphone, puis le texte. */
+  .hl-sub-split{grid-template-columns:1fr; grid-template-rows:none; grid-template-areas:"hd" "vis" "main"; row-gap:16px;}
+  .hl-sub-split > .hl-sub-hd{margin-bottom:0;}
   .hl-sub-split .hl-feats{align-items:flex-start; width:max-content; max-width:100%; margin-left:auto; margin-right:auto;}
   /* Mobile : encarts blancs centrés comme le reste (picto au-dessus du titre). */
   .hl-sub{text-align:center;}
@@ -438,9 +446,9 @@ img{display:block; max-width:100%;}
       </div>
 
       <section class="hl-sub hl-sub-split hl-sub-zoom" aria-labelledby="hlSubSejours">
-        <div class="hl-sub-main">
           <div class="hl-sub-hd"><span class="ic sej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
             <div><small>Espace voyageur</small><h3 id="hlSubSejours">Fiftin Séjours</h3></div></div>
+        <div class="hl-sub-main">
           <p class="hl-desc">Découvrez des hébergements uniques, échangez directement avec les hôtes et organisez vos séjours en toute liberté.</p>
           <ul class="hl-feats">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Des lieux uniques</li>
@@ -464,9 +472,9 @@ img{display:block; max-width:100%;}
       </div>
 
       <section class="hl-sub hl-sub-split" aria-labelledby="hlSubAnnonce">
-        <div class="hl-sub-main">
           <div class="hl-sub-hd"><span class="ic sej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
             <div><small>Espace hôte · Fiftin Séjours</small><h3 id="hlSubAnnonce">Votre annonce</h3></div></div>
+        <div class="hl-sub-main">
           <p class="hl-desc">Déposez votre annonce, ajoutez vos photos et modifiez-la quand vous voulez. Les voyageurs vous contactent directement, sans commission Fiftin sur leurs séjours.</p>
           <div class="hl-sub-cta">
             <a class="hl-btn sauge" href="sejours/?espace=hote">Déposer mon annonce <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
@@ -482,9 +490,9 @@ img{display:block; max-width:100%;}
       </div>
 
       <section class="hl-sub hl-sub-split hl-sub-plan" aria-labelledby="hlSubPlanning">
-        <div class="hl-sub-main">
           <div class="hl-sub-hd"><span class="ic plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
             <div><small>Gestion</small><h3 id="hlSubPlanning">Fiftin Planning</h3></div></div>
+        <div class="hl-sub-main">
           <p class="hl-desc">Un planning simple et complet pour gérer vos réservations, vos clients et votre activité en toute sérénité.</p>
           <ul class="hl-feats">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Planning intuitif</li>
