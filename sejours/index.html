@@ -18,6 +18,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" integrity="sha256-YU3qCpj/P06tdPBJGPax0bm6Q1wltfwjsho5TR4+TYc=" crossorigin="">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" integrity="sha256-YSWCMtmNZNwqex4CEw1nQhvFub2lmU7vcCKP+XVwwXA=" crossorigin="">
+<link rel="stylesheet" href="assets/fiftin-auth.css?v=1">
 </head>
 <body>
 <!-- Filtre SVG de distorsion "verre/prisme" pour les boutons de la carte
@@ -6772,14 +6773,19 @@ function openSheet(kind){
     // "corrigé" : un seul chemin vers une formule payante désormais, le vrai
     // (Profil -> cartes -> createCheckoutSession, avec son essai de 15 jours
     // sans carte) — toute inscription hôte démarre en Formule Hôte gratuite.
-    inner = '<h3>'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
-      '<p class="sheet-sub">Le même compte que votre espace de gestion Fiftin.</p>'+
-      '<div class="field-block"><label>E-mail</label><input class="text-input" type="email" id="auth-email" autocomplete="email"></div>'+
-      '<div class="field-block"><label>Mot de passe</label><input class="text-input" type="password" id="auth-password" autocomplete="'+(authMode==="signup"?"new-password":"current-password")+'"></div>'+
-      (authMode==="signup" ? '<div class="field-block"><label>Confirmer le mot de passe</label><input class="text-input" type="password" id="auth-password2" autocomplete="new-password"></div>' : '')+
-      '<div class="auth-err" id="auth-err"></div>'+
-      '<button type="button" class="link-btn" id="auth-toggle">'+(authMode==="signup"?"Déjà un compte ? Se connecter":"Pas encore de compte ? En créer un")+'</button>'+
-      (authMode==="signin" ? '<button type="button" class="link-btn" id="auth-forgot">Mot de passe oublié ?</button>' : '');
+    // Fenêtre de connexion commune à tout le site (assets/fiftin-auth.css) :
+    // même carte en surimpression que sur l'accueil et dans l'outil, ids
+    // inchangés (submitAuthSheet()/submitForgotPassword() les lisent).
+    inner = '<div class="ff-auth-logo"><img src="assets/logo-fiftin-mark-glass.png" alt="Fiftin"></div>'+
+      '<h3 class="ff-auth-title">'+(authMode==="signup"?"Créer un compte":"Se connecter")+'</h3>'+
+      '<p class="ff-auth-sub">Un seul compte pour Fiftin Séjours et Fiftin Planning.</p>'+
+      '<input class="ff-auth-input" type="email" id="auth-email" placeholder="Adresse e-mail" aria-label="E-mail" autocomplete="email">'+
+      '<input class="ff-auth-input" type="password" id="auth-password" placeholder="Mot de passe" aria-label="Mot de passe" autocomplete="'+(authMode==="signup"?"new-password":"current-password")+'">'+
+      (authMode==="signup" ? '<input class="ff-auth-input" type="password" id="auth-password2" placeholder="Confirmez le mot de passe" aria-label="Confirmer le mot de passe" autocomplete="new-password">' : '')+
+      '<button type="button" class="ff-auth-submit" id="sheet-apply">'+(authMode==="signup"?"Créer le compte":"Se connecter")+'</button>'+
+      '<div class="ff-auth-err auth-err" id="auth-err"></div>'+
+      '<div class="ff-auth-switch">'+(authMode==="signup"?"Déjà un compte ?":"Pas encore de compte ?")+'<button type="button" class="ff-auth-pill" id="auth-toggle">'+(authMode==="signup"?"Se connecter":"Créer un compte")+'</button></div>'+
+      (authMode==="signin" ? '<button type="button" class="ff-auth-forgot" id="auth-forgot">Mot de passe oublié ?</button>' : '');
   } else if(kind==="hostform"){
     var hfEditing = !!hostFormEditListing;
     var hfEf = hostFormEditListing;
@@ -7075,11 +7081,19 @@ function openSheet(kind){
     : kind==="legal" ? "Fermer"
     : "Voir les résultats";
 
+  if(kind==="auth"){
+    root.innerHTML = '<div class="ff-auth open" id="sheet-backdrop" role="dialog" aria-modal="true"><div class="ff-auth-card">'+
+      '<button type="button" class="ff-auth-close" id="sheet-close" aria-label="Fermer">&times;</button>'+inner+'</div></div>';
+    Array.prototype.forEach.call(root.querySelectorAll(".ff-auth-input"), function(el){
+      el.addEventListener("keydown", function(e){ if(e.key==="Enter") submitAuthSheet(); });
+    });
+  } else {
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
-    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    inner+
-    '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">'+footerLabel+'</button></div>'+
-  '</div></div></div>';
+      '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+      inner+
+      '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">'+footerLabel+'</button></div>'+
+    '</div></div></div>';
+  }
 
   document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
   document.getElementById("sheet-close").addEventListener("click", closeSheet);
