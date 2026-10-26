@@ -13379,9 +13379,9 @@ function submitAuth(){
 function forgotPassword(){
   const email=byId('authEmail').value.trim();
   const errEl=byId('lockErr');
-  if(!email){errEl.textContent="Entrez d'abord votre e-mail ci-dessus, puis cliquez à nouveau ici.";return;}
+  if(!email){errEl.textContent="Entrez d'abord votre e-mail ci-dessus.";return;}
   firebase.auth().sendPasswordResetEmail(email)
-    .then(()=>{errEl.style.color='var(--green)';errEl.textContent='E-mail de réinitialisation envoyé — vérifiez votre boîte de réception.';})
+    .then(()=>{errEl.style.color='var(--green)';errEl.textContent='E-mail envoyé — vérifiez votre boîte de réception.';})
     .catch(err=>{errEl.style.color='var(--danger)';errEl.textContent=authErrorMessage(err);});
 }
 // Réglages → Compte : déconnexion — rechargement complet plutôt qu'un
