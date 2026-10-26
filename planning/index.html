@@ -362,11 +362,11 @@ section[id]{scroll-margin-top:72px;}
   .pl-feature:hover .ic{background:rgba(255,255,255,.14);} .pl-feature:hover .ic svg{color:var(--yellow);} }
 
 /* Sections texte + visuel */
-/* Fond des visuels : carte blanche (plutôt que le dégradé sauge ou lavande
-   ton sur ton), comme les encarts blancs de l'accueil. */
-.pl-visual{max-width:920px; margin:clamp(36px,5vw,52px) auto 0; min-height:440px; border-radius:28px; display:flex; align-items:center; justify-content:center; padding:36px 24px; overflow:hidden;
-  background:#fff; box-shadow:0 6px 18px rgba(29,40,32,.06);}
-.pl-visual.lavender{background:#fff;}
+/* Visuels (paires de téléphones) : posés directement sur la grande zone,
+   sans carte autour. */
+.pl-visual{max-width:920px; margin:clamp(36px,5vw,52px) auto 0; min-height:440px; display:flex; align-items:center; justify-content:center; padding:36px 24px;}
+/* Voile d'entrée de la couleur du fond de la zone (crème ou blanc). */
+.da-zone.cream .pl-visual .da-phone::after{background:var(--cream);}
 .pl-check{list-style:none; margin:22px 0 24px; padding:0; display:grid; gap:12px;}
 .pl-check li{display:flex; gap:12px; align-items:flex-start; line-height:1.5; font-size:16px; color:var(--ink);}
 .pl-check li::before{content:""; flex:0 0 24px; height:24px; border-radius:50%; margin-top:1px;
