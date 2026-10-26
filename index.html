@@ -695,8 +695,8 @@ var hlSpring=(function(){
 })();
 // Téléphone Fiftin Planning (carte hôtes) : la position du téléphone dans
 // la fenêtre choisit la vue (Grille → Location → Semaine → Mois → Année),
-// sur la plage où il est entièrement visible sous l'en-tête ; pendant le
-// passage d'une vue, son contenu défile un peu (35 % de la hauteur visible
+// d'un peu avant qu'il soit entièrement visible à un peu après ; pendant le
+// passage d'une vue, son contenu défile un peu (18 % de la hauteur visible
 // au plus), pour éviter un écran figé sans tout dérouler.
 (function(){
   var tour=document.querySelector(".hl-tour"); if(!tour) return;
@@ -704,13 +704,15 @@ var hlSpring=(function(){
   var n=views.length, cur=-1, raf=0;
   function upd(){
     raf=0; var vh=window.innerHeight, hd=document.querySelector(".hl-top"), head=hd?hd.getBoundingClientRect().bottom:52;
-    var r=phone.getBoundingClientRect(), c=(r.top+r.bottom)/2, a=vh-r.height/2, z=head+r.height/2;
-    if(a-z<vh*.3){ var m=(a+z)/2; a=m+vh*.15; z=m-vh*.15; }
+    // Plage élargie : la ronde des vues commence quand les deux tiers du
+    // téléphone sont entrés en bas de l'écran et se termine quand il en
+    // reste les deux tiers sous l'en-tête — plus de défilement par vue.
+    var r=phone.getBoundingClientRect(), c=(r.top+r.bottom)/2, a=vh-r.height/2+r.height*.33, z=head+r.height/2-r.height*.33;
     var p=Math.min(1,Math.max(0,(a-c)/(a-z))), x=p*n, i=Math.min(n-1,Math.floor(x)), t=Math.min(1,x-i);
     var changed=i!==cur;
     if(changed){ cur=i; views.forEach(function(v,j){ v.classList.toggle("on",j===i); }); tabs.forEach(function(e,j){ e.classList.toggle("on",j===i); }); }
     var body=views[i].querySelector(".gs-body"), img=body.querySelector("img");
-    var shift=Math.min(Math.max(0,img.offsetHeight-body.clientHeight), body.clientHeight*.35);
+    var shift=Math.min(Math.max(0,img.offsetHeight-body.clientHeight), body.clientHeight*.18);
     // Changement de vue immédiat ; défilement de la vue en courbe en S, amorti.
     hlSpring(img, hlEase(t), function(v){ img.style.transform="translateY("+(-v*shift).toFixed(1)+"px)"; }, changed);
   }
