@@ -598,7 +598,7 @@ section[id]{scroll-margin-top:72px;}
       </ul>
     </div>
     <div class="pl-visual">
-      <div class="da-phone pl-mock da-gridscroll" role="img" aria-label="Bilan du mois dans Fiftin Planning : revenus, occupation, charges, marge"><div class="da-scr"><img class="gs-top" src="assets/app-mois-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-mois-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-mois-bas.webp" width="600" height="83" alt=""></div></div>
+      <div class="da-phone pl-mock da-gridscroll gs-fixed" role="img" aria-label="Bilan du mois dans Fiftin Planning : revenus, occupation, charges, marge"><div class="da-scr"><img class="gs-top" src="assets/app-mois-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-mois-corps.webp" width="600" height="1692" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-mois-bas.webp" width="600" height="83" alt=""></div></div>
       <div class="da-phone pl-mock da-gridscroll" role="img" aria-label="Bilan de l'année dans Fiftin Planning : chiffre d'affaires réalisé et projeté, charges, marge nette, seuils, revenus par mois, meilleurs clients, sources et répartition des charges"><div class="da-scr"><img class="gs-top" src="assets/app-annee-haut.webp" width="600" height="142" alt=""><div class="gs-body"><img src="assets/app-annee-corps.webp" width="600" height="3214" alt="" loading="lazy"></div><img class="gs-bot" src="assets/app-annee-bas.webp" width="600" height="83" alt=""></div></div>
     </div>
     <p class="pl-notice">Les indicateurs et alertes constituent une aide au suivi, pas un conseil fiscal individualisé ni une comptabilité certifiée.</p>
@@ -759,9 +759,9 @@ var hlSpring=(function(){
 function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.getBoundingClientRect().bottom : 52; }
 // Téléphones des sections : le contenu défile sur toute la traversée de
 // l'écran (dès que le téléphone apparaît en bas jusqu'à ce qu'il passe
-// sous l'en-tête), comme sur l'accueil.
+// sous l'en-tête), comme sur l'accueil. La vue Mois (.gs-fixed) reste fixe.
 (function(){
-  var els=[].slice.call(document.querySelectorAll(".pl-visual .da-gridscroll .gs-body img"));
+  var els=[].slice.call(document.querySelectorAll(".pl-visual .da-gridscroll:not(.gs-fixed) .gs-body img"));
   if(!els.length) return;
   var raf=0;
   function upd(){
@@ -780,7 +780,7 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
 // Paires de téléphones : parallaxe — pendant la traversée du visuel, le
 // premier monte légèrement et le second descend (±24 px, 16 px sur mobile).
 // Sur mobile, chaque téléphone apparaît aussi avec le léger flou et le
-// voile blanc de l'accueil, qui se dissipent sur le premier tiers.
+// voile blanc de l'accueil, plus légers et dissipés tôt (premier cinquième).
 (function(){
   var vis=[].slice.call(document.querySelectorAll(".pl-visual"));
   if(!vis.length) return;
@@ -796,9 +796,9 @@ function plHead(){ var hd=document.getElementById("plHeader"); return hd ? hd.ge
         ph.forEach(function(e,j){
           var dy=ph.length>1 ? (j===0 ? off : -off) : 0;
           e.style.transform="translateY("+dy.toFixed(1)+"px)";
-          var pf=mobile ? hlEase(x/0.4) : 1;
+          var pf=mobile ? hlEase(x/0.2) : 1;
           if(mobile) e.style.setProperty("--veil",(0.4*(1-pf)).toFixed(3)); else e.style.removeProperty("--veil");
-          e.style.filter=mobile && pf<0.999 ? "blur("+(2.4*(1-pf)).toFixed(2)+"px)" : "";
+          e.style.filter=mobile && pf<0.999 ? "blur("+(1.4*(1-pf)).toFixed(2)+"px)" : "";
         });
       });
     });
