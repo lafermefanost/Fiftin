@@ -583,14 +583,16 @@ function hlLoadFirebase(cb){
         if(window.matchMedia("(max-width:640px)").matches){
           var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
           // Le zoom n'attaque qu'au-delà de 40 % de la course, puis en
-          // accélérant (ease-in) : téléphone entier au début. Effet de
-          // profondeur par l'opacité : translucide sur le blanc de la carte
-          // au début, complètement opaque au zoom maximal.
-          var pzz=Math.max(0,(pz-0.4)/0.6), smax=Math.min(1.5,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pzz*pzz;
+          // accélérant (ease-in), et reste modéré (×1,25 au plus) : téléphone
+          // presque entier longtemps. Effet de profondeur : léger flou et
+          // transparence sur le blanc de la carte au début, net et opaque
+          // au zoom maximal.
+          var pzz=Math.max(0,(pz-0.4)/0.6), smax=Math.min(1.25,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pzz*pzz;
           phone.style.transform="scale("+sc.toFixed(3)+")";
           phone.style.opacity=(0.3+0.7*pz).toFixed(3);
+          phone.style.filter=pz<1 ? "blur("+(2.4*(1-pz)).toFixed(2)+"px)" : "";
           zoom.closest(".hl-sub").style.setProperty("--zs",(pzz*pzz).toFixed(3));
-        } else { phone.style.transform=""; phone.style.opacity=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
+        } else { phone.style.transform=""; phone.style.opacity=""; phone.style.filter=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
       }
     });
   }
