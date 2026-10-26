@@ -157,6 +157,20 @@ section[id]{scroll-margin-top:72px;}
   background:linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.55) 32%, rgba(255,255,255,0) 100%);
   border-radius:50%; filter:blur(1px); transform:rotate(-6deg); pointer-events:none;}
 .ff-home img{position:relative; z-index:1; width:61%; height:auto; display:block; transform:translateX(-3%); filter:brightness(0) invert(1);}
+/* Petit picto = icône de l'écran d'accueil du téléphone
+   (logo-fiftin-icon-*.png, la même que l'icône installée), avec son anneau
+   irisé animé ; plus de verre ni de reflet ajoutés par-dessus. */
+.ff-home,.da-logo.da-icon{border-radius:23%; background:none; border:none; box-shadow:0 3px 9px rgba(20,26,20,.22), 0 1px 2px rgba(20,26,20,.16);
+  backdrop-filter:none; -webkit-backdrop-filter:none;}
+.ff-home img,.da-logo.da-icon img{width:100%; height:100%; transform:none; filter:none;}
+.ff-home::after,.da-logo.da-icon::after{display:none;}
+.ff-home::before,.da-logo.da-icon::before{z-index:2;}
+/* Grand logo du hero : le même que celui de l'accueil (verre posé sur la vidéo). */
+.pl-hero-logo{width:clamp(96px,11vw,124px); height:clamp(96px,11vw,124px); margin-bottom:24px;
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(16,22,18,.1) 68%, rgba(16,22,18,.26) 100%),
+    rgba(29,40,32,.14);
+  backdrop-filter:blur(9px) saturate(1.4); -webkit-backdrop-filter:blur(9px) saturate(1.4);}
 /* En-tête fixe : pastille d'accueil + « Se connecter », toujours accessibles.
    Transparent sur la vidéo du haut, puis barre vert sauge (couleur
    propriétaire, même bandeau que Séjours) dès qu'on fait défiler. */
@@ -357,7 +371,7 @@ section[id]{scroll-margin-top:72px;}
 </head>
 <body>
 <header class="pl-header" id="plHeader">
-  <a class="ff-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
+  <a class="ff-home" href="./" aria-label="Accueil Fiftin" title="Accueil Fiftin"><img src="assets/logo-fiftin-icon-144.png" width="144" height="144" alt=""></a>
   <a class="pl-login" href="app/" id="plLogin">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
     <span id="plLoginLabel">Se connecter</span>
@@ -368,6 +382,7 @@ section[id]{scroll-margin-top:72px;}
 <section class="pl-hero">
   <video class="brand-bg-video" id="plHeroVideo" autoplay muted loop playsinline aria-hidden="true"></video>
   <div class="pl-hero-in">
+    <span class="da-logo pl-hero-logo"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt="Fiftin"></span>
     <p class="da-kicker">Fiftin Planning</p>
     <h1>Toute votre activité d'hébergeur.<br>Au même endroit.</h1>
     <p class="claim">Le plaisir d'accueillir. La liberté de gérer.</p>
@@ -462,7 +477,7 @@ section[id]{scroll-margin-top:72px;}
       <div class="pl-sync" role="img" aria-label="Échange iCal dans les deux sens entre Airbnb, Booking.com et Fiftin Planning">
         <div class="pl-sync-row"><div class="pl-sync-box">Airbnb<small>calendrier iCal</small></div><div class="pl-sync-box">Booking.com<small>calendrier iCal</small></div></div>
         <div class="pl-sync-arrows" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16M3 16l4 4 4-4"/><path d="M17 20V4M13 8l4-4 4 4"/></svg></div>
-        <div class="pl-sync-box main"><span class="da-logo"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></span><span>Fiftin Planning<small>import et export iCal</small></span></div>
+        <div class="pl-sync-box main"><span class="da-logo da-icon"><img src="assets/logo-fiftin-icon-144.png" width="144" height="144" alt=""></span><span>Fiftin Planning<small>import et export iCal</small></span></div>
       </div>
     </div>
     <p class="pl-notice">La synchronisation iCal n'est pas instantanée et ne synchronise pas les tarifs ni les paiements. Un délai entre mises à jour peut laisser subsister un risque de double réservation.</p>
@@ -552,7 +567,7 @@ section[id]{scroll-margin-top:72px;}
     </div>
     <footer class="da-foot">
       <div class="da-foot-brand">
-        <a class="da-logo" href="./" aria-label="Accueil Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
+        <a class="da-logo da-icon" href="./" aria-label="Accueil Fiftin"><img src="assets/logo-fiftin-icon-144.png" width="144" height="144" alt=""></a>
         <p>Voyager. Accueillir. Tout simplement.</p>
       </div>
       <nav aria-label="Pied de page">
