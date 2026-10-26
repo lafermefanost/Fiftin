@@ -310,10 +310,12 @@ section[id]{scroll-margin-top:72px;}
 .pl-events-tabs .ev-tout.on{background:var(--sauge); border-color:var(--sauge);}
 .pl-events-phone > .da-scr{position:relative;}
 /* Téléphone coupé à sa base, cadré sur le haut de l'écran Événements :
-   un fin liseré le coupe net en bas (pas de carte, pas de fondu) ; les
+   un fin liseré aux extrémités fondues le coupe net en bas (pas de carte, pas de fondu sur le téléphone) ; les
    pastilles des 4 vues sont sous le liseré. */
 .pl-events-crop{width:min(400px, 100%, calc(100vw - 32px)); height:min(480px, calc(100vh - 52px - 190px)); box-sizing:border-box; padding:30px 30px 0;
-  overflow:hidden; display:flex; justify-content:center; align-items:flex-start; border-bottom:1px solid rgba(46,43,34,.2);}
+  position:relative; overflow:hidden; display:flex; justify-content:center; align-items:flex-start;}
+.pl-events-crop::after{content:""; position:absolute; left:0; right:0; bottom:0; height:1px; z-index:4; pointer-events:none;
+  background:linear-gradient(90deg, rgba(46,43,34,0) 0%, rgba(46,43,34,.22) 25%, rgba(46,43,34,.22) 75%, rgba(46,43,34,0) 100%);}
 .pl-events-crop .pl-events-phone{width:min(290px, 100%);}
 @media (min-width:761px){ .pl-events-crop{width:400px;} }
 @media (max-width:760px){
