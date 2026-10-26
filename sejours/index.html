@@ -7623,7 +7623,7 @@ function submitAuthSheet(){
     }, 15000);
     firebase.auth().signInWithEmailAndPassword(email, password)
       .then(function(){ settled = true; clearTimeout(slowTimer); afterAuth(); })
-      .catch(function(err){ settled = true; clearTimeout(slowTimer); errEl.textContent = authErrorMessage(err)+(err&&err.code?" ("+err.code+")":""); btn.disabled = false; btn.textContent = label; });
+      .catch(function(err){ settled = true; clearTimeout(slowTimer); errEl.textContent = authErrorMessage(err); btn.disabled = false; btn.textContent = label; });
   }
 }
 /* Retour utilisateur : "ni un endroit dédié pour changer le mot de passe"
