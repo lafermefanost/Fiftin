@@ -282,6 +282,17 @@ img{display:block; max-width:100%;}
   .hl-sub-cta{flex-direction:column; align-items:center; gap:2px;}
   .hl-sub .hl-btn{display:flex; margin-left:auto; margin-right:auto;}
   .hl-joint{padding:12px 4px;}
+  /* Téléphone des annonces (carte voyageurs) : zoom avant au défilement
+     (voir le script des téléphones). La hauteur de .hl-zoom reste celle du
+     téléphone au repos ; en grossissant, son bas glisse SOUS le panneau
+     blanc du texte, posé par-dessus avec une ombre douce vers le haut —
+     effet de profondeur, comme rangé dans une poche, sans fondu. */
+  .hl-zoom{display:flex; justify-content:center; width:100%; position:relative; z-index:1;}
+  .hl-zoom .da-phone{transform-origin:50% 0; will-change:transform;}
+  .hl-sub-zoom{overflow:hidden;}
+  .hl-sub-zoom .hl-sub-main{position:relative; z-index:2; background:#fff;
+    margin:-6px calc(-1 * clamp(18px,2.4vw,24px)) calc(-1 * clamp(18px,2.4vw,24px)); padding:22px clamp(18px,2.4vw,24px) clamp(18px,2.4vw,24px);
+    border-radius:24px 24px 0 0; box-shadow:0 -14px 26px -12px rgba(29,40,32,calc(.08 + var(--zs,0) * .22));}
   .hl-val{flex-direction:column; align-items:center; text-align:center; gap:12px;}
   .hl-val h4{margin-top:0;}
   .hl-story > div{text-align:center;}
@@ -377,7 +388,7 @@ img{display:block; max-width:100%;}
         <h2 class="hl-tag">Le plaisir de voyager.<br>La liberté d'échanger.</h2>
       </div>
 
-      <section class="hl-sub hl-sub-split" aria-labelledby="hlSubSejours">
+      <section class="hl-sub hl-sub-split hl-sub-zoom" aria-labelledby="hlSubSejours">
         <div class="hl-sub-main">
           <div class="hl-sub-hd"><span class="ic sej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4v16"/><path d="M2 8h18a2 2 0 0 1 2 2v10"/><path d="M2 17h20"/><path d="M6 8v9"/></svg></span>
             <div><small>Espace voyageur</small><h3 id="hlSubSejours">Fiftin Séjours</h3></div></div>
@@ -392,7 +403,7 @@ img{display:block; max-width:100%;}
             <a class="hl-link" href="sejours/?espace=voyageur">Mon espace voyageur <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
         </div>
-        <div class="hl-visual"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="Fiftin Séjours : le fil des annonces publiées"><div class="da-scr"><img class="gs-top" src="assets/sejours-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/sejours-corps.webp" width="600" height="2288" alt="" loading="lazy"></div><img class="gs-bot" src="assets/sejours-bas.webp" width="600" height="134" alt=""></div></div></div>
+        <div class="hl-visual"><div class="hl-zoom"><div class="da-phone hl-shot da-gridscroll" role="img" aria-label="Fiftin Séjours : le fil des annonces publiées"><div class="da-scr"><img class="gs-top" src="assets/sejours-haut.webp" width="600" height="180" alt=""><div class="gs-body"><img src="assets/sejours-corps.webp" width="600" height="2288" alt="" loading="lazy"></div><img class="gs-bot" src="assets/sejours-bas.webp" width="600" height="134" alt=""></div></div></div></div>
       </section>
     </article>
 
@@ -558,12 +569,24 @@ function hlLoadFirebase(cb){
   function upd(){
     raf=0; var vh=window.innerHeight, hd=document.querySelector(".hl-top"), head=hd?hd.getBoundingClientRect().bottom:64;
     els.forEach(function(img){
-      var box=img.parentNode, card=img.closest(".hl-card"), phone=img.closest(".da-phone");
-      var track=(card && getComputedStyle(card).position==="sticky") ? card.parentNode : phone;
+      var box=img.parentNode, card=img.closest(".hl-card"), phone=img.closest(".da-phone"), zoom=phone.parentNode.classList.contains("hl-zoom") ? phone.parentNode : null;
+      var track=(card && getComputedStyle(card).position==="sticky") ? card.parentNode : (zoom || phone);
       var r=track.getBoundingClientRect();
       var p=Math.min(1,Math.max(0,(vh-r.top)/(vh-head+r.height)));
       var max=Math.max(0,img.offsetHeight-box.clientHeight);
       img.style.transform="translateY("+(-p*max).toFixed(1)+"px)";
+      // Zoom avant (mobile, carte voyageurs) : de la taille actuelle quand le
+      // téléphone entre en bas de l'écran, jusqu'à presque toute la largeur
+      // de l'encart quand son haut arrive sous l'en-tête ; le bas, qui
+      // dépasse alors, est masqué (.hl-zoom).
+      if(zoom){
+        if(window.matchMedia("(max-width:640px)").matches){
+          var zr=zoom.getBoundingClientRect(), pz=Math.min(1,Math.max(0,(vh-zr.top)/(vh-head-24)));
+          var smax=Math.min(1.5,Math.max(1,(zoom.clientWidth-8)/phone.offsetWidth)), sc=1+(smax-1)*pz;
+          phone.style.transform="scale("+sc.toFixed(3)+")";
+          zoom.closest(".hl-sub").style.setProperty("--zs",pz.toFixed(3));
+        } else { phone.style.transform=""; zoom.closest(".hl-sub").style.removeProperty("--zs"); }
+      }
     });
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
