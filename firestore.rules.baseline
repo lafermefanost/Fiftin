@@ -24,6 +24,17 @@ service cloud.firestore {
       }
     }
 
+    // Profil hôte propre à Fiftin Séjours (photo de compte + présentation
+    // réutilisée sur toutes les annonces, voir sejours/index.html
+    // resolveHostProfileBio()/wireAccountAvatar()) — jamais accounts/{uid},
+    // réservé à l'app Fiftin. Un seul document par hôte, lu et écrit
+    // uniquement par son propriétaire connecté ; jamais lu par un tiers
+    // (la photo/présentation publiques passent toujours par le cache sur
+    // listings/{listingId}, déjà couvert par sa propre règle plus bas).
+    match /hostProfiles/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     match /accountMembers/{memberUid} {
       allow read: if request.auth != null && (
         request.auth.uid == memberUid || resource.data.ownerUid == request.auth.uid
