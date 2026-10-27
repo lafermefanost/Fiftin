@@ -1553,6 +1553,30 @@ body.map-fullscreen{overflow:hidden;}
 .log-action.decline{color:var(--danger); border-color:rgba(178,84,59,.35);}
 .log-action.move{color:var(--ink);}
 .log-action.edit{color:var(--sauge-deep); border-color:rgba(53,75,56,.3);}
+/* Carnet de voyage (onglet Séjours) : même lecture que l'écran Événements
+   de l'outil — bandeaux de mois, tuile de date à gauche (jour d'arrivée ;
+   vert à venir, gris passé, pointillés « ? » sans dates ; toucher la tuile
+   = modifier les dates), annonce à droite (toucher = ouvrir l'annonce),
+   pastille J-n / En cours. */
+.trip-month{display:flex; justify-content:space-between; align-items:center; background:#E6E4DD; border-radius:10px; padding:9px 14px; margin:18px 0 8px;
+  font-size:12.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink);}
+.trip-month small{font-size:12.5px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--muted);}
+.trip-list{display:flex; flex-direction:column; gap:8px;}
+.trip-row{display:flex; align-items:center; gap:14px; background:#fff; border-radius:16px; padding:10px 12px;}
+.trip-tile{width:52px; height:62px; flex-shrink:0; border-radius:11px; border:none; background:var(--sauge); color:#fff; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; font-family:inherit; line-height:1; padding:0;}
+.trip-tile .t-wd,.trip-tile .t-mo{font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;}
+.trip-tile .t-wd{opacity:.8; font-weight:500;}
+.trip-tile .t-d{font-size:22px; font-weight:700; margin:3px 0 2px;}
+.trip-tile.past{background:#B9B7B0;}
+.trip-tile.unknown{background:#fff; color:var(--sauge); border:1.5px dashed rgba(53,75,56,.45);}
+.trip-tile.unknown .t-d{font-size:24px; margin:0;}
+.trip-body{flex:1; min-width:0; cursor:pointer;}
+.trip-body b{display:block; font-size:15px; font-weight:600; color:var(--ink); line-height:1.25;
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+.trip-body span{display:block; margin-top:3px; font-size:12.5px; font-weight:500; color:var(--muted);}
+.trip-chip{flex-shrink:0; font-size:11.5px; font-weight:700; padding:5px 9px; border-radius:999px; background:var(--sauge-bg); color:var(--sauge-deep); white-space:nowrap;}
+.trip-chip.now{background:var(--yellow); color:var(--sauge-deep);}
 .stay-unknown{display:flex; align-items:center; gap:10px; margin:14px 0 4px; font-size:14px; color:var(--ink); cursor:pointer;}
 .stay-unknown input{width:18px; height:18px; accent-color:var(--sauge);}
 .qr-field input:disabled{opacity:.45;}
@@ -6069,8 +6093,48 @@ function tripLine(e){
   }
   return line;
 }
-/* À venir (le plus proche en premier, séjour en cours compris), dates à
-   préciser, puis passés (le plus récent en premier). */
+var TRIP_WD = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
+var TRIP_MO = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+var TRIP_MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+function tripISODate(iso){ return new Date(iso+"T00:00:00"); }
+/* « Le Petit Fanost — Le Petit Fanost » (annonce et chambre du même nom) → une fois. */
+function tripTitle(name){
+  var parts = String(name||"Annonce").split(" — ");
+  return (parts.length===2 && parts[0].trim()===parts[1].trim()) ? parts[0] : (name||"Annonce");
+}
+/* « 23 → 31 déc. » ou « 28 déc. → 3 janv. » (+ année si ce n'est pas l'année en cours). */
+function tripRange(t){
+  var a = tripISODate(t.in), b = tripISODate(t.out), y = new Date().getFullYear();
+  var left = a.getDate()+(a.getMonth()===b.getMonth() && a.getFullYear()===b.getFullYear() ? "" : " "+TRIP_MO[a.getMonth()]+(a.getFullYear()!==b.getFullYear() && a.getFullYear()!==y ? " "+a.getFullYear() : ""));
+  return left+" → "+b.getDate()+" "+TRIP_MO[b.getMonth()]+(b.getFullYear()!==y ? " "+b.getFullYear() : "");
+}
+function tripRowHtml(entryId, entry){
+  var t = tripDates(entry), today = localISO(new Date());
+  var numericId = entry.listingId ? idFromString(entry.listingId) : null;
+  var l = numericId!=null ? LISTINGS.filter(function(x){ return x.id===numericId; })[0] : null;
+  var place = l && l.region ? String(l.region).split(",")[0].trim() : "";
+  var tile, info, chip = "";
+  if(!t){
+    tile = '<button type="button" class="trip-tile unknown" data-log-edit="'+esc(entryId)+'" aria-label="Préciser les dates du séjour"><span class="t-d">?</span></button>';
+    info = "Dates à préciser";
+  } else {
+    var a = tripISODate(t.in), past = t.out<today;
+    tile = '<button type="button" class="trip-tile'+(past?' past':'')+'" data-log-edit="'+esc(entryId)+'" aria-label="Modifier les dates du séjour">'+
+      '<span class="t-wd">'+TRIP_WD[a.getDay()]+'</span><span class="t-d">'+a.getDate()+'</span><span class="t-mo">'+TRIP_MO[a.getMonth()]+'</span></button>';
+    var nights = daysBetween(t.in, t.out);
+    info = tripRange(t)+(nights>0 ? " · "+nights+" nuit"+(nights>1?"s":"") : "");
+    if(!past){
+      if(t.in<=today) chip = '<span class="trip-chip now">En cours</span>';
+      else { var n = daysBetween(today, t.in); chip = '<span class="trip-chip">'+(n===1 ? "Demain" : "J-"+n)+'</span>'; }
+    }
+  }
+  if(place) info += " · "+place;
+  return '<div class="trip-row">'+tile+
+    '<div class="trip-body"'+(l?' data-open-log="'+numericId+'"':'')+'><b>'+esc(tripTitle(entry.listingName))+'</b><span>'+esc(info)+'</span></div>'+
+    chip+'</div>';
+}
+/* À venir par mois d'arrivée (le plus proche en premier, séjour en cours
+   compris), dates à préciser, puis passés (le plus récent en premier). */
 function groupedSejoursHtml(docs){
   var today = localISO(new Date()), up = [], unknown = [], past = [];
   docs.forEach(function(d){
@@ -6079,14 +6143,18 @@ function groupedSejoursHtml(docs){
   });
   up.sort(function(a,b){ return a.t.in<b.t.in ? -1 : a.t.in>b.t.in ? 1 : 0; });
   past.sort(function(a,b){ return a.t.in>b.t.in ? -1 : a.t.in<b.t.in ? 1 : 0; });
-  var groups = [
-    {label:"À venir", docs:up.map(function(x){ return x.d; })},
-    {label:"Dates à préciser", docs:unknown},
-    {label:"Séjours passés", docs:past.map(function(x){ return x.d; })}
-  ].filter(function(g){ return g.docs.length; });
+  var groups = [], byMonth = {};
+  up.forEach(function(x){
+    var key = x.t.in.slice(0,7);
+    if(!byMonth[key]){ var a = tripISODate(x.t.in); byMonth[key] = {label:TRIP_MONTHS[a.getMonth()]+" "+a.getFullYear(), docs:[]}; groups.push(byMonth[key]); }
+    byMonth[key].docs.push(x.d);
+  });
+  if(unknown.length) groups.push({label:"Dates à préciser", docs:unknown});
+  if(past.length) groups.push({label:"Séjours passés", docs:past.map(function(x){ return x.d; })});
   return groups.map(function(g, i){
-    return '<div class="log-period-label"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(g.label)+'</div>'+
-      '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+    var n = g.docs.length;
+    return '<div class="trip-month"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(g.label)+'<small>'+n+' séjour'+(n>1?'s':'')+'</small></div>'+
+      '<div class="trip-list">'+g.docs.map(function(d){ return tripRowHtml(d.id, d.data()); }).join("")+'</div>';
   }).join("");
 }
 /* Volet « dates du séjour » : à la validation d'une demande (mode
