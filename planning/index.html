@@ -418,6 +418,15 @@ section[id]{scroll-margin-top:72px;}
 .pl-dual article{text-align:center; border-radius:28px; padding:clamp(24px,3vw,32px); background:#fff; box-shadow:var(--shadow);}
 .pl-dual h3{font-size:clamp(19px,2vw,22px); margin-bottom:8px;}
 .pl-dual p{margin:0; color:var(--muted);}
+/* Même jeu que les cartes fonctionnalités, en vert uniquement : sur mobile
+   la carte qui passe au milieu de l'écran se colore, sur ordinateur celle
+   survolée. */
+.pl-dual article{transition:background .35s ease, box-shadow .35s ease, transform .35s ease;}
+.pl-dual h3, .pl-dual p{transition:color .35s ease;}
+.pl-dual article.is-active{background:var(--sauge); box-shadow:0 18px 40px rgba(29,40,32,.28); transform:translateY(-2px);}
+.pl-dual article.is-active h3{color:#fff;} .pl-dual article.is-active p{color:rgba(255,255,255,.85);}
+@media (hover:hover){ .pl-dual article:hover{background:var(--sauge); box-shadow:0 18px 40px rgba(29,40,32,.28); transform:translateY(-2px);}
+  .pl-dual article:hover h3{color:#fff;} .pl-dual article:hover p{color:rgba(255,255,255,.85);} }
 
 /* Passerelle Séjours : même pastille que la carte Séjours de l'accueil */
 .pl-pill{display:inline-flex; align-items:center; gap:10px; padding:9px 16px; border-radius:999px; font-size:13.5px; font-weight:600; letter-spacing:.06em; text-transform:uppercase;
@@ -751,16 +760,19 @@ function fiftinSetBrandVideoSrc(id){
 }
 fiftinSetBrandVideoSrc("plHeroVideo");
 
-// Mobile (cartes empilées) : la carte fonctionnalité la plus proche du
-// milieu de l'écran est mise en avant (classe .is-active).
+// Mobile (cartes empilées) : dans chaque groupe (cartes fonctionnalités,
+// cartes « Vos données, vos choix »), la carte la plus proche du milieu de
+// l'écran est mise en avant (classe .is-active).
 (function(){
-  var cards=[].slice.call(document.querySelectorAll(".pl-feature")), mq=window.matchMedia("(max-width:640px)"), raf=0;
+  var groups=[".pl-feature",".pl-dual article"].map(function(sel){ return [].slice.call(document.querySelectorAll(sel)); }), mq=window.matchMedia("(max-width:640px)"), raf=0;
   function upd(){
     raf=0;
-    if(!mq.matches){ cards.forEach(function(c){ c.classList.remove("is-active"); }); return; }
-    var mid=window.innerHeight/2, best=null, bd=Infinity;
-    cards.forEach(function(c){ var r=c.getBoundingClientRect(); var d=Math.abs((r.top+r.bottom)/2-mid); if(r.bottom>0 && r.top<window.innerHeight && d<bd){ bd=d; best=c; } });
-    cards.forEach(function(c){ c.classList.toggle("is-active", c===best); });
+    groups.forEach(function(cards){
+      if(!mq.matches){ cards.forEach(function(c){ c.classList.remove("is-active"); }); return; }
+      var mid=window.innerHeight/2, best=null, bd=Infinity;
+      cards.forEach(function(c){ var r=c.getBoundingClientRect(); var d=Math.abs((r.top+r.bottom)/2-mid); if(r.bottom>0 && r.top<window.innerHeight && d<bd){ bd=d; best=c; } });
+      cards.forEach(function(c){ c.classList.toggle("is-active", c===best); });
+    });
   }
   function req(){ if(!raf) raf=requestAnimationFrame(upd); }
   window.addEventListener("scroll", req, {passive:true}); window.addEventListener("resize", req); upd();
