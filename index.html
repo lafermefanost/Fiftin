@@ -914,7 +914,10 @@ hlLoadFirebase(function(){
     var pick=all.filter(function(x){ return /fanost/i.test(x.name||""); })[0] || all[0];
     db.collection("listings").doc(pick.docId).get().then(function(doc){
       var d=doc.exists?doc.data():{};
-      var full=(d.gallery&&d.gallery[0])||pick.thumbUrl;
+      // Version d'affichage 1280 px si elle existe (même nom de fichier + « __mid.jpg »), sinon le plein format.
+      var g0=d.gallery&&d.gallery[0], m0=d.galleryMid&&d.galleryMid[0];
+      var objName=function(u){ var m=/\/o\/([^?#]+)/.exec(u||""); try{ return m?decodeURIComponent(m[1]):null; }catch(e){ return null; } };
+      var full=(g0&&m0&&objName(m0)===objName(g0)+"__mid.jpg"?m0:g0)||pick.thumbUrl;
       pick.claim=d.claim||"";
       hlShowListing(pick,full);
     }).catch(function(){ hlShowListing(pick,pick.thumbUrl); });
