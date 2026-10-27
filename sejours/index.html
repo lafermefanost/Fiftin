@@ -2433,9 +2433,22 @@ body.map-fullscreen{overflow:hidden;}
    aplat vert propriétaire sans effet verre, étoile blanche, sans libellé
    (aria-label sur le bouton) ; plus gros que les deux autres pictos. */
 .tab.tab-solo{justify-content:center; gap:0;}
-.tab.tab-solo .tab-icon, .tab.tab-solo.active .tab-icon{width:54px; height:54px; border-radius:17px; background:var(--sauge);
-  box-shadow:0 6px 14px rgba(29,40,32,.22);}
-.tab.tab-solo .tab-icon::before{content:none;}
+.tab.tab-solo .tab-icon, .tab.tab-solo.active .tab-icon{width:54px; height:54px; border-radius:17px; position:relative; overflow:hidden;
+  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge);
+  box-shadow:inset 0 2px 3px rgba(255,255,255,.55), inset 1.5px 0 3px rgba(255,255,255,.25),
+    inset 0 -6px 10px rgba(0,0,0,.22), inset -4px 0 8px rgba(0,0,0,.14);
+  filter:drop-shadow(0 6px 10px rgba(29,40,32,.22));}
+/* Même verre que les pictos actifs des deux autres menus (dégradé,
+   reliefs intérieurs, anneau irisé animé), en permanence. */
+.tab.tab-solo .tab-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.2px;
+  background:conic-gradient(from var(--iris-angle,0deg),
+    rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
+    rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
+  mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
+  -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
+  opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
+.tab.tab-solo .tab-icon svg{position:relative; z-index:1;}
 .tab.tab-solo .tab-icon svg, .tab.tab-solo.active .tab-icon svg{width:24px; height:24px; fill:#fff; stroke:#fff; stroke-width:1.2; stroke-linejoin:round;}
 /* L'étoile fait un quart de tour toutes les 4 s (pause, puis rotation
    souple avec un léger dépassement) pour attirer l'œil vers la navigation
