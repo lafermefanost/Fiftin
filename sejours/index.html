@@ -2547,6 +2547,9 @@ nav.tabbar.host-mode{background:rgba(53,75,56,.97); border-top-color:rgba(255,25
   background:var(--yellow); border:1px solid var(--yellow); backdrop-filter:none; -webkit-backdrop-filter:none;}
 .hl-acc-btn svg, .pl-login svg{width:15px; height:15px;}
 .hl-acc-btn:hover, .pl-login:hover{filter:brightness(.96);}
+/* « Se connecter » en cartouche : même format que le bouton menu à côté
+   (40 px de haut, coins 13 px, filet 1,5 px), en jaune. */
+.hl-acc-btn, .pl-login{height:40px; box-sizing:border-box; padding:0 14px; border-radius:13px; border-width:1.5px;}
 /* Menu : une fois connecté, le bouton « Se connecter » devient un simple
    bouton menu (trois traits) discret, carré arrondi comme le petit logo
    (40 px, coins 13 px), filet blanc translucide, sur la vidéo comme sur le
@@ -2575,6 +2578,13 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-account{display:flex; align-items:center; gap:8px;}
 .hl-guest-btn[hidden]{display:none !important;}
 .hl-account.is-guest .m-user, .hl-account:not(.is-guest) .m-guest{display:none !important;}
+/* Connexion mise en avant dans le menu visiteur : pilule jaune (même
+   bouton que l'ancien « Se connecter » de l'en-tête). */
+.hl-menu .m-login{align-items:center; justify-content:center; gap:7px; width:calc(100% - 8px); margin:6px 4px 8px; padding:11px 16px;
+  border-radius:999px; background:var(--yellow); color:var(--sauge-deep); font-weight:600; font-size:14px; white-space:nowrap;}
+.hl-account.is-guest .hl-menu{min-width:272px;}
+.hl-menu .m-login:hover{background:var(--yellow); filter:brightness(.96);}
+.hl-menu .m-login svg{color:currentColor; margin-top:0; width:16px; height:16px;}
 
 </style>
 
@@ -2622,18 +2632,18 @@ function fiftinSetBrandVideoSrc(id){
     <button type="button" class="hl-acc-btn is-menu hl-guest-btn" id="sejGuestBtn" aria-label="Menu" aria-haspopup="true"><svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="b1" d="M4.5 7.5h15"/><path class="b2" d="M4.5 12h15"/><path class="b3" d="M4.5 16.5h15"/></svg></button>
     <div class="hl-menu" id="sejMenu" role="menu">
       <div class="hl-menu-mail m-guest">Vous n'êtes pas connecté</div>
-      <button type="button" class="m-guest" id="sejGuestLogin" role="menuitem">
+      <button type="button" class="m-guest m-login" id="sejGuestLogin" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
-        <span>Se connecter ou créer un compte<small>Un seul compte pour Séjours et Planning</small></span>
+        <span>Se connecter ou créer un compte</span>
       </button>
       <a class="m-guest" href="sejours/?espace=hote" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
         <span>Déposer une annonce<small>Espace hôte de Fiftin Séjours</small></span>
       </a>
       <div class="hl-menu-mail m-user"><span class="hl-menu-avatar" id="sejMenuAvatar"></span><span id="sejMenuMail"></span></div>
-      <a class="m-user" href="sejours/?espace=voyageur" role="menuitem">
+      <a class="m-user" href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
-        <span>Espace voyageur<small>Mes séjours, favoris et profil</small></span>
+        <span>Espace voyageur<small>Explorer les annonces</small></span>
       </a>
       <a class="m-user" href="sejours/?espace=hote" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
@@ -7921,7 +7931,7 @@ function submitAuthSheet(){
     // par l'hôte, capture d'écran à l'appui. enterHostMode() gérait déjà
     // correctement son propre chrome, d'où ce bug invisible tant que seul
     // "Devenir hôte" déclenchait cette connexion.
-    if(authContext==="host") enterHostMode(); else switchTab("profile");
+    if(authContext==="host") enterHostMode(authHostTab); else switchTab("profile");
   };
   if(authMode==="signup"){
     var pw2 = document.getElementById("auth-password2").value;
@@ -9984,7 +9994,9 @@ function renderTabbar(){
    annonces" surprenait, "on devrait rester sur la vue profil") — c'est
    aussi depuis ce Profil hôte qu'on ressort vers l'espace voyageur (voir
    HOST_TABS_HTML, plus de 3e onglet séparé pour ça). */
-function enterHostMode(){
+/* tab : onglet hôte d'arrivée ("listings" = Mes annonces, depuis le menu
+   du site) ; Profil par défaut. */
+function enterHostMode(tab){
   if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
   // Même correctif que switchTab() : repartir du haut à chaque changement
   // de menu, pour ne pas atterrir en espace hôtes à la position de
@@ -10013,7 +10025,7 @@ function enterHostMode(){
   var mapBackBtnHost = document.getElementById("map-back-btn");
   if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
-  state.hostTab = "profile";
+  state.hostTab = tab || "profile";
   state.hostListingId = null;
   state.hostUnitId = null;
   hostListingsCache = [];
@@ -11192,12 +11204,14 @@ if(state.hostMode){
 updateHeroMenu();
 
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
-   racine) : ?espace=voyageur → Profil voyageur ; ?espace=hote → Espace
-   hôtes (connexion demandée si besoin) ; ?login=1 → volet de connexion.
+   racine) : ?espace=voyageur → Profil voyageur
+   (&onglet=explore : Explorer, depuis le menu du site) ; ?espace=hote →
+   Mes annonces de l'espace hôtes (connexion demandée si besoin) ;
+   ?login=1 → volet de connexion.
    &next=/chemin : page du site où revenir une fois connecté (ex. la page
    Fiftin Planning, qui y relance le paiement de la formule choisie).
    Paramètres retirés de l'adresse aussitôt. */
-var authNextUrl = null;
+var authNextUrl = null, authHostTab = null;
 (function(){
   var q = new URLSearchParams(location.search);
   var espace = q.get("espace"), login = q.get("login"), next = q.get("next");
@@ -11209,9 +11223,13 @@ var authNextUrl = null;
     var tries = 0;
     (function wait(){ if(authState.ready || tries++>80) fn(); else setTimeout(wait, 100); })();
   }
-  if(espace==="voyageur"){ if(state.hostMode) exitHostMode(); else switchTab("profile"); }
+  if(espace==="voyageur"){
+    if(state.hostMode){ state.hostMode = false; persist(); renderTabbar(); }
+    switchTab(q.get("onglet")==="explore" ? "explore" : "profile");
+  }
   else if(espace==="hote") whenAuthReady(function(){
-    if(authState.uid) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
+    authHostTab = "listings";
+    if(authState.uid) enterHostMode("listings"); else { authContext = "host"; openSheet("auth"); }
   });
   else if(login==="1") whenAuthReady(function(){
     if(authState.uid){ if(authNextUrl) location.href = authNextUrl; else switchTab("profile"); }
