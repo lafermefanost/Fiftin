@@ -1,0 +1,37 @@
+# Rattrapage des photos déjà en ligne (scripts/backfill-photos.js).
+#
+# Se lance à chaque mise à jour de main qui touche le script, son mode ou
+# ce fichier. Le mode est lu dans scripts/backfill-photos.mode :
+#   simulation  : rien n'est écrit, rapport dans le journal du job ;
+#   application : ajoute les versions 1280 px et les miniatures manquantes
+#                 (nouveaux fichiers et nouveaux champs uniquement, rien
+#                 n'est modifié ni supprimé). Rejouable sans risque.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Rattrapage des photos
+
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/backfill-photos.js", "scripts/backfill-photos.mode", ".github/workflows/backfill-photos.yml"]
+
+concurrency:
+  group: backfill-photos
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Dépendances
+        run: npm install --no-save --no-package-lock --silent firebase-admin@12 sharp@0.33
+        working-directory: scripts
+      - name: Rattrapage
+        run: node scripts/backfill-photos.js

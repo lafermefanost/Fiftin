@@ -3757,7 +3757,7 @@ function setMenuAvatar(force){
   var uid = authState.uid;
   firebase.firestore().collection("hostProfiles").doc(uid).get().then(function(doc){
     if(authState.uid!==uid) return;
-    var url = doc.exists && doc.data().photoUrl;
+    var url = doc.exists && avatarPhotoUrl(doc.data().photoUrl, doc.data().photoThumbUrl);
     if(url) el.innerHTML = '<img src="'+esc(url)+'" alt="">';
   }).catch(function(){});
 }
@@ -3813,6 +3813,7 @@ function normalizeHostListing(doc){
     likeCount: (typeof l.likeCount==="number") ? l.likeCount : 0,
     grad: "clay", motif: "roof",
     gallery: gallery,
+    galleryMid: l.galleryMid || null, // version d'affichage 1280 px (voir registerPhotoVariants())
     galleryThumb: l.galleryThumb || null, // vignette légère de gallery[0] (voir listingThumbUrl()) — absente sur une annonce créée avant ce chantier, repli automatique sur gallery[0]
     units: units, // chaque chambre porte déjà son propre galleryThumb tel quel (même mécanisme, pas besoin de le remapper ici)
     amen: l.amen || [],
@@ -3828,7 +3829,7 @@ function normalizeHostListing(doc){
     instagramUrl: l.instagramUrl || "", facebookUrl: l.facebookUrl || "",
     regionName: l.regionName || "", deptName: l.deptName || "", city: l.city || "",
     accomType: l.accomType || "",
-    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || "", photo: l.hostPhotoUrl || ""},
+    host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || "", photo: avatarPhotoUrl(l.hostPhotoUrl, l.hostPhotoThumbUrl)},
     photos: gallery ? gallery.length : 0,
     avail: []
   };
@@ -3901,6 +3902,40 @@ function fetchPublishedListings(cb){
    chargement (settle() + maybeFinishInitialLoad()) que l'ancien montage :
    sans lui, un visiteur rapide verrait une carte à moitié vide le temps
    que Firestore réponde. */
+/* Variantes d'une photo (affichage 1280 px, miniature 480 px) retrouvées à
+   partir de l'URL du plein format. galleryMid/galleryThumb sont des
+   tableaux parallèles à gallery ; une variante n'est retenue que si son
+   nom de fichier dérive bien de celui du plein format (« <plein>__mid.jpg »,
+   « <plein>__thumb.jpg », ou l'ancien « …-thumb-… ») : un tableau décalé
+   (enregistré par une page plus ancienne restée ouverte) ne peut donc
+   jamais afficher la photo d'une autre. À défaut : le plein format. */
+var PHOTO_VARIANTS = {};
+function storageObjectName(url){
+  var m = /\/o\/([^?#]+)/.exec(url || "");
+  if(!m) return null;
+  try { return decodeURIComponent(m[1]); } catch(e){ return null; }
+}
+function isPhotoVariantOf(variantUrl, fullUrl, tag){
+  var v = storageObjectName(variantUrl), f = storageObjectName(fullUrl);
+  if(!v || !f) return false;
+  return v === f+"__"+tag+".jpg" || (v.indexOf("-"+tag+"-")>=0 && v.replace("-"+tag+"-", "-") === f);
+}
+function registerPhotoVariants(o){
+  if(!o) return;
+  [o].concat(o.units || []).forEach(function(x){
+    (x.gallery || []).forEach(function(full, i){
+      if(!full) return;
+      var e = PHOTO_VARIANTS[full] || (PHOTO_VARIANTS[full] = {});
+      var m = x.galleryMid && x.galleryMid[i], t = x.galleryThumb && x.galleryThumb[i];
+      if(m && isPhotoVariantOf(m, full, "mid")) e.mid = m;
+      if(t && isPhotoVariantOf(t, full, "thumb")) e.thumb = t;
+    });
+  });
+}
+function photoMid(full){ var e = PHOTO_VARIANTS[full]; return (e && e.mid) || full; }
+function photoThumb(full){ var e = PHOTO_VARIANTS[full]; return (e && (e.thumb || e.mid)) || full; }
+// Photo de l'hôte (avatar) : miniature si elle correspond bien à la photo.
+function avatarPhotoUrl(full, thumb){ return (thumb && full && isPhotoVariantOf(thumb, full, "thumb")) ? thumb : (full || ""); }
 var listingIndexCache = [];
 var listingIndexSettled = false;
 function fetchListingIndex(){
@@ -5137,6 +5172,7 @@ function renderResultLine(){
 
 /* ---------------- render: feed ---------------- */
 function coverHtml(l){
+  registerPhotoVariants(l);
   var fallbackShots = (!l.gallery || !l.gallery.length) && l.units ?
     l.units.reduce(function(acc,u){ return acc.concat(u.gallery||[]); }, []) : null;
   var shots = l.gallery && l.gallery.length ? l.gallery.slice(0,3) : (fallbackShots && fallbackShots.length ? fallbackShots.slice(0,3) : null);
@@ -5144,7 +5180,7 @@ function coverHtml(l){
   var mediaHtml;
   if(shots){
     mediaHtml = '<div class="cover-carousel" data-cc="'+l.id+'">'+
-      shots.map(function(src){ return '<img class="cc-slide" src="'+src+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
+      shots.map(function(src){ return '<img class="cc-slide" src="'+photoMid(src)+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
     '</div>'+
     (shots.length>1 ? '<div class="cover-dots">'+shots.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '');
   } else {
@@ -6746,7 +6782,8 @@ function wireQuickReq(id, uid, unit){
 }
 
 function unitCardHtml(u, selectable){
-  var img = (u.gallery && u.gallery[0]) ? '<img src="'+u.gallery[0]+'" alt="'+esc(u.name)+'" loading="lazy">' : '<div class="unit-thumb-empty"></div>';
+  registerPhotoVariants(u);
+  var img = (u.gallery && u.gallery[0]) ? '<img src="'+photoThumb(u.gallery[0])+'" alt="'+esc(u.name)+'" loading="lazy">' : '<div class="unit-thumb-empty"></div>';
   var tag = selectable ? 'button type="button" data-select-unit="'+esc(u.id)+'"' : 'div';
   var closeTag = selectable ? 'button' : 'div';
   return '<'+tag+' class="unit-card">'+
@@ -6808,7 +6845,7 @@ function openDetail(id, listingOverride, forceVisitorView){
   if(listingOverride && !l.host){
     var ovUnits = l.units || null;
     l = Object.assign({}, l, {
-      host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || "", photo: l.hostPhotoUrl || ""},
+      host: {name: l.hostName || "Hôte Fiftin", initial: (l.hostName||"H").charAt(0).toUpperCase(), phone: l.phone, email: l.email || "", bio: l.hostBio || "", photo: avatarPhotoUrl(l.hostPhotoUrl, l.hostPhotoThumbUrl)},
       photos: (l.photos!=null) ? l.photos : ((l.gallery && l.gallery.length) || 0),
       grad: l.grad || "clay",
       price: (ovUnits && ovUnits.length) ? Math.min.apply(null, ovUnits.map(function(u){ return u.price; })) : l.price,
@@ -6845,12 +6882,13 @@ function openDetail(id, listingOverride, forceVisitorView){
     gallery = (l.gallery || []).slice();
     (l.units || []).forEach(function(u){ gallery = gallery.concat(u.gallery || []); });
   }
+  registerPhotoVariants(l);
   var galleryAlt = activeUnit ? activeUnit.name : l.name;
   var total = Math.max(l.photos, gallery.length);
   var slides = "";
   for(var i=0;i<total;i++){
     if(gallery[i]){
-      slides += '<div class="slide"><img src="'+gallery[i]+'" alt="'+esc(galleryAlt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
+      slides += '<div class="slide"><img src="'+photoMid(gallery[i])+'" alt="'+esc(galleryAlt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
       continue;
     }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
@@ -7343,11 +7381,11 @@ function openSheet(kind){
     // qu'une photo déjà en ligne, gardée telle quelle, n'ait jamais besoin
     // de régénérer sa vignette à l'enregistrement (voir resolvePhotoEntries()).
     hfSelectedFiles = (hfEf && hfEf.gallery ? hfEf.gallery : []).map(function(url, i){
-      return {type:"existing", url:url, thumbUrl:(hfEf.galleryThumb && hfEf.galleryThumb[i]) || null};
+      return {type:"existing", url:url, thumbUrl:(hfEf.galleryThumb && hfEf.galleryThumb[i]) || null, midUrl:(hfEf.galleryMid && hfEf.galleryMid[i]) || null};
     });
     hfUnits = (hfEf && hfEf.units && hfEf.units.length) ? hfEf.units.map(function(u){
       return {id:u.id, name:u.name||"", price:u.price!=null?String(u.price):"", maxPersons:u.maxPersons!=null?u.maxPersons:2,
-        photos:(u.gallery||[]).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(u.galleryThumb && u.galleryThumb[i]) || null}; }), linkedRoomId:u.linkedRoomId||""};
+        photos:(u.gallery||[]).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(u.galleryThumb && u.galleryThumb[i]) || null, midUrl:(u.galleryMid && u.galleryMid[i]) || null}; }), linkedRoomId:u.linkedRoomId||""};
     }) : [{id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""}];
   } else if(kind==="hostbooking"){
     var hbCtx = hostBookingContext;
@@ -7544,7 +7582,7 @@ function openSheet(kind){
       hfUpdateWordCount(id);
     });
     wireHfAddressAutocomplete();
-    hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl} : null;
+    hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl, thumbUrl:hostFormEditListing.hostPhotoThumbUrl || null} : null;
     // Repli sur la photo de compte (hostProfiles/{uid}, voir
     // wireAccountAvatar()) si cette annonce précise n'a pas encore la
     // sienne — une nouvelle annonce démarre avec la photo déjà choisie
@@ -7553,7 +7591,7 @@ function openSheet(kind){
       firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
         if(hfHostPhoto || !document.getElementById("hf-host-photo-avatar")) return; // l'hôte a déjà choisi une photo entre-temps, ou le volet a changé
         var url = doc.exists && doc.data().photoUrl;
-        if(url){ hfHostPhoto = {type:"existing", url:url}; renderHfHostPhotoPreview(); }
+        if(url){ hfHostPhoto = {type:"existing", url:url, thumbUrl:doc.data().photoThumbUrl || null}; renderHfHostPhotoPreview(); }
       });
     }
     document.getElementById("hf-host-photo-avatar").addEventListener("click", function(){
@@ -8684,6 +8722,38 @@ function makeThumbFile(file){
   });
 }
 
+/* Version d'AFFICHAGE (fil Explorer, fiche détail) : 1280 px de LARGE —
+   l'application est plafonnée à 520 px (#app), soit au plus ~1 290 px
+   utiles sur le plus grand téléphone en 3× et 1 040 px sur ordinateur en
+   2×. Le fichier plein format (2048 px) reste stocké comme version maître
+   (zoom ou nouvel affichage plus grand un jour), mais n'est plus téléchargé
+   pour l'affichage. null si l'image fait déjà 1280 px de large ou moins
+   (le plein format suffit alors), ou si le canvas échoue — jamais bloquant. */
+var MID_MAX_WIDTH = 1280;
+function makeMidFile(file){
+  return new Promise(function(resolve){
+    var img = new Image();
+    var url = URL.createObjectURL(file);
+    img.onload = function(){
+      URL.revokeObjectURL(url);
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if(!w || !h || w <= MID_MAX_WIDTH){ resolve(null); return; }
+      var tw = MID_MAX_WIDTH, th = Math.max(1, Math.round(h*MID_MAX_WIDTH/w));
+      var canvas = document.createElement("canvas");
+      canvas.width = tw; canvas.height = th;
+      var ctx = canvas.getContext("2d");
+      if(!ctx){ resolve(null); return; }
+      ctx.drawImage(img, 0, 0, tw, th);
+      canvas.toBlob(function(blob){
+        if(!blob){ resolve(null); return; }
+        resolve(new File([blob], file.name.replace(/\.[^.\/]+$/, "")+"-mid.jpg", {type:"image/jpeg"}));
+      }, "image/jpeg", PHOTO_JPEG_QUALITY);
+    };
+    img.onerror = function(){ URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
 function cropAndCompressFiles(files){
   var results = [];
   var runNext = function(i){
@@ -8829,28 +8899,35 @@ function uploadPhotoFiles(files, uid, pathPrefix, progressLabel){
   // uploade la photo de profil directement depuis le Profil, sans sheet
   // ouvert) — le texte de progression est alors simplement ignoré.
   var btn = document.getElementById("sheet-apply");
-  if(!files.length) return Promise.resolve({urls:[], thumbUrls:[]});
-  var urls = [], thumbUrls = [];
+  if(!files.length) return Promise.resolve({urls:[], thumbUrls:[], midUrls:[]});
+  var urls = [], thumbUrls = [], midUrls = [];
   var uploadOne = function(i){
     if(i>=files.length) return Promise.resolve();
     if(btn) btn.textContent = progressLabel+" ("+(i+1)+"/"+files.length+")";
     var file = files[i];
     var safeName = file.name.replace(/[^a-zA-Z0-9._-]/g,"_");
     var ts = Date.now();
-    var fullPromise = firebase.storage().ref().child("listings/"+uid+"/"+pathPrefix+"-"+ts+"-"+i+"-"+safeName)
+    var fullPath = "listings/"+uid+"/"+pathPrefix+"-"+ts+"-"+i+"-"+safeName;
+    var fullPromise = firebase.storage().ref().child(fullPath)
       .put(file).then(function(snap){ return snap.ref.getDownloadURL(); });
+    var midPromise = makeMidFile(file).then(function(midFile){
+      if(!midFile) return null;
+      return firebase.storage().ref().child(fullPath+"__mid.jpg")
+        .put(midFile).then(function(snap){ return snap.ref.getDownloadURL(); });
+    });
     var thumbPromise = makeThumbFile(file).then(function(thumbFile){
       if(!thumbFile) return null;
       return firebase.storage().ref().child("listings/"+uid+"/"+pathPrefix+"-thumb-"+ts+"-"+i+"-"+safeName)
         .put(thumbFile).then(function(snap){ return snap.ref.getDownloadURL(); });
     });
-    return Promise.all([fullPromise, thumbPromise]).then(function(results){
+    return Promise.all([fullPromise, thumbPromise, midPromise]).then(function(results){
       urls.push(results[0]);
       thumbUrls.push(results[1]);
+      midUrls.push(results[2]);
       return uploadOne(i+1);
     });
   };
-  return uploadOne(0).then(function(){ return {urls:urls, thumbUrls:thumbUrls}; });
+  return uploadOne(0).then(function(){ return {urls:urls, thumbUrls:thumbUrls, midUrls:midUrls}; });
 }
 /* Sépare les entrées déjà en ligne (juste réutilisées telles quelles, rien
    à envoyer) des nouveaux fichiers à uploader, puis recombine dans l'ordre
@@ -8862,13 +8939,13 @@ function uploadPhotoFiles(files, uid, pathPrefix, progressLabel){
 function resolvePhotoEntries(entries, uid, pathPrefix, progressLabel){
   var newFiles = entries.filter(function(e){ return e.type==="new"; }).map(function(e){ return e.file; });
   return uploadPhotoFiles(newFiles, uid, pathPrefix, progressLabel).then(function(res){
-    var urlsQueue = res.urls.slice(), thumbQueue = res.thumbUrls.slice();
-    var urls = [], thumbs = [];
+    var urlsQueue = res.urls.slice(), thumbQueue = res.thumbUrls.slice(), midQueue = res.midUrls.slice();
+    var urls = [], thumbs = [], mids = [];
     entries.forEach(function(e){
-      if(e.type==="existing"){ urls.push(e.url); thumbs.push(e.thumbUrl || null); }
-      else { urls.push(urlsQueue.shift()); thumbs.push(thumbQueue.shift()); }
+      if(e.type==="existing"){ urls.push(e.url); thumbs.push(e.thumbUrl || null); mids.push(e.midUrl || null); }
+      else { urls.push(urlsQueue.shift()); thumbs.push(thumbQueue.shift()); mids.push(midQueue.shift()); }
     });
-    return {urls:urls, thumbs:thumbs};
+    return {urls:urls, thumbs:thumbs, mids:mids};
   });
 }
 
@@ -9204,19 +9281,19 @@ function submitHostForm(){
         if(i>=hfUnits.length) return Promise.resolve(doneUnits);
         var u = hfUnits[i];
         return resolvePhotoEntries(u.photos, authState.uid, "location-"+(i+1), "Envoi des photos de "+(u.name.trim()||name)+"…").then(function(unitPhotos){
-          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitPhotos.urls, galleryThumb:unitPhotos.thumbs, linkedRoomId:u.linkedRoomId||""});
+          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitPhotos.urls, galleryThumb:unitPhotos.thumbs, galleryMid:unitPhotos.mids, linkedRoomId:u.linkedRoomId||""});
           return uploadUnit(i+1, doneUnits);
         });
       };
       return uploadUnit(0, []).then(function(units){
         btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
         var payload = {
-          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
+          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", hostPhotoThumbUrl:hostPhoto.thumbs[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
           spaces:hfSpaces,
           regionName:regionName, deptName:deptName, city:city,
           address:address, lat:coords.lat, lng:coords.lng, inseeCode:coords.citycode||"",
           websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
-          gallery:house.urls, galleryThumb:house.thumbs,
+          gallery:house.urls, galleryThumb:house.thumbs, galleryMid:house.mids,
           units:units
         };
         var listingWrite;
@@ -9783,7 +9860,9 @@ function renderAdminQueue(){
     if(snap.empty){ list.innerHTML = '<p class="sheet-sub">Aucune annonce en attente pour le moment.</p>'; return; }
     list.innerHTML = snap.docs.map(function(doc){
       var l = doc.data();
+      registerPhotoVariants(l);
       var coverUrl = listingCoverUrl(l);
+      if(coverUrl) coverUrl = photoThumb(coverUrl);
       var cover = coverUrl
         ? '<img class="admin-thumb" src="'+coverUrl+'" alt="">'
         : '<div class="admin-thumb admin-thumb-empty"></div>';
@@ -10466,7 +10545,7 @@ function wireAccountAvatar(avatarId, inputId, afterUpdate){
   avatarEl.innerHTML += avatarBadgeSvg();
   firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
     if(document.getElementById(avatarId)!==avatarEl) return; // re-rendu entre-temps
-    var url = doc.exists && doc.data().photoUrl;
+    var url = doc.exists && avatarPhotoUrl(doc.data().photoUrl, doc.data().photoThumbUrl);
     if(url) avatarEl.innerHTML = '<img src="'+esc(url)+'" alt="">'+avatarBadgeSvg();
   });
   avatarEl.addEventListener("click", function(){ inputEl.click(); });
@@ -10475,19 +10554,20 @@ function wireAccountAvatar(avatarId, inputId, afterUpdate){
     e.target.value = "";
     if(!file || !/^image\//.test(file.type)) return;
     avatarEl.style.opacity = ".5";
-    var uploadedUrl = null;
+    var uploadedUrl = null, uploadedThumbUrl = "";
     cropAndCompressFiles([file]).then(function(files){
       return uploadPhotoFiles(files, authState.uid, "hote", "Envoi de votre photo…");
     }).then(function(res){
       uploadedUrl = res.urls[0];
+      uploadedThumbUrl = res.thumbUrls[0] || "";
       if(!uploadedUrl) throw new Error("L'envoi n'a renvoyé aucune image.");
       return firebase.firestore().collection("hostProfiles").doc(authState.uid)
-        .set({photoUrl:uploadedUrl, updated:new Date().toISOString()}, {merge:true});
+        .set({photoUrl:uploadedUrl, photoThumbUrl:uploadedThumbUrl, updated:new Date().toISOString()}, {merge:true});
     }).then(function(){
       ensureHostListingsLoaded(function(list){
         if(!list.length) return;
         var batch = firebase.firestore().batch();
-        list.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostPhotoUrl:uploadedUrl}); });
+        list.forEach(function(l){ batch.update(firebase.firestore().collection("listings").doc(l.id), {hostPhotoUrl:uploadedUrl, hostPhotoThumbUrl:uploadedThumbUrl}); });
         batch.commit().then(function(){ hostListingsCache = []; });
       });
       afterUpdate();
@@ -10765,10 +10845,11 @@ function hostListingCoverShots(l){
   return l.gallery && l.gallery.length ? l.gallery.slice(0,3) : (fallbackShots && fallbackShots.length ? fallbackShots.slice(0,3) : null);
 }
 function hostListingCardHtml(l){
+  registerPhotoVariants(l);
   var shots = hostListingCoverShots(l);
   var cover = shots
     ? '<div class="hlc-photo"><div class="cover-carousel" data-cc="hlc-'+esc(l.id)+'">'+
-        shots.map(function(src){ return '<img class="cc-slide" src="'+src+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
+        shots.map(function(src){ return '<img class="cc-slide" src="'+photoMid(src)+'" alt="'+esc(l.name)+'" loading="lazy">'; }).join("")+
       '</div>'+
       (shots.length>1 ? '<div class="cover-dots">'+shots.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
     '</div>'
