@@ -489,6 +489,18 @@ section[id]{scroll-margin-top:72px;}
   background:var(--yellow); border:1px solid var(--yellow); backdrop-filter:none; -webkit-backdrop-filter:none;}
 .hl-acc-btn svg, .pl-login svg{width:15px; height:15px;}
 .hl-acc-btn:hover, .pl-login:hover{filter:brightness(.96);}
+/* Menu : une fois connecté, le bouton « Se connecter » devient un simple
+   bouton menu (trois traits) discret, carré arrondi comme le petit logo
+   (40 px, coins 13 px), filet blanc translucide, sur la vidéo comme sur le
+   bandeau vert. Non connecté : bouton jaune « Se connecter » inchangé. */
+.hl-burger{display:none;}
+a.is-menu, button.is-menu{width:40px; height:40px; padding:0 !important; gap:0 !important; justify-content:center; border-radius:13px !important;
+  background:rgba(255,255,255,.08) !important; border:1.5px solid rgba(255,255,255,.55) !important; color:#fff !important;
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);}
+a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.16) !important;}
+.is-menu > svg:not(.hl-burger), .is-menu > span{display:none !important;}
+.is-menu .hl-burger{display:block; width:21px !important; height:21px !important;}
+
 </style>
 </head>
 <body>
@@ -498,6 +510,7 @@ section[id]{scroll-margin-top:72px;}
     <a class="pl-login" href="app/" id="plLogin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       <span id="plLoginLabel">Se connecter</span>
+      <svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15"/></svg>
     </a>
     <div class="hl-menu" id="plMenu" role="menu">
       <div class="hl-menu-mail" id="plMenuMail"></div>
@@ -1037,7 +1050,10 @@ function choosePlan(plan, btn){
    (espaces voyageur et hôte, outil, déconnexion). */
 function setLoginButton(){
   var label = document.getElementById("plLoginLabel");
-  label.textContent = plUser ? "Mon compte" : "Se connecter";
+  label.textContent = plUser ? "Menu" : "Se connecter";
+  var btn = document.getElementById("plLogin");
+  btn.classList.toggle("is-menu", !!plUser);
+  if(plUser) btn.setAttribute("aria-label","Menu"); else btn.removeAttribute("aria-label");
   document.getElementById("plMenuMail").textContent = plUser && plUser.email ? plUser.email : "";
   if(!plUser) document.getElementById("plMenu").classList.remove("open");
 }
