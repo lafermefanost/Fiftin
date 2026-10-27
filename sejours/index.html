@@ -351,6 +351,11 @@ a{color:inherit; text-decoration:none;}
 .chip-x{display:flex; align-items:center; justify-content:center; width:24px; height:24px; margin:0 6px 0 -4px;
   border-radius:50%; background:rgba(239,238,234,.25); border:none; color:var(--cream); font-size:15px; line-height:1;
   font-family:'Jost',sans-serif;}
+.chip-map{flex-shrink:0; width:38px; align-self:stretch; min-height:36px; display:flex; align-items:center; justify-content:center; padding:0;
+  border-radius:12px; border:none; background:var(--sauge); color:#fff; cursor:pointer;}
+.chip-map svg{width:17px; height:17px;}
+/* L'ancien bouton carte flottant est remplacé par .chip-map. */
+.map-back-btn{display:none !important;}
 .chip-reset-all{flex-shrink:0; background:none; border:none; padding:8px 4px; font-family:'Jost',sans-serif;
   font-size:12.5px; font-weight:700; color:var(--danger); white-space:nowrap; text-decoration:underline;}
 
@@ -417,7 +422,7 @@ a{color:inherit; text-decoration:none;}
    puisque le 100px fixe d'origine ne comptait pas la marge de sécurité
    côté appareil. 85px (77 + 8px de respiration) + l'encoche : réduit le
    vide sur la plupart des appareils, sans jamais recouvrir la carte. */
-#feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(85px + env(safe-area-inset-bottom, 0px)); gap:6px; background:#fff;}
+#feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(85px + env(safe-area-inset-bottom, 0px)); gap:2px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
 /* Pas de grain sur les vraies photos du fil Explorer (retour utilisateur :
    "retirer l'effet de grain par-dessus les images") — .has-photos posé par
@@ -2433,23 +2438,32 @@ body.map-fullscreen{overflow:hidden;}
    aplat vert propriétaire sans effet verre, étoile blanche, sans libellé
    (aria-label sur le bouton) ; plus gros que les deux autres pictos. */
 .tab.tab-solo{justify-content:center; gap:0;}
-.tab.tab-solo .tab-icon, .tab.tab-solo.active .tab-icon{width:54px; height:54px; border-radius:17px; position:relative; overflow:hidden;
-  background:linear-gradient(145deg, rgba(255,255,255,.44) 0%, rgba(255,255,255,.16) 26%, rgba(255,255,255,.03) 48%,
-      rgba(0,0,0,.1) 68%, rgba(0,0,0,.24) 100%), var(--sauge);
-  box-shadow:inset 0 2px 3px rgba(255,255,255,.55), inset 1.5px 0 3px rgba(255,255,255,.25),
-    inset 0 -6px 10px rgba(0,0,0,.22), inset -4px 0 8px rgba(0,0,0,.14);
-  filter:drop-shadow(0 6px 10px rgba(29,40,32,.22));}
-/* Même verre que les pictos actifs des deux autres menus (dégradé,
-   reliefs intérieurs, anneau irisé animé), en permanence. */
-.tab.tab-solo .tab-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.2px;
+.tab.tab-solo .tab-icon{width:54px; height:54px; border-radius:17px; position:relative; overflow:hidden; background:var(--sauge-bg);
+  transition:background .2s ease;}
+.tab.tab-solo .tab-icon svg{position:relative; z-index:1;}
+/* Onglet actif : même verre que le logo Fiftin (dégradé diagonal, reliefs
+   intérieurs sur les quatre côtés, anneau irisé animé, reflet en haut,
+   ombre portée) sur le vert propriétaire. Sur un autre onglet : pastille
+   claire, étoile vert pâle, comme les autres pictos au repos. */
+.tab.tab-solo.active .tab-icon{
+  background:linear-gradient(145deg, rgba(255,255,255,.5) 0%, rgba(255,255,255,.2) 26%, rgba(255,255,255,.04) 48%,
+      rgba(0,0,0,.1) 68%, rgba(0,0,0,.26) 100%), var(--sauge);
+  -webkit-backdrop-filter:blur(9px) saturate(1.4); backdrop-filter:blur(9px) saturate(1.4);
+  box-shadow:inset 0 3px 5px rgba(255,255,255,.6), inset 3px 0 5px rgba(255,255,255,.3),
+    inset 0 -9px 15px rgba(0,0,0,.38), inset -7px 0 13px rgba(0,0,0,.24);
+  filter:drop-shadow(0 7px 12px rgba(29,40,32,.26));}
+.tab.tab-solo.active .tab-icon::before{content:""; position:absolute; inset:0; border-radius:inherit; padding:1.3px;
   background:conic-gradient(from var(--iris-angle,0deg),
     rgba(255,255,255,0) 0deg, var(--lavender) 55deg, rgba(255,255,255,.9) 95deg, var(--yellow) 150deg,
     rgba(255,255,255,0) 190deg, rgba(255,255,255,0) 270deg, var(--sauge-light) 320deg, rgba(255,255,255,0) 360deg);
   mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); mask-composite:exclude;
   -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite:xor;
   opacity:.9; animation:irisSpin 9s linear infinite; pointer-events:none;}
-.tab.tab-solo .tab-icon svg{position:relative; z-index:1;}
-.tab.tab-solo .tab-icon svg, .tab.tab-solo.active .tab-icon svg{width:24px; height:24px; fill:#fff; stroke:#fff; stroke-width:1.2; stroke-linejoin:round;}
+.tab.tab-solo.active .tab-icon::after{content:""; position:absolute; left:-10%; top:-12%; width:120%; height:48%;
+  background:linear-gradient(180deg, rgba(255,255,255,.7) 0%, rgba(255,255,255,.32) 34%, rgba(255,255,255,0) 100%);
+  border-radius:50%; filter:blur(1.5px); transform:rotate(-6deg); pointer-events:none; z-index:0;}
+.tab.tab-solo .tab-icon svg{width:24px; height:24px; fill:var(--sauge-light); stroke:var(--sauge-light); stroke-width:1.2; stroke-linejoin:round;}
+.tab.tab-solo.active .tab-icon svg{fill:#fff; stroke:#fff;}
 /* L'étoile fait un quart de tour toutes les 4 s (pause, puis rotation
    souple avec un léger dépassement) pour attirer l'œil vers la navigation
    principale ; symétrique, elle reprend exactement sa position. Coupé si
@@ -4985,7 +4999,11 @@ function renderFilterBar(){
   var anyActive = locActive || datesActive || f.distance!=null || f.price!=null || f.capacity!=null || activeAmenCount>0 || state.sort!=="reco";
   // Réinitialiser en premier (retour utilisateur) : à gauche des filtres
   // plutôt qu'après, visible sans avoir à faire défiler la barre.
-  bar.innerHTML = (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
+  // Bouton carte (plein écran de la carte d'Explorer) : premier élément du
+  // bandeau, carré vert, à la place de l'ancien bouton flottant.
+  var mapChip = state.tab==="explore" && !state.hostMode
+    ? '<button type="button" class="chip-map" id="chip-map" aria-label="'+(mapExpanded?"Fermer la carte":"Afficher la carte")+'">'+MAP_BACK_ICON(mapExpanded)+'</button>' : "";
+  bar.innerHTML = mapChip + (anyActive ? '<button type="button" class="chip-reset-all" id="chip-reset-all">Réinitialiser</button>' : "") + [
     chipHtml("loc", locChipLabel(f), locActive),
     chipHtml("dates", datesChipLabel(f), datesActive),
     chipHtml("distance", f.distance!=null ? "Distance · "+f.distance+" km"+(f.zoneOrigin?" (repère)":"") : "Distance", f.distance!=null),
@@ -5000,6 +5018,11 @@ function renderFilterBar(){
   });
   Array.prototype.forEach.call(bar.querySelectorAll(".chip-x"), function(el){
     el.addEventListener("click", function(e){ e.stopPropagation(); clearFilter(el.getAttribute("data-clear")); });
+  });
+  var mapChipBtn = document.getElementById("chip-map");
+  if(mapChipBtn) mapChipBtn.addEventListener("click", function(){
+    if(!document.querySelector(".map-canvas")) return;
+    setMapExpanded(!mapExpanded);
   });
   var resetAllBtn = document.getElementById("chip-reset-all");
   if(resetAllBtn) resetAllBtn.addEventListener("click", function(){
@@ -9311,11 +9334,12 @@ function setMapExpanded(expanded){
   if(!canvas) return;
   canvas.classList.toggle("expanded", expanded);
   applyMapFullscreenOffsets(canvas, expanded);
-  var btn = document.getElementById("map-back-btn");
-  if(btn){
+  ["map-back-btn","chip-map"].forEach(function(id){
+    var btn = document.getElementById(id);
+    if(!btn) return;
     btn.setAttribute("aria-label", expanded ? "Fermer la carte" : "Afficher la carte");
     btn.innerHTML = MAP_BACK_ICON(expanded);
-  }
+  });
   // setTimeout : le conteneur grandit/rétrécit avec une transition CSS
   // (voir .map-canvas), Leaflet doit attendre qu'elle soit terminée pour
   // mesurer la bonne taille — appeler invalidateSize() trop tôt le
