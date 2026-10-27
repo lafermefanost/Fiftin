@@ -1,8 +1,7 @@
 /* Fenêtre de connexion Fiftin — un seul style pour tout le site (accueil,
    Séjours, outil). Fenêtre en surimpression : la page reste visible
-   derrière, assombrie et floutée ; la carte reprend le fond de l'univers
-   (image fixe de la vidéo de marque + même voile vert que les heros),
-   le logo en verre, des champs pilules translucides, « Se connecter » en
+   derrière, assombrie et floutée ; la carte est en vert propriétaire
+   (#354B38, aplat sans motif), le logo en verre, des champs pilules translucides, « Se connecter » en
    contour blanc et « Créer un compte » en pastille jaune. Seule la mise en
    forme est commune : chaque page garde sa propre logique de connexion.
    Chemins d'images relatifs à ce fichier (assets/). */
@@ -16,8 +15,7 @@
 
 .ff-auth-card{position:relative; width:100%; max-width:400px; max-height:100%; overflow-y:auto; box-sizing:border-box;
   border-radius:28px; padding:34px 26px 24px; text-align:center; color:#fff; font-family:'Jost',sans-serif;
-  background:linear-gradient(180deg, rgba(29,40,32,.20) 0%, rgba(29,40,32,.32) 60%, rgba(29,40,32,.40) 100%),
-    url("hero-poster-vertical.webp") center/cover, #4E6F53;
+  background:#354B38;
   box-shadow:0 30px 70px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.14);}
 
 .ff-auth-close{position:absolute; top:14px; right:14px; width:36px; height:36px; border-radius:50%;
