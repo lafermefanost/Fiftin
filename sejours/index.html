@@ -49,7 +49,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700;800&family=Fraunces:ital,wght@1,400;1,500&display=swap');
 
 :root{
-  --cream:#EFEEEA; --cream-deep:#E4E1D9; --cream-light:#F7F6F4; --ink:#2E2B22;
+  --cream:#EFEEEA; --cream-deep:#E4E1D9; --cream-light:#F7F6F4; --ink:#2E2B22; --muted:#6F6C62;
   --sauge:#354B38; --sauge-deep:#1D2820; --sauge-light:#8B9D86; --sauge-mid:#4E6F53; --sauge-bg:#E5E9E4;
   --lavender:#7B94E8; --lavender-bg:#E7E9F1; --lavender-soft:#B2BBDA; --lavender-deep:#4E67BC; --lavender-icon:#829AD0;
   --yellow:#DEEB82; --yellow-deep:#C7D65E; --yellow-light:#EFF5C1;
@@ -2429,6 +2429,64 @@ body.map-fullscreen{overflow:hidden;}
 .hl-menu .hl-menu-mail{padding:8px 12px 10px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--cream-deep); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis;}
 @media (max-width:640px){ .hl-acc-btn{padding:9px 14px; font-size:13.5px;} }
 
+/* ---------- Refonte espaces voyageur / hôte (vert propriétaire) ----------
+   Plus de lavande pour l'espace hôte : tout reste en vert sauge. Seule la
+   barre de menus du bas marque la différence, en négatif côté hôte (bande
+   verte, pictos blancs) ; côté voyageur, bande claire et pictos verts. */
+.switch-tile.hotes{--tile-base:var(--sauge);}
+.switch-tile.hotes:not(.current){background:var(--sauge-bg);}
+.switch-tile.hotes:not(.current) b{color:var(--sauge-deep);}
+.switch-tile.hotes:not(.current) span{color:var(--sauge-mid);}
+.switch-tile.hotes:not(.current) .switch-icon{background:rgba(53,75,56,.14); color:var(--sauge-deep);}
+.profile-identity--hotes{background:var(--sauge);}
+.profile-identity--hotes .profile-identity-btn{color:var(--sauge-deep);}
+.profile-identity-switch-hotes{--tile-base:var(--sauge);}
+nav.tabbar.host-mode{background:rgba(53,75,56,.97); border-top-color:rgba(255,255,255,.12);}
+.tabbar.host-mode .tab{color:rgba(255,255,255,.66);}
+.tabbar.host-mode .tab.active{color:#fff;}
+.tabbar.host-mode .tab-primary .tab-icon{background:rgba(255,255,255,.12);}
+.tabbar.host-mode .tab.active .tab-icon{
+  background:linear-gradient(145deg, rgba(255,255,255,.6) 0%, rgba(255,255,255,.25) 30%, rgba(255,255,255,0) 55%,
+      rgba(0,0,0,.06) 75%, rgba(0,0,0,.14) 100%), var(--cream);}
+.tabbar.host-mode .tab.active .tab-icon svg{fill:var(--sauge); stroke:var(--sauge);}
+/* Photo + e-mail + déconnexion dans la carte « Votre profil », sous la
+   bascule des deux espaces (plus de bloc séparé en tête de page). */
+.profile-identity-account{display:flex; align-items:center; gap:14px; margin:0 0 16px;}
+.profile-identity-account .profile-avatar{flex:none; width:56px; height:56px; box-shadow:0 0 0 2px rgba(255,255,255,.85);}
+.profile-identity-account-txt{min-width:0; display:flex; flex-direction:column; gap:3px;}
+.profile-identity-account-txt b{font-size:15px; font-weight:600; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.profile-identity-account-txt a{font-size:13px; font-weight:600; color:rgba(255,255,255,.85); text-decoration:underline; text-underline-offset:3px; align-self:flex-start;}
+/* Photo du compte dans le menu « Mon compte ». */
+.hl-menu .hl-menu-mail{display:flex; align-items:center; gap:10px;}
+.hl-menu-avatar{flex:none; width:30px; height:30px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center;
+  background:var(--sauge); color:#fff; font-size:13px; font-weight:600;}
+.hl-menu-avatar:empty{display:none;}
+.hl-menu-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
+#sejMenuMail{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+/* Formules : même carte que la page Planning (.pl-plans .plan). */
+.profile-plans{margin-bottom:14px;}
+.profile-plans .profile-section-label{margin-top:8px;}
+.plan-card-list{gap:14px;}
+.plan-card{display:block; background:#fff; border-radius:24px; padding:22px; box-shadow:0 10px 26px rgba(29,40,32,.08);}
+.plan-card.active{background:#fff; box-shadow:0 0 0 2px var(--sauge) inset, 0 10px 26px rgba(29,40,32,.08);}
+.plan-card-name{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px;
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+.plan-card-tag{background:var(--sauge); color:#fff; font-size:10.5px; font-weight:600; letter-spacing:.02em; text-transform:none; padding:3px 9px; border-radius:20px;}
+.plan-card-price{font-family:'Jost',sans-serif; font-weight:700; font-size:38px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px; color:var(--sauge-deep);}
+.plan-card-per{font-size:14px; color:var(--muted); margin-bottom:16px;}
+.plan-card li{font-size:14.5px; line-height:1.45; padding:6px 0 6px 34px; color:var(--ink);}
+.plan-card li::before, .plan-card li:nth-child(n)::before{top:5px; width:22px; height:22px; border-radius:50%;
+  background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/12px no-repeat;}
+.plan-card.active .plan-card-name{color:var(--sauge-deep);}
+.plan-card.active .plan-card-price{color:var(--sauge-deep);}
+.plan-card.active .plan-card-per{color:var(--muted);}
+.plan-card.active li{color:var(--ink);}
+.plan-card-cta{display:flex; justify-content:center; align-items:center; width:100%; margin-top:18px; padding:15px; border:none; border-radius:999px; cursor:pointer;
+  background:var(--yellow); color:var(--sauge-deep); font:600 15.5px 'Jost',sans-serif;}
+.plan-card-cta.manage{background:var(--sauge); color:#fff;}
+.plan-card-cta:disabled{opacity:.6; cursor:default;}
+
+
 /* Bouton « Se connecter / Mon compte » de l'en-tête : plus compact (de
    l'air dans le bandeau de 52 px) et jaune comme les autres boutons
    d'action, sur la vidéo comme sur le bandeau vert. */
@@ -2481,7 +2539,7 @@ function fiftinSetBrandVideoSrc(id){
     <div class="hl-account" id="sejAccount">
       <a class="hl-acc-btn" id="sejAccBtn" href="sejours/?login=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span id="sejAccLabel">Se connecter</span></a>
     <div class="hl-menu" id="sejMenu" role="menu">
-      <div class="hl-menu-mail" id="sejMenuMail"></div>
+      <div class="hl-menu-mail"><span class="hl-menu-avatar" id="sejMenuAvatar"></span><span id="sejMenuMail"></span></div>
       <a href="sejours/?espace=voyageur" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
         <span>Espace voyageur<small>Mes séjours, favoris et profil</small></span>
@@ -3551,10 +3609,30 @@ function signOutUser(){
 /* Bouton « Mon compte » du bandeau du haut (voir .sej-home) : « Se
    connecter » ouvre le volet de connexion ; une fois connecté, menu
    commun à tout le site (espaces, outil, déconnexion). */
+/* Petite photo du compte dans l'en-tête du menu « Mon compte », à côté de
+   l'e-mail (même photo que le Profil, hostProfiles/{uid}.photoUrl), lue
+   une fois par compte ; initiale de l'e-mail à défaut. force : relire
+   après un changement de photo. */
+var menuAvatarUid = null;
+function setMenuAvatar(force){
+  var el = document.getElementById("sejMenuAvatar"); if(!el) return;
+  if(!authState.uid){ el.innerHTML = ""; menuAvatarUid = null; return; }
+  if(menuAvatarUid===authState.uid && !force) return;
+  menuAvatarUid = authState.uid;
+  el.textContent = (authState.email||"?").charAt(0).toUpperCase();
+  if(typeof firebase==="undefined") return;
+  var uid = authState.uid;
+  firebase.firestore().collection("hostProfiles").doc(uid).get().then(function(doc){
+    if(authState.uid!==uid) return;
+    var url = doc.exists && doc.data().photoUrl;
+    if(url) el.innerHTML = '<img src="'+esc(url)+'" alt="">';
+  }).catch(function(){});
+}
 function renderTopAccount(){
   var label=document.getElementById("sejAccLabel"); if(!label) return;
   label.textContent = authState.uid ? "Mon compte" : "Se connecter";
   document.getElementById("sejMenuMail").textContent = authState.email || "";
+  setMenuAvatar();
   if(!authState.uid) document.getElementById("sejMenu").classList.remove("open");
 }
 (function(){
@@ -6628,14 +6706,16 @@ function closeDetail(){
    de formule". Pas de bouton sur la carte "Formule Hôte" active : rien à
    gérer côté Stripe pour un compte gratuit (aucun stripeCustomerId). */
 function planCardHtml(f, active){
-  var cta = !active ? '<button type="button" class="btn primary plan-card-cta" data-plan="'+esc(f.value)+'"><span>Changer pour cette formule</span></button>'
-    : (f.value==="simple" ? '' : '<button type="button" class="btn primary plan-card-cta" data-manage-billing="1"><span>Gérer mon abonnement</span></button>');
+  // Même carte que les formules de la page Planning (.pl-plans .plan dans
+  // planning/index.html) : nom en capitales, gros prix vert, points à coche
+  // jaune, bouton pilule. La formule active est cerclée de vert et porte la
+  // pastille « Votre formule actuelle ».
+  var cta = !active ? '<button type="button" class="plan-card-cta" data-plan="'+esc(f.value)+'"><span>Changer pour cette formule</span></button>'
+    : (f.value==="simple" ? '' : '<button type="button" class="plan-card-cta manage" data-manage-billing="1"><span>Gérer mon abonnement</span></button>');
   return '<div class="plan-card'+(active?' active':'')+'">'+
-    '<div class="plan-card-prices">'+
-      '<div class="plan-card-name">'+esc(f.planName)+'</div>'+
-      '<div class="plan-card-price">'+esc(f.planPrice)+'</div>'+
-      '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
-    '</div>'+
+    '<div class="plan-card-name">'+esc(f.planName)+(active?'<span class="plan-card-tag">Votre formule actuelle</span>':'')+'</div>'+
+    '<div class="plan-card-price">'+esc(f.planPrice)+'</div>'+
+    '<div class="plan-card-per">'+esc(f.planPer)+'</div>'+
     '<ul>'+f.bullets.map(function(b){ return '<li>'+esc(b)+'</li>'; }).join("")+'</ul>'+
     cta+
   '</div>';
@@ -9301,18 +9381,8 @@ function wireExploreMap(){
 function renderProfile(){
   var feed = document.getElementById("feed");
   var connected = !!authState.uid;
-  var initial = connected ? authState.email.charAt(0).toUpperCase() : "?";
-  var nameLine = connected ? esc(authState.email) : "Non connecté";
-  var subLine = connected
-    ? '<a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a>'
-    // Retour utilisateur : nulle part ailleurs sur cette vue un non-connecté
-    // ne pouvait cliquer pour se connecter (Espace hôtes ouvre bien le même
-    // volet, mais dans un contexte "devenir hôte" trompeur pour un simple
-    // voyageur) — un vrai lien ici, au niveau du compte.
-    : '<a href="#" id="btn-signin-profile" style="text-decoration:underline;">Se connecter</a>';
 
   feed.innerHTML = '<div class="profile-view">'+
-    '<div class="profile-head"><div class="profile-avatar" id="traveler-profile-avatar">'+initial+'</div>'+(connected ? '<input type="file" id="traveler-profile-photo-input" accept="image/*" style="display:none">' : '')+'<div><b style="font-size:17px;">'+nameLine+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;">'+subLine+'</div></div></div>'+
     profileIdentityCardHtml("voyageur", connected)+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
@@ -9335,10 +9405,9 @@ function renderProfile(){
     // Même photo de compte qu'en mode hôte (hostProfiles/{uid}, voir
     // wireAccountAvatar()) — retour utilisateur : "utilise la même photo
     // pour le mode voyageur", inutile de la reproposer séparément ici.
-    wireAccountAvatar("traveler-profile-avatar", "traveler-profile-photo-input", function(){ if(state.tab==="profile") renderProfile(); });
+    wireAccountAvatar("traveler-profile-avatar", "traveler-profile-photo-input", function(){ setMenuAvatar(true); if(state.tab==="profile") renderProfile(); });
     wireProfileIdentityCard();
   } else {
-    document.getElementById("btn-signin-profile").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
     document.getElementById("profile-identity-signin").addEventListener("click", function(e){ e.preventDefault(); authContext = "traveler"; openSheet("auth"); });
   }
   if(isAdmin()){
@@ -9928,10 +9997,19 @@ function profileIdentityCardHtml(variant, connected){
       '<p class="profile-identity-static">Non connecté — <a href="#" id="profile-identity-signin">se connecter</a></p>'+
     '</div>';
   }
+  // Photo du compte + e-mail + déconnexion, sous la bascule voyageur/hôte
+  // (auparavant en tête de page, au-dessus de la carte). Mêmes ids
+  // qu'avant pour wireAccountAvatar() et #btn-signout.
+  var pre = isHost ? "host" : "traveler";
+  var initial = authState.email ? authState.email.charAt(0).toUpperCase() : "?";
   return '<div class="profile-identity profile-identity--'+variant+'">'+
     profileIdentitySwitchHtml(isHost)+
     '<div class="profile-identity-title">Votre profil</div>'+
-    '<div class="field-block"><label>Email</label><p class="profile-identity-static">'+esc(authState.email||"")+'</p></div>'+
+    '<div class="profile-identity-account">'+
+      '<div class="profile-avatar" id="'+pre+'-profile-avatar">'+initial+'</div>'+
+      '<input type="file" id="'+pre+'-profile-photo-input" accept="image/*" style="display:none">'+
+      '<div class="profile-identity-account-txt"><b>'+esc(authState.email||"")+'</b><a href="#" id="btn-signout">Se déconnecter</a></div>'+
+    '</div>'+
     '<div class="field-block"><label>Votre nom</label>'+
       '<p class="field-hint" style="margin:0 0 8px;">Celui avec lequel vous souhaitez être contacté — repris automatiquement sur toutes vos annonces, plus besoin de le ressaisir à chaque dépôt.</p>'+
       '<input class="text-input" id="profile-name-input" placeholder="Ex. Karim, ou « La famille Dupont »">'+
@@ -10099,16 +10177,14 @@ function wireAccountAvatar(avatarId, inputId, afterUpdate){
 }
 function renderHostProfile(){
   var feed = document.getElementById("feed");
-  var initial = authState.email ? authState.email.charAt(0).toUpperCase() : "?";
   feed.innerHTML = '<div class="profile-view">'+
-    '<div class="profile-head"><div class="profile-avatar" id="host-profile-avatar">'+initial+'</div><input type="file" id="host-profile-photo-input" accept="image/*" style="display:none"><div><b style="font-size:17px;">'+esc(authState.email||"")+'</b><div style="font-size:12.5px;color:var(--sauge);font-weight:600;"><a href="#" id="btn-signout" style="text-decoration:underline;">Se déconnecter</a></div></div></div>'+
     profileIdentityCardHtml("hotes")+
     (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       changePasswordRowHtml()+
     '</div></div>'+
-    '<div class="profile-card"><div class="profile-card-title">Votre formule</div>'+
+    '<div class="profile-plans"><div class="profile-section-label">Votre formule</div>'+
     /* Aucune carte marquée active au premier rendu : hostAccountCache est
        systématiquement invalidé par enterHostMode(), donc le vrai plan
        n'est jamais connu à cet instant. Deviner "simple" ici (ancien code)
@@ -10134,7 +10210,7 @@ function renderHostProfile(){
     document.getElementById("row-admin-queue").addEventListener("click", renderAdminQueue);
     loadAdminQueueCount();
   }
-  wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ if(state.hostTab==="profile") renderHostProfile(); });
+  wireAccountAvatar("host-profile-avatar", "host-profile-photo-input", function(){ setMenuAvatar(true); if(state.hostTab==="profile") renderHostProfile(); });
   wireProfileIdentityCard();
   wireLegalRows();
   resolveHostAccount(function(account){
