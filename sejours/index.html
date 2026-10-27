@@ -5942,7 +5942,9 @@ function contactLogRowHtml(entryId, entry){
       swHtml+
       '<div><b>'+esc(entry.listingName||"Annonce")+'</b>'+
         (subLine ? '<span>'+esc(subLine)+'</span>' : '')+
-        '<span>'+meta.label+' · '+fmtContactDate(entry.createdAt)+(confirmed?' · Séjour confirmé':'')+'</span>'+
+        // Dans la carte : le séjour souhaité (si renseigné) plutôt que la
+        // date du contact, qui sert désormais de titre de groupe.
+        '<span>'+meta.label+' · '+esc(wishedStayLabel(entry.checkIn, entry.checkOut))+(confirmed?' · Séjour confirmé':'')+'</span>'+
       '</div>'+
     '</div>'+
     (confirmed ? '' :
@@ -5962,17 +5964,47 @@ function contactLogRowHtml(entryId, entry){
    séparer ici — pas de "En cours"/"Séjours confirmés" en tête non plus,
    redondant avec l'onglet où l'on se trouve déjà. */
 function groupedDemandesHtml(pendingDocs){
+  // Groupes par jour de prise de contact (docs déjà triés par createdAt
+  // décroissant : les plus récents en premier) — plus facile de savoir où
+  // on en est. Les dates souhaitées passent dans chaque carte.
   var order = [], byKey = {};
   pendingDocs.forEach(function(d){
     var e = d.data();
-    var key = (e.checkIn||"?")+"_"+(e.checkOut||"?");
-    if(!byKey[key]){ byKey[key] = {checkIn:e.checkIn, checkOut:e.checkOut, docs:[]}; order.push(byKey[key]); }
+    var key = contactDayKey(e.createdAt);
+    if(!byKey[key]){ byKey[key] = {label:contactDayLabel(e.createdAt), docs:[]}; order.push(byKey[key]); }
     byKey[key].docs.push(d);
   });
   return order.map(function(g, i){
-    return '<div class="log-period-label"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(stayPeriodLabel(g.checkIn, g.checkOut))+'</div>'+
+    return '<div class="log-period-label"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(g.label)+'</div>'+
       '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
   }).join("");
+}
+function contactTsDate(ts){
+  if(!ts) return null;
+  var d = typeof ts.toDate==="function" ? ts.toDate() : new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
+function contactDayKey(ts){
+  var d = contactTsDate(ts);
+  return d ? d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate() : "?";
+}
+/* « Contactés aujourd'hui / hier / le 24 oct. 2026 ». */
+function contactDayLabel(ts){
+  var d = contactTsDate(ts);
+  if(!d) return "Date de contact inconnue";
+  var today = new Date(); today.setHours(0,0,0,0);
+  var day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  var diff = Math.round((today - day)/86400000);
+  if(diff===0) return "Contactés aujourd'hui";
+  if(diff===1) return "Contactés hier";
+  var mois = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+  return "Contactés le "+d.getDate()+" "+mois[d.getMonth()]+" "+d.getFullYear();
+}
+/* Séjour souhaité, affiché dans la carte d'une demande. */
+function wishedStayLabel(checkIn, checkOut){
+  if(!checkIn || !checkOut) return "Dates non précisées";
+  var year = new Date(checkOut+"T00:00:00").getFullYear();
+  return "Du "+fmtDate(checkIn)+" au "+fmtDate(checkOut)+" "+year;
 }
 /* Grande vignette d'une demande (même mécanisme, historiquement, que le feu
    selectMapListing() de l'ex-onglet Carte — délibérément dupliqué plutôt
