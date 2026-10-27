@@ -2429,6 +2429,21 @@ body.map-fullscreen{overflow:hidden;}
 .hl-menu .hl-menu-mail{padding:8px 12px 10px; font-size:12.5px; color:var(--muted); border-bottom:1px solid var(--cream-deep); margin-bottom:4px; overflow:hidden; text-overflow:ellipsis;}
 @media (max-width:640px){ .hl-acc-btn{padding:9px 14px; font-size:13.5px;} }
 
+/* Espace voyageur : picto central Explorer en grande pastille pleine,
+   aplat vert propriétaire sans effet verre, étoile blanche, sans libellé
+   (aria-label sur le bouton) ; plus gros que les deux autres pictos. */
+.tab.tab-solo{justify-content:center; gap:0;}
+.tab.tab-solo .tab-icon, .tab.tab-solo.active .tab-icon{width:54px; height:54px; border-radius:17px; background:var(--sauge);
+  box-shadow:0 6px 14px rgba(29,40,32,.22);}
+.tab.tab-solo .tab-icon::before{content:none;}
+.tab.tab-solo .tab-icon svg, .tab.tab-solo.active .tab-icon svg{width:24px; height:24px; fill:#fff; stroke:#fff; stroke-width:1.2; stroke-linejoin:round;}
+/* L'étoile fait un quart de tour toutes les 4 s (pause, puis rotation
+   souple avec un léger dépassement) pour attirer l'œil vers la navigation
+   principale ; symétrique, elle reprend exactement sa position. Coupé si
+   « réduire les animations » est demandé. */
+@keyframes tabStarTurn{0%,78%{transform:rotate(0deg);} 96%{transform:rotate(96deg);} 100%{transform:rotate(90deg);}}
+.tab.tab-solo .tab-icon svg{animation:tabStarTurn 4s cubic-bezier(.45,0,.25,1) infinite; transform-origin:50% 50%;}
+@media (prefers-reduced-motion:reduce){ .tab.tab-solo .tab-icon svg{animation:none;} }
 /* ---------- Refonte espaces voyageur / hôte (vert propriétaire) ----------
    Plus de lavande pour l'espace hôte : tout reste en vert sauge. Seule la
    barre de menus du bas marque la différence, en négatif côté hôte (bande
@@ -9644,9 +9659,10 @@ var TRAVELER_TABS_HTML =
   // avant par rapport aux autres" — .tab-primary (voir son CSS), même
   // classe côté HOST_TABS_HTML sur Mes annonces, qui joue le même rôle
   // "onglet principal" dans l'espace hôte.
-  '<button class="tab tab-primary" data-tab="explore">'+
-    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg></span>'+
-    '<span>Explorer</span>'+
+  // Picto central de l'espace voyageur : grande pastille pleine (aplat
+  // vert, étoile blanche aux côtés incurvés), sans libellé visible.
+  '<button class="tab tab-primary tab-solo" data-tab="explore" aria-label="Explorer">'+
+    '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg></span>'+
   '</button>'+
   '<button class="tab" data-tab="likes">'+
     '<span class="tab-icon"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></span>'+
