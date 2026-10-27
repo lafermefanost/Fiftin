@@ -2568,13 +2568,15 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-account:has(.hl-menu.open) .hl-burger .b2{opacity:0;}
 .hl-account:has(.hl-menu.open) .hl-burger .b3{transform:translateY(-4.5px) rotate(-45deg);}
 @media (prefers-reduced-motion:reduce){ .hl-burger path{transition:none;} }
-/* Menu aussi sans compte : bouton menu (.hl-guest-btn) à côté de « Se
-   connecter » ; entrées propres au visiteur (.m-guest : connexion,
+/* Menu aussi sans compte : bouton menu seul (.hl-guest-btn) ; entrées propres au visiteur (.m-guest : connexion,
    découverte, dépôt d'annonce) ou au compte (.m-user : espaces,
    déconnexion), selon .is-guest sur .hl-account. */
 .hl-account{display:flex; align-items:center; gap:8px;}
 .hl-guest-btn[hidden]{display:none !important;}
 .hl-account.is-guest .m-user, .hl-account:not(.is-guest) .m-guest{display:none !important;}
+/* Visiteur : plus de bouton jaune « Se connecter » à part, la connexion
+   est la première entrée du menu. */
+.hl-account.is-guest > :not(.hl-guest-btn):not(.hl-menu){display:none !important;}
 
 </style>
 
