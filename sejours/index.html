@@ -2437,6 +2437,13 @@ body.map-fullscreen{overflow:hidden;}
   box-shadow:0 6px 14px rgba(29,40,32,.22);}
 .tab.tab-solo .tab-icon::before{content:none;}
 .tab.tab-solo .tab-icon svg, .tab.tab-solo.active .tab-icon svg{width:24px; height:24px; fill:#fff; stroke:#fff; stroke-width:1.2; stroke-linejoin:round;}
+/* L'étoile fait un quart de tour toutes les 4 s (pause, puis rotation
+   souple avec un léger dépassement) pour attirer l'œil vers la navigation
+   principale ; symétrique, elle reprend exactement sa position. Coupé si
+   « réduire les animations » est demandé. */
+@keyframes tabStarTurn{0%,78%{transform:rotate(0deg);} 96%{transform:rotate(96deg);} 100%{transform:rotate(90deg);}}
+.tab.tab-solo .tab-icon svg{animation:tabStarTurn 4s cubic-bezier(.45,0,.25,1) infinite; transform-origin:50% 50%;}
+@media (prefers-reduced-motion:reduce){ .tab.tab-solo .tab-icon svg{animation:none;} }
 /* ---------- Refonte espaces voyageur / hôte (vert propriétaire) ----------
    Plus de lavande pour l'espace hôte : tout reste en vert sauge. Seule la
    barre de menus du bas marque la différence, en négatif côté hôte (bande
