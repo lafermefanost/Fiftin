@@ -352,7 +352,7 @@ a{color:inherit; text-decoration:none;}
   border-radius:50%; background:rgba(239,238,234,.25); border:none; color:var(--cream); font-size:15px; line-height:1;
   font-family:'Jost',sans-serif;}
 .chip-map{flex-shrink:0; width:38px; align-self:stretch; min-height:36px; display:flex; align-items:center; justify-content:center; padding:0;
-  border-radius:12px; border:none; background:var(--sauge); color:#fff; cursor:pointer;}
+  border-radius:16px; border:none; background:var(--sauge); color:#fff; cursor:pointer;}
 .chip-map svg{width:17px; height:17px;}
 /* L'ancien bouton carte flottant est remplacé par .chip-map. */
 .map-back-btn{display:none !important;}
@@ -1402,6 +1402,12 @@ body.detail-open nav.tabbar{z-index:220;}
    bas) : sans cette marge propre au bloc, la carte irait aussi bord à bord,
    perdant ses coins arrondis à l'écran. */
 .explore-map-block{margin:10px 16px 18px;}
+/* Plus d'aperçu de la carte dans le fil : la carte ne s'affiche qu'en
+   plein écran, via le bouton carte du bandeau de filtres (.chip-map). Le
+   bloc reste monté (Leaflet garde sa taille réelle, 0 px de hauteur dans
+   le flux, invisible) ; .map-canvas.expanded, en position fixe, n'est pas
+   rogné par overflow:hidden. */
+body:not(.map-fullscreen) .explore-map-block{height:0; margin:0; overflow:hidden; visibility:hidden;}
 /* z-index:0 en plus de position:relative : ouvre un nouveau contexte
    d'empilement propre à .map-canvas, qui CONTIENT tous les z-index internes
    élevés (les tuiles/punaises Leaflet vont jusqu'à ~700, .map-zone-btn est
