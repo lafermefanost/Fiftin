@@ -394,6 +394,10 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .is-menu .hl-burger{display:block; width:21px !important; height:21px !important;}
 /* Menu ouvert : les trois traits se changent en croix (fermer). */
 .hl-burger path{transform-box:view-box; transform-origin:12px 12px; transition:transform .28s cubic-bezier(.4,0,.2,1), opacity .2s ease;}
+/* Chaque trait pivote autour de son propre milieu puis rejoint le centre :
+   croix parfaitement centrée et symétrique. */
+.hl-burger .b1{transform-origin:12px 7.5px;}
+.hl-burger .b3{transform-origin:12px 16.5px;}
 .hl-account:has(.hl-menu.open) .hl-burger .b1{transform:translateY(4.5px) rotate(45deg);}
 .hl-account:has(.hl-menu.open) .hl-burger .b2{opacity:0;}
 .hl-account:has(.hl-menu.open) .hl-burger .b3{transform:translateY(-4.5px) rotate(-45deg);}
