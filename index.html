@@ -402,6 +402,13 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-account:has(.hl-menu.open) .hl-burger .b2{opacity:0;}
 .hl-account:has(.hl-menu.open) .hl-burger .b3{transform:translateY(-4.5px) rotate(-45deg);}
 @media (prefers-reduced-motion:reduce){ .hl-burger path{transition:none;} }
+/* Menu aussi sans compte : bouton menu (.hl-guest-btn) à côté de « Se
+   connecter » ; entrées propres au visiteur (.m-guest : connexion,
+   découverte, dépôt d'annonce) ou au compte (.m-user : espaces,
+   déconnexion), selon .is-guest sur .hl-account. */
+.hl-account{display:flex; align-items:center; gap:8px;}
+.hl-guest-btn[hidden]{display:none !important;}
+.hl-account.is-guest .m-user, .hl-account:not(.is-guest) .m-guest{display:none !important;}
 
 </style>
 </head>
@@ -410,31 +417,45 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 <header class="hl-top">
   <a class="hl-home" href="./" aria-label="Haut de la page d'accueil" title="Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
   <a class="hl-top-link" href="sejours/?espace=hote">Déposer une annonce</a>
-  <div class="hl-account">
+  <div class="hl-account is-guest">
     <a class="hl-acc-btn" id="hlAccBtn" href="sejours/?login=1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       <span id="hlAccLabel">Se connecter</span>
       <svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="b1" d="M4.5 7.5h15"/><path class="b2" d="M4.5 12h15"/><path class="b3" d="M4.5 16.5h15"/></svg>
     </a>
+    <button type="button" class="hl-acc-btn is-menu hl-guest-btn" id="hlGuestBtn" aria-label="Menu" aria-haspopup="true"><svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="b1" d="M4.5 7.5h15"/><path class="b2" d="M4.5 12h15"/><path class="b3" d="M4.5 16.5h15"/></svg></button>
     <div class="hl-menu" id="hlMenu" role="menu">
-      <div class="hl-menu-mail" id="hlMenuMail"></div>
-      <a href="sejours/?espace=voyageur" role="menuitem">
+      <div class="hl-menu-mail m-guest">Vous n'êtes pas connecté</div>
+      <button type="button" class="m-guest" id="hlGuestLogin" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+        <span>Se connecter ou créer un compte<small>Un seul compte pour Séjours et Planning</small></span>
+      </button>
+      <a class="m-guest" href="sejours/" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <span>Fiftin Séjours<small>Trouver un séjour en direct</small></span>
+      </a>
+      <a class="m-guest" href="sejours/?espace=hote" role="menuitem">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
+        <span>Déposer une annonce<small>Espace hôte de Fiftin Séjours</small></span>
+      </a>
+      <div class="hl-menu-mail m-user" id="hlMenuMail"></div>
+      <a class="m-user" href="sejours/?espace=voyageur" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
         <span>Espace voyageur<small>Mes séjours, favoris et profil</small></span>
       </a>
-      <a href="sejours/?espace=hote" role="menuitem">
+      <a class="m-user" href="sejours/?espace=hote" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
         <span>Espace hôte<small>Mes annonces sur Fiftin Séjours</small></span>
       </a>
       <a href="app/" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        <span>Fiftin Planning<small>Ouvrir l'outil de gestion</small></span>
+        <span>Fiftin Planning<small><span class="m-user">Ouvrir l'outil de gestion</span><span class="m-guest">Se connecter ou créer un compte</span></small></span>
       </a>
       <a href="planning/" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg>
         <span>Découvrir Fiftin Planning<small>Fonctionnalités et formules</small></span>
       </a>
-      <button type="button" id="hlSignOut" role="menuitem">
+      <button type="button" class="m-user" id="hlSignOut" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
         <span>Se déconnecter</span>
       </button>
@@ -772,6 +793,9 @@ hlBtn.addEventListener("click",function(e){
   if(!hlUser){ hlOpenAuth(); return; } // non connecté : encart de connexion sur place
   hlMenu.classList.toggle("open");
 });
+// Visiteur : bouton menu à côté de « Se connecter » (découverte, connexion).
+document.getElementById("hlGuestBtn").addEventListener("click",function(){ hlMenu.classList.toggle("open"); });
+document.getElementById("hlGuestLogin").addEventListener("click",function(){ hlMenu.classList.remove("open"); hlOpenAuth(); });
 
 /* Connexion sur l'accueil même (plus de détour par Séjours) : même compte
    Firebase, mêmes messages et même comportement que le volet de connexion
@@ -869,6 +893,8 @@ hlLoadFirebase(function(){
     document.getElementById("hlAccLabel").textContent=u?"Menu":"Se connecter";
     hlBtn.classList.toggle("is-menu",!!u); if(u) hlBtn.setAttribute("aria-label","Menu"); else hlBtn.removeAttribute("aria-label");
     document.getElementById("hlMenuMail").textContent=u&&u.email?u.email:"";
+    document.getElementById("hlGuestBtn").hidden=!!u;
+    hlBtn.parentNode.classList.toggle("is-guest",!u);
     if(!u) hlMenu.classList.remove("open");
   });
   var db=firebase.firestore();
