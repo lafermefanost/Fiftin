@@ -1,0 +1,47 @@
+# Règles Firestore (firestore.rules) — lancé à la main uniquement.
+#   mode "verifier" : compare les règles actuellement en production avec le
+#                     fichier du dépôt (diff dans le journal), sans rien changer.
+#   mode "deployer" : remplace les règles en production par firestore.rules.
+# Un déploiement remplace TOUTES les règles (outil compris) : toujours lancer
+# "verifier" d'abord et ne déployer que si la seule différence est voulue.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Règles Firestore
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "verifier (comparaison seule) ou deployer"
+        required: true
+        default: verifier
+        type: choice
+        options: [verifier, deployer]
+
+concurrency:
+  group: deploy-rules
+  cancel-in-progress: false
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          token_format: access_token
+      - name: Règles en production comparées au dépôt
+        env:
+          TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          set -euo pipefail
+          API=https://firebaserules.googleapis.com/v1
+          NAME=$(curl -sSf -H "Authorization: Bearer $TOKEN" "$API/projects/fiftin-e30c2/releases/cloud.firestore" | jq -r .rulesetName)
+          echo "Règles en production : $NAME"
+          curl -sSf -H "Authorization: Bearer $TOKEN" "$API/$NAME" | jq -r '.source.files[0].content' > live.rules
+          if diff -u live.rules firestore.rules; then echo "IDENTIQUES : rien à déployer."; else echo "DIFFÉRENCES ci-dessus (- production, + dépôt)."; fi
+      - name: Déploiement
+        if: inputs.mode == 'deployer'
+        run: npx --yes firebase-tools@13.29.1 deploy --only firestore:rules --project fiftin-e30c2 --non-interactive
