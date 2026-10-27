@@ -500,6 +500,12 @@ a.is-menu, button.is-menu{width:40px; height:40px; padding:0 !important; gap:0 !
 a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.16) !important;}
 .is-menu > svg:not(.hl-burger), .is-menu > span{display:none !important;}
 .is-menu .hl-burger{display:block; width:21px !important; height:21px !important;}
+/* Menu ouvert : les trois traits se changent en croix (fermer). */
+.hl-burger path{transform-box:view-box; transform-origin:12px 12px; transition:transform .28s cubic-bezier(.4,0,.2,1), opacity .2s ease;}
+.hl-account:has(.hl-menu.open) .hl-burger .b1{transform:translateY(4.5px) rotate(45deg);}
+.hl-account:has(.hl-menu.open) .hl-burger .b2{opacity:0;}
+.hl-account:has(.hl-menu.open) .hl-burger .b3{transform:translateY(-4.5px) rotate(-45deg);}
+@media (prefers-reduced-motion:reduce){ .hl-burger path{transition:none;} }
 
 </style>
 </head>
@@ -510,7 +516,7 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
     <a class="pl-login" href="app/" id="plLogin">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
       <span id="plLoginLabel">Se connecter</span>
-      <svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4.5 7.5h15M4.5 12h15M4.5 16.5h15"/></svg>
+      <svg class="hl-burger" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path class="b1" d="M4.5 7.5h15"/><path class="b2" d="M4.5 12h15"/><path class="b3" d="M4.5 16.5h15"/></svg>
     </a>
     <div class="hl-menu" id="plMenu" role="menu">
       <div class="hl-menu-mail" id="plMenuMail"></div>
