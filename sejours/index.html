@@ -2631,9 +2631,9 @@ function fiftinSetBrandVideoSrc(id){
         <span>Déposer une annonce<small>Espace hôte de Fiftin Séjours</small></span>
       </a>
       <div class="hl-menu-mail m-user"><span class="hl-menu-avatar" id="sejMenuAvatar"></span><span id="sejMenuMail"></span></div>
-      <a class="m-user" href="sejours/?espace=voyageur" role="menuitem">
+      <a class="m-user" href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
-        <span>Espace voyageur<small>Mes séjours, favoris et profil</small></span>
+        <span>Espace voyageur<small>Explorer les annonces</small></span>
       </a>
       <a class="m-user" href="sejours/?espace=hote" role="menuitem">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
@@ -7921,7 +7921,7 @@ function submitAuthSheet(){
     // par l'hôte, capture d'écran à l'appui. enterHostMode() gérait déjà
     // correctement son propre chrome, d'où ce bug invisible tant que seul
     // "Devenir hôte" déclenchait cette connexion.
-    if(authContext==="host") enterHostMode(); else switchTab("profile");
+    if(authContext==="host") enterHostMode(authHostTab); else switchTab("profile");
   };
   if(authMode==="signup"){
     var pw2 = document.getElementById("auth-password2").value;
@@ -9984,7 +9984,9 @@ function renderTabbar(){
    annonces" surprenait, "on devrait rester sur la vue profil") — c'est
    aussi depuis ce Profil hôte qu'on ressort vers l'espace voyageur (voir
    HOST_TABS_HTML, plus de 3e onglet séparé pour ça). */
-function enterHostMode(){
+/* tab : onglet hôte d'arrivée ("listings" = Mes annonces, depuis le menu
+   du site) ; Profil par défaut. */
+function enterHostMode(tab){
   if(!authState.uid){ authContext = "host"; openSheet("auth"); return; }
   // Même correctif que switchTab() : repartir du haut à chaque changement
   // de menu, pour ne pas atterrir en espace hôtes à la position de
@@ -10013,7 +10015,7 @@ function enterHostMode(){
   var mapBackBtnHost = document.getElementById("map-back-btn");
   if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
-  state.hostTab = "profile";
+  state.hostTab = tab || "profile";
   state.hostListingId = null;
   state.hostUnitId = null;
   hostListingsCache = [];
@@ -11192,12 +11194,14 @@ if(state.hostMode){
 updateHeroMenu();
 
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
-   racine) : ?espace=voyageur → Profil voyageur ; ?espace=hote → Espace
-   hôtes (connexion demandée si besoin) ; ?login=1 → volet de connexion.
+   racine) : ?espace=voyageur → Profil voyageur
+   (&onglet=explore : Explorer, depuis le menu du site) ; ?espace=hote →
+   Mes annonces de l'espace hôtes (connexion demandée si besoin) ;
+   ?login=1 → volet de connexion.
    &next=/chemin : page du site où revenir une fois connecté (ex. la page
    Fiftin Planning, qui y relance le paiement de la formule choisie).
    Paramètres retirés de l'adresse aussitôt. */
-var authNextUrl = null;
+var authNextUrl = null, authHostTab = null;
 (function(){
   var q = new URLSearchParams(location.search);
   var espace = q.get("espace"), login = q.get("login"), next = q.get("next");
@@ -11209,9 +11213,13 @@ var authNextUrl = null;
     var tries = 0;
     (function wait(){ if(authState.ready || tries++>80) fn(); else setTimeout(wait, 100); })();
   }
-  if(espace==="voyageur"){ if(state.hostMode) exitHostMode(); else switchTab("profile"); }
+  if(espace==="voyageur"){
+    if(state.hostMode){ state.hostMode = false; persist(); renderTabbar(); }
+    switchTab(q.get("onglet")==="explore" ? "explore" : "profile");
+  }
   else if(espace==="hote") whenAuthReady(function(){
-    if(authState.uid) enterHostMode(); else { authContext = "host"; openSheet("auth"); }
+    authHostTab = "listings";
+    if(authState.uid) enterHostMode("listings"); else { authContext = "host"; openSheet("auth"); }
   });
   else if(login==="1") whenAuthReady(function(){
     if(authState.uid){ if(authNextUrl) location.href = authNextUrl; else switchTab("profile"); }
