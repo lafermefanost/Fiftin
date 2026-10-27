@@ -577,19 +577,28 @@ service cloud.firestore {
         && (request.resource.data.checkOut is string || request.resource.data.checkOut == null)
         && request.resource.data.createdAt == request.time
         && request.resource.data.keys().hasOnly(['listingId', 'listingName', 'channel', 'checkIn', 'checkOut', 'createdAt']);
-      // Seule mise à jour permise : confirmer un séjour (Envies -> Demandes,
-      // bouton "validé", confirmContactLogEntry()) — une transition à SENS
-      // UNIQUE, pending (pas de champ status) -> confirmed, jamais l'inverse
-      // et jamais une seconde fois (resource.data.get('status', null) doit
-      // être absent avant l'écriture : une fois confirmée, la règle refuse
-      // toute nouvelle mise à jour, cohérent avec l'UI qui retire les
-      // boutons d'action une fois confirmé). confirmedAt vérifié comme un
-      // vrai timestamp serveur, même principe que createdAt à la création.
+      // Deux mises à jour permises (Mes séjours, carnet de voyage) :
+      // 1) valider une demande (openStaySheet(), mode "confirm") — transition
+      //    à SENS UNIQUE pending -> confirmed, confirmedAt = vrai timestamp
+      //    serveur, avec les dates retenues stayIn/stayOut (texte AAAA-MM-JJ
+      //    ou null si pas encore connues) ;
+      // 2) modifier les dates d'un séjour déjà validé (mode "edit") — SEULS
+      //    stayIn/stayOut peuvent changer, jamais le statut ni le reste.
+      function stayDatesOk(d){
+        return (d.get('stayIn', null) == null || (d.stayIn is string && d.stayIn.size() == 10))
+          && (d.get('stayOut', null) == null || (d.stayOut is string && d.stayOut.size() == 10));
+      }
       allow update: if request.auth != null && request.auth.uid == uid
-        && resource.data.get('status', null) == null
-        && request.resource.data.status == 'confirmed'
-        && request.resource.data.confirmedAt == request.time
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt']);
+        && stayDatesOk(request.resource.data)
+        && (
+          (resource.data.get('status', null) == null
+            && request.resource.data.status == 'confirmed'
+            && request.resource.data.confirmedAt == request.time
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'confirmedAt', 'stayIn', 'stayOut']))
+          ||
+          (resource.data.get('status', null) == 'confirmed'
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stayIn', 'stayOut']))
+        );
     }
 
     // Collections de favoris (Mes séjours -> Favoris, voir

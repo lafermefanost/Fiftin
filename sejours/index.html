@@ -1552,6 +1552,10 @@ body.map-fullscreen{overflow:hidden;}
 .log-action.confirm{color:var(--sauge-deep); border-color:rgba(53,75,56,.3);}
 .log-action.decline{color:var(--danger); border-color:rgba(178,84,59,.35);}
 .log-action.move{color:var(--ink);}
+.log-action.edit{color:var(--sauge-deep); border-color:rgba(53,75,56,.3);}
+.stay-unknown{display:flex; align-items:center; gap:10px; margin:14px 0 4px; font-size:14px; color:var(--ink); cursor:pointer;}
+.stay-unknown input{width:18px; height:18px; accent-color:var(--sauge);}
+.qr-field input:disabled{opacity:.45;}
 /* Effet "balayer pour révéler" (retour utilisateur : "comme sur iPhone où
    tu scrolles légèrement sur la gauche pour faire apparaître ces menus
    derrière, comme si les menus étaient cachés par l'encart lui-même" —
@@ -5937,17 +5941,22 @@ function contactLogRowHtml(entryId, entry){
   var swHtml = thumb ? '<img class="sw" src="'+thumb+'" alt="" loading="lazy">'
     : '<div class="sw" style="background:'+(l ? GRADIENTS[l.grad] : "var(--cream-deep)")+'"></div>';
   var subLine = l ? (l.region+' · '+listingPriceLabel(l)) : "";
+  // Séjour validé (carnet de voyage) : dates retenues + repère dans le
+  // temps ; demande en cours : canal + séjour souhaité.
+  var lastLine = confirmed ? tripLine(entry)
+    : meta.label+' · '+wishedStayLabel(entry.checkIn, entry.checkOut);
   return '<div class="map-list-item demande-row'+(confirmed?'':' swipe-row')+'">'+
     '<div class="log-body"'+(l?' data-open-log="'+numericId+'"':'')+'>'+
       swHtml+
       '<div><b>'+esc(entry.listingName||"Annonce")+'</b>'+
         (subLine ? '<span>'+esc(subLine)+'</span>' : '')+
-        // Dans la carte : le séjour souhaité (si renseigné) plutôt que la
-        // date du contact, qui sert désormais de titre de groupe.
-        '<span>'+meta.label+' · '+esc(wishedStayLabel(entry.checkIn, entry.checkOut))+(confirmed?' · Séjour confirmé':'')+'</span>'+
+        '<span>'+esc(lastLine)+'</span>'+
       '</div>'+
     '</div>'+
-    (confirmed ? '' :
+    (confirmed ?
+      '<div class="log-actions">'+
+        '<button type="button" class="log-action edit" data-log-edit="'+esc(entryId)+'" aria-label="Modifier les dates du séjour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></button>'+
+      '</div>' :
       '<div class="log-actions">'+
         '<button type="button" class="log-action confirm" data-log-confirm="'+esc(entryId)+'" aria-label="Confirmer le séjour"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg></button>'+
         '<button type="button" class="log-action decline" data-log-decline="'+esc(entryId)+'" aria-label="Supprimer cette demande"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
@@ -6000,6 +6009,106 @@ function contactDayLabel(ts){
   var mois = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
   return "Contactés le "+d.getDate()+" "+mois[d.getMonth()]+" "+d.getFullYear();
 }
+/* Carnet de voyage (onglet Séjours). Dates retenues à la validation
+   (stayIn/stayOut, null si pas encore connues) ; pour un séjour validé
+   avant l'existence de ces champs, repli sur les dates demandées au
+   contact (checkIn/checkOut). */
+function tripDates(e){
+  var has = Object.prototype.hasOwnProperty.call(e, "stayIn");
+  var a = has ? e.stayIn : e.checkIn, b = has ? e.stayOut : e.checkOut;
+  return (a && b) ? {in:a, out:b} : null;
+}
+function localISO(d){ return d.getFullYear()+"-"+("0"+(d.getMonth()+1)).slice(-2)+"-"+("0"+d.getDate()).slice(-2); }
+function daysBetween(a, b){ return Math.round((new Date(b+"T00:00:00") - new Date(a+"T00:00:00"))/86400000); }
+function tripLine(e){
+  var t = tripDates(e);
+  if(!t) return "Dates à préciser";
+  var nights = daysBetween(t.in, t.out);
+  var line = wishedStayLabel(t.in, t.out)+(nights>0 ? " · "+nights+" nuit"+(nights>1?"s":"") : "");
+  var today = localISO(new Date());
+  if(t.in<=today && t.out>=today) return line+" · En cours";
+  if(t.in>today){
+    var n = daysBetween(today, t.in);
+    return line+" · "+(n===1 ? "demain" : "dans "+n+" jours");
+  }
+  return line;
+}
+/* À venir (le plus proche en premier, séjour en cours compris), dates à
+   préciser, puis passés (le plus récent en premier). */
+function groupedSejoursHtml(docs){
+  var today = localISO(new Date()), up = [], unknown = [], past = [];
+  docs.forEach(function(d){
+    var t = tripDates(d.data());
+    if(!t) unknown.push(d); else if(t.out>=today) up.push({d:d, t:t}); else past.push({d:d, t:t});
+  });
+  up.sort(function(a,b){ return a.t.in<b.t.in ? -1 : a.t.in>b.t.in ? 1 : 0; });
+  past.sort(function(a,b){ return a.t.in>b.t.in ? -1 : a.t.in<b.t.in ? 1 : 0; });
+  var groups = [
+    {label:"À venir", docs:up.map(function(x){ return x.d; })},
+    {label:"Dates à préciser", docs:unknown},
+    {label:"Séjours passés", docs:past.map(function(x){ return x.d; })}
+  ].filter(function(g){ return g.docs.length; });
+  return groups.map(function(g, i){
+    return '<div class="log-period-label"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(g.label)+'</div>'+
+      '<div class="map-list">'+g.docs.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+  }).join("");
+}
+/* Volet « dates du séjour » : à la validation d'une demande (mode
+   "confirm") ou pour modifier un séjour validé (mode "edit"). Préremplit
+   avec les dates déjà connues ; « Je ne connais pas encore les dates »
+   permet de valider quand même. */
+function openStaySheet(entryId, entry, mode){
+  var t = mode==="edit" ? tripDates(entry) : (entry.checkIn && entry.checkOut ? {in:entry.checkIn, out:entry.checkOut} : null);
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+    '<h3>'+(mode==="edit" ? "Dates du séjour" : "Ce séjour a bien eu lieu, ou aura lieu ?")+'</h3>'+
+    '<p class="field-hint" style="margin:-4px 0 14px;">'+esc(entry.listingName||"Annonce")+(mode==="edit"?"":" · indiquez les dates retenues pour l'ajouter à votre carnet de voyage.")+'</p>'+
+    '<div class="qr-row">'+
+      '<div class="qr-field"><label>Arrivée</label><input type="date" id="stay-in" value="'+(t?t.in:"")+'"></div>'+
+      '<div class="qr-field"><label>Départ</label><input type="date" id="stay-out" value="'+(t?t.out:"")+'"></div>'+
+    '</div>'+
+    '<label class="stay-unknown"><input type="checkbox" id="stay-unknown"'+(t?'':' checked')+'> Je ne connais pas encore les dates</label>'+
+    '<p class="field-hint" id="stay-err" style="color:var(--danger);"></p>'+
+    '<div class="sheet-apply">'+
+      '<button type="button" class="btn-apply" id="stay-save">'+(mode==="edit" ? "Enregistrer" : "Valider le séjour")+'</button>'+
+      '<button type="button" class="link-btn" id="stay-cancel" style="width:100%; text-align:center; margin:12px 0 0;">Annuler</button>'+
+    '</div>'+
+  '</div></div></div>';
+  var $in = document.getElementById("stay-in"), $out = document.getElementById("stay-out"), $unk = document.getElementById("stay-unknown");
+  function sync(){ $in.disabled = $out.disabled = $unk.checked; }
+  sync();
+  $unk.addEventListener("change", sync);
+  [$in,$out].forEach(function(el){ el.addEventListener("change", function(){ if($in.value && (!$out.value || $out.value<=$in.value)){ var d=new Date($in.value+"T00:00:00"); d.setDate(d.getDate()+1); $out.value = localISO(d); } }); });
+  document.getElementById("sheet-close").addEventListener("click", closeSheet);
+  document.getElementById("stay-cancel").addEventListener("click", closeSheet);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
+  document.getElementById("stay-save").addEventListener("click", function(){
+    var err = document.getElementById("stay-err");
+    var a = $unk.checked ? null : ($in.value || null), b = $unk.checked ? null : ($out.value || null);
+    if(!$unk.checked && (!a || !b)){ err.textContent = "Indiquez l'arrivée et le départ, ou cochez « Je ne connais pas encore les dates »."; return; }
+    if(a && b && b<=a){ err.textContent = "Le départ doit être après l'arrivée."; return; }
+    var btn = this; btn.disabled = true;
+    saveStayDates(entryId, mode, a, b, function(ok){
+      if(ok){ closeSheet(); return; }
+      btn.disabled = false; err.textContent = "Enregistrement impossible pour le moment, réessayez.";
+    });
+  });
+}
+function saveStayDates(entryId, mode, a, b, done){
+  if(!authState.uid){ done(false); return; }
+  var payload = {stayIn:a, stayOut:b};
+  if(mode==="confirm"){ payload.status = "confirmed"; payload.confirmedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+  firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
+    .update(payload)
+    .then(function(){ done(true); contactLogCache = null; renderContactLog(); })
+    .catch(function(err){ console.error("[contactLog] échec de l'enregistrement des dates", err); done(false); });
+}
+function contactLogEntryById(id){
+  var docs = contactLogCache || [];
+  for(var i=0;i<docs.length;i++){ if(docs[i].id===id) return docs[i].data(); }
+  return null;
+}
 /* Séjour souhaité, affiché dans la carte d'une demande. */
 function wishedStayLabel(checkIn, checkOut){
   if(!checkIn || !checkOut) return "Dates non précisées";
@@ -6045,7 +6154,14 @@ function wireContactLogRows(){
     el.addEventListener("click", function(e){
       e.stopPropagation();
       var entryId = el.getAttribute("data-log-confirm");
-      openConfirmSheet("Ce séjour a bien eu lieu, ou aura lieu ?", "Oui, confirmer", "Non, revenir en arrière", function(){ confirmContactLogEntry(entryId); });
+      openStaySheet(entryId, contactLogEntryById(entryId) || {}, "confirm");
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-log-edit]"), function(el){
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      var entryId = el.getAttribute("data-log-edit");
+      openStaySheet(entryId, contactLogEntryById(entryId) || {}, "edit");
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-log-decline]"), function(el){
@@ -6064,13 +6180,6 @@ function wireContactLogRows(){
    dans sa propre fiche détail. Règle Firestore : une transition à sens
    unique, pending -> confirmed uniquement (voir README), donc pas besoin
    de vérifier ici l'état courant, la règle refuse toute seconde écriture. */
-function confirmContactLogEntry(entryId){
-  if(!authState.uid) return;
-  firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
-    .update({status:"confirmed", confirmedAt: firebase.firestore.FieldValue.serverTimestamp()})
-    .then(function(){ contactLogCache = null; renderContactLog(); })
-    .catch(function(err){ console.error("[contactLog] échec de la confirmation", err); });
-}
 function declineContactLogEntry(entryId){
   if(!authState.uid) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").doc(entryId)
@@ -6148,7 +6257,7 @@ function renderContactLog(){
         : '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
           '<p>Aucune demande en cours pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
     } else if(wantConfirmed){
-      body = '<div class="map-selected" id="demandes-selected" hidden></div><div class="map-list">'+filtered.map(function(d){ return contactLogRowHtml(d.id, d.data()); }).join("")+'</div>';
+      body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedSejoursHtml(filtered);
     } else {
       body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedDemandesHtml(filtered);
     }
