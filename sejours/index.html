@@ -2634,13 +2634,14 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-account{display:flex; align-items:center; gap:8px;}
 .hl-guest-btn[hidden]{display:none !important;}
 .hl-account.is-guest .m-user, .hl-account:not(.is-guest) .m-guest{display:none !important;}
-/* Connexion mise en avant dans le menu visiteur : pilule jaune (même
-   bouton que l'ancien « Se connecter » de l'en-tête). */
-.hl-menu .m-login{align-items:center; justify-content:center; gap:7px; width:calc(100% - 8px); margin:6px 4px 8px; padding:11px 16px;
-  border-radius:999px; background:var(--yellow); color:var(--sauge-deep); font-weight:600; font-size:14px; white-space:nowrap;}
+/* Connexion mise en avant dans le menu visiteur : encart jaune aux coins
+   arrondis (13 px, comme les boutons de l'en-tête), même gabarit que les
+   autres entrées pour que tous les pictos restent alignés. */
+.hl-menu .m-login{align-items:center; margin:4px 0 8px; border-radius:13px;
+  background:var(--yellow); color:var(--sauge-deep); font-weight:600; white-space:nowrap;}
 .hl-account.is-guest .hl-menu{min-width:272px;}
 .hl-menu .m-login:hover{background:var(--yellow); filter:brightness(.96);}
-.hl-menu .m-login svg{color:currentColor; margin-top:0; width:16px; height:16px;}
+.hl-menu .m-login svg{color:currentColor; margin-top:0;}
 
 </style>
 
