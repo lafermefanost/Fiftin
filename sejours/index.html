@@ -428,10 +428,10 @@ a{color:inherit; text-decoration:none;}
 #feed.feed-explore .card{border-radius:0;}
 /* Pas de grain sur les vraies photos du fil Explorer (retour utilisateur :
    "retirer l'effet de grain par-dessus les images") — .has-photos posé par
-   coverHtml() quand l'annonce a des photos. Le grain reste sur les
-   couvertures dégradées sans photo et dans les autres vues (Carte, Envies,
-   fiche détail), non concernées par ce retour. */
-#feed.feed-explore .cover.has-photos .grain{display:none;}
+   coverHtml() quand l'annonce a des photos ; puis "enlever partout" :
+   fil, collections, aperçu au-dessus de Demandes/Séjours, etc. Le grain
+   ne reste que sur les couvertures dégradées sans photo. */
+.cover.has-photos .grain{display:none;}
 /* Onglet Carte uniquement (retour utilisateur) : fond derrière la carte/
    la liste distinct de #app/--cream (qui reste tel quel pour la barre de
    filtres et la barre d'onglets — seule la légère différence de gris
