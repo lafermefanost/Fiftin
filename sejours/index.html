@@ -1191,7 +1191,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
    mais un paragraphe de présentation sur plusieurs lignes ferait dériver
    l'avatar vers le bas du bloc si on le gardait centré verticalement. */
 .host-card{display:flex; align-items:flex-start; gap:12px; background:transparent; border-radius:16px; padding:0; margin-bottom:0;}
-.host-avatar{width:46px; height:46px; border-radius:50%; background:var(--lavender); color:#fff; display:flex;
+.host-avatar{width:46px; height:46px; border-radius:28%; background:var(--lavender); color:#fff; display:flex;
   align-items:center; justify-content:center; font-weight:700; font-size:17px; flex-shrink:0; overflow:hidden;}
 .host-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 .host-info{display:flex; flex-direction:column; gap:5px; flex:1; min-width:0;}
@@ -1672,7 +1672,9 @@ body.map-fullscreen{overflow:hidden;}
 /* ---------- profile ---------- */
 .profile-view{padding:24px 0 110px;}
 .profile-head{display:flex; align-items:center; gap:14px; margin-bottom:26px;}
-.profile-avatar{width:60px; height:60px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
+/* Photo de profil : carré aux coins arrondis (28 %), sans contour —
+   même forme partout (profil, menu, fiche annonce, formulaire). */
+.profile-avatar{width:60px; height:60px; border-radius:28%; background:var(--sauge-deep); color:var(--cream);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:22px; overflow:hidden; position:relative; flex-shrink:0;}
 .profile-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
 /* .editable posée par wireAccountAvatar() dès qu'un compte est connecté
@@ -1680,8 +1682,8 @@ body.map-fullscreen{overflow:hidden;}
    voir le grand commentaire au-dessus de wireAccountAvatar()) : plus
    besoin d'avoir déjà déposé une annonce pour pouvoir en ajouter une. */
 .profile-avatar.editable{cursor:pointer;}
-.profile-avatar-badge{position:absolute; right:-2px; bottom:-2px; width:20px; height:20px; border-radius:50%;
-  background:var(--sauge); border:2px solid var(--cream); display:flex; align-items:center; justify-content:center;}
+.profile-avatar-badge{position:absolute; right:3px; bottom:3px; width:20px; height:20px; border-radius:50%;
+  background:rgba(29,40,32,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); display:flex; align-items:center; justify-content:center;}
 .profile-avatar-badge svg{width:10px; height:10px; color:#fff;}
 /* Sticky en haut de #feed, comme .filters — retour utilisateur : les
    onglets Favoris/Demandes/Séjours ne doivent pas défiler avec les
@@ -2424,7 +2426,6 @@ body.map-fullscreen{overflow:hidden;}
 .plan-card.active .plan-card-price,
 .plan-card.active .plan-card-per,
 .plan-card.active li{color:#fff;}
-.plan-card.active li:nth-child(5n+1)::before{background:#fff;}
 .plan-card-name{font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:8px;}
 /* "grossir un peu les chiffres" (retour utilisateur) — 28px -> 32px. */
 .plan-card-price{font-family:'Jost',sans-serif; font-weight:800; font-size:32px; letter-spacing:-0.02em; line-height:1; color:var(--ink); margin-bottom:2px;}
@@ -2570,13 +2571,13 @@ nav.tabbar.host-mode{background:rgba(53,75,56,.97); border-top-color:rgba(255,25
 /* Photo + e-mail + déconnexion dans la carte « Votre profil », sous la
    bascule des deux espaces (plus de bloc séparé en tête de page). */
 .profile-identity-account{display:flex; align-items:center; gap:14px; margin:0 0 16px;}
-.profile-identity-account .profile-avatar{flex:none; width:56px; height:56px; box-shadow:0 0 0 2px rgba(255,255,255,.85);}
+.profile-identity-account .profile-avatar{flex:none; width:56px; height:56px;}
 .profile-identity-account-txt{min-width:0; display:flex; flex-direction:column; gap:3px;}
 .profile-identity-account-txt b{font-size:15px; font-weight:600; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .profile-identity-account-txt a{font-size:13px; font-weight:600; color:rgba(255,255,255,.85); text-decoration:underline; text-underline-offset:3px; align-self:flex-start;}
 /* Photo du compte dans le menu « Mon compte ». */
 .hl-menu .hl-menu-mail{display:flex; align-items:center; gap:10px;}
-.hl-menu-avatar{flex:none; width:30px; height:30px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center;
+.hl-menu-avatar{flex:none; width:30px; height:30px; border-radius:28%; overflow:hidden; display:flex; align-items:center; justify-content:center;
   background:var(--sauge); color:#fff; font-size:13px; font-weight:600;}
 .hl-menu-avatar:empty{display:none;}
 .hl-menu-avatar img{width:100%; height:100%; object-fit:cover; display:block;}
@@ -2586,7 +2587,7 @@ nav.tabbar.host-mode{background:rgba(53,75,56,.97); border-top-color:rgba(255,25
 .profile-plans .profile-section-label{margin-top:8px;}
 .plan-card-list{gap:14px;}
 .plan-card{display:block; background:#fff; border-radius:24px; padding:22px; box-shadow:0 10px 26px rgba(29,40,32,.08);}
-.plan-card.active{background:#fff; box-shadow:0 0 0 2px var(--sauge) inset, 0 10px 26px rgba(29,40,32,.08);}
+.plan-card.active{background:var(--sauge); box-shadow:0 10px 26px rgba(29,40,32,.18);}
 .plan-card-name{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px;
   display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .plan-card-tag{background:var(--sauge); color:#fff; font-size:10.5px; font-weight:600; letter-spacing:.02em; text-transform:none; padding:3px 9px; border-radius:20px;}
@@ -2595,10 +2596,12 @@ nav.tabbar.host-mode{background:rgba(53,75,56,.97); border-top-color:rgba(255,25
 .plan-card li{font-size:14.5px; line-height:1.45; padding:6px 0 6px 34px; color:var(--ink);}
 .plan-card li::before, .plan-card li:nth-child(n)::before{top:5px; width:22px; height:22px; border-radius:50%;
   background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/12px no-repeat;}
-.plan-card.active .plan-card-name{color:var(--sauge-deep);}
-.plan-card.active .plan-card-price{color:var(--sauge-deep);}
-.plan-card.active .plan-card-per{color:var(--muted);}
-.plan-card.active li{color:var(--ink);}
+.plan-card.active .plan-card-name{color:#fff;}
+.plan-card.active .plan-card-price{color:#fff;}
+.plan-card.active .plan-card-per{color:rgba(255,255,255,.72);}
+.plan-card.active li{color:#fff;}
+.plan-card.active .plan-card-tag{background:var(--yellow); color:var(--sauge-deep);}
+.plan-card.active .plan-card-cta.manage{background:#fff; color:var(--sauge-deep);}
 .plan-card-cta{display:flex; justify-content:center; align-items:center; width:100%; margin-top:18px; padding:15px; border:none; border-radius:999px; cursor:pointer;
   background:var(--yellow); color:var(--sauge-deep); font:600 15.5px 'Jost',sans-serif;}
 .plan-card-cta.manage{background:var(--sauge); color:#fff;}
