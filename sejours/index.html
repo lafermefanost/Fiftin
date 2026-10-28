@@ -557,7 +557,7 @@ a{color:inherit; text-decoration:none;}
 /* Retour utilisateur : "grossir légèrement le corps de cette typo" — 14.5
    -> 16px, line-height ajusté en conséquence (même rapport approximatif
    qu'avant, pas juste la taille qui grandit sans le reste). */
-.cover-info .tagline{font-size:16px; line-height:1.3; color:rgba(245,240,229,.88); margin:0 0 12px; max-width:88%;}
+.cover-info .tagline{font-size:15px; line-height:1.3; color:rgba(245,240,229,.88); margin:0 0 12px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
   padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
@@ -1054,7 +1054,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .detail-body{padding:16px 11px 90px;}
 .detail-body .region{font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; color:var(--sauge);}
 .detail-body h1{font-size:28px; font-weight:700; line-height:1.1; margin:3px 0 5px; letter-spacing:-0.01em;}
-.detail-body .tagline{font-size:16px; line-height:1.2; margin:0 0 10px; color:var(--sauge-deep);}
+.detail-body .tagline{font-size:15px; line-height:1.2; margin:0 0 10px; color:var(--sauge-deep);}
 /* Carte blanche séparant chaque section de la fiche détail — même principe
    que app/ (vue Année : chaque bloc, chiffres/seuils/graphique, est sa
    propre carte blanche posée sur le fond crème de la page) plutôt que du
@@ -1135,7 +1135,10 @@ textarea.text-input{resize:vertical; min-height:80px;}
    de la fiche détail (.detail-body). */
 .type-label{font-family:'Jost',sans-serif; font-style:normal; font-weight:700;}
 .detail-body .type-label{color:var(--ink);}
-.type-sep{opacity:.55; font-weight:400;}
+/* Séparateur type · accroche : vrai point rond (pas le caractère « • »,
+   petit et bas en Jost), centré sur la hauteur des minuscules. */
+.type-sep{display:inline-block; width:4px; height:4px; border-radius:50%; background:currentColor; opacity:.9;
+  vertical-align:middle; position:relative; top:-1px; margin:0 3px;}
 .detail-body p.desc{font-size:14.5px; line-height:1.4; color:#4a4636; margin:0 0 14px;}
 .section-title{font-size:15px; font-weight:700; margin:0 0 10px;}
 /* Prestations groupées (voir detailAmenitiesHtml()) : un sous-titre par
@@ -2848,7 +2851,7 @@ function hfUpdateWordCount(inputId){
 function taglineHtml(l){
   var type = (l.accomType && ACCOM_TYPES[l.accomType]) ? esc(ACCOM_TYPES[l.accomType].label) : "";
   var claim = esc(l.claim);
-  var typePart = type ? '<span class="type-label">'+type+'</span>'+(claim ? ' <span class="type-sep">•</span> ' : '') : '';
+  var typePart = type ? '<span class="type-label">'+type+'</span>'+(claim ? ' <span class="type-sep" aria-hidden="true"></span> ' : '') : '';
   return '<p class="tagline claim">'+typePart+claim+'</p>';
 }
 /* Site perso + avis Google : retour utilisateur, "j'aimerais que ça soit
@@ -3788,6 +3791,26 @@ function renderTopAccount(){
   // Visiteur : bouton menu à côté de « Se connecter » (découverte, connexion).
   document.getElementById("sejGuestBtn").addEventListener("click", function(){ menu.classList.toggle("open"); });
   document.getElementById("sejGuestLogin").addEventListener("click", function(){ menu.classList.remove("open"); authContext = "traveler"; openSheet("auth"); });
+})();
+
+/* Bandeau de filtres : s'il a été décalé vers la droite, il revient tout
+   seul à sa position de départ (bouton carte visible) dès que l'on reprend
+   le défilement des annonces (24 px de défilement vertical après le
+   dernier geste sur le bandeau ; jamais pendant qu'on le manipule). */
+(function(){
+  var bar = document.getElementById("filter-bar");
+  if(!bar) return;
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var anchorY = window.scrollY, touching = false, returning = false;
+  bar.addEventListener("touchstart", function(){ touching = true; returning = false; }, {passive:true});
+  bar.addEventListener("touchend", function(){ touching = false; anchorY = window.scrollY; }, {passive:true});
+  bar.addEventListener("scroll", function(){ if(bar.scrollLeft < 2) returning = false; if(!returning) anchorY = window.scrollY; }, {passive:true});
+  window.addEventListener("scroll", function(){
+    if(touching || bar.scrollLeft < 2){ if(bar.scrollLeft < 2) returning = false; anchorY = window.scrollY; return; }
+    if(Math.abs(window.scrollY - anchorY) < 24 || returning) return;
+    returning = true;
+    bar.scrollTo({left:0, behavior: reduce ? "auto" : "smooth"});
+  }, {passive:true});
 })();
 
 /* Fusionne dans LISTINGS les annonces d'hôtes publiées (Firestore,
