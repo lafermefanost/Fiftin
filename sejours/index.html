@@ -797,7 +797,8 @@ a{color:inherit; text-decoration:none;}
 .sheet-ghead{position:sticky; top:-8px; z-index:3; /* porte aussi la croix (position:absolute dedans) */ margin:-8px -20px 18px; padding:2px 64px 16px; background:var(--sauge);
   border-radius:26px 26px 0 0; text-align:center;}
 .sheet-ghead .sheet-handle{background:rgba(255,255,255,.35); margin:10px auto 12px;}
-.sheet .sheet-ghead h3{color:#fff; margin:0; font-size:19px; line-height:1.25;}
+.sheet .sheet-ghead h3{color:#fff; margin:0; font-size:19px; line-height:1.25; display:flex; align-items:center; justify-content:center; gap:9px;}
+.sheet-ghead h3 svg{width:20px; height:20px; flex-shrink:0;}
 .sheet.sheet-green .sheet-close{z-index:4; top:14px; right:16px; background:rgba(255,255,255,.14); color:#fff; border:1.5px solid rgba(255,255,255,.4);}
 .sheet.sheet-green .sheet-sub{margin-top:0;}
 .sheet:has(.hf-head) .sheet-close{background:rgba(20,26,20,.4); color:#fff;
@@ -7707,7 +7708,14 @@ function openSheet(kind){
   var headHtml = '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>';
   if(greenHead){
     var hm = /^<h3>([\s\S]*?)<\/h3>/.exec(inner);
-    if(hm){ inner = inner.slice(hm[0].length); headHtml = '<div class="sheet-ghead"><button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div><h3>'+hm[1]+'</h3></div>'; }
+    if(hm){
+      // Même picto que le bouton du filtre dans le bandeau (FILTER_ICONS) ;
+      // silhouette de compte pour l'invitation à se connecter.
+      var ghIcon = kind==="loginPrompt" ? '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/>' : (FILTER_ICONS[kind] || "");
+      inner = inner.slice(hm[0].length);
+      headHtml = '<div class="sheet-ghead"><button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div><h3>'+
+        (ghIcon ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+ghIcon+'</svg>' : '')+hm[1]+'</h3></div>';
+    }
   }
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet'+(greenHead?' sheet-green':'')+'" style="position:relative;">'+
       headHtml+
