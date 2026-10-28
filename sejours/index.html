@@ -667,7 +667,7 @@ a{color:inherit; text-decoration:none;}
    même case, même couleur, juste plus explicite au premier coup d'œil.
    Pas sur .avail (disponible) ni .cal-nodata (pas "indisponible", on ne
    sait juste pas : voir calendarHtml/le commentaire plus bas). */
-.cal:not(.cal-nodata) .cal-cell:not(.avail):not(.empty){
+.cal:not(.cal-nodata):not(.trip-cal) .cal-cell:not(.avail):not(.empty){
   background-image:linear-gradient(135deg, transparent calc(50% - 0.5px), rgba(46,43,34,.3) calc(50% - 0.5px), rgba(46,43,34,.3) calc(50% + 0.5px), transparent calc(50% + 0.5px));}
 /* Disponible : retour utilisateur, "dans le calendrier passe les cases
    disponibles plutôt en vert moyen" — --sauge-mid, texte clair dessus
@@ -1582,6 +1582,33 @@ body.map-fullscreen{overflow:hidden;}
 .trip-body span{display:block; margin-top:3px; font-size:12.5px; font-weight:500; color:var(--muted);}
 .trip-chip{flex-shrink:0; font-size:11.5px; font-weight:700; padding:5px 9px; border-radius:999px; background:var(--sauge-bg); color:var(--sauge-deep); white-space:nowrap;}
 .trip-chip.now{background:var(--yellow); color:var(--sauge-deep);}
+.trip-switch{display:flex; gap:4px; padding:4px; background:#E6E4DD; border-radius:13px; margin:0 0 14px;}
+.trip-switch-btn{flex:1; display:flex; align-items:center; justify-content:center; gap:7px; border:none; background:none; border-radius:10px;
+  padding:8px 10px; font:600 13.5px 'Jost',sans-serif; color:var(--muted); cursor:pointer;}
+.trip-switch-btn svg{width:15px; height:15px;}
+.trip-switch-btn.on{background:#fff; color:var(--sauge-deep); box-shadow:0 1px 4px rgba(46,43,34,.12);}
+.trip-cal{margin:0 0 12px;}
+.trip-cal-count{font-size:12.5px; font-weight:500; color:var(--muted);}
+.trip-cal .cal-title{font-size:15px;}
+.trip-day{display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; color:rgba(46,43,34,.45); background:#ECEAE4; padding:0;}
+.trip-day.on{color:#fff; cursor:pointer;}
+.trip-day.leave{cursor:pointer; color:var(--ink); text-shadow:0 0 3px #fff, 0 0 2px #fff;}
+.trip-day.today{box-shadow:inset 0 0 0 2px var(--yellow-deep);}
+.trip-cal-list{display:flex; flex-direction:column; gap:2px; margin-top:12px; border-top:1px solid var(--line); padding-top:8px;}
+.trip-cal-line{display:grid; grid-template-columns:10px 1fr; column-gap:10px; row-gap:1px; align-items:center; border:none; background:none; padding:6px 4px; border-radius:8px; text-align:left;
+  font-family:'Jost',sans-serif; cursor:pointer; min-width:0;}
+.trip-cal-line i{width:10px; height:10px; border-radius:3px; grid-row:1;}
+.trip-cal-line b{font-size:13.5px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; grid-row:1; grid-column:2;}
+.trip-cal-line span{font-size:12.5px; color:var(--muted); grid-row:2; grid-column:2;}
+.trip-cal.past .trip-day{color:var(--gray-mid);}
+.trip-cal.past .trip-day.on{color:#fff;}
+.trip-unknown-note{display:block; width:100%; margin:0 0 12px; padding:12px 14px; border:1.5px dashed rgba(53,75,56,.35); border-radius:14px;
+  background:none; font:500 13.5px 'Jost',sans-serif; color:var(--sauge-deep); cursor:pointer; text-align:center;}
+.trip-past{margin:4px 0 12px;}
+.trip-past summary{list-style:none; display:flex; justify-content:space-between; align-items:center; background:#E6E4DD; border-radius:10px;
+  padding:9px 14px; font-size:12.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink); cursor:pointer; margin-bottom:10px;}
+.trip-past summary::-webkit-details-marker{display:none;}
+.trip-past summary span{font-size:12.5px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--muted);}
 .stay-unknown{display:flex; align-items:center; gap:10px; margin:14px 0 4px; font-size:14px; color:var(--ink); cursor:pointer;}
 .stay-unknown input{width:18px; height:18px; accent-color:var(--sauge);}
 .qr-field input:disabled{opacity:.45;}
@@ -6160,8 +6187,8 @@ var TRIP_MONTHS = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","A
 function tripISODate(iso){ return new Date(iso+"T00:00:00"); }
 /* « Le Petit Fanost — Le Petit Fanost » (annonce et chambre du même nom) → une fois. */
 function tripTitle(name){
-  var parts = String(name||"Annonce").split(" — ");
-  return (parts.length===2 && parts[0].trim()===parts[1].trim()) ? parts[0] : (name||"Annonce");
+  var parts = String(name||"Annonce").split(/\s[—–-]\s/);
+  return (parts.length===2 && parts[0].trim().toLowerCase()===parts[1].trim().toLowerCase()) ? parts[0].trim() : (name||"Annonce");
 }
 /* « 23 → 31 déc. » ou « 28 déc. → 3 janv. » (+ année si ce n'est pas l'année en cours). */
 function tripRange(t){
@@ -6217,6 +6244,104 @@ function groupedSejoursHtml(docs){
     return '<div class="trip-month"'+(i===0?' style="margin-top:0;"':'')+'>'+esc(g.label)+'<small>'+n+' séjour'+(n>1?'s':'')+'</small></div>'+
       '<div class="trip-list">'+g.docs.map(function(d){ return tripRowHtml(d.id, d.data()); }).join("")+'</div>';
   }).join("");
+}
+/* Carnet de voyage, vue Planning : les mois où le voyageur a un séjour
+   (nuits louées), un calendrier par mois au format du calendrier des
+   annonces (.cal), à partir du mois en cours ; mois passés repliés sous
+   « Séjours passés ». Une couleur par séjour, reprise dans la liste sous
+   chaque mois ; jour de départ à demi rempli (départ le matin). Toucher
+   un jour loué ou une ligne : aperçu de l'annonce au-dessus, comme en
+   liste (data-open-log). Choix Liste / Planning gardé sur l'appareil. */
+var SEJOURS_VIEW_KEY = "fiftin_sejours_view";
+var TRIP_COLORS = ["#354B38", "#4E67BC", "#7C9A6E"]; // sauge, lavande foncée (couleurs de la marque), vert moyen
+function sejoursView(){ try { return localStorage.getItem(SEJOURS_VIEW_KEY)==="planning" ? "planning" : "liste"; } catch(e){ return "liste"; } }
+function setSejoursView(v){ try { localStorage.setItem(SEJOURS_VIEW_KEY, v); } catch(e){} }
+function sejoursViewSwitchHtml(v){
+  var b = function(key, label, icon){
+    return '<button type="button" class="trip-switch-btn'+(v===key?' on':'')+'" data-trip-view="'+key+'" aria-pressed="'+(v===key)+'">'+icon+label+'</button>';
+  };
+  return '<div class="trip-switch">'+
+    b("liste", "Liste", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>')+
+    b("planning", "Planning", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>')+
+  '</div>';
+}
+function tripListingAttr(e){ return e.listingId ? ' data-open-log="'+idFromString(e.listingId)+'"' : ''; }
+function tripMonthHtml(mo, trips, past){
+  var y = mo.y, m = mo.m, first = new Date(y, m, 1), days = new Date(y, m+1, 0).getDate();
+  var offset = (first.getDay()+6)%7, today = localISO(new Date());
+  var cells = "";
+  for(var i=0;i<offset;i++) cells += '<span class="cal-cell empty"></span>';
+  for(var d=1; d<=days; d++){
+    var iso = y+"-"+("0"+(m+1)).slice(-2)+"-"+("0"+d).slice(-2);
+    var nights = trips.filter(function(x){ return x.t.in<=iso && iso<x.t.out; });
+    var leaving = trips.filter(function(x){ return x.t.out===iso; });
+    var cls = "cal-cell trip-day"+(iso===today?" today":""), style = "", attr = "";
+    var col = function(x){ return (past || x.t.out<today) ? "#B9B7B0" : x.color; };
+    if(nights.length){
+      cls += " on";
+      style = nights.length>1 ? "background:linear-gradient(180deg,"+col(nights[0])+" 50%,"+col(nights[1])+" 50%)" : "background:"+col(nights[0]);
+      if(leaving.length && !nights.some(function(x){ return leaving.indexOf(x)>=0; })) style = "background:linear-gradient(90deg,"+col(leaving[0])+" 50%,"+col(nights[0])+" 50%)";
+      attr = tripListingAttr(nights[0].e);
+    } else if(leaving.length){
+      cls += " leave";
+      style = "background:linear-gradient(90deg,"+col(leaving[0])+" 50%,#E2DFD8 50%)";
+      attr = tripListingAttr(leaving[0].e);
+    }
+    cells += attr ? '<button type="button" class="'+cls+'" style="'+style+'"'+attr+'>'+d+'</button>'
+      : '<span class="'+cls+'">'+d+'</span>';
+  }
+  var list = mo.trips.map(function(x){
+    var n = daysBetween(x.t.in, x.t.out);
+    return '<button type="button" class="trip-cal-line"'+tripListingAttr(x.e)+'><i style="background:'+((past || x.t.out<localISO(new Date()))?"#B9B7B0":x.color)+'"></i>'+
+      '<b>'+esc(tripTitle(x.e.listingName))+'</b><span>'+esc(tripRange(x.t))+(n>0?" · "+n+" nuit"+(n>1?"s":""):"")+'</span></button>';
+  }).join("");
+  return '<div class="cal trip-cal'+(past?' past':'')+'">'+
+    '<div class="cal-head"><span class="cal-title">'+TRIP_MONTHS[m]+' '+y+'</span><span class="trip-cal-count">'+mo.trips.length+' séjour'+(mo.trips.length>1?'s':'')+'</span></div>'+
+    '<div class="cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>'+
+    '<div class="cal-grid">'+cells+'</div>'+
+    '<div class="trip-cal-list">'+list+'</div>'+
+  '</div>';
+}
+function tripPlanningHtml(docs){
+  var today = localISO(new Date()), curKey = today.slice(0,7), trips = [], unknown = 0;
+  docs.forEach(function(d){
+    var t = tripDates(d.data());
+    if(t && t.out>t.in) trips.push({e:d.data(), t:t}); else unknown++;
+  });
+  trips.sort(function(a,b){ return a.t.in<b.t.in ? -1 : a.t.in>b.t.in ? 1 : 0; });
+  trips.forEach(function(x, i){ x.color = TRIP_COLORS[i % TRIP_COLORS.length]; });
+  // Mois touchés par chaque séjour (nuits + jour de départ).
+  var months = {}, keys = [];
+  trips.forEach(function(x){
+    var c = tripISODate(x.t.in), end = tripISODate(x.t.out);
+    c = new Date(c.getFullYear(), c.getMonth(), 1);
+    while(c <= end){
+      var key = c.getFullYear()+"-"+("0"+(c.getMonth()+1)).slice(-2);
+      if(!months[key]){ months[key] = {y:c.getFullYear(), m:c.getMonth(), trips:[]}; keys.push(key); }
+      if(months[key].trips.indexOf(x)<0) months[key].trips.push(x);
+      c = new Date(c.getFullYear(), c.getMonth()+1, 1);
+    }
+  });
+  keys.sort();
+  var upcoming = keys.filter(function(k){ return k>=curKey; });
+  var past = keys.filter(function(k){ return k<curKey; }).reverse();
+  var html = upcoming.length
+    ? upcoming.map(function(k){ return tripMonthHtml(months[k], months[k].trips, false); }).join("")
+    : '<div class="empty-state" style="padding:24px 12px;"><p>Aucun séjour à venir avec des dates.</p></div>';
+  if(unknown) html += '<button type="button" class="trip-unknown-note" data-trip-view="liste">'+unknown+' séjour'+(unknown>1?'s':'')+' sans dates — à préciser dans la liste</button>';
+  if(past.length) html += '<details class="trip-past"><summary>Séjours passés <span>'+past.length+' mois</span></summary>'+
+    past.map(function(k){ return tripMonthHtml(months[k], months[k].trips, true); }).join("")+'</details>';
+  return html;
+}
+function wireTripViewSwitch(){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-trip-view]"), function(el){
+    el.addEventListener("click", function(){
+      var v = el.getAttribute("data-trip-view");
+      if(v===sejoursView()) return;
+      setSejoursView(v);
+      renderContactLog();
+    });
+  });
 }
 /* Volet « dates du séjour » : à la validation d'une demande (mode
    "confirm") ou pour modifier un séjour validé (mode "edit"). Préremplit
@@ -6422,7 +6547,9 @@ function renderContactLog(){
         : '<div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>'+
           '<p>Aucune demande en cours pour l\'instant.<br>Elle apparaîtra ici dès que vous contacterez un hébergement.</p></div>';
     } else if(wantConfirmed){
-      body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedSejoursHtml(filtered);
+      var sv = sejoursView();
+      body = sejoursViewSwitchHtml(sv)+'<div class="map-selected" id="demandes-selected" hidden></div>'+
+        (sv==="planning" ? tripPlanningHtml(filtered) : groupedSejoursHtml(filtered));
     } else {
       body = '<div class="map-selected" id="demandes-selected" hidden></div>'+groupedDemandesHtml(filtered);
     }
@@ -6430,6 +6557,7 @@ function renderContactLog(){
     wireLikesToggle();
     wireSwipeRows(); // AVANT wireContactLogRows() : voir le commentaire de wireSwipeRows()
     wireContactLogRows();
+    wireTripViewSwitch();
   });
 }
 
