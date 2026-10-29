@@ -1217,3 +1217,7 @@ Vérifié sur émulateurs (téléphone 390 px) : fiche (description sous l'accro
 
 Suite : la carte Prestations du créateur d'un hébergement d'établissement ne montre plus non plus les prestations réglables dans l'établissement (`PE_SHARED_AMEN`) — Environnement et Accueil disparaissent, Loisirs ne garde que le jacuzzi, Esprit & ambiance perd barbecue / plancha / brasero, Atouts perd « Accessible sans voiture » et « Privatisation ». Elles restent appliquées à l'annonce (recopiées depuis l'établissement) et visibles sur sa fiche voyageur. Annonce seule : toutes les prestations. Vérifié sur émulateurs.
 
+### Mes annonces : la carte d'une annonce = la carte du fil
+
+Retour de César (captures) : même aperçu que dans le fil, texte sur l'image, et les actions sur l'image. La carte reprend la `.cover` du fil (photo en carrousel au format 4/5, voile, région, nom et accroche en surimpression) ; en haut à gauche, une pastille de statut (point jaune « En ligne », « En pause », « Brouillon », « En attente de validation », « Retirée par Fiftin ») et le prix ; à droite, des boutons de verre (mêmes que cœur / partager du fil) : mettre en pause ou remettre en ligne, aperçu, supprimer (toujours avec sa confirmation). Sous l'image : « Modifier l’annonce », la passerelle « + Ajouter un hébergement au même endroit » (annonce seule) et « Calendrier ». Mêmes attributs `data-host-*` qu'avant, câblage inchangé. Vérifié sur émulateurs : pause → « En pause » et `paused` en base, remise en ligne, aperçu, suppression qui demande confirmation ; aucune erreur.
+
