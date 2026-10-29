@@ -4948,7 +4948,10 @@ function matchesAllFilters(l, f){
    capacités sans regarder les dates. Un lieu = une seule carte dans le
    fil et un seul point sur la carte (voir collapseSites()) : on met en
    avant une maison et son hôte, pas un nombre de chambres. */
-function siteOf(l){ return (l && l.siteId) || ""; }
+// Clé d'un lieu = propriétaire + siteId : l'identifiant d'un lieu est
+// public (index), un autre hôte qui le recopierait sur son annonce ne
+// rejoint jamais ce lieu (ni ne masque ses logements dans le fil).
+function siteOf(l){ return (l && l.siteId && l.ownerUid) ? l.ownerUid+"|"+l.siteId : ""; }
 function indexSource(){ return (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS; }
 function siteMembers(siteId, source){
   if(!siteId) return [];
@@ -9616,7 +9619,7 @@ function submitHostForm(){
   if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
   var editing = !!hostFormEditListing;
   var editId = editing ? hostFormEditListing.id : null;
-  var siteAssocFailed = false;
+  var siteAssocFailed = false, siteAutoNames = [];
   var btn = document.getElementById("sheet-apply");
   var originalLabel = btn.textContent;
   btn.disabled = true;
@@ -9673,10 +9676,22 @@ function submitHostForm(){
           // fait pas échouer le dépôt, déjà enregistré (voir siteAssocFailed).
           var siteSel = hfSiteSel.slice();
           listingWrite = firebase.firestore().collection("listings").add(payload).then(function(ref){
-            if(!siteSel.length) return;
+            // ensureHostListingsLoaded() ne lit que les annonces de CE compte
+            // (ownerUid == uid) : une annonce d'un autre hôte à la même
+            // adresse n'est jamais associée (et les règles Firestore
+            // l'interdiraient de toute façon).
             return new Promise(function(res){ ensureHostListingsLoaded(res); }).then(function(listings){
-              var all = listings.filter(function(x){ return x.id!==ref.id; }).concat([{id:ref.id, siteId:""}]);
-              return applySiteAssociation(all, ref.id, siteSel);
+              var own = listings.filter(function(x){ return x.id!==ref.id; });
+              // Association automatique : un logement de cet hôte à moins
+              // de 50 m est au même endroit, sans case à cocher (évite deux
+              // cartes pour une même maison, volontairement ou non). Se
+              // défait dans Mes annonces → Au même endroit.
+              own.forEach(function(x){
+                if(siteSel.indexOf(x.id)!==-1 || typeof x.lat!=="number") return;
+                if(haversineKm(coords.lat, coords.lng, x.lat, x.lng) <= SITE_AUTO_KM){ siteSel.push(x.id); siteAutoNames.push(x.name||""); }
+              });
+              if(!siteSel.length) return;
+              return applySiteAssociation(own.concat([{id:ref.id, siteId:""}]), ref.id, siteSel);
             }).catch(function(){ siteAssocFailed = true; });
           });
         }
@@ -9704,7 +9719,9 @@ function submitHostForm(){
       (editing
         ? '<h3>Annonce modifiée</h3><p class="sheet-sub">Vos changements sont enregistrés.</p>'
         : '<h3>Annonce envoyée</h3><p class="sheet-sub">Merci ! On la vérifie et elle sera mise en ligne prochainement.'+
-          (siteAssocFailed ? '<br>Les logements « au même endroit » n’ont pas pu être associés : refaites-le depuis Mes annonces.' : '')+'</p>')+
+          (siteAssocFailed ? '<br>Les logements « au même endroit » n’ont pas pu être associés : refaites-le depuis Mes annonces.'
+            : siteAutoNames.length ? '<br>Elle est à la même adresse que '+(siteAutoNames.length>1 ? siteAutoNames.length+' de vos logements' : '« '+esc(siteAutoNames[0])+' »')+' : les voyageurs les découvriront ensemble, sur une seule carte. Pour la présenter séparément : Mes annonces → Au même endroit.'
+            : '')+'</p>')+
       '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
     '</div></div></div>';
     document.getElementById("sheet-close").addEventListener("click", closeSheet);
@@ -11084,6 +11101,7 @@ function hostGuestName(guestId){
    défait en décochant. Un lieu réduit à un seul logement n'en est plus un
    (siteId retiré). Toutes les écritures d'une modification partent dans un
    seul lot (batch) : tout ou rien. */
+var SITE_AUTO_KM = 0.05; // association automatique à la création : même hôte, moins de 50 m
 function newSiteId(){ return "site_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function planSiteAssociation(listings, listingId, otherIds){
   var byId = {}; listings.forEach(function(l){ byId[l.id] = l; });
@@ -11169,7 +11187,7 @@ function renderHfSiteSection(){
     // Préremplissage depuis une annonce : son lieu entier est coché.
     if(hfSiteFrom) siteOthersOf(hfSiteFrom, listings).forEach(function(x){ if(hfSiteSel.indexOf(x.id)===-1) hfSiteSel.push(x.id); });
     wrap.innerHTML = '<div class="hf-sec">'+hfSecTitleHtml("home","Au même endroit")+
-      '<p class="field-hint" style="margin-top:0;">Vous avez d’autres hébergements au même endroit ? Cochez-les (facultatif) : les voyageurs les découvriront ensemble, chaque annonce reste indépendante.</p>'+
+      '<p class="field-hint" style="margin-top:0;">Vos logements à la même adresse sont associés automatiquement : les voyageurs les découvrent ensemble, sur une seule carte. Chaque annonce reste indépendante (calendrier, prix, lien Planning). Vous pouvez en cocher d’autres du même lieu.</p>'+
       '<div class="field-block sort-row" style="margin-bottom:0;">'+sitePickRowsHtml(listings, null, hfSiteSel, hfSiteFrom)+'</div>'+
     '</div>';
     wireSitePickRows(wrap, hfSiteSel);
