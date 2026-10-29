@@ -984,7 +984,7 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
 .amen-group{margin-bottom:16px;}
 .amen-group:last-child{margin-bottom:0;}
 .amen-group-title{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--sauge); margin-bottom:8px;}
-.amenity-grid{display:grid; grid-template-columns:repeat(2,1fr); gap:8px;}
+.amenity-grid{display:flex; flex-wrap:wrap; gap:6px;}
 /* Retour utilisateur : "utilise plus les couleurs" pour les prestations,
    puis "un peu violents en plein" (aplat retiré, contour renforcé à la
    place), puis "le vert propriétaire plutôt que le lavande" — --sauge
@@ -993,10 +993,16 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    .amenity-grid/.amenity-chip sont réutilisées telles quelles en fiche
    détail (voir detailAmenitiesHtml()) pour un style "à l'identique" entre
    filtre et fiche, sans dupliquer la règle CSS à deux endroits. */
-.amenity-chip{border:1.5px solid var(--line); border-radius:16px; padding:10px 12px; font-size:12.5px; font-weight:600;
-  color:var(--sauge); display:flex; align-items:center; gap:8px;}
-.amenity-chip.active{background:none; color:var(--sauge); border-color:var(--sauge); border-width:2px;}
-.amenity-chip svg{width:15px; height:15px; flex-shrink:0;}
+/* Pastilles compactes (retour de César) : cochée = pleine vert
+   propriétaire, texte blanc ; à cocher = fond crème, texte vert ; absente
+   sur une fiche (.off) = gris très léger, pour comparer ce qu'il y a et
+   ce qu'il n'y a pas. Mêmes pastilles pour les pièces (.xchip). */
+.amenity-chip{display:inline-flex; align-items:center; gap:6px; border:none; border-radius:999px; padding:6px 11px;
+  background:var(--cream-deep); color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; line-height:1.2; cursor:pointer;}
+.amenity-chip.active{background:var(--sauge); color:#fff;}
+.amenity-chip.off{background:#F4F3EF; color:#C9C6BC; cursor:default;}
+.amenity-chip svg{width:14px; height:14px; flex-shrink:0;}
+.detail-amen-group .amenity-chip, .cr-block .amenity-chip{cursor:inherit;}
 /* Pièces & annexes (retour utilisateur : "un groupe clair qui permette de
    sélectionner les pièces de la maison et leur nombre, même principe que
    le catalogue de l'app de gestion, clic plusieurs fois pour augmenter le
@@ -1011,12 +1017,12 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    Pièces & annexes du reste de la section Prestations. */
 .hf-spaces-box{background:var(--cream-deep); border-radius:16px; padding:14px;}
 .hf-spaces-grid{display:flex; flex-wrap:wrap; gap:8px;}
-.xchip{display:inline-flex; align-items:center; gap:5px; padding:9px 12px;
-  border:1.5px solid var(--line); border-radius:16px; cursor:pointer;
-  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; color:var(--ink); background:none;}
-.xchip svg{width:15px; height:15px; flex-shrink:0;}
-.xchip.on{border-color:var(--sauge); border-width:2px; color:var(--sauge);}
-.xchip-qty{background:var(--sauge); color:#fff; border-radius:10px; padding:2px 7px; font-size:11px; font-weight:700;}
+.xchip{display:inline-flex; align-items:center; gap:6px; padding:6px 11px;
+  border:none; border-radius:999px; cursor:pointer;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; line-height:1.2; color:var(--sauge); background:var(--cream-deep);}
+.xchip svg{width:14px; height:14px; flex-shrink:0;}
+.xchip.on{background:var(--sauge); color:#fff;}
+.xchip-qty{background:#fff; color:var(--sauge); border-radius:10px; padding:1px 7px; font-size:11px; font-weight:700;}
 /* Retour utilisateur : "pas dans le même style que les autres boutons"
    (Pièces & annexes comparé aux puces Prestations du même modal) — même
    principe que .hf-sec .amenity-chip.active plus bas (fond vert/typo
@@ -1298,6 +1304,9 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .detail-amen-group:last-child{margin-bottom:0;}
 .detail-amen-group-title{font-size:11px; font-weight:800; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;}
 .detail-amen-group .amenity-grid{margin-bottom:0;}
+/* Description sous le titre et l'accroche (fiche, établissement, éditeurs). */
+.detail-body p.desc.desc-under{margin:10px 0 4px;}
+.detail-body textarea.desc-under{margin-top:10px;}
 .unit-list{display:flex; flex-direction:column; gap:8px; margin-bottom:14px;}
 .unit-card{display:flex; align-items:center; gap:12px; background:var(--cream-deep); border-radius:16px; padding:10px; overflow:hidden; width:100%; border:none; text-align:left; font-family:inherit; cursor:pointer;}
 /* Onglets façon navigateur plutôt que des pilules isolées ("boudins") : coins
@@ -3194,16 +3203,21 @@ function metaItemHtml(iconPath, value, label){
    permanent (pas de clic géré hors de #sheet-root, voir wireSheet()) —
    sert juste à afficher les prestations que l'annonce a bien, dans le
    même style que la case cochée d'un filtre. */
-function detailAmenitiesHtml(l){
+// universe (facultatif) : prestations possibles à montrer (établissement :
+// PE_SHARED_AMEN) ; sinon toutes. Présentes = pastille pleine, absentes =
+// gris très léger — on voit ce qu'il y a ET ce qu'il n'y a pas (César).
+function detailAmenitiesHtml(l, universe){
+  var have = l.amen || [];
   var groupsHtml = AMEN_GROUPS.map(function(g){
-    var have = g.items.filter(function(a){ return l.amen.indexOf(a)!==-1; });
-    if(!have.length) return "";
+    var items = universe ? g.items.filter(function(a){ return universe.indexOf(a)!==-1; }) : g.items;
+    if(!items.length) return "";
     return '<div class="detail-amen-group"><div class="detail-amen-group-title">'+esc(g.title)+'</div>'+
-      '<div class="amenity-grid">'+have.map(function(a){
-        return '<span class="amenity-chip active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</span>';
+      '<div class="amenity-grid">'+items.map(function(a){
+        var on = have.indexOf(a)!==-1;
+        return '<span class="amenity-chip '+(on?'active':'off')+'"'+(on?'':' aria-label="'+esc(a)+' : non"')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</span>';
       }).join("")+'</div></div>';
   }).join("");
-  return groupsHtml || '<p class="sheet-sub" style="margin:0;">Aucune prestation renseignée pour le moment.</p>';
+  return groupsHtml;
 }
 /* Pièces/annexes quantifiées (l.spaces, voir hfSpaceChipsHtml() côté
    formulaire) — section séparée des Prestations car ce n'est pas un
@@ -3217,11 +3231,11 @@ function detailAmenitiesHtml(l){
    optionnelle, contrairement aux Prestations). */
 function detailSpacesHtml(l){
   var sp = l.spaces || {};
-  var names = HOUSE_SPACES.filter(function(name){ return sp[name]>0; });
-  if(!names.length) return "";
-  return '<div class="amenity-grid">'+names.map(function(name){
-    var qty = sp[name];
-    return '<span class="amenity-chip active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg>'+esc(name)+(qty>1?' ×'+qty:'')+'</span>';
+  if(!HOUSE_SPACES.some(function(name){ return sp[name]>0; })) return "";
+  // Toutes les pièces possibles : présentes pleines (×N au-delà de 1), absentes en gris léger.
+  return '<div class="amenity-grid">'+HOUSE_SPACES.map(function(name){
+    var qty = sp[name] || 0;
+    return '<span class="amenity-chip '+(qty>0?'active':'off')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg>'+esc(name)+(qty>1?' ×'+qty:'')+'</span>';
   }).join("")+'</div>';
 }
 
@@ -7416,9 +7430,6 @@ function openDetail(id, listingOverride, forceVisitorView){
       (dKmOverview!=null ? metaItemHtml(META_ICON_DISTANCE, dKmOverview+" km", "de vous") : "")+
     '</div></div>';
     bodyExtraHtml =
-      '<div class="detail-card">'+
-      '<p class="desc">'+esc(l.desc)+'</p>'+
-      '</div>'+
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
@@ -7474,6 +7485,8 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
+      // Description sous le titre et l'accroche (retour de César), plus dans sa propre carte.
+      (!activeUnit && l.desc ? '<p class="desc desc-under">'+esc(l.desc)+'</p>' : '')+
       trustBadgeHtml(l)+
       extLinksHtml(l)+
       '</div>'+
@@ -7482,18 +7495,19 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-cards">'+
         metaRowHtml+
         bodyExtraHtml+
+        // Une seule carte hôte : photo, nom, présentation et « Voir plus »
+        // (volet hostBio : présentation complète et autres annonces de l'hôte).
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-        '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div></div>'+
+        '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
+        (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p><button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>' : '')+
+        '</div>'+
         // "À propos de votre hôte" : encart séparé, juste après "Votre hôte"
         // (point 3.3, retour utilisateur — voir le grand commentaire CSS de
         // .host-bio-text) — absent si cet hôte n'a aucune présentation
         // (jamais un encart vide). "Voir plus" ouvre kind==="hostBio", pas
         // un simple dépli : la présentation complète ET, en dessous, les
         // autres annonces du même hôte (point 3.4) y tiennent ensemble.
-        (l.host.bio ? '<div class="detail-card"><div class="section-title" style="margin-top:0">À propos de votre hôte</div>'+
-          '<p class="host-bio-text">'+esc(l.host.bio)+'</p>'+
-          '<button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>'+
-        '</div>' : '')+
+
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
@@ -7640,12 +7654,6 @@ function placeKindLabel(place){
   return "";
 }
 function placeMemberName(m, l){ return l.place && l.place.name ? stripPlaceName(m.name, l.place.name) : siteShortName(m.name, l.name); }
-// Prestations cochées sur TOUS les logements (fiches complètes seulement).
-function placeCommonAmen(members){
-  var full = members.filter(function(m){ return Array.isArray(m.amen); });
-  if(full.length<2) return [];
-  return full[0].amen.filter(function(a){ return full.every(function(m){ return m.amen.indexOf(a)!==-1; }); });
-}
 var detailBackToPlace = null; // {id, override} : logement ouvert depuis la page de son établissement
 function placeBannerHtml(l, listingOverride){
   if(listingOverride || !l.siteId) return "";
@@ -7707,7 +7715,6 @@ function openPlace(id, override, loaded){
   var prices = members.map(displayPriceOf).filter(function(v){ return v!=null; });
   var minPrice = prices.length ? Math.min.apply(null, prices) : null;
   var cap = siteAvailableCapacity(members, {});
-  var common = placeCommonAmen(members);
   var qid = "qrp"+l.id;
   var root = document.getElementById("detail-root");
   root.innerHTML = '<div class="detail place-detail" id="detail-panel">'+
@@ -7722,6 +7729,7 @@ function openPlace(id, override, loaded){
         '<h1>'+esc(title)+'</h1>'+
         '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
           '<span>'+(kind ? '<b>'+esc(kind)+'</b> · ' : '')+members.length+' hébergements</span></div>'+
+        (place.desc ? '<p class="desc desc-under">'+esc(place.desc)+'</p>' : '')+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card"><div class="meta-row">'+
@@ -7729,12 +7737,14 @@ function openPlace(id, override, loaded){
           metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           (cap ? metaItemHtml(META_ICON_GUESTS, cap, "voyageurs en tout") : "")+
         '</div></div>'+
-        (place.desc ? '<div class="detail-card"><div class="section-title" style="margin-top:0">L’établissement</div><p class="desc">'+esc(place.desc)+'</p></div>' : '')+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
           '<p class="site-sub">Chaque hébergement a sa fiche, ses photos et son calendrier.</p>'+
           '<div class="place-units">'+members.map(function(m){ return placeUnitRowHtml(m, l); }).join("")+'</div>'+
         '</div>'+
-        (common.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les hébergements</div>'+detailAmenitiesHtml({amen:common})+'</div>' : '')+
+        // Prestations de l'établissement : celles que l'hôte a cochées pour
+        // tout le lieu (place.amen), jamais une intersection des chambres
+        // (qui faisait apparaître le couchage).
+        ((place.amen || []).length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
         parkingCardHtml(place)+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
@@ -9565,6 +9575,7 @@ function crRender(){
         '<div class="cr-tagline"><button type="button" class="type-label cr-type'+(type?'':' cr-ph')+'" data-cr-open="type">'+(type ? esc(type) : 'Type')+'</button><span class="type-sep" aria-hidden="true"></span>'+
           '<textarea class="cr-claim" id="cr-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(d.claim||"")+'</textarea></div>'+
         '<p class="cr-count" id="cr-claim-count"></p>'+
+        '<div data-cr-sec="desc"><textarea class="desc cr-desc desc-under" id="cr-desc" rows="3" placeholder="Décrivez votre hébergement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card" data-cr-sec="price"><div class="meta-row">'+
@@ -9573,7 +9584,6 @@ function crRender(){
           '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_GUESTS,
             u.linkedRoomId && cr.planning ? cr.planning.capacity : (Number(u.maxPersons)>0 ? u.maxPersons : '<span class="cr-ph">—</span>'), "voyageurs max")+'</button>'+
         '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Prix et capacité gérés dans Fiftin Planning'+(cr.planning ? '' : (cr.status==="draft" ? ' · prix calculé à la mise en ligne' : ' · calcul en cours'))+'</p>' : '')+'</div>'+
-        '<div class="detail-card" data-cr-sec="desc"><textarea class="desc cr-desc" id="cr-desc" rows="3" placeholder="Décrivez votre hébergement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
         '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
           (amenChosen ? '<button type="button" class="cr-block" data-cr-open="amen">'+detailAmenitiesHtml(d)+'<span class="cr-edit-link">Modifier les prestations</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-cr-open="amen"><span class="cr-ph">Couchage, équipements, ambiance… Touchez pour compléter.</span></button>')+'</div>'+
@@ -10423,6 +10433,7 @@ function peRender(){
         '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
         '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
           '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' hébergement'+(members.length>1?'s':'')+'</span></div>'+
+        '<textarea class="desc cr-desc desc-under" id="pe-desc" rows="3" maxlength="1200" placeholder="Présentez l’établissement : le lieu, son histoire, ce qui est commun à tous les hébergements…">'+esc(p.desc)+'</textarea>'+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card"><div class="meta-row">'+
@@ -10430,15 +10441,13 @@ function peRender(){
           metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           metaItemHtml(META_ICON_GUESTS, cap || '<span class="cr-ph">—</span>', "voyageurs en tout")+
         '</div><p class="cr-linked">Calculés à partir de chaque hébergement</p></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">L’établissement</div>'+
-          '<textarea class="desc cr-desc" id="pe-desc" rows="3" maxlength="1200" placeholder="Le lieu, son histoire, ce qui est commun à tous les hébergements : jardin, piscine, petit-déjeuner…">'+esc(p.desc)+'</textarea></div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
           '<p class="site-sub">Ce que voient les voyageurs. Touchez un hébergement pour le modifier ou le retirer.</p>'+
           '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
           (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+
-          ((p.amen || []).length ? '<button type="button" class="cr-block" data-pe-open="amen">'+detailAmenitiesHtml({amen:p.amen})+'<span class="cr-edit-link">Modifier</span></button>'
+          ((p.amen || []).length ? '<button type="button" class="cr-block" data-pe-open="amen">'+detailAmenitiesHtml({amen:p.amen}, PE_SHARED_AMEN)+'<span class="cr-edit-link">Modifier</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-pe-open="amen"><span class="cr-ph">Environnement, wifi, parking, piscine, accueil… Cochées une fois ici, elles valent pour tous les hébergements.</span></button>')+'</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Stationnement</div><button type="button" class="cr-block'+(p.parking && p.parking.kind ? '' : ' cr-empty')+'" data-pe-open="parking">'+
           (p.parking && p.parking.kind ? '<span>'+esc(parkingLabel(p.parking))+'</span>'+(p.parking.note ? '<span class="cr-sub">'+esc(p.parking.note)+'</span>' : '')+'<span class="cr-edit-link">Modifier</span>'
