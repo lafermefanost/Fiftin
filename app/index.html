@@ -10488,7 +10488,11 @@ function addRoomFromListingUnit(listingId,unitId){
   S.settings.rooms.push({id:newRoomId,name:nm&&nm!=='(sans nom)'?nm:('Location '+n),short:'L'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
-  writeBackSejoursLink(listingId,unitId,newRoomId);
+  // Paramètres en brouillon : la location n'existe dans Planning qu'à « ✓ OK ».
+  // Le lien côté annonce attend donc ce moment (commitSettings) ; « ✕ » ou un
+  // import l'abandonnent avec le brouillon, et l'annonce reste proposée.
+  if(settingsDraft)(settingsDraft.sejoursLinks=settingsDraft.sejoursLinks||[]).push({listingId,unitId,roomId:newRoomId});
+  else writeBackSejoursLink(listingId,unitId,newRoomId);
 }
 // Referme la boucle du lien créé ci-dessus : écrit unit.linkedRoomId sur
 // l'annonce Séjours d'origine, pour que son calendrier (Espace hôtes,
@@ -12757,6 +12761,9 @@ function commitSettings(){
     try{localStorage.setItem('ff2_settings',JSON.stringify(S.settings));}catch(e){}
     saveCatalog();
     persist();
+    // Liens Séjours en attente (addRoomFromListingUnit), pour les seules
+    // locations encore présentes à l'enregistrement.
+    (d.sejoursLinks||[]).forEach(k=>{if((S.settings.rooms||[]).some(r=>r.id===k.roomId))writeBackSejoursLink(k.listingId,k.unitId,k.roomId);});
   }
   closeM('modalSettings');
 }
