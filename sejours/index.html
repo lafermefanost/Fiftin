@@ -2412,6 +2412,8 @@ body.map-fullscreen{overflow:hidden;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
 .pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
 .pe-add{margin-top:10px;}
+.parking-line{display:flex; align-items:flex-start; gap:12px; font-size:14.5px; line-height:1.4;}
+.parking-line svg{flex:0 0 34px; width:34px; height:34px; padding:7px; border-radius:11px; background:var(--sauge-mid); color:var(--cream);}
 .amenity-chip.cr-locked{opacity:.45; cursor:default;}
 .pe-undo{display:block; margin:6px auto 0; color:var(--muted);}
 /* « Créer » : hébergement ou établissement (openCreateChoice()). */
@@ -7405,6 +7407,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
+      (l.siteId ? parkingCardHtml(l.place) : '')+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -7717,6 +7720,7 @@ function openPlace(id, override, loaded){
           '<div class="place-units">'+members.map(function(m){ return placeUnitRowHtml(m, l); }).join("")+'</div>'+
         '</div>'+
         (common.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les hébergements</div>'+detailAmenitiesHtml({amen:common})+'</div>' : '')+
+        parkingCardHtml(place)+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
           (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p>' : '')+
@@ -9443,7 +9447,7 @@ function openCreator(listing, siteFrom, siteJoin){
   if(!listing && siteJoin && siteJoin.shared){
     PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ var v = siteJoin.shared[k]; if(v!=null && v!=="") data[k] = v; });
   }
-  if(site && site.place.amen) data.amen = mergeSharedAmen(data.amen, [], site.place.amen);
+  if(site) data.amen = mergeSharedAmen(data.amen, [], placeSharedAmen(site.place));
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
     timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, site: site, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
@@ -9791,7 +9795,7 @@ function crSheet(kind, arg){
       '<p class="field-hint">Prix indicatif d’une nuit, affiché « à partir de » aux voyageurs.</p>'+
       '<div id="crs-rooms"></div>';
   } else if(kind==="amen"){
-    var siteAmen = (cr.site && cr.site.place.amen) || [];
+    var siteAmen = cr.site ? placeSharedAmen(cr.site.place) : [];
     inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.'+
       (siteAmen.length ? ' Les prestations grisées sont celles de l’établissement : elles se modifient dans l’établissement.' : '')+'</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
@@ -9878,7 +9882,7 @@ function crSheet(kind, arg){
       if(newlyLinked){ cr.planning = null; crSave().then(function(){ setTimeout(crLoadPlanningPrice, 4000); }); }
     });
   } else if(kind==="amen"){
-    var lockedAmen = (cr.site && cr.site.place.amen) || [];
+    var lockedAmen = cr.site ? placeSharedAmen(cr.site.place) : [];
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
       var la = chip.getAttribute("data-a"), lg = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
       // Prestation de l'établissement (ou groupe à choix unique déjà fixé par lui) : non modifiable ici.
@@ -10150,6 +10154,28 @@ var PE_SHARED_AMEN = [
   "Barbecue","Plancha","Brasero",
   "Accessible sans voiture","Privatisation / événements possibles"
 ];
+/* Stationnement (carte à part de l'établissement, place.parking {kind, note}) :
+   « Parking privé sur place » coche aussi la prestation « Parking privé »
+   de chaque hébergement (filtre Prestations des voyageurs). */
+var PARKING_KINDS = [["private","Parking privé sur place"],["street","Stationnement gratuit dans la rue"],["public","Parking public à proximité"],["none","Pas de stationnement"]];
+function parkingLabel(pk){
+  var k = pk && pk.kind;
+  for(var i=0;i<PARKING_KINDS.length;i++) if(PARKING_KINDS[i][0]===k) return PARKING_KINDS[i][1];
+  return "";
+}
+// Prestations que l'établissement impose à ses hébergements.
+function placeSharedAmen(place){
+  var out = ((place && place.amen) || []).slice();
+  if(place && place.parking && place.parking.kind==="private" && out.indexOf("Parking privé")===-1) out.push("Parking privé");
+  return out;
+}
+function parkingCardHtml(place){
+  var lab = parkingLabel(place && place.parking);
+  if(!lab) return "";
+  return '<div class="detail-card"><div class="section-title" style="margin-top:0">Stationnement</div>'+
+    '<div class="parking-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9.5 17V7h3.5a3 3 0 0 1 0 6H9.5"/></svg>'+
+    '<span><b>'+esc(lab)+'</b>'+(place.parking.note ? '<br>'+esc(place.parking.note) : '')+'</span></div></div>';
+}
 function peSharedFrom(l){
   var out = {};
   PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ out[k] = (l && l[k]!=null) ? l[k] : (k==="lat"||k==="lng" ? null : ""); });
@@ -10177,7 +10203,7 @@ function openPlaceEditor(listing, listings, preselect){
     var dp = (draft && draft.place) || {};
     pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
       shared:(draft && draft.shared) || peSharedFrom({email:authState.email || ""}), savedAmen:[], dirty:{},
-      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", amen:dp.amen || [], parking:dp.parking || null, gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
     document.body.classList.add("creator-open");
     peRender();
     return;
@@ -10188,8 +10214,8 @@ function openPlaceEditor(listing, listings, preselect){
   var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
   var pl = (withPlace && withPlace.place) || {};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
-    shared:peSharedFrom(byId(ids[0])), savedAmen:(pl.amen || []).slice(), dirty:{},
-    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    shared:peSharedFrom(byId(ids[0])), savedAmen:placeSharedAmen(pl), dirty:{},
+    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", parking:pl.parking || null, amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
@@ -10206,6 +10232,7 @@ function pePlaceObj(ctx){
   if(p.kind) out.kind = p.kind;
   if(desc) out.desc = desc;
   if(p.amen && p.amen.length) out.amen = p.amen.slice();
+  if(p.parking && p.parking.kind) out.parking = p.parking.note ? {kind:p.parking.kind, note:p.parking.note} : {kind:p.parking.kind};
   return out;
 }
 function peSaveLabel(){
@@ -10231,7 +10258,7 @@ function peSave(){
   c.saveState = "saving"; peSetSaveLabel();
   c.chain = c.chain.then(function(){
     var dirty = c.dirty; c.dirty = {}; c.lastDirty = dirty;
-    var newAmen = (c.place.amen || []).slice(), oldAmen = c.savedAmen;
+    var newAmen = placeSharedAmen(c.place), oldAmen = c.savedAmen;
     return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj(c), true).then(function(){
       // Informations communes modifiées : recopiées sur chaque hébergement.
       var db = firebase.firestore(), batch = db.batch(), n = 0;
@@ -10341,6 +10368,9 @@ function peRender(){
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+
           ((p.amen || []).length ? '<button type="button" class="cr-block" data-pe-open="amen">'+detailAmenitiesHtml({amen:p.amen})+'<span class="cr-edit-link">Modifier</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-pe-open="amen"><span class="cr-ph">Environnement, wifi, parking, piscine, accueil… Cochées une fois ici, elles valent pour tous les hébergements.</span></button>')+'</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Stationnement</div><button type="button" class="cr-block'+(p.parking && p.parking.kind ? '' : ' cr-empty')+'" data-pe-open="parking">'+
+          (p.parking && p.parking.kind ? '<span>'+esc(parkingLabel(p.parking))+'</span>'+(p.parking.note ? '<span class="cr-sub">'+esc(p.parking.note)+'</span>' : '')+'<span class="cr-edit-link">Modifier</span>'
+            : '<span class="cr-ph">Parking sur place, dans la rue, à proximité… Commun à tous les hébergements.</span>')+'</button></div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Adresse</div><button type="button" class="cr-block" data-pe-open="address">'+
           (sh.address ? '<span>'+esc(sh.address)+'</span>'+(typeof sh.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+
           '<span class="cr-sub">Commune à tous ses hébergements</span></button></div>'+
@@ -10439,6 +10469,13 @@ function peSheet(kind, arg){
           return '<button type="button" class="amenity-chip'+((p.amen||[]).indexOf(a)!==-1?' active':'')+'" data-a="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
         }).join("")+'</div></div>';
       }).join("")+'</div>';
+  } else if(kind==="parking"){
+    apply = "Valider";
+    var pk = p.parking || {};
+    inner = '<h3>Stationnement</h3><p class="sheet-sub">Commun à tous les hébergements de l’établissement.</p><div class="sort-row">'+PARKING_KINDS.map(function(k){
+      return '<button type="button" class="radio-row'+(pk.kind===k[0]?' active':'')+'" data-pk="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+'</div>'+
+      '<div class="field-block" style="margin-top:12px;"><label>Précision (facultatif)</label><input class="text-input" id="pk-note" maxlength="120" placeholder="Ex. 4 places, borne de recharge, garage à vélos" value="'+esc(pk.note||"")+'"></div>'+
+      (pk.kind ? '<button type="button" class="link-btn" id="pk-clear">Ne pas préciser</button>' : '');
   } else if(kind==="address"){
     apply = "Valider";
     inner = '<h3>Adresse de l’établissement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(pe.shared.address||"")+'">'+
@@ -10492,7 +10529,22 @@ function peSheet(kind, arg){
   var done = function(){ close(); peRender(); peScheduleSave(); };
   var acts = function(fn){ Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){ b.addEventListener("click", function(){ fn(b.getAttribute("data-act")); }); }); };
   var applyBtn = document.getElementById("sheet-apply");
-  if(kind==="amen"){
+  if(kind==="parking"){
+    var pkSel = (p.parking && p.parking.kind) || "";
+    Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(b){
+      b.addEventListener("click", function(){
+        pkSel = b.getAttribute("data-pk");
+        Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(o){ o.classList.toggle("active", o===b); });
+      });
+    });
+    var clr = document.getElementById("pk-clear");
+    if(clr) clr.addEventListener("click", function(){ p.parking = null; pe.dirty.amen = true; done(); });
+    applyBtn.addEventListener("click", function(){
+      var note = document.getElementById("pk-note").value.trim();
+      p.parking = pkSel ? {kind:pkSel, note:note} : null;
+      pe.dirty.amen = true; done();
+    });
+  } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
       chip.addEventListener("click", function(){
         var g = AMEN_GROUPS[Number(chip.getAttribute("data-group"))], on = !chip.classList.contains("active");
