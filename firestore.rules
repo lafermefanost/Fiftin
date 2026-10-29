@@ -67,9 +67,13 @@ service cloud.firestore {
       allow read: if resource.data.status == 'published'
         || (request.auth != null && resource.data.ownerUid == request.auth.uid)
         || isAdmin();
+      // Dépôt direct ("pending") ou brouillon ("draft", créateur d'annonce
+      // de Fiftin Séjours, enregistré au fil de la saisie) : un brouillon
+      // n'est lisible que par son propriétaire (règle read ci-dessus) et
+      // jamais publié sans passer par "pending" puis un admin.
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status in ['pending', 'draft'];
       allow update: if isAdmin()
         || (request.auth != null
           && resource.data.ownerUid == request.auth.uid
@@ -80,7 +84,11 @@ service cloud.firestore {
           // pas s'auto-publier après un premier dépôt).
           && (request.resource.data.status == resource.data.status
             || (resource.data.status in ['published', 'paused']
-              && request.resource.data.status in ['published', 'paused']))
+              && request.resource.data.status in ['published', 'paused'])
+            // Brouillon envoyé à la vérification : à sens unique, toujours
+            // vers "pending" (jamais directement "published").
+            || (resource.data.status == 'draft'
+              && request.resource.data.status == 'pending'))
           // stats (compteur de conversion demandes -> séjours, voir plus
           // bas et functions/index.js) : écrit UNIQUEMENT par la Cloud
           // Function syncListingContactStats (SDK Admin, hors règles) —
