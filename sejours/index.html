@@ -2372,7 +2372,8 @@ body.map-fullscreen{overflow:hidden;}
 .cpl-txt b .check{width:16px; height:16px; flex-shrink:0;}
 .cpl-sub{margin:8px auto 12px; max-width:320px; font-size:13px; line-height:1.4; opacity:.88;}
 .cpl-actions{display:flex; flex-direction:column; align-items:center; gap:8px;}
-.cpl-change{border:none; background:none; padding:4px 0; font-family:'Jost',sans-serif; font-size:13px; font-weight:600; color:#fff; text-decoration:underline; text-underline-offset:3px; cursor:pointer;}
+.cpl-link{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 10px;}
+.cpl-change{border:1.5px solid rgba(255,255,255,.6); background:transparent; border-radius:999px; padding:4px 12px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; color:#fff; cursor:pointer;}
 .cal-access-note{display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px;
   padding:14px 12px; border-radius:16px; margin-bottom:12px; font-size:12.5px; font-weight:600; line-height:1.4;}
 .cal-access-note svg{width:18px; height:18px; flex-shrink:0;}
@@ -12930,11 +12931,12 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
       // Picto calendrier de l'entrée « Mon planning » du menu.
       '<div class="cpl-head"><svg class="cpl-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>'+
         '<span class="cpl-txt"><small>Fiftin Planning</small>'+
-          '<b>'+(curRoomName ? '<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Relié à '+esc(curRoomName) : 'Pas encore relié à une location')+'</b></span></div>'+
+          // Lien Planning et son bouton côte à côte (retour de César).
+          '<span class="cpl-link"><b>'+(curRoomName ? '<svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>Relié à '+esc(curRoomName) : 'Pas encore relié à une location')+'</b>'+
+            (rooms.length ? '<button type="button" class="cpl-change" id="planning-chip-btn">'+(curRoomName ? 'Changer' : 'Relier')+'</button>' : '')+'</span></span></div>'+
       '<p class="cpl-sub">Calendrier en lecture seule ici : vos réservations s’ajoutent et se modifient dans Fiftin Planning.</p>'+
       '<div class="cpl-actions"><a class="cal-add-pill" href="app/" target="_blank" rel="noopener">Modifier le calendrier dans Fiftin Planning'+
         '<svg class="ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17L17 7M9 7h8v8"/></svg></a>'+
-        (rooms.length ? '<button type="button" class="cpl-change" id="planning-chip-btn">'+(curRoomName ? 'Changer la location reliée' : 'Relier une location')+'</button>' : '')+
       '</div></div>';
     roomLinkHtml = "";
   }
