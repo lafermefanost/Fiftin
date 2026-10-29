@@ -2412,6 +2412,7 @@ body.map-fullscreen{overflow:hidden;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
 .pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
 .pe-add{margin-top:10px;}
+.amenity-chip.cr-locked{opacity:.45; cursor:default;}
 .pe-undo{display:block; margin:6px auto 0; color:var(--muted);}
 /* « Créer » : hébergement ou établissement (openCreateChoice()). */
 .create-choice{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
@@ -9426,6 +9427,10 @@ function openListingEditor(listing, siteFrom){
 // siteJoin {siteId, place} : hébergement créé dans un établissement (peNewListing()).
 function openCreator(listing, siteFrom, siteJoin){
   var data = crBlank();
+  // Hébergement d'un établissement : adresse, contact et prestations du lieu
+  // viennent de l'établissement (lecture seule ici, voir crSite()).
+  var site = siteJoin ? {siteId:siteJoin.siteId, place:siteJoin.place || {}}
+    : (listing && listing.siteId && listing.place ? {siteId:listing.siteId, place:listing.place} : null);
   if(listing){
     data = JSON.parse(JSON.stringify(listing));
     ["id","ownerUid","ownerEmail","status","reviewed","createdAt","publishedAt","reviewedAt","stats","likeCount","siteId","place"].forEach(function(k){ delete data[k]; });
@@ -9435,8 +9440,12 @@ function openCreator(listing, siteFrom, siteJoin){
     sitePrefillFrom && Object.assign(data, sitePrefillFrom(siteFrom));
     ["lat","lng","region","inseeCode"].forEach(function(k){ if(siteFrom[k]!=null) data[k] = siteFrom[k]; });
   }
+  if(!listing && siteJoin && siteJoin.shared){
+    PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ var v = siteJoin.shared[k]; if(v!=null && v!=="") data[k] = v; });
+  }
+  if(site && site.place.amen) data.amen = mergeSharedAmen(data.amen, [], site.place.amen);
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
-    timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, profile:null, notice:""};
+    timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, site: site, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
   try{
     var local = JSON.parse(localStorage.getItem(CR_LOCAL_KEY+(cr.id||"new")) || "null");
@@ -9552,13 +9561,15 @@ function crRender(){
             : '<button type="button" class="cr-block cr-empty" data-cr-open="spaces"><span class="cr-ph">Chambres, salle de bain, jardin, terrasse…</span></button>')+'</div>'+
         crSiteCardHtml()+
         '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
-          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>'+
+          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+
+          (cr.site ? '<span class="cr-sub">Celle de l’établissement</span>' : '')+'</button></div>'+
         '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
           '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
           '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
         '<div class="detail-card" data-cr-sec="contact"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-cr-open="contact">'+
           crPh(d.phone, '<span>'+esc(d.phone)+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(d.email ? '<span class="cr-sub">'+esc(d.email)+'</span>' : '')+
-          ((d.websiteUrl||d.googleUrl||d.instagramUrl||d.facebookUrl) ? '<span class="cr-sub">Liens : '+[d.websiteUrl&&"site",d.googleUrl&&"Google",d.instagramUrl&&"Instagram",d.facebookUrl&&"Facebook"].filter(Boolean).join(", ")+'</span>' : '')+'</button></div>'+
+          ((d.websiteUrl||d.googleUrl||d.instagramUrl||d.facebookUrl) ? '<span class="cr-sub">Liens : '+[d.websiteUrl&&"site",d.googleUrl&&"Google",d.instagramUrl&&"Instagram",d.facebookUrl&&"Facebook"].filter(Boolean).join(", ")+'</span>' : '')+
+          (cr.site ? '<span class="cr-sub">Celui de l’établissement</span>' : '')+'</button></div>'+
       '</div>'+
     '</div>'+
     '<input type="file" id="cr-file" accept="image/*" multiple style="display:none">'+
@@ -9621,6 +9632,8 @@ function crWire(){
   });
   var pub = document.getElementById("cr-publish");
   if(pub) pub.addEventListener("click", crPublish);
+  var siteOpen = document.getElementById("cr-site-open");
+  if(siteOpen) siteOpen.addEventListener("click", crOpenSite);
   var site = document.getElementById("cr-site");
   if(site) site.addEventListener("click", function(){
     var myId = cr.id;
@@ -9637,7 +9650,10 @@ function crWire(){
    Brouillon : association automatique à la mise en ligne (< 50 m). */
 function crSiteCardHtml(){
   var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement <small class="cr-opt">facultatif</small></div>';
-  if(cr.siteJoin) return head+'<p class="cr-note">Cet hébergement fait partie de l’établissement'+(cr.siteJoin.place && cr.siteJoin.place.name ? ' « '+esc(cr.siteJoin.place.name)+' »' : '')+'.</p></div>';
+  if(cr.site) return head+(cr.id ? '<button type="button" class="cr-block" id="cr-site-open">' : '<div class="cr-block">')+
+    '<span>Fait partie de l’établissement'+(cr.site.place && cr.site.place.name ? ' « '+esc(cr.site.place.name)+' »' : '')+'</span>'+
+    '<span class="cr-sub">Adresse, contact et prestations communes viennent de l’établissement.</span>'+
+    (cr.id ? '<span class="cr-edit-link">Ouvrir l’établissement</span></button>' : '</div>')+'</div>';
   if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos hébergements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
   var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
   if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
@@ -9749,6 +9765,7 @@ function enableRowDrag(container, arr, rerender){
 /* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
 function crSheet(kind, arg){
   var d = cr.data, u = crUnit(), inner = "", apply = "Valider";
+  if(cr.site && (kind==="address" || kind==="contact")){ crSiteInfoSheet(kind); return; }
   if(kind==="type"){
     apply = null;
     inner = '<h3>Type d’hébergement</h3><div class="sort-row">'+Object.keys(ACCOM_TYPES).map(function(k){
@@ -9774,7 +9791,9 @@ function crSheet(kind, arg){
       '<p class="field-hint">Prix indicatif d’une nuit, affiché « à partir de » aux voyageurs.</p>'+
       '<div id="crs-rooms"></div>';
   } else if(kind==="amen"){
-    inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.</p>'+
+    var siteAmen = (cr.site && cr.site.place.amen) || [];
+    inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.'+
+      (siteAmen.length ? ' Les prestations grisées sont celles de l’établissement : elles se modifient dans l’établissement.' : '')+'</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
   } else if(kind==="address"){
     inner = '<h3>Adresse de l’hébergement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
@@ -9859,8 +9878,13 @@ function crSheet(kind, arg){
       if(newlyLinked){ cr.planning = null; crSave().then(function(){ setTimeout(crLoadPlanningPrice, 4000); }); }
     });
   } else if(kind==="amen"){
+    var lockedAmen = (cr.site && cr.site.place.amen) || [];
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
+      var la = chip.getAttribute("data-a"), lg = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
+      // Prestation de l'établissement (ou groupe à choix unique déjà fixé par lui) : non modifiable ici.
+      if(lockedAmen.indexOf(la)!==-1 || (lg && lg.single && lg.items.some(function(x){ return lockedAmen.indexOf(x)!==-1; }))){ chip.disabled = true; chip.classList.add("cr-locked"); }
       chip.addEventListener("click", function(){
+        if(chip.disabled) return;
         var a = chip.getAttribute("data-a"), g = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
         var on = !chip.classList.contains("active");
         if(on && g && g.single) Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-group="'+chip.getAttribute("data-group")+'"].active'), function(o){ o.classList.remove("active"); });
@@ -9964,6 +9988,34 @@ function crSheet(kind, arg){
       close(); crSetPhotos(list.map(function(e){ return {u:e.url, t:e.thumbUrl||null, m:e.midUrl||null}; }));
     });
   }
+}
+/* Adresse ou contact d'un hébergement d'établissement : communs, modifiés
+   dans l'établissement (un seul endroit, recopiés sur tous). */
+function crSiteInfoSheet(kind){
+  var d = cr.data, name = (cr.site.place && cr.site.place.name) || "l’établissement";
+  var val = kind==="address" ? esc(d.address || "Pas encore d’adresse") : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+    '<h3>'+(kind==="address" ? "Adresse" : "Contact")+'</h3>'+
+    '<p class="sheet-sub">'+(kind==="address" ? 'Commune' : 'Commun')+' à tous les hébergements de « '+esc(name)+' » : '+(kind==="address" ? 'elle se modifie' : 'il se modifie')+' une seule fois, dans l’établissement.</p>'+
+    '<div class="cr-planning-box"><b>'+val+'</b></div>'+
+    (cr.id ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">Modifier dans l’établissement</button></div>' : '')+
+  '</div></div></div>';
+  var close = function(){ root.innerHTML = ""; };
+  document.getElementById("sheet-close").addEventListener("click", close);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") close(); });
+  var go = document.getElementById("sheet-apply");
+  if(go) go.addEventListener("click", function(){ close(); crOpenSite(); });
+}
+function crOpenSite(){
+  var myId = cr.id;
+  crClose(function(){
+    ensureHostListingsLoaded(function(listings){
+      var me = listings.filter(function(x){ return x.id===myId; })[0];
+      if(me) openSiteLink(me, listings);
+    });
+  });
 }
 /* ---------- enregistrement automatique ---------- */
 function crPayload(){
@@ -10079,6 +10131,30 @@ function crPreview(){
 var pe = null; // {listings, memberIds, place, uploads, timer, chain, saveState, siteId}
 var PE_MAX_PHOTOS = 6;
 var PE_LOCAL_NEW = "fiftin_pe_new"; // établissement en création, avant son premier hébergement
+/* Informations communes, saisies une fois dans l'établissement et recopiées
+   sur chacun de ses hébergements (comme le nom et les photos du lieu) :
+   adresse, contact, et les prestations du lieu (place.amen) — jamais le
+   couchage ni le confort propres à chaque chambre. */
+var PE_ADDR_KEYS = ["address","lat","lng","region","regionName","deptName","city","inseeCode"];
+var PE_CONTACT_KEYS = ["phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"];
+var PE_AMEN_EXCLUDED = ["Séjours","Confort — Literie","Confort — Autres"];
+function peSharedFrom(l){
+  var out = {};
+  PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ out[k] = (l && l[k]!=null) ? l[k] : (k==="lat"||k==="lng" ? null : ""); });
+  return out;
+}
+// Prestations d'un hébergement une fois celles de l'établissement appliquées :
+// retire celles que l'établissement n'a plus, ajoute les siennes ; dans un
+// groupe à choix unique (Environnement), celle du lieu remplace l'autre.
+function mergeSharedAmen(own, oldShared, newShared){
+  var out = (own || []).filter(function(a){ return (oldShared || []).indexOf(a)===-1 || newShared.indexOf(a)!==-1; });
+  newShared.forEach(function(a){
+    var g = AMEN_GROUPS.filter(function(x){ return x.items.indexOf(a)!==-1; })[0];
+    if(g && g.single) out = out.filter(function(b){ return b===a || g.items.indexOf(b)===-1; });
+    if(out.indexOf(a)===-1) out.push(a);
+  });
+  return out;
+}
 /* listing null : nouvel établissement (« Créer » → « Un établissement ») —
    rien n'existe côté serveur avant son premier hébergement : présentation
    gardée sur l'appareil, puis recopiée sur ce premier hébergement. */
@@ -10088,7 +10164,8 @@ function openPlaceEditor(listing, listings, preselect){
     try{ draft = JSON.parse(localStorage.getItem(PE_LOCAL_NEW) || "null"); }catch(e){}
     var dp = (draft && draft.place) || {};
     pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
-      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+      shared:(draft && draft.shared) || peSharedFrom({email:authState.email || ""}), savedAmen:[], dirty:{},
+      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
     document.body.classList.add("creator-open");
     peRender();
     return;
@@ -10099,7 +10176,8 @@ function openPlaceEditor(listing, listings, preselect){
   var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
   var pl = (withPlace && withPlace.place) || {};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
-    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    shared:peSharedFrom(byId(ids[0])), savedAmen:(pl.amen || []).slice(), dirty:{},
+    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", amen:(pl.amen || []).slice(), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
@@ -10115,6 +10193,7 @@ function pePlaceObj(ctx){
   var out = {name:name, gallery:p.gallery.slice(), galleryThumb:p.galleryThumb.slice(), galleryMid:p.galleryMid.slice()};
   if(p.kind) out.kind = p.kind;
   if(desc) out.desc = desc;
+  if(p.amen && p.amen.length) out.amen = p.amen.slice();
   return out;
 }
 function peSaveLabel(){
@@ -10134,12 +10213,31 @@ function peSave(){
   var c = pe;
   c.timer = null;
   if(!c.memberIds.length){
-    try{ localStorage.setItem(PE_LOCAL_NEW, JSON.stringify({siteId:c.siteId, place:c.place})); }catch(e){}
+    try{ localStorage.setItem(PE_LOCAL_NEW, JSON.stringify({siteId:c.siteId, place:c.place, shared:c.shared})); }catch(e){}
     c.saveState = "new"; peSetSaveLabel(); return;
   }
   c.saveState = "saving"; peSetSaveLabel();
   c.chain = c.chain.then(function(){
-    return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj(), true).then(function(){
+    var dirty = c.dirty; c.dirty = {}; c.lastDirty = dirty;
+    var newAmen = (c.place.amen || []).slice(), oldAmen = c.savedAmen;
+    return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj(c), true).then(function(){
+      // Informations communes modifiées : recopiées sur chaque hébergement.
+      var db = firebase.firestore(), batch = db.batch(), n = 0;
+      c.memberIds.forEach(function(id){
+        var m = c.listings.filter(function(x){ return x.id===id; })[0];
+        if(!m) return;
+        var upd = {};
+        if(dirty.address) PE_ADDR_KEYS.forEach(function(k){ if(m[k]!==c.shared[k]) upd[k] = c.shared[k]; });
+        if(dirty.contact) PE_CONTACT_KEYS.forEach(function(k){ if((m[k]||"")!==(c.shared[k]||"")) upd[k] = c.shared[k] || ""; });
+        if(dirty.amen || dirty.members){
+          var merged = mergeSharedAmen(m.amen, oldAmen, newAmen);
+          if(JSON.stringify(merged)!==JSON.stringify(m.amen || [])) upd.amen = merged;
+        }
+        if(Object.keys(upd).length){ batch.update(db.collection("listings").doc(id), upd); n++; }
+      });
+      return n ? batch.commit() : null;
+    }).then(function(){
+      c.savedAmen = newAmen;
       // Données à jour (siteId attribué, lieu recopié) pour la suite.
       return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(function(ls){ c.listings = ls; res(); }); });
     }).then(function(){
@@ -10148,6 +10246,7 @@ function peSave(){
       peSetSaveLabel();
     }, function(err){
       console.warn("[établissement]", err);
+      if(c.lastDirty) Object.keys(c.lastDirty).forEach(function(k){ c.dirty[k] = true; });
       if(pe!==c) return;
       c.saveState = "error"; peSetSaveLabel();
     });
@@ -10186,9 +10285,10 @@ function peRender(){
   var prices = views.map(displayPriceOf).filter(function(v){ return v!=null; });
   var minPrice = prices.length ? Math.min.apply(null, prices) : null;
   var cap = siteAvailableCapacity(views, {});
-  var common = placeCommonAmen(views);
   var first = views[0] || {};
-  var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"]].filter(Boolean);
+  var sh = pe.shared;
+  var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"],
+    typeof sh.lat!=="number" && ["address","Adresse"], !(sh.phone||"").trim() && ["contact","Téléphone"]].filter(Boolean);
   var progress = !members.length
     ? '<div class="cr-progress"><b>Présentez votre établissement, puis créez ses hébergements</b><p>Un établissement est un lieu qui comprend plusieurs hébergements (chambres, gîtes…). Nom, type, photos et présentation sont communs à tous ; chaque hébergement a ensuite sa propre annonce, son prix et son calendrier.</p><button type="button" class="btn-apply" id="pe-first">Créer le premier hébergement</button></div>'
     : missing.length
@@ -10226,8 +10326,15 @@ function peRender(){
           '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
           (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les hébergements</div>'+
-          (common.length ? detailAmenitiesHtml({amen:common}) : '<p class="cr-note">Les prestations cochées sur tous vos hébergements apparaîtront ici.</p>')+'</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+
+          ((p.amen || []).length ? '<button type="button" class="cr-block" data-pe-open="amen">'+detailAmenitiesHtml({amen:p.amen})+'<span class="cr-edit-link">Modifier</span></button>'
+            : '<button type="button" class="cr-block cr-empty" data-pe-open="amen"><span class="cr-ph">Environnement, wifi, parking, piscine, accueil… Cochées une fois ici, elles valent pour tous les hébergements.</span></button>')+'</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Adresse</div><button type="button" class="cr-block" data-pe-open="address">'+
+          (sh.address ? '<span>'+esc(sh.address)+'</span>'+(typeof sh.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+
+          '<span class="cr-sub">Commune à tous ses hébergements</span></button></div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-pe-open="contact">'+
+          crPh(sh.phone, '<span>'+esc(sh.phone||"")+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(sh.email ? '<span class="cr-sub">'+esc(sh.email)+'</span>' : '')+
+          '<span class="cr-sub">Commun à tous ses hébergements</span></button></div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+esc((first.host && first.host.name) || "")+'</b></div></div>'+
           '<p class="cr-note">Votre présentation, commune à toutes vos annonces.</p></div>'+
@@ -10276,7 +10383,7 @@ function peWire(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-pe-go]"), function(b){
     b.addEventListener("click", function(){
       var key = b.getAttribute("data-pe-go");
-      if(key==="kind"){ peSheet("kind"); return; }
+      if(key==="kind" || key==="address" || key==="contact"){ peSheet(key); return; }
       if(key==="photos"){ var g = document.getElementById("pe-gallery-scroll"); document.getElementById("creator-panel").scrollTo({top:0, behavior:"smooth"}); g.scrollTo({left:g.scrollWidth, behavior:"smooth"}); return; }
       var el = document.getElementById("pe-"+key); el.scrollIntoView({behavior:"smooth", block:"center"}); el.focus();
     });
@@ -10310,7 +10417,31 @@ function peAddFiles(fileList){
 }
 function peSheet(kind, arg){
   var p = pe.place, inner = "", apply = null, sel = [];
-  if(kind==="kind"){
+  if(kind==="amen"){
+    apply = "Valider";
+    inner = '<h3>Prestations de l’établissement</h3><p class="sheet-sub">Cochées ici, elles valent pour tous ses hébergements. Le couchage et le confort de chaque chambre se règlent dans chaque annonce.</p>'+
+      '<div class="cr-amen">'+AMEN_GROUPS.map(function(g, gi){
+        if(PE_AMEN_EXCLUDED.indexOf(g.title)!==-1) return "";
+        return '<div class="amen-group" data-group="'+gi+'"><div class="amen-group-title">'+esc(g.title)+'</div><div class="amenity-grid">'+g.items.map(function(a){
+          return '<button type="button" class="amenity-chip'+((p.amen||[]).indexOf(a)!==-1?' active':'')+'" data-a="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
+        }).join("")+'</div></div>';
+      }).join("")+'</div>';
+  } else if(kind==="address"){
+    apply = "Valider";
+    inner = '<h3>Adresse de l’établissement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(pe.shared.address||"")+'">'+
+      '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
+      '<p class="field-hint">Recopiée sur tous ses hébergements : elle les place sur la carte et sert aux distances ; jamais montrée telle quelle aux voyageurs.</p><div class="auth-err" id="crs-err"></div>';
+  } else if(kind==="contact"){
+    apply = "Valider";
+    var sc = pe.shared;
+    inner = '<h3>Contact de l’établissement</h3><p class="sheet-sub">Recopié sur tous ses hébergements : les voyageurs vous joignent au même numéro.</p>'+
+      '<div class="field-block"><label>Téléphone *</label><input class="text-input" type="tel" id="crs-phone" placeholder="+33…" value="'+esc(sc.phone||"")+'"></div>'+
+      '<div class="field-block"><label>E-mail (facultatif)</label><input class="text-input" type="email" id="crs-email" value="'+esc(sc.email||"")+'"></div>'+
+      '<div class="field-block"><label>Site personnel</label><input class="text-input" type="url" id="crs-web" placeholder="https://…" value="'+esc(sc.websiteUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Avis Google</label><input class="text-input" type="url" id="crs-google" value="'+esc(sc.googleUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Instagram</label><input class="text-input" type="url" id="crs-insta" value="'+esc(sc.instagramUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Facebook</label><input class="text-input" type="url" id="crs-fb" value="'+esc(sc.facebookUrl||"")+'"></div><div class="auth-err" id="crs-err"></div>';
+  } else if(kind==="kind"){
     inner = '<h3>Type d’établissement</h3><div class="sort-row">'+PLACE_KINDS.map(function(k){
       return '<button type="button" class="radio-row'+(p.kind===k[0]?' active':'')+'" data-v="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+
       (p.kind ? '<button type="button" class="radio-row" data-v="">Ne pas préciser</button>' : '')+'</div>';
@@ -10347,7 +10478,59 @@ function peSheet(kind, arg){
   document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") close(); });
   var done = function(){ close(); peRender(); peScheduleSave(); };
   var acts = function(fn){ Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){ b.addEventListener("click", function(){ fn(b.getAttribute("data-act")); }); }); };
-  if(kind==="kind"){
+  var applyBtn = document.getElementById("sheet-apply");
+  if(kind==="amen"){
+    Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
+      chip.addEventListener("click", function(){
+        var g = AMEN_GROUPS[Number(chip.getAttribute("data-group"))], on = !chip.classList.contains("active");
+        if(on && g && g.single) Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-group="'+chip.getAttribute("data-group")+'"].active'), function(o){ o.classList.remove("active"); });
+        chip.classList.toggle("active", on);
+      });
+    });
+    applyBtn.addEventListener("click", function(){
+      p.amen = Array.prototype.map.call(root.querySelectorAll(".amenity-chip.active"), function(c){ return c.getAttribute("data-a"); });
+      pe.dirty.amen = true; done();
+    });
+  } else if(kind==="address"){
+    var input = document.getElementById("crs-address"), box = document.getElementById("crs-suggest"), atimer = null, picked = null;
+    input.addEventListener("input", function(){
+      picked = null;
+      var q = input.value.trim(); clearTimeout(atimer);
+      if(q.length<5){ box.hidden = true; return; }
+      atimer = setTimeout(function(){ searchAddressSuggestions(q).then(function(res){
+        if(input.value.trim()!==q) return;
+        if(!res.length){ box.hidden = true; return; }
+        box.innerHTML = res.map(function(x, i){ return '<button type="button" class="hf-address-suggestion" data-i="'+i+'">'+esc((x.properties||{}).label||"")+'</button>'; }).join("");
+        box.hidden = false;
+        Array.prototype.forEach.call(box.querySelectorAll("[data-i]"), function(b){ b.addEventListener("click", function(){ picked = res[Number(b.getAttribute("data-i"))]; input.value = (picked.properties||{}).label || input.value; box.hidden = true; }); });
+      }); }, 400);
+    });
+    applyBtn.addEventListener("click", function(){
+      var addr = input.value.trim(), err = document.getElementById("crs-err"), d = pe.shared;
+      if(!addr){ err.textContent = "Renseignez l’adresse."; return; }
+      applyBtn.disabled = true; applyBtn.textContent = "Localisation…";
+      geocodeAddress(addr).then(function(coords){
+        var m = matchRegionDept(coords.address || (picked && picked.properties) || {});
+        d.address = addr; d.lat = coords.lat; d.lng = coords.lng; d.inseeCode = coords.citycode || "";
+        d.regionName = m.regionName || d.regionName || ""; d.deptName = m.deptName || d.deptName || ""; d.city = m.city || d.city || "";
+        d.region = (d.city ? d.city+", " : "") + (d.deptName || d.regionName || addr);
+        pe.dirty.address = true; done();
+      }).catch(function(){
+        err.textContent = "Adresse introuvable : vérifiez qu’elle est complète (numéro, rue, code postal, ville).";
+        applyBtn.disabled = false; applyBtn.textContent = "Valider";
+      });
+    });
+  } else if(kind==="contact"){
+    applyBtn.addEventListener("click", function(){
+      var d = pe.shared, phone = document.getElementById("crs-phone").value.trim();
+      // Les annonces en ligne gardent toujours un téléphone (minimum de mise en ligne).
+      if(!phone){ document.getElementById("crs-err").textContent = "Le téléphone est indispensable : c’est par lui que les voyageurs vous joignent."; return; }
+      d.phone = phone; d.email = document.getElementById("crs-email").value.trim();
+      d.websiteUrl = extUrl(document.getElementById("crs-web").value); d.googleUrl = extUrl(document.getElementById("crs-google").value);
+      d.instagramUrl = extUrl(document.getElementById("crs-insta").value); d.facebookUrl = extUrl(document.getElementById("crs-fb").value);
+      pe.dirty.contact = true; done();
+    });
+  } else if(kind==="kind"){
     Array.prototype.forEach.call(root.querySelectorAll("[data-v]"), function(b){ b.addEventListener("click", function(){ p.kind = b.getAttribute("data-v"); done(); }); });
   } else if(kind==="photo"){
     acts(function(act){
@@ -10379,6 +10562,7 @@ function peSheet(kind, arg){
     var ab = document.getElementById("sheet-apply");
     if(ab) ab.addEventListener("click", function(){
       sel.forEach(function(id){ if(pe.memberIds.indexOf(id)===-1) pe.memberIds.push(id); });
+      if(sel.length) pe.dirty.members = true;
       close(); peRender();
       if(sel.length) peScheduleSave(0);
     });
@@ -10400,7 +10584,7 @@ function peNewListing(){
     document.getElementById("creator-root").innerHTML = "";
     pe = null;
     if(!members.length){ try{ localStorage.removeItem(PE_LOCAL_NEW); }catch(e){} }
-    openCreator(null, members[0] || null, {siteId:siteId, place:pePlaceObj(c)});
+    openCreator(null, members[0] || null, {siteId:siteId, place:pePlaceObj(c), shared:c.shared});
   });
 }
 function peUndo(){

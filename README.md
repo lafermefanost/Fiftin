@@ -1178,3 +1178,14 @@ Demandes de César : l'établissement doit se créer « exactement comme un héb
 
 Tests : `planSiteAssociation`, 13 cas (7 d'avant inchangés, 6 nouveaux : établissement à un hébergement, retrait sans dissolution, lieu étranger jamais touché). Émulateurs, téléphone 390 px : établissement créé d'abord (gardé sur l'appareil) → premier hébergement (brouillon rattaché, siteId + place) → retour à l'établissement → carte dans Mes annonces ; type + présentation recopiés sur les 7 annonces de La Ferme Fanost ; retrait puis ajout (gîte et chambre) ; aperçu ; annonce seule → établissement à un hébergement → « Défaire » ; aucun autre établissement touché ; aucune erreur de page.
 
+### Informations communes saisies une seule fois dans l'établissement
+
+Pour ne plus ressaisir sept fois la même chose : l'adresse, le contact (téléphone obligatoire, e-mail, liens) et les prestations du lieu (environnement, équipements, accueil, loisirs & bien-être, esprit & ambiance, atouts) se règlent dans l'éditeur d'établissement et sont recopiés sur chacun de ses hébergements à l'enregistrement — uniquement ce que l'hôte vient de modifier (une annonce d'un établissement dont le téléphone différait n'est pas réécrite parce qu'on a changé la présentation). Le couchage, le confort de la chambre et le type de séjour restent propres à chaque hébergement.
+
+- Prestations du lieu : `place.amen`, appliquées par `mergeSharedAmen(own, oldShared, newShared)` — ajoutées à chaque hébergement, retirées de chacun si l'hôte les retire de l'établissement, et dans un groupe à choix unique (Environnement) celle du lieu remplace celle de l'hébergement. Un hébergement ajouté à l'établissement les reçoit.
+- Créateur d'un hébergement d'établissement : adresse et contact affichés « Celle / Celui de l’établissement », leur volet explique qu'ils se modifient dans l'établissement (bouton « Modifier dans l’établissement ») ; prestations du lieu grisées dans le volet Prestations ; carte « Établissement » avec « Ouvrir l’établissement ».
+- Nouvel établissement : adresse, contact et prestations saisis avant le premier hébergement (gardés sur l'appareil avec le reste), puis reportés dans ce premier hébergement.
+- Les annonces en ligne gardent le minimum : le téléphone de l'établissement ne peut pas être vidé, l'adresse doit être localisée.
+
+Tests : `mergeSharedAmen` 5 cas ; `planSiteAssociation` 13 cas inchangés. Émulateurs : prestations, téléphone (vide refusé) et adresse de La Ferme Fanost recopiés sur ses 7 hébergements, gîte hors établissement intact ; créateur d'une chambre : 9 prestations verrouillées (Piscine + tout le groupe Environnement fixé à Champêtre), volet Adresse en lecture qui rouvre l'établissement ; nouvel établissement → premier hébergement prérempli (adresse, téléphone, e-mail, Forêt) ; aucune erreur de page.
+
