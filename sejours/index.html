@@ -4223,11 +4223,14 @@ function fetchListingIndex(){
    déjà couverts par Accueil/Équipements/Esprit & ambiance/Installation
    autonome — double saisie du même fait sans bénéfice (retour
    utilisateur après relecture). */
+/* Obligatoire pour publier : le couchage seulement (Confort — Literie),
+   l'information que les voyageurs cherchent d'abord. Les autres catégories
+   améliorent l'annonce sans bloquer sa mise en ligne. */
 var AMEN_GROUPS = [
-  {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true, required:true},
-  {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true, required:true},
-  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Ventilateur","Ventilateur plafond","Moustiquaire","Chauffage","Wifi","Parking privé","Accès PMR","Sèche-cheveux"], required:true},
-  {title:"Accueil", items:["Accueil en personne","Installation autonome"], required:true},
+  {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true},
+  {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true},
+  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Ventilateur","Ventilateur plafond","Moustiquaire","Chauffage","Wifi","Parking privé","Accès PMR","Sèche-cheveux"]},
+  {title:"Accueil", items:["Accueil en personne","Installation autonome"]},
   {title:"Confort — Literie", items:["Lit 180 cm","Lit 160 cm","Lit 140 cm","Lit 90 cm","Lits jumeaux 2×80 cm","Lits jumeaux 2×90 cm","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
   {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
   {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition"]},
@@ -7805,7 +7808,7 @@ function openSheet(kind){
       // plus souvent") — avant tous les champs modifiés bien plus
       // rarement une fois l'annonce créée (adresse, description, réseaux…).
       '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos & tarifs")+
-        '<div class="field-block"><label>'+(hfLegacyMulti ? 'Photos de la maison / espaces communs' : 'Photos du logement')+' (6 maximum, 8 Mo par photo)</label>'+
+        '<div class="field-block"><label>'+(hfLegacyMulti ? 'Photos de la maison / espaces communs' : 'Photos du logement *')+' (3 minimum, 6 maximum, 8 Mo par photo)</label>'+
           '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
           '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
           '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
@@ -7875,7 +7878,7 @@ function openSheet(kind){
       '<div id="hf-site-wrap"></div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact & réseaux")+
         '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
-        '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
+        '<div class="field-block"><label>E-mail de contact</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
           '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
         '</div>'+
         '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
@@ -9795,6 +9798,10 @@ function wireHfAddressAutocomplete(){
   input.addEventListener("blur", function(){ setTimeout(hide, 150); });
 }
 
+/* Minimum pour mettre une annonce en ligne (formulaire actuel, puis créateur
+   d'annonce) : 3 photos, nom, type, accroche, description, adresse localisée,
+   prix, capacité, téléphone, nom et présentation de l'hôte, couchage. */
+var LISTING_MIN_PHOTOS = 3;
 function submitHostForm(){
   var name = document.getElementById("hf-name").value.trim();
   var accomType = document.getElementById("hf-type").value;
@@ -9848,8 +9855,9 @@ function submitHostForm(){
     ["hf-address", address, "Renseignez l'adresse complète du logement."],
     ["hf-claim", claim, "Renseignez une accroche courte."],
     ["hf-desc", desc, "Renseignez la description du logement."],
-    ["hf-phone", phone, "Renseignez un téléphone de contact."],
-    ["hf-email", email, "Renseignez un e-mail de contact."]
+    // Téléphone obligatoire (boutons WhatsApp, SMS, Appeler de l'annonce) ;
+    // e-mail facultatif (bouton Mail affiché seulement s'il existe).
+    ["hf-phone", phone, "Renseignez un téléphone de contact."]
   ];
   for(var fi=0; fi<requiredFields.length; fi++){
     if(!requiredFields[fi][1]){
@@ -9869,6 +9877,16 @@ function submitHostForm(){
   if(!hostName){ errEl.textContent = "Renseignez votre nom dans la section Profil (en tête de votre espace hôte) avant de déposer une annonce."; return; }
   if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; scrollToField("hf-hostbio"); return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
+  // Annonce en ligne dès l'envoi : au moins LISTING_MIN_PHOTOS photos (une
+  // carte et une fiche qui donnent envie, jamais de carte vide dans le fil).
+  // Photos du logement, plus celles d'une ancienne location le cas échéant.
+  var photoCount = hfSelectedFiles.length + hfUnits.reduce(function(n, u){ return n + (u.photos||[]).length; }, 0);
+  if(photoCount < LISTING_MIN_PHOTOS){
+    errEl.textContent = "Ajoutez au moins "+LISTING_MIN_PHOTOS+" photos de votre logement ("+photoCount+"/"+LISTING_MIN_PHOTOS+").";
+    var photoBtn = document.getElementById("hf-photos-btn");
+    if(photoBtn) photoBtn.scrollIntoView({behavior:"smooth", block:"center"});
+    return;
+  }
   // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
   // voir renderHostUnits() — donc jamais exigé pour une seule location
   // solo, dont le champ reste vide par construction (pas d'input pour le
