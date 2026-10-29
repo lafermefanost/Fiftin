@@ -1075,6 +1075,10 @@ Un logement = une annonce. Les annonces d'un même hôte à la même adresse peu
 - Associer / dissocier : un seul lot d'écritures (`planSiteAssociation()`, `applySiteAssociation()`) ; décocher un logement le sépare sans défaire le reste du lieu ; un lieu réduit à un logement perd son `siteId`.
 - **Déploiement** : `functions/index.js` modifié → workflow « Déploiement des fonctions Firebase » à la fusion. Tant que l'index n'est pas republié pour une annonce (toute écriture de l'annonce le republie), elle n'est pas regroupée dans le fil.
 
+## Modération des annonces (Fiftin Séjours)
+
+Après publication : une annonce est en ligne dès l'envoi (`status:"published"`, `reviewed:false`, `publishedAt`). Profil → « Annonces à vérifier » (comptes admin) liste les annonces pas encore vérifiées (`reviewed == false`, hors brouillons et retirées) et les anciens dépôts `pending` : « Voir » (fiche comme un voyageur), « C'est bon » (`reviewed:true`, `reviewedAt`), « Retirer » (`status:"removed"` : hors du site, l'hôte garde l'annonce, peut la modifier ou la supprimer, mais ne peut plus la remettre en ligne — règle Firestore). `reviewed` n'est jamais écrit par l'hôte (obligatoirement `false` à la création, inchangé ensuite). Brouillons (`draft`, créateur d'annonce à venir) : lisibles par le seul propriétaire, mis en ligne à sens unique. Tests : `tests/firestore-rules.test.mjs` (émulateur).
+
 ## Mentions de confiance (Fiftin Séjours)
 
 Plus de taux de conversion demandes → séjours (il n'était montré qu'au propriétaire, mais mettait une pression inutile). Sur la fiche, une seule mention, sans nombre ni classement (`trustBadgeHtml()`) : « Déjà choisi via Fiftin » dès qu'un voyageur a validé un séjour dans son carnet (`stats.confirmedCount` ≥ 1, écrit uniquement par la fonction `syncListingContactStats`), sinon « Nouveau sur Fiftin » pendant 6 mois après le dépôt (`createdAt`), ensuite rien. Limite connue : déclaratif (un voyageur valide lui-même son séjour).

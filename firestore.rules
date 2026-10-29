@@ -58,29 +58,37 @@ service cloud.firestore {
       allow delete: if request.auth != null && resource.data.ownerUid == request.auth.uid;
     }
 
-    // Annonces déposées par les hôtes depuis Fiftin Séjours (onglet Profil
-    // → Espace hôtes). Public en lecture uniquement une fois publiée ; le
-    // dépôt force status:"pending" (un hôte ne peut pas s'auto-publier) ;
-    // seul un compte isAdmin() peut faire passer status à "published" ou
-    // supprimer une annonce d'un autre compte (Profil → Annonces à valider).
+    // Annonces déposées par les hôtes depuis Fiftin Séjours (Espace hôte).
+    // Public en lecture uniquement une fois publiée. Modération APRÈS
+    // publication : l'hôte met son annonce en ligne lui-même (reviewed:false),
+    // un admin la vérifie ensuite (Profil → Annonces à vérifier) : reviewed
+    // passe à true, ou l'annonce est retirée (status "removed", que l'hôte
+    // ne peut plus remettre en ligne). reviewed n'est jamais écrit par l'hôte.
     match /listings/{listingId} {
       allow read: if resource.data.status == 'published'
         || (request.auth != null && resource.data.ownerUid == request.auth.uid)
         || isAdmin();
+      // Création : en ligne directement ("published"), brouillon ("draft",
+      // créateur d'annonce, lisible par le seul propriétaire) ou ancien
+      // dépôt "pending" ; toujours marquée « à vérifier » (reviewed:false).
       allow create: if request.auth != null
         && request.resource.data.ownerUid == request.auth.uid
-        && request.resource.data.status == 'pending';
+        && request.resource.data.status in ['published', 'draft', 'pending']
+        && request.resource.data.reviewed == false;
       allow update: if isAdmin()
         || (request.auth != null
           && resource.data.ownerUid == request.auth.uid
-          // status : inchangé (cas d'origine), OU une bascule published<->paused
-          // (Mes annonces → "Mettre en pause"/"Publier", voir sejours/index.html
-          // toggleListingPause()) — jamais depuis/vers "pending" par ce chemin,
-          // qui reste réservé à isAdmin() ci-dessus (un hôte ne peut toujours
-          // pas s'auto-publier après un premier dépôt).
+          // status : inchangé, OU une bascule published<->paused (Mes
+          // annonces → "En ligne"/"En pause"), OU un brouillon mis en ligne
+          // (à sens unique). Jamais depuis "removed" (retirée par un admin)
+          // ni depuis "pending" (ancien dépôt en attente d'un admin).
           && (request.resource.data.status == resource.data.status
             || (resource.data.status in ['published', 'paused']
-              && request.resource.data.status in ['published', 'paused']))
+              && request.resource.data.status in ['published', 'paused'])
+            || (resource.data.status == 'draft'
+              && request.resource.data.status in ['published', 'pending']))
+          // Vérification par un admin : jamais modifiée par l'hôte.
+          && request.resource.data.get('reviewed', null) == resource.data.get('reviewed', null)
           // stats (compteur de conversion demandes -> séjours, voir plus
           // bas et functions/index.js) : écrit UNIQUEMENT par la Cloud
           // Function syncListingContactStats (SDK Admin, hors règles) —
