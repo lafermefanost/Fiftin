@@ -9869,6 +9869,15 @@ function submitHostForm(){
   if(!hostName){ errEl.textContent = "Renseignez votre nom dans la section Profil (en tête de votre espace hôte) avant de déposer une annonce."; return; }
   if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; scrollToField("hf-hostbio"); return; }
   if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
+  // Annonce en ligne dès l'envoi : jamais sans photo (une carte vide dans
+  // le fil). Photos du logement, ou à défaut celles d'une ancienne location.
+  var photoCount = hfSelectedFiles.length + hfUnits.reduce(function(n, u){ return n + (u.photos||[]).length; }, 0);
+  if(!photoCount){
+    errEl.textContent = "Ajoutez au moins une photo de votre logement.";
+    var photoBtn = document.getElementById("hf-photos-btn");
+    if(photoBtn) photoBtn.scrollIntoView({behavior:"smooth", block:"center"});
+    return;
+  }
   // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
   // voir renderHostUnits() — donc jamais exigé pour une seule location
   // solo, dont le champ reste vide par construction (pas d'input pour le
