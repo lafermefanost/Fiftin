@@ -475,6 +475,20 @@ a{color:inherit; text-decoration:none;}
 .cover .grad{position:absolute; inset:0;}
 .cover .cover-carousel{position:absolute; inset:0; display:flex; overflow-x:auto; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; z-index:1;}
 .cover .cover-carousel .cc-slide{min-width:100%; height:100%; object-fit:cover; scroll-snap-align:start; flex-shrink:0;}
+/* Carte d'un lieu (placeCoverHtml()) : diapositives en <div> (photo +
+   étiquette du logement). */
+.place-cover .cc-slide{position:relative;}
+.place-cover .cc-slide img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+.place-unit-tag{position:absolute; left:16px; top:76px; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+  max-width:calc(100% - 32px); padding:8px 14px; border:none; border-radius:16px; background:rgba(255,255,255,.92); color:var(--ink);
+  font-family:'Jost',sans-serif; text-align:left; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.18);}
+.place-unit-tag b{font-size:14px; font-weight:700;}
+.place-unit-tag span{font-size:12.5px; font-weight:600; color:var(--sauge);}
+.place-unit-tag.full span{color:var(--muted);}
+.place-pick{margin-top:14px; text-align:center;}
+.place-pick > span{display:block; font-size:12.5px; color:var(--muted); margin-bottom:8px;}
+.place-pick-list{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;}
+.place-pick-chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:7px 12px; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; color:var(--sauge); cursor:pointer;}
 .cover .cover-dots{position:absolute; top:58px; left:0; right:0; z-index:5; display:flex; justify-content:center; gap:5px;}
 .cover .cover-dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .cover .cover-dots span.on{background:#fff; width:16px; border-radius:3px;}
@@ -562,6 +576,9 @@ a{color:inherit; text-decoration:none;}
 /* Mention « + N autres logements au même endroit » / « Jusqu'à N voyageurs
    avec les logements associés » (siteNoteHtml()) : discrète, entre
    l'accroche et les boutons. */
+/* Mention de confiance de la fiche (trustBadgeHtml()) : pastille discrète. */
+.trust-badge{display:inline-flex; align-items:center; gap:6px; margin:10px 0 2px; padding:6px 12px; border-radius:999px; background:var(--sauge-bg); color:var(--sauge); font-size:12.5px; font-weight:600;}
+.trust-badge svg{width:14px; height:14px; flex-shrink:0;}
 .cover-info .site-note{display:flex; align-items:center; gap:6px; margin:-4px 0 12px; font-size:12.5px; font-weight:600; color:rgba(245,240,229,.95);}
 .cover-info .site-note svg{width:15px; height:15px; flex-shrink:0;}
 /* Fiche : « Au même endroit » — petites cartes des autres logements
@@ -2258,6 +2275,10 @@ body.map-fullscreen{overflow:hidden;}
 .site-pick-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
 .site-pick-name{flex:1; min-width:0; text-align:left;}
 .site-pick-name small{display:block; font-size:11.5px; font-weight:500; color:var(--muted);}
+.site-place{margin-top:18px; padding-top:16px; border-top:1.5px solid var(--line);}
+.site-place.first{margin-top:4px; padding-top:0; border-top:none;}
+.site-place-title{font-size:15px; font-weight:700; color:var(--ink); margin-bottom:6px;}
+.site-place-title small{font-size:12px; font-weight:500; color:var(--muted); margin-left:6px;}
 .site-hint{background:var(--sauge-bg); border-radius:16px; padding:14px; margin-bottom:14px; color:var(--sauge);}
 .site-hint p{margin:0 0 10px; font-size:13.5px; line-height:1.4; font-weight:500;}
 .site-hint-actions{display:flex; gap:8px;}
@@ -3002,7 +3023,6 @@ function extLinksHtml(l){
    qu'un simple espace (voir .meta-item + border-left en CSS). */
 var META_ICON_PRICE = "<path d='M3 3h8l10 10-8 8L3 11V3z'/><circle cx='8' cy='8' r='1.5'/>";
 var META_ICON_DISTANCE = "<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>";
-var META_ICON_CONVERSION = "<path d='M3 17l6-6 4 4 8-8'/><path d='M15 7h6v6'/>";
 var META_ICON_GUESTS = "<circle cx='12' cy='8' r='3.5'/><path d='M5 21c0-4 3-7 7-7s7 3 7 7'/>";
 function metaItemHtml(iconPath, value, label){
   return '<div class="meta-item"><span class="meta-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+iconPath+'</svg></span><span class="meta-text"><b>'+value+'</b><span>'+label+'</span></span></div>';
@@ -3883,6 +3903,31 @@ function renderTopAccount(){
    listings/{id} status=="published") avec le fil statique (listings.json).
    Lecture publique déjà autorisée par les règles Firestore pour les
    annonces publiées — pas besoin d'être connecté pour les voir. */
+function listingCreatedMs(l){
+  var c = l && l.createdAt;
+  if(!c) return null;
+  if(typeof c.toMillis==="function") return c.toMillis();
+  if(typeof c.seconds==="number") return c.seconds*1000;
+  return null;
+}
+/* Mention de confiance, sans nombre ni classement : « Déjà choisi via
+   Fiftin » dès qu'un voyageur a validé un séjour dans son carnet de
+   voyage (stats.confirmedCount, écrit uniquement par le serveur), sinon
+   « Nouveau sur Fiftin » pendant les 6 mois qui suivent le dépôt ;
+   ensuite rien (jamais de mention négative). */
+var TRUST_NEW_MS = 183*24*3600*1000;
+var TRUST_ICON_OK = "<path d='M20 6L9 17l-5-5'/>";
+var TRUST_ICON_NEW = "<path d='M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'/>";
+function trustBadgeHtml(l){
+  var label, icon;
+  if(l.stats && l.stats.confirmedCount>0){ label = "Déjà choisi via Fiftin"; icon = TRUST_ICON_OK; }
+  else {
+    var created = l.createdAtMs!=null ? l.createdAtMs : listingCreatedMs(l);
+    if(created==null || Date.now()-created > TRUST_NEW_MS) return "";
+    label = "Nouveau sur Fiftin"; icon = TRUST_ICON_NEW;
+  }
+  return '<div class="trust-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+icon+'</svg><span>'+label+'</span></div>';
+}
 function normalizeHostListing(doc){
   var l = doc.data();
   var gallery = l.gallery && l.gallery.length ? l.gallery : null;
@@ -3896,7 +3941,9 @@ function normalizeHostListing(doc){
   return {
     id: idFromString(doc.id),
     docId: doc.id, // id Firestore réel (string) — le "id" ci-dessus n'est qu'un hash numérique pour homogénéité avec les annonces statiques (listings.json), qui elles n'ont pas de document Firestore. Nécessaire pour cibler le bon document (toggleLike, likeCount).
-    ownerUid: l.ownerUid || "", // pour n'afficher le taux de conversion (voir conversionLabelFor()) qu'au propriétaire connecté, jamais aux autres voyageurs.
+    ownerUid: l.ownerUid || "", // lieu (siteOf()), « Ailleurs chez … », et aperçu de l'hôte sur sa propre annonce
+    createdAtMs: listingCreatedMs(l), // « Nouveau sur Fiftin » (voir trustBadgeHtml())
+    place: l.place || null, // « Le lieu » : nom + photos communes des logements associés (voir applySiteAssociation())
     siteId: l.siteId || "", // logements associés au même endroit (voir siteOf())
     stats: l.stats || null, // {demandeCount, confirmedCount} — écrit uniquement par la Cloud Function syncListingContactStats (functions/index.js), jamais par un client (voir la règle Firestore listings/{listingId}).
     name: l.name, region: l.region, claim: l.claim,
@@ -4858,11 +4905,11 @@ function writeLikeState(l, liked){
    voir son commentaire. Re-rendu immédiat du bandeau si l'onglet Mes
    séjours est déjà affiché ; sinon la prochaine visite relira
    simplement l'état réel via loadContactLogEntries(). */
-function logContact(l, channel, unitName, checkIn, checkOut){
+function logContact(l, channel, unitName, checkIn, checkOut, nameOverride){
   if(!authState.uid || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
   firebase.firestore().collection("contactLog").doc(authState.uid).collection("entries").add({
     listingId: l.docId || String(l.id),
-    listingName: unitName ? (l.name+" – "+unitName) : l.name,
+    listingName: nameOverride || (unitName ? (l.name+" – "+unitName) : l.name),
     channel: channel,
     checkIn: checkIn,
     checkOut: checkOut,
@@ -4873,23 +4920,10 @@ function logContact(l, channel, unitName, checkIn, checkOut){
   }).catch(function(err){ console.error("[contactLog] échec de l'écriture", err); });
 }
 
-/* Taux de conversion demandes -> séjours d'une annonce, visible UNIQUEMENT
-   par son propriétaire dans sa propre fiche détail (voir openDetail()) :
-   une donnée business, pas un argument marketing à exposer aux voyageurs
-   (afficher un pourcentage bas découragerait des réservations légitimes
-   sur un échantillon souvent minuscule — décision volontaire, à
-   reconsidérer si un jour l'hôte veut l'afficher publiquement). l.stats
-   n'existe que si la Cloud Function syncListingContactStats a déjà tourné
-   au moins une fois (voir functions/index.js) ; null tant qu'aucune
-   demande n'a jamais été enregistrée pour cette annonce — pas de "0%"
-   trompeur (0% de conversion et "personne n'a encore contacté" sont deux
-   informations différentes). */
-function conversionLabelFor(l){
-  if(!l.stats || !l.stats.demandeCount) return null;
-  var pct = Math.round((l.stats.confirmedCount||0) / l.stats.demandeCount * 100);
-  return pct+"%";
-}
-
+/* Plus de taux de conversion (demandes -> séjours) affiché nulle part :
+   une note qui met une pression inutile sur l'hôte. Les compteurs restent
+   tenus par la fonction syncListingContactStats ; seul confirmedCount sert,
+   à la mention « Déjà choisi via Fiftin » (voir trustBadgeHtml()). */
 function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
 
 /* Utilitaires partagés annonces à plusieurs chambres (units) — utilisés
@@ -5361,6 +5395,79 @@ function coverHtml(l){
   '</div>';
 }
 
+/* Carte d'un LIEU dans le fil (logements associés, voir collapseSites()) :
+   le voyageur est d'abord séduit par le lieu, puis choisit un logement.
+   Carrousel : photos du lieu (« Le lieu », saisies par l'hôte), puis une
+   photo par logement avec une étiquette (nom · capacité · prix ; touchée,
+   elle ouvre sa fiche). Logements libres aux dates choisies d'abord, les
+   autres marqués « Complet à ces dates ». Titre : nom du lieu, sinon celui
+   du logement mis en avant. */
+function placeMembersOf(l){
+  var members = siteMembers(siteOf(l)).map(function(ix){
+    return LISTINGS.filter(function(x){ return listingKey(x)===ix.docId; })[0] || ix;
+  });
+  var rank = function(m){ return hasDateFilter(state.filters) ? availabilityRank(m) : 0; };
+  return members.sort(function(a, b){
+    if((a.docId||a.id)===(l.docId||l.id)) return -1;
+    if((b.docId||b.id)===(l.docId||l.id)) return 1;
+    return (rank(a)-rank(b)) || ((a.price||0)-(b.price||0));
+  });
+}
+function memberCoverUrl(m){
+  if(m.gallery && m.gallery[0]) return photoMid(m.gallery[0]);
+  var units = m.units || [];
+  for(var i=0;i<units.length;i++) if(units[i].gallery && units[i].gallery[0]) return photoMid(units[i].gallery[0]);
+  return m.thumbUrl || null;
+}
+// « Chambre 2 — La Ferme Fanost » → « Chambre 2 » sur la carte du lieu « La Ferme Fanost ».
+function stripPlaceName(name, placeName){
+  var m = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(name || "");
+  return (m && m[2].trim().toLowerCase()===String(placeName).trim().toLowerCase()) ? m[1] : (name || "");
+}
+function placeCoverHtml(l, members){
+  registerPhotoVariants(l);
+  members.forEach(registerPhotoVariants);
+  var place = l.place || null;
+  var placeName = (place && place.name) || "";
+  var placeShots = ((place && place.gallery) || []).slice(0, 4);
+  var dates = hasDateFilter(state.filters);
+  var slides = placeShots.map(function(src){
+    return '<div class="cc-slide"><img src="'+photoMid(src)+'" alt="'+esc(placeName||l.name)+'" loading="lazy"></div>';
+  }).concat(members.map(function(m){
+    var img = memberCoverUrl(m);
+    var cap = m.maxPersons!=null ? m.maxPersons : listingMaxCapacity(m);
+    var full = dates && availabilityCache[m.id]==="occupied";
+    var name = placeName ? stripPlaceName(m.name, placeName) : siteShortName(m.name, l.name);
+    return '<div class="cc-slide">'+(img ? '<img src="'+img+'" alt="'+esc(m.name||"")+'" loading="lazy">' : '')+
+      '<button type="button" class="place-unit-tag'+(full?' full':'')+'" data-open="'+m.id+'">'+
+        '<b>'+esc(name)+'</b><span>'+(cap ? cap+' pers. · ' : '')+(m.price!=null ? m.price+' €' : '')+(full ? ' · Complet à ces dates' : '')+'</span>'+
+      '</button></div>';
+  }));
+  var minPrice = Math.min.apply(null, members.map(function(m){ return m.price!=null ? m.price : Infinity; }));
+  var note = siteNotes[l.docId] || {};
+  var line = note.groupCapacity!=null
+    ? "Jusqu’à "+note.groupCapacity+" voyageurs avec les logements associés"
+    : members.length+" logements au même endroit";
+  return '<div class="cover has-photos place-cover">'+
+    '<div class="cover-carousel" data-cc="'+l.id+'">'+slides.join("")+'</div>'+
+    (slides.length>1 ? '<div class="cover-dots">'+slides.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
+    '<div class="scrim"></div>'+
+    '<div class="top-badges">'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
+    '<button class="save-btn'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection">'+
+      '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
+    '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
+    '<div class="cover-info">'+
+      '<div class="region">'+esc(locationLineFor(l))+'</div>'+
+      '<h2>'+esc(placeName || l.name)+'</h2>'+
+      '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>'+esc(line)+'</span></div>'+
+      '<div class="cover-cta">'+
+        '<button class="btn primary" data-placereq="'+l.id+'"><span>Contacter l’hôte</span></button>'+
+        '<button class="btn ghost-dark" data-open="'+l.id+'"><span>Voir plus</span></button>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+
 // Explorer uniquement désormais — Mes séjours (Favoris/Demandes/Séjours)
 // a ses propres fonctions de rendu (renderFavorisView()/renderContactLog()),
 // voir renderTabContent() plus bas.
@@ -5412,12 +5519,24 @@ function renderFeedBody(){
     ensureAvailabilityFor(state.filters.dateIn, state.filters.dateOut, function(){ if(state.tab==="explore" && !state.hostMode){ renderFeedBody(); renderResultLine(); } });
   }
   var docIds = pageEntries.map(function(ix){ return ix.docId; });
-  var allDocIds = docIds;
+  // Carte d'un lieu : les fiches des autres logements du lieu servent à
+  // son carrousel (une photo par logement).
+  var allDocIds = docIds.slice();
+  pageEntries.forEach(function(ix){
+    if(!siteNotes[ix.docId]) return;
+    siteMembers(siteOf(ix)).forEach(function(m){ if(m.docId && allDocIds.indexOf(m.docId)===-1) allDocIds.push(m.docId); });
+  });
   ensureListingDocsLoaded(allDocIds, function(){
     if(gen!==feedRenderGen) return; // un rendu plus récent a déjà pris le dessus
     var list = docIds.map(function(id){ return LISTINGS.filter(function(l){ return listingKey(l)===id; })[0]; }).filter(Boolean);
     var hasMore = fullList.length > pageEntries.length;
     feed.innerHTML = mapBlockHtml + list.map(function(l){
+      var members = siteNotes[l.docId] ? placeMembersOf(l) : null;
+      if(members && members.length>1){
+        return '<article class="card" id="card-'+l.id+'">'+placeCoverHtml(l, members)+
+          '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+placeReqHtml(l, members, "qr"+l.id)+'</div>'+
+        '</article>';
+      }
       return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
         '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
       '</article>';
@@ -5474,6 +5593,14 @@ function wireFeedEvents(){
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-open]"), function(el){
     el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-open"))); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-placereq]"), function(el){
+    el.addEventListener("click", function(){
+      var id = el.getAttribute("data-placereq");
+      var panel = document.getElementById("qr-"+id);
+      panel.hidden = !panel.hidden;
+      wirePlaceReq(Number(id), "qr"+id);
+    });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-quickreq]"), function(el){
     el.addEventListener("click", function(){
@@ -6761,7 +6888,11 @@ function quickReqHtml(l, uid, calSource){
     '</div>'+
   '</div>'+
   '<div class="msg-preview" id="'+qid+'-preview"></div>'+
-  '<div class="send-row">'+
+  sendRowHtml(l, qid);
+}
+
+function sendRowHtml(l, qid){
+  return '<div class="send-row">'+
     /* Mail en premier : seulement si l'hôte a renseigné une adresse de
        contact (hf-email, obligatoire au dépôt depuis son ajout — voir
        submitHostForm() — mais absente sur toute annonce plus ancienne
@@ -6773,7 +6904,103 @@ function quickReqHtml(l, uid, calSource){
     '<a class="btn send-btn call" data-send="call" data-id="'+qid+'"><span class="send-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg></span><span>Appeler</span></a>'+
   '</div>';
 }
-
+/* Contact au niveau d'un lieu (carte du lieu dans le fil) : le voyageur
+   écrit à l'hôte pour le lieu, sans choisir de logement (« lequel nous
+   conseillez-vous ? »), ou pour un groupe. Le message dit quels logements
+   sont libres d'après les calendriers publics, quand on le sait. Lien
+   « ou choisir un logement précis » vers les fiches. Simple message :
+   rien n'est réservé ni bloqué. */
+function placeReqHtml(l, members, qid){
+  var defIn = state.filters.dateIn || todayISO(14);
+  var defOut = state.filters.dateOut || todayISO(21);
+  var defG = state.filters.capacity || 2;
+  return '<div class="qr-row">'+
+      '<div class="qr-field"><label>Arrivée</label><input type="date" id="'+qid+'-in" value="'+defIn+'"></div>'+
+      '<div class="qr-field"><label>Départ</label><input type="date" id="'+qid+'-out" value="'+defOut+'"></div>'+
+    '</div>'+
+    '<div class="qr-row">'+
+      '<div class="qr-field"><label>Voyageurs</label>'+
+        '<div class="stepper"><button data-step="-1" data-target="'+qid+'-g">−</button><span id="'+qid+'-g">'+defG+'</span><button data-step="1" data-target="'+qid+'-g">+</button></div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="msg-preview" id="'+qid+'-preview"></div>'+
+    sendRowHtml(l, qid)+
+    '<div class="place-pick"><span>ou choisir un logement précis</span><div class="place-pick-list">'+
+      members.map(function(m){ return '<button type="button" class="place-pick-chip" data-open="'+m.id+'">'+esc(l.place && l.place.name ? stripPlaceName(m.name, l.place.name) : siteShortName(m.name, l.name))+'</button>'; }).join("")+
+    '</div></div>';
+}
+function buildPlaceMessage(l, members, free, din, dout, guests){
+  var placeName = (l.place && l.place.name) || l.name;
+  var maxOne = Math.max.apply(null, members.map(function(m){ return m.maxPersons!=null ? m.maxPersons : listingMaxCapacity(m); }));
+  var who = guests>1 ? "Nous sommes "+guests : "Je suis seul·e";
+  var ask = guests>maxOne
+    ? " et aimerions séjourner ensemble : quels logements pourriez-vous nous proposer ?"
+    : " : un de vos logements est-il disponible ? Lequel "+(guests>1?"nous":"me")+" conseillez-vous ?";
+  var freeTxt = !free || !free.length ? ""
+    : free.length===members.length && members.length>1 ? " D’après votre calendrier, tous vos logements sont libres."
+    : " D’après votre calendrier, "+(free.length>1 ? "sont libres : " : "est libre : ")+free.join(", ")+".";
+  return "Bonjour "+l.host.name+", votre lieu \""+placeName+"\" ("+l.region+") "+(guests>1?"nous":"me")+" plaît beaucoup. "+who+" du "+fmtDate(din)+" au "+fmtDate(dout)+ask+freeTxt+" Merci ! — via Fiftin";
+}
+function wirePlaceReq(id, qid){
+  var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+  if(!l) return;
+  var members = placeMembersOf(l);
+  var $in = document.getElementById(qid+"-in"), $out = document.getElementById(qid+"-out"), $g = document.getElementById(qid+"-g");
+  var $prev = document.getElementById(qid+"-preview");
+  var $mailBtn = document.querySelector('[data-send="mail"][data-id="'+qid+'"]');
+  var $waBtn = document.querySelector('[data-send="wa"][data-id="'+qid+'"]');
+  var $smsBtn = document.querySelector('[data-send="sms"][data-id="'+qid+'"]');
+  var $callBtn = document.querySelector('[data-send="call"][data-id="'+qid+'"]');
+  // Calendriers publics des logements du lieu, lus une fois (docId -> plages, null = non renseigné).
+  var ranges = {};
+  var freeNames = function(){
+    if(!$in.value || !$out.value) return [];
+    return members.filter(function(m){ var r = ranges[m.docId||m.id]; return r && !staysOverlapOccupied(r, $in.value, $out.value); })
+      .map(function(m){ return l.place && l.place.name ? stripPlaceName(m.name, l.place.name) : siteShortName(m.name, l.name); });
+  };
+  function update(){
+    if(!$in.value || !$out.value || $out.value<=$in.value){ $prev.textContent = "Choisissez vos dates d’arrivée et de départ."; return; }
+    var msg = buildPlaceMessage(l, members, freeNames(), $in.value, $out.value, Number($g.textContent));
+    $prev.textContent = msg;
+    var phone = waPhoneDigits(l.host.phone);
+    var placeName = (l.place && l.place.name) || l.name;
+    if($mailBtn) $mailBtn.href = "mailto:"+l.host.email+"?subject="+encodeURIComponent("Demande de séjour — "+placeName)+"&body="+encodeURIComponent(msg);
+    $waBtn.href = "https://wa.me/"+phone+"?text="+encodeURIComponent(msg);
+    $smsBtn.href = "sms:"+l.host.phone+(/iPhone|iPad|iPod/.test(navigator.userAgent)? "&":"?")+"body="+encodeURIComponent(msg);
+    $callBtn.href = "tel:"+l.host.phone;
+  }
+  if($prev.dataset.wired){ update(); return; }
+  $prev.dataset.wired = "1";
+  // Demande notée une fois, au nom du lieu (rattachée au logement mis en avant).
+  var datesTouched = !!state.filters.dateIn;
+  var placeLabel = (l.place && l.place.name) || l.name;
+  var log = function(ch){ return function(){ logContact(l, ch, null, datesTouched?$in.value:null, datesTouched?$out.value:null, placeLabel); }; };
+  if($mailBtn) $mailBtn.addEventListener("click", log("mail"));
+  $waBtn.addEventListener("click", log("wa"));
+  $smsBtn.addEventListener("click", log("sms"));
+  $callBtn.addEventListener("click", log("call"));
+  $in.addEventListener("change", function(){ datesTouched = true; update(); });
+  $out.addEventListener("change", function(){ datesTouched = true; update(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.stepper button[data-target="'+qid+'-g"]'), function(btn){
+    btn.addEventListener("click", function(){
+      var v = Number($g.textContent) + Number(btn.getAttribute("data-step"));
+      if(v<1) v = 1; if(v>30) v = 30;
+      $g.textContent = v; update();
+    });
+  });
+  update();
+  if(typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
+  var pending = 0;
+  members.forEach(function(m){
+    var docId = m.docId || m.id;
+    listingUnitIds(m).forEach(function(unitId){
+      pending++;
+      firebase.firestore().collection("listings").doc(docId).collection("publicAvail").doc(unitId).get().then(function(d){
+        if(d.exists) ranges[docId] = (ranges[docId] || []).concat(d.data().ranges || []);
+      }).catch(function(){}).then(function(){ if(--pending===0) update(); });
+    });
+  });
+}
 function buildMessage(l, din, dout, guests, unitName){
   var label = unitName ? (l.name+" – "+unitName) : l.name;
   return "Bonjour "+l.host.name+", je suis intéressé·e par \""+label+"\" ("+l.region+") du "+fmtDate(din)+" au "+fmtDate(dout)+" pour "+guests+" voyageur"+(guests>1?"s":"")+". Ce logement est-il disponible sur ces dates ? Merci ! — via Fiftin";
@@ -7030,16 +7257,9 @@ function unitCardHtml(u, selectable){
    "paused" n'y est jamais, alors que c'est justement là qu'un aperçu est
    le plus utile, avant publication). Sans 2e argument, comportement
    identique à avant (recherche dans LISTINGS par id).
-   forceVisitorView (retour utilisateur, bouton Aperçu toujours : "ne
-   dirige pas vers l'aperçu comme chez un visiteur" — bug réel repéré en
-   relisant cette fonction, pas juste un ressenti : l'hôte qui prévisualise
-   SA PROPRE annonce reste connecté avec son propre uid, et
-   authState.uid===l.ownerUid déclenche plus bas l'affichage du taux de
-   conversion demandes->séjours, un badge que seul le propriétaire voit
-   jamais côté voyageur, voir conversionLabelFor(). true force ce badge à
-   rester masqué, pour que l'aperçu soit identique pixel pour pixel à ce
-   qu'un inconnu verrait — aucun autre endroit de cette fonction ne
-   dépend d'authState.uid/ownerUid. */
+   forceVisitorView : aperçu de l'hôte sur sa propre annonce (Mes annonces
+   → Aperçu) — le bouton favori y reste visible mais inactif (voir plus
+   bas), pour ne jamais s'auto-liker. */
 function openDetail(id, listingOverride, forceVisitorView){
   userInteracted = true; // voir sa déclaration : annule le popup de connexion programmé au boot
   var l = listingOverride || LISTINGS.filter(function(x){ return x.id===id; })[0];
@@ -7102,8 +7322,11 @@ function openDetail(id, listingOverride, forceVisitorView){
   } else {
     gallery = (l.gallery || []).slice();
     (l.units || []).forEach(function(u){ gallery = gallery.concat(u.gallery || []); });
+    // Photos du lieu (espaces communs), après celles du logement.
+    if(l.siteId && l.place && l.place.gallery) gallery = gallery.concat(l.place.gallery.filter(function(u){ return gallery.indexOf(u)===-1; }));
   }
   registerPhotoVariants(l);
+  if(l.place) registerPhotoVariants(l.place);
   var galleryAlt = activeUnit ? activeUnit.name : l.name;
   var total = Math.max(l.photos, gallery.length);
   var slides = "";
@@ -7136,12 +7359,10 @@ function openDetail(id, listingOverride, forceVisitorView){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
-    var convLabel = (!forceVisitorView && authState.uid && l.ownerUid && l.ownerUid===authState.uid) ? conversionLabelFor(l) : null;
     var dKmOverview = listingDistanceKm(l);
     metaRowHtml = '<div class="detail-card"><div class="meta-row">'+
       metaItemHtml(META_ICON_PRICE, (hasTabs ? "dès "+l.price : l.price)+"€", "par nuit")+
       (dKmOverview!=null ? metaItemHtml(META_ICON_DISTANCE, dKmOverview+" km", "de vous") : "")+
-      (convLabel ? metaItemHtml(META_ICON_CONVERSION, convLabel, "demandes &rarr; séjours") : "")+
     '</div></div>';
     bodyExtraHtml =
       '<div class="detail-card">'+
@@ -7201,6 +7422,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
+      trustBadgeHtml(l)+
       extLinksHtml(l)+
       '</div>'+
       tabsHtml+
@@ -7313,7 +7535,7 @@ function fillSiteOthers(l, id){
     if(!slot || state.detailListingId!==id) return;
     slot.innerHTML =
       (same.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Au même endroit</div>'+
-        '<p class="site-sub">D’autres logements chez '+esc(host)+', pour choisir celui qui vous convient ou venir à plusieurs.</p>'+
+        '<p class="site-sub">D’autres logements '+(l.place && l.place.name ? 'à '+esc(l.place.name)+', ' : '')+'chez '+esc(host)+', pour choisir celui qui vous convient ou venir à plusieurs.</p>'+
         placeCardsHtml(same, null, l.name)+'</div>' : '')+
       (elsewhere.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Ailleurs chez '+esc(host)+'</div>'+
         placeCardsHtml(elsewhere, l, null, siteCounts)+'</div>' : '');
@@ -7770,7 +7992,19 @@ function openSheet(kind){
       '<p class="sheet-sub">'+(slOthers.length
         ? 'Vos autres logements à la même adresse. Les voyageurs les découvrent ensemble ; chaque annonce garde son calendrier, son prix et son lien Planning.'
         : 'Chaque logement a sa propre annonce. Créez celle d’un autre logement de ce lieu : adresse, type, prestations et contact sont repris.')+'</p>'+
-      (slOthers.length ? '<div class="field-block sort-row">'+sitePickRowsHtml(slCtx.listings, slCtx.listing.id, slCtx.sel, slCtx.listing)+'</div>' : '')+
+      // « Le lieu » en premier : c'est ce que les voyageurs voient d'abord
+      // sur la carte du fil (nom, photos des espaces communs, puis logements).
+      (slOthers.length ? '<div class="site-place first">'+
+        '<div class="site-place-title">Le lieu <small>facultatif</small></div>'+
+        '<p class="field-hint" style="margin-top:0;">Montré en premier aux voyageurs, sur la carte du fil : un nom, et des photos de ce qui est commun (maison, jardin, environnement…).</p>'+
+        '<div class="field-block"><label>Nom du lieu</label><input class="text-input" id="site-place-name" placeholder="Ex. La Ferme Fanost" value="'+esc(slCtx.placeName)+'"></div>'+
+        '<div class="field-block" style="margin-bottom:0;"><label>Photos du lieu (6 maximum)</label>'+
+          '<input type="file" id="site-place-input" accept="image/*" multiple style="display:none">'+
+          '<button type="button" class="btn-photo-add" id="site-place-btn">+ Ajouter des photos</button>'+
+          '<div class="hf-photo-list" id="site-place-grid"></div>'+
+        '</div>'+
+      '</div>' : '')+
+      (slOthers.length ? '<div class="site-place-title" style="margin-top:18px;">Logements de ce lieu</div><div class="field-block sort-row">'+sitePickRowsHtml(slCtx.listings, slCtx.listing.id, slCtx.sel, slCtx.listing)+'</div>' : '')+
       '<button type="button" class="link-btn" id="site-new-btn">+ Créer un autre logement à cette adresse</button>'+
       '<div class="auth-err" id="site-err"></div>';
   } else if(kind==="collRename"){
@@ -8112,6 +8346,40 @@ function openSheet(kind){
   } else if(kind==="siteLink"){
     var slc = siteLinkContext;
     wireSitePickRows(root, slc.sel);
+    var renderPlaceGrid = function(){
+      var grid = document.getElementById("site-place-grid");
+      if(!grid) return;
+      grid.innerHTML = slc.placePhotos.map(function(entry, i){ return photoListRowHtml(entry, i, slc.placePhotos.length); }).join("");
+      wirePhotoListRows(grid, slc.placePhotos, renderPlaceGrid);
+    };
+    renderPlaceGrid();
+    var placeName = document.getElementById("site-place-name");
+    if(placeName) placeName.addEventListener("input", function(){ slc.placeName = placeName.value; });
+    var placeBtn = document.getElementById("site-place-btn");
+    if(placeBtn){
+      placeBtn.addEventListener("click", function(){ document.getElementById("site-place-input").click(); });
+      document.getElementById("site-place-input").addEventListener("change", function(e){
+        var errEl = document.getElementById("site-err");
+        errEl.textContent = "";
+        var accepted = [];
+        Array.prototype.forEach.call(e.target.files, function(file){
+          if(slc.placePhotos.length+accepted.length>=6){ errEl.textContent = "6 photos maximum."; return; }
+          if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
+          accepted.push(file);
+        });
+        e.target.value = "";
+        if(!accepted.length) return;
+        cropAndCompressFiles(accepted).then(function(files){
+          files.forEach(function(file){
+            if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
+            var entry = {type:"new", file:file};
+            slc.placePhotos.push(entry);
+            enhancePhotoEntry(entry, renderPlaceGrid);
+          });
+          renderPlaceGrid();
+        });
+      });
+    }
     document.getElementById("site-new-btn").addEventListener("click", function(){
       closeSheet();
       hostFormEditListing = null;
@@ -8123,12 +8391,25 @@ function openSheet(kind){
       var errEl = document.getElementById("site-err");
       errEl.textContent = "";
       btn.disabled = true;
-      applySiteAssociation(slc.listings, slc.listing.id, slc.sel.slice()).then(function(){
+      var sel = slc.sel.slice();
+      // Lieu saisi : photos envoyées d'abord (mêmes trois tailles que les
+      // annonces), puis association + copie du lieu en un seul lot.
+      var placeReady = !sel.length ? Promise.resolve(null)
+        : resolvePhotoEntries(slc.placePhotos, authState.uid, "lieu", "Envoi des photos du lieu…").then(function(ph){
+            var name = (slc.placeName||"").trim();
+            if(!name && !ph.urls.length) return null;
+            return {name:name, gallery:ph.urls, galleryThumb:ph.thumbs, galleryMid:ph.mids};
+          });
+      placeReady.then(function(place){
+        btn.textContent = "Enregistrement…";
+        return applySiteAssociation(slc.listings, slc.listing.id, sel, place);
+      }).then(function(){
         closeSheet();
         if(state.hostMode && state.hostTab==="listings") renderHostListings();
       }).catch(function(err){
         errEl.textContent = "Erreur : "+(err.message||err.code||"réessayez.");
         btn.disabled = false;
+        btn.textContent = "Enregistrer";
       });
     });
     return;
@@ -11129,14 +11410,32 @@ function planSiteAssociation(listings, listingId, otherIds){
   listings.forEach(function(l){ if((l.siteId||"")!==next[l.id]) changes[l.id] = next[l.id]; });
   return changes;
 }
-function applySiteAssociation(listings, listingId, otherIds){
+/* « Le lieu » (nom + photos des espaces communs) : recopié sur chaque
+   annonce du lieu, dans le même lot que l'association — aucune nouvelle
+   collection ni règle Firestore. newPlace : le lieu saisi pour le lieu de
+   listingId (null = aucun) ; undefined = garder celui déjà porté par les
+   annonces du lieu (association automatique, retrait d'un logement). Une
+   annonce qui n'appartient plus à aucun lieu perd sa copie. */
+function samePlace(a, b){ return JSON.stringify(a||null)===JSON.stringify(b||null); }
+function applySiteAssociation(listings, listingId, otherIds, newPlace){
   var changes = planSiteAssociation(listings, listingId, otherIds);
-  var ids = Object.keys(changes);
-  if(!ids.length) return Promise.resolve();
-  var db = firebase.firestore(), batch = db.batch();
-  ids.forEach(function(id){
-    batch.update(db.collection("listings").doc(id), {siteId: changes[id] || firebase.firestore.FieldValue.delete()});
+  var finalSite = {};
+  listings.forEach(function(l){ finalSite[l.id] = (l.id in changes) ? changes[l.id] : (l.siteId || ""); });
+  var placeOf = {}, target = finalSite[listingId];
+  if(target && newPlace!==undefined) placeOf[target] = newPlace;
+  // Lieu déjà connu : d'abord une annonce qui était déjà de ce lieu, sinon
+  // n'importe quel membre qui en porte un.
+  listings.forEach(function(l){ var st = finalSite[l.id]; if(st && !(st in placeOf) && l.place && l.siteId===st) placeOf[st] = l.place; });
+  listings.forEach(function(l){ var st = finalSite[l.id]; if(st && !(st in placeOf) && l.place) placeOf[st] = l.place; });
+  var db = firebase.firestore(), batch = db.batch(), n = 0;
+  listings.forEach(function(l){
+    var upd = {}, st = finalSite[l.id];
+    if(l.id in changes) upd.siteId = changes[l.id] || firebase.firestore.FieldValue.delete();
+    var p = st ? (placeOf[st] || null) : null;
+    if(!samePlace(l.place, p)) upd.place = p || firebase.firestore.FieldValue.delete();
+    if(Object.keys(upd).length){ batch.update(db.collection("listings").doc(l.id), upd); n++; }
   });
+  if(!n) return Promise.resolve();
   return batch.commit().then(function(){ hostListingsCache = []; });
 }
 function sitePrefillFrom(l){
@@ -11212,7 +11511,9 @@ function siteSuggestion(listings){
 function openSiteLink(listing, listings, preselect){
   var sel = siteOthersOf(listing, listings).map(function(x){ return x.id; });
   (preselect||[]).forEach(function(id){ if(sel.indexOf(id)===-1) sel.push(id); });
-  siteLinkContext = {listing:listing, listings:listings, sel:sel};
+  var pl = listing.place || (siteOthersOf(listing, listings).filter(function(x){ return x.place; })[0] || {}).place || null;
+  siteLinkContext = {listing:listing, listings:listings, sel:sel, placeName:(pl && pl.name) || "",
+    placePhotos:((pl && pl.gallery) || []).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(pl.galleryThumb && pl.galleryThumb[i]) || null, midUrl:(pl.galleryMid && pl.galleryMid[i]) || null}; })};
   openSheet("siteLink");
 }
 
@@ -11439,7 +11740,7 @@ function hostListingCardHtml(l, listings){
     // Logements au même endroit (voir openSiteLink()).
     '<button type="button" class="cal-disclose site-disclose" data-site-link="'+esc(l.id)+'">'+
       '<span>Au même endroit</span>'+
-      '<span class="site-disclose-val">'+(siteCount ? siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'Ajouter')+'</span>'+
+      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'Ajouter')+'</span>'+
       '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>'+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
