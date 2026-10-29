@@ -2987,18 +2987,6 @@ var ACCOM_TYPES = {
 var HF_CLAIM_MAX_WORDS = 14;
 var HF_DESC_MAX_WORDS = 60;
 function hfWordCount(s){ s=(s||"").trim(); return s ? s.split(/\s+/).length : 0; }
-function hfWordCountHtml(id,max){
-  return '<p class="field-hint hf-wordcount" id="'+id+'-count" data-max="'+max+'">0 / '+max+' mots</p>';
-}
-function hfUpdateWordCount(inputId){
-  var el = document.getElementById(inputId);
-  var countEl = document.getElementById(inputId+"-count");
-  if(!el || !countEl) return;
-  var max = Number(countEl.getAttribute("data-max"));
-  var n = hfWordCount(el.value);
-  countEl.textContent = n+" / "+max+" mots";
-  countEl.classList.toggle("over", n>max);
-}
 /* Type + accroche sur UNE seule ligne : "Gîte • Un air de campagne..."
    (retour utilisateur — avant, deux paragraphes empilés). Le type reste
    distinct typographiquement (.type-label : gras, sans-serif, droit) au
@@ -3467,13 +3455,6 @@ function wireLegalRows(){
     });
   });
 }
-/* Chaque entrée de photo est {type:"existing", url} (déjà en ligne, juste
-   affichée/retirable) ou {type:"new", file} (à uploader à l'envoi) — les
-   deux cohabitent dans le même tableau pour permettre de modifier une
-   annonce existante (garder ses photos, en ajouter/en retirer) avec
-   exactement le même code que pour une création. */
-var hfSelectedFiles = []; // photos de la maison / espaces communs (niveau établissement)
-var hfUnits = []; // chambres du formulaire en cours : [{id, name, price, maxPersons, photos:[], linkedRoomId}]
 // Retour utilisateur : "dans les prestations, j'aimerais vraiment un groupe
 // clair qui permette de sélectionner les pièces de la maison et leur
 // nombre (utilise le même principe que le catalogue de l'app de gestion,
@@ -3537,137 +3518,6 @@ function hfStepSpace(name,delta){
   var wrap = document.getElementById("hf-spaces-grid");
   if(wrap) wrap.innerHTML = hfSpaceChipsHtml();
 }
-var hfHostPhoto = null; // photo de l'hôte (facultative) : null, {type:"existing", url} ou {type:"new", file} — même mécanique que hfSelectedFiles, mais un seul fichier
-/* Présentation de PROFIL résolue par resolveHostProfileBio() (voir plus
-   bas, près de wireAccountAvatar()) : `undefined` tant que pas encore
-   connue, `""` si l'hôte n'en a vraiment aucune (première annonce/premier
-   profil), sinon le texte. Lue par updateHfHostBioUI()/submitHostForm()
-   pour décider si le textarea #hf-hostbio EST la présentation de profil
-   (première fois) ou une simple présentation spécifique optionnelle
-   surchargeant celle, déjà connue, du profil. */
-var hfProfileBio;
-/* Nom de contact du profil, résolu par resolveHostProfileName() — mon profil
-   (César, retour utilisateur) : "mon nom, renseigné une fois pour éviter de
-   le remettre à chaque annonce". Contrairement à hfProfileBio, aucune case
-   "présentation/nom spécifique à cette annonce" demandée : toujours la
-   valeur du profil, sans exception, lue directement par submitHostForm().
-   Le formulaire de dépôt n'a plus aucun champ "Votre nom" — déplacé dans le
-   bloc Profil (voir profileIdentityCardHtml()), rempli une fois pour
-   toutes. */
-var hfProfileName;
-var hfAvailableRooms = []; // accounts/{uid}.settings.rooms de l'hôte (compte gestion), lecture seule — pour proposer un lien dès la création d'une chambre
-/* Retour utilisateur : "laisse une description [présentation] par annonce,
-   au pire ajoute un champ de récupération d'une description déjà remplie
-   sur une autre annonce", puis "idem pour les description de l'annonce
-   (...) souvent les gens font la même structure" — mécanisme de reprise
-   pour "desc" (description du logement, propre à chaque annonce).
-   hfReuseCandidates() servait aussi à "hostBio" avant le passage de la
-   présentation au niveau du profil (point 3.2, voir resolveHostProfileBio()
-   plus bas) — une seule présentation partagée par défaut a rendu cette
-   reprise annonce-par-annonce redondante pour ce champ-là, retirée.
-   Candidats {id, name, text} : les AUTRES annonces du même hôte
-   (listings/{id}.ownerUid===authState.uid, via ensureHostListingsLoaded(),
-   déjà utilisée par Mes annonces — pas une nouvelle lecture Firestore) qui
-   ont déjà ce champ non vide, annonce en cours d'édition exclue. Rempli en
-   asynchrone à l'ouverture du formulaire (voir wireSheet(), kind==="hostform"),
-   même pattern que hfAvailableRooms juste au-dessus. */
-var hfDescCandidates = [];
-function hfReuseCandidates(list, editId, field){
-  return list.filter(function(l){ return l[field] && l[field].trim() && l.id!==editId; })
-    .map(function(l){ return {id:l.id, name:l.name, text:l[field]}; });
-}
-/* Rendu d'un sélecteur de reprise — chaîne vide tant qu'aucun candidat
-   n'est chargé (voir hfReuseCandidates) : rien à proposer plutôt qu'un
-   sélecteur vide et déroutant sur un tout premier compte, une toute
-   première annonce, ou une annonce dont aucune autre du même hôte n'a
-   encore ce champ renseigné. */
-function hfReuseSelectHtml(selectId, candidates, placeholder){
-  if(!candidates.length) return "";
-  return '<select class="text-input" id="'+selectId+'" style="margin-top:8px;">'+
-    '<option value="">'+esc(placeholder)+'</option>'+
-    candidates.map(function(c){ return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>'; }).join("")+
-  '</select>';
-}
-/* Choisir une annonce COPIE son champ dans le formulaire (texte normal,
-   librement modifiable ensuite) plutôt que de le lier — retour
-   utilisateur, "récupérer ET modifier", pas garder un lien vivant entre
-   deux annonces. Le sélecteur se réinitialise après coup : ce n'est qu'un
-   raccourci de saisie, pas un champ de formulaire à part entière avec sa
-   propre valeur à soumettre. */
-function wireHfReuseSelect(selectId, candidates, targetFieldId){
-  var el = document.getElementById(selectId);
-  if(!el) return;
-  el.addEventListener("change", function(){
-    var pickedId = this.value;
-    var c = candidates.filter(function(x){ return x.id===pickedId; })[0];
-    if(c) document.getElementById(targetFieldId).value = c.text;
-    this.value = "";
-  });
-}
-/* Patche #hf-hostbio-block une fois resolveHostProfileBio() résolue (voir
-   son grand commentaire, près de wireAccountAvatar()) — appelée une
-   première fois à l'ouverture du formulaire (wireSheet(), kind==="hostform")
-   et ré-appelée par le changement de la case à cocher, jamais par une
-   frappe clavier (la valeur du textarea, elle, n'est lue qu'au submit).
-   Deux états bien distincts, pas une simple variante visuelle l'un de
-   l'autre :
-   — hfProfileBio vide (aucune présentation de profil nulle part, ni
-     migrée) : CE formulaire EST la première présentation de profil, pas
-     de case à cocher (rien à surcharger), textarea obligatoire.
-   — hfProfileBio non vide : la présentation du profil s'affiche en
-     rappel, textarea masqué par défaut (la case, décochée, suffit à la
-     réutiliser telle quelle) — cochée, elle révèle le textarea comme
-     présentation SPÉCIFIQUE à cette seule annonce (retour utilisateur :
-     "case Utiliser une présentation spécifique pour cette annonce"),
-     pré-rempli avec la présentation de profil comme point de départ
-     commode si vide, jamais écrasée si l'hôte avait déjà tapé quelque
-     chose dedans avant de cocher. */
-function updateHfHostBioUI(){
-  var block = document.getElementById("hf-hostbio-block");
-  if(!block) return; // volet déjà refermé/changé
-  resolveHostProfileBio(function(bio){
-    hfProfileBio = bio;
-    var block2 = document.getElementById("hf-hostbio-block"); // revérifié : la réponse peut arriver après coup
-    if(!block2) return;
-    var preview = document.getElementById("hf-hostbio-profile-preview");
-    var overrideRow = document.getElementById("hf-hostbio-override-row");
-    var overrideCb = document.getElementById("hf-hostbio-override");
-    var textarea = document.getElementById("hf-hostbio");
-    var hint = document.getElementById("hf-hostbio-hint");
-    if(bio){
-      preview.hidden = false;
-      preview.textContent = "Présentation actuelle de votre profil : « "+bio+" »";
-      overrideRow.hidden = false;
-      // Édition d'une annonce qui a déjà sa propre présentation spécifique
-      // (hostBioCustom, voir submitHostForm()) : case pré-cochée, pas une
-      // ancienne présentation partagée qu'il faudrait redécouvrir.
-      var editingCustom = !!(hostFormEditListing && hostFormEditListing.hostBioCustom);
-      overrideCb.checked = editingCustom;
-      textarea.hidden = !editingCustom;
-      textarea.required = editingCustom;
-      hint.textContent = "Réutilise automatiquement la présentation de votre profil (modifiable depuis Profil hôte), sauf si vous cochez une présentation spécifique ci-dessus.";
-      overrideCb.onchange = function(){
-        textarea.hidden = !overrideCb.checked;
-        textarea.required = overrideCb.checked;
-        if(overrideCb.checked && !textarea.value.trim()) textarea.value = bio;
-      };
-    } else {
-      preview.hidden = true;
-      overrideRow.hidden = true;
-      textarea.hidden = false;
-      textarea.required = true;
-      hint.textContent = "Première présentation : elle sera réutilisée automatiquement sur toutes vos futures annonces (modifiable ensuite depuis votre Profil hôte).";
-    }
-  });
-}
-/* null = dépôt d'une nouvelle annonce ; sinon l'annonce (doc complet, avec
-   son id) en cours de modification — submitHostForm() fait un .update()
-   sur ce document au lieu d'un .add(). Remis à null par chaque point
-   d'entrée "créer" (voir updateHeroMenu, renderHostListings, hostEmptyHtml). */
-var hostFormEditListing = null;
-var hostFormSiteFrom = null; // annonce dont on crée un logement voisin (voir sitePrefillFrom())
-var hfSiteFrom = null;       // idem, pour le formulaire actuellement ouvert
-var hfSiteSel = [];          // annonces cochées « Au même endroit » dans ce formulaire
 var siteLinkContext = null;  // {listing, listings, sel} — volet kind==="siteLink"
 function newHfUnitId(){ return "u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function photoEntryUrl(entry){ return entry.type==="existing" ? entry.url : URL.createObjectURL(entry.file); }
@@ -5321,26 +5171,6 @@ var FILTER_ICONS = {
   amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>",
   sort:"<path d='M4 6h16M4 12h10M4 18h6'/>"
 };
-/* Icônes des encarts du formulaire d'annonce (openSheet, kind==="hostform"),
-   voir le grand commentaire de .hf-sec plus loin dans le CSS — retour
-   utilisateur : "hiérarchise les infos, homogénéise les encarts, inspire-toi
-   du modal de réservation de l'outil de gestion" (.msec/.msec-title côté
-   app/index.html). Certaines réutilisent une icône déjà déclarée ailleurs
-   (loc=FILTER_ICONS.loc, amen=FILTER_ICONS.amen, home=PROFILE_SWITCH_ICON_HOTES
-   un peu plus bas) plutôt qu'un doublon : même glyphe, même sens, à chaque
-   fois qu'il apparaît ailleurs dans l'app. */
-var HF_SEC_ICONS = {
-  home:"<path d='M3 11l9-8 9 8'/><path d='M5 10v10h14V10'/>",
-  photos:"<path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/><circle cx='12' cy='13' r='4'/>",
-  host:"<path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/><circle cx='12' cy='7' r='4'/>",
-  loc:"<path d='M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z'/><circle cx='12' cy='10' r='2.5'/>",
-  text:"<line x1='17' y1='10' x2='3' y2='10'/><line x1='21' y1='6' x2='3' y2='6'/><line x1='21' y1='14' x2='3' y2='14'/><line x1='17' y1='18' x2='3' y2='18'/>",
-  phone:"<path d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z'/>",
-  amen:"<path d='M9 11l3 3L22 4'/><path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'/>"
-};
-function hfSecTitleHtml(iconKey,label){
-  return '<div class="hf-sec-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+HF_SEC_ICONS[iconKey]+'</svg>'+esc(label)+'</div>';
-}
 
 /* Libellé de la puce Lieu : le plus précis des trois niveaux renseignés
    (mot-clé libre > département > région), sinon "Lieu". Les trois peuvent
@@ -7837,170 +7667,6 @@ function openSheet(kind){
       '<div class="ff-auth-err auth-err" id="auth-err"></div>'+
       '<div class="ff-auth-switch">'+(authMode==="signup"?"Déjà un compte ?":"Pas encore de compte ?")+'<button type="button" class="ff-auth-pill" id="auth-toggle">'+(authMode==="signup"?"Se connecter":"Créer un compte")+'</button></div>'+
       (authMode==="signin" ? '<button type="button" class="ff-auth-forgot" id="auth-forgot">Mot de passe oublié ?</button>' : '');
-  } else if(kind==="hostform"){
-    var hfEditing = !!hostFormEditListing;
-    // « Créer un autre logement à cette adresse » (Mes annonces → Au même
-    // endroit) : nouvelle annonce préremplie avec ce qui est commun au lieu
-    // (adresse, type, prestations, contact) — jamais le nom, les textes,
-    // les photos ni le prix, propres à chaque logement.
-    hfSiteFrom = hostFormSiteFrom; hostFormSiteFrom = null;
-    var hfEf = hostFormEditListing || (hfSiteFrom ? sitePrefillFrom(hfSiteFrom) : null);
-    hfSiteSel = hfSiteFrom ? [hfSiteFrom.id] : [];
-    var hfLegacyMulti = !!(hfEditing && hfEf.units && hfEf.units.length>1);
-    // Avant la construction d'`inner` (hfSpaceChipsHtml() y est appelée,
-    // voir plus bas) : contrairement à hfUnits/hfSelectedFiles (remplis
-    // après, car affichés via un <div id> vide + rendu JS séparé),
-    // hfSpaces est lu directement au moment où ce HTML est construit —
-    // doit donc déjà refléter CETTE annonce avant cet appel. Copie
-    // superficielle (pas une référence directe à hfEf.spaces) : hfStepSpace()
-    // mute cet objet en place, ne jamais muter les données déjà en cache.
-    hfSpaces = (hfEf && hfEf.spaces) ? Object.assign({}, hfEf.spaces) : {};
-    inner = '<div class="hf-head"><h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
-      '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera en ligne dès l’envoi. Nous la vérifions ensuite, sous 48 h.")+'</p>'+
-      '</div>'+
-      '<p class="field-hint">Les champs marqués <b>*</b> sont obligatoires.</p>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("home","Votre logement")+
-        '<div class="field-block"><label>Nom du logement *</label><input class="text-input" id="hf-name" placeholder="Ex. La Ferme Fanost" value="'+(hfEf?esc(hfEf.name||""):"")+'"></div>'+
-        '<div class="field-block"><label>Type d\'hébergement *</label><select class="text-input" id="hf-type">'+
-          '<option value="">— Choisir —</option>'+
-          Object.keys(ACCOM_TYPES).map(function(k){ return '<option value="'+k+'"'+(hfEf&&hfEf.accomType===k?' selected':'')+'>'+esc(ACCOM_TYPES[k].label)+'</option>'; }).join("")+
-        '</select>'+
-          '<p class="field-hint">Affiché en pictogramme à côté du nom, pour que les voyageurs distinguent une chambre chez l\'habitant d\'un gîte indépendant en un coup d\'œil.</p>'+
-        '</div>'+
-        // Retour utilisateur : "mets Présentation de l'annonce directement
-        // dans Votre logement, c'est plus logique" — Accroche/Description
-        // n'ont plus leur propre .hf-sec, elles rejoignent Nom/Type.
-        '<div class="field-block"><label>Accroche courte *</label><input class="text-input" id="hf-claim" placeholder="Une phrase qui donne envie" value="'+(hfEf?esc(hfEf.claim||""):"")+'">'+
-          hfWordCountHtml("hf-claim",HF_CLAIM_MAX_WORDS)+
-        '</div>'+
-        '<div class="field-block"><label>Description *</label><textarea class="text-input" id="hf-desc" rows="4">'+(hfEf?esc(hfEf.desc||""):"")+'</textarea>'+
-          hfWordCountHtml("hf-desc",HF_DESC_MAX_WORDS)+
-          '<div id="hf-desc-reuse-wrap"></div>'+
-        '</div>'+
-      '</div>'+
-      // Photos et Capacité/tarif remontées ici, juste après Nom/Type
-      // (retour utilisateur : "mets la partie photo et la partie prix
-      // dans les premiers, c'est la partie que les gens modifieront le
-      // plus souvent") — avant tous les champs modifiés bien plus
-      // rarement une fois l'annonce créée (adresse, description, réseaux…).
-      '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos & tarifs")+
-        '<div class="field-block"><label>'+(hfLegacyMulti ? 'Photos de la maison / espaces communs' : 'Photos du logement *')+' (3 minimum, 6 maximum, 8 Mo par photo)</label>'+
-          '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
-          '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
-          '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
-        '</div>'+
-        '<div class="field-block"><label id="hf-units-label">Capacité et tarif *</label>'+
-          '<div id="hf-units"></div>'+
-          // Un logement = une annonce : plus d'ajout de location dans une
-          // annonce (« Au même endroit » dans Mes annonces pour les autres
-          // logements du lieu). Gardé pour les anciennes annonces à
-          // plusieurs locations, qui restent modifiables telles quelles.
-          (hfLegacyMulti ? '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>' : '')+
-        '</div>'+
-      '</div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("host","Vous, l\'hôte")+
-        '<div class="field-block"><label>Votre photo (facultatif)</label>'+
-          '<div class="profile-avatar editable" id="hf-host-photo-avatar">'+
-            (hfEf && hfEf.hostPhotoUrl ? '<img src="'+esc(hfEf.hostPhotoUrl)+'" alt="">' : '')+
-            avatarBadgeSvg()+
-          '</div>'+
-          '<input type="file" id="hf-host-photo-input" accept="image/*" style="display:none">'+
-          '<p class="field-hint">Affichée à côté de votre nom, section "Votre hôte" — cliquez la photo pour la changer.</p>'+
-        '</div>'+
-        // Champ "Votre nom" retiré d'ici (retour utilisateur) : déplacé au
-        // niveau du PROFIL (voir profileIdentityCardHtml()), au même titre
-        // que la présentation juste en dessous — une seule saisie, jamais
-        // ressaisie annonce par annonce. hfProfileName (résolu par
-        // updateHfHostBioUI() -> resolveHostProfileName(), voir plus bas)
-        // alimente directement submitHostForm(), aucun input ici.
-        /* Présentation : au niveau du PROFIL hôte désormais (retour
-           utilisateur : "stocker la présentation au niveau du profil hôte,
-           pas de chaque annonce : une seule saisie, réutilisée automatiquement
-           sur toutes ses annonces"), pas un champ libre à chaque annonce comme
-           avant. Rendu statique ici en attendant la résolution asynchrone de
-           resolveHostProfileBio() (même défi que hfHostPhoto/l'avatar juste
-           au-dessus : il faut une lecture Firestore avant de savoir si une
-           présentation de profil existe déjà) — updateHfHostBioUI(), câblée
-           plus bas, patche ce bloc une fois la réponse connue : textarea
-           masqué + case "présentation spécifique" si un profil existe déjà,
-           sinon ce textarea EST la présentation de profil (première fois,
-           obligatoire — "champ obligatoire lors de la création de la première
-           annonce (ou du profil)"). */
-        '<div class="field-block" id="hf-hostbio-block">'+
-          '<label>Présentation *</label>'+
-          '<p class="field-hint" id="hf-hostbio-profile-preview" hidden></p>'+
-          '<label class="hf-checkbox-row" id="hf-hostbio-override-row" hidden>'+
-            '<input type="checkbox" id="hf-hostbio-override"> Utiliser une présentation spécifique pour cette annonce'+
-          '</label>'+
-          '<textarea class="text-input" id="hf-hostbio" rows="3" placeholder="Quelques mots sur vous, en quelques phrases">'+(hfEf?esc(hfEf.hostBio||""):"")+'</textarea>'+
-          '<p class="field-hint" id="hf-hostbio-hint">Affichée dans la fiche de l\'annonce, encart « À propos de votre hôte ».</p>'+
-        '</div>'+
-      '</div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("loc","Adresse")+
-        '<div class="field-block" style="position:relative;"><label>Adresse complète du logement *</label>'+
-          '<input class="text-input" id="hf-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+(hfEf?esc(hfEf.address||""):"")+'">'+
-          '<div class="hf-address-suggestions" id="hf-address-suggestions" hidden></div>'+
-          '<p class="field-hint">Choisissez une adresse dans la liste proposée : région, département et ville se remplissent tout seuls juste en dessous (modifiables si besoin). Sert aussi à calculer la distance réelle affichée aux voyageurs — jamais montrée telle quelle sur l\'annonce.</p>'+
-        '</div>'+
-        '<div class="field-block"><label>Région</label><select class="text-input" id="hf-region-name">'+
-          '<option value="">— Choisir —</option>'+
-          FR_REGIONS.map(function(r){ return '<option value="'+esc(r.name)+'"'+(hfEf&&hfEf.regionName===r.name?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
-        '</select></div>'+
-        '<div class="field-block"><label>Département</label><select class="text-input" id="hf-dept-name">'+
-          deptOptionsHtml(hfEf?hfEf.regionName:"", hfEf?hfEf.deptName:"")+
-        '</select></div>'+
-        '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
-      '</div>'+
-      '<div id="hf-site-wrap"></div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact & réseaux")+
-        '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
-        '<div class="field-block"><label>E-mail de contact</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
-          '<p class="field-hint">Utilisée pour le bouton Mail sur votre annonce — peut être différente de l\'e-mail de votre compte.</p>'+
-        '</div>'+
-        '<div class="field-block"><label>Site personnel (optionnel)</label><input class="text-input" type="url" id="hf-website" placeholder="https://…" value="'+(hfEf?esc(hfEf.websiteUrl||""):"")+'"></div>'+
-        '<div class="field-block"><label>Fiche Google Business / avis Google (optionnel)</label><input class="text-input" type="url" id="hf-google" placeholder="https://g.page/…" value="'+(hfEf?esc(hfEf.googleUrl||""):"")+'"></div>'+
-        '<div class="field-block"><label>Instagram (optionnel)</label><input class="text-input" type="url" id="hf-instagram" placeholder="https://instagram.com/…" value="'+(hfEf?esc(hfEf.instagramUrl||""):"")+'"></div>'+
-        '<div class="field-block"><label>Facebook (optionnel)</label><input class="text-input" type="url" id="hf-facebook" placeholder="https://facebook.com/…" value="'+(hfEf?esc(hfEf.facebookUrl||""):"")+'"></div>'+
-      '</div>'+
-      '<div class="hf-sec">'+hfSecTitleHtml("amen","Prestations")+
-        // Retour utilisateur : "pas sûr de l'utilité de « communes au
-        // logement »" — le titre de section "PRESTATIONS" juste au-dessus
-        // dit déjà ça, label retiré (field-block gardé, juste sans label).
-        '<div class="field-block">'+amenityGroupsHtml(function(a){ return hfEf && hfEf.amen && hfEf.amen.indexOf(a)!==-1; }, true)+'</div>'+
-        // Retour utilisateur : "un groupe clair qui permette de
-        // sélectionner les pièces de la maison et leur nombre, même
-        // principe que le catalogue de l'app de gestion" — voir
-        // hfSpaceChipsHtml()/hfStepSpace() plus haut.
-        '<div class="field-block hf-spaces-box" style="margin-bottom:0;"><label>Pièces & annexes</label>'+
-          '<p class="field-hint" style="margin:0 0 8px;">Cliquez pour ajouter, cliquez sur le nombre pour retirer.</p>'+
-          '<div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>'+
-        '</div>'+
-      '</div>'+
-      // Retour utilisateur : "il doit être dans un bouton" (c'était un
-      // simple lien texte) "et il doit s'adapter ... soit te diriger vers
-      // le changement formule gestion soit vers l'app directement. Et le
-      // texte est trop long" — devient un vrai <button>, câblé sur
-      // openHostGestionApp() (voir son commentaire : essentiel/pro -> app/
-      // direct, sinon -> page commerciale de changement de formule) plutôt
-      // que sur un href fixe vers app/, qui ignorait le cas sans formule
-      // gestion. Textes raccourcis. resolveHostAccount() est async (lecture
-      // Firestore) : texte par défaut (formule simple, le cas le plus
-      // courant pour qui dépose une 1ère annonce) posé ici, recalculé juste
-      // après l'insertion DOM (voir le câblage de kind==="hostform" plus
-      // bas, même endroit que hfHostPhoto/updateHfHostBioUI() pour les
-      // autres résolutions async de ce volet).
-      '<button type="button" class="hf-gestion-btn" id="hf-gestion-link">Découvrir l\'app de gestion Fiftin →</button>'+
-      '<div class="auth-err" id="hf-err"></div>';
-    // thumbUrl repris ici (galleryThumb, même index que gallery) pour
-    // qu'une photo déjà en ligne, gardée telle quelle, n'ait jamais besoin
-    // de régénérer sa vignette à l'enregistrement (voir resolvePhotoEntries()).
-    hfSelectedFiles = (hfEf && hfEf.gallery ? hfEf.gallery : []).map(function(url, i){
-      return {type:"existing", url:url, thumbUrl:(hfEf.galleryThumb && hfEf.galleryThumb[i]) || null, midUrl:(hfEf.galleryMid && hfEf.galleryMid[i]) || null};
-    });
-    hfUnits = (hfEf && hfEf.units && hfEf.units.length) ? hfEf.units.map(function(u){
-      return {id:u.id, name:u.name||"", price:u.price!=null?String(u.price):"", maxPersons:u.maxPersons!=null?u.maxPersons:2,
-        photos:(u.gallery||[]).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(u.galleryThumb && u.galleryThumb[i]) || null, midUrl:(u.galleryMid && u.galleryMid[i]) || null}; }), linkedRoomId:u.linkedRoomId||""};
-    }) : [{id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""}];
   } else if(kind==="hostbooking"){
     var hbCtx = hostBookingContext;
     if(hbCtx.mode==="view"){
@@ -8153,7 +7819,6 @@ function openSheet(kind){
   }
 
   var footerLabel = kind==="auth" ? (authMode==="signup"?"Créer le compte":"Se connecter")
-    : kind==="hostform" ? (hostFormEditListing ? "Enregistrer les modifications" : "Envoyer l'annonce")
     : kind==="hostbooking" ? ((hostBookingContext.mode==="view" || hostBookingContext.isGestion) ? "Fermer" : "Ajouter la réservation")
     : kind==="loginPrompt" ? "Se connecter"
     : kind==="collPicker" ? (collectionPickerContext.creating ? "Créer" : "Terminé")
@@ -8205,151 +7870,6 @@ function openSheet(kind){
     document.getElementById("auth-toggle").addEventListener("click", function(){ authMode = authMode==="signup"?"signin":"signup"; openSheet("auth"); });
     var forgotBtn = document.getElementById("auth-forgot");
     if(forgotBtn) forgotBtn.addEventListener("click", submitForgotPassword);
-    return;
-  } else if(kind==="hostform"){
-    document.getElementById("sheet-apply").addEventListener("click", submitHostForm);
-    Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(el){
-      el.addEventListener("click", function(){ toggleAmenityChip(el); });
-    });
-    // Pièces & annexes (hfStepSpace()) : un seul écouteur délégué sur le
-    // conteneur plutôt qu'un par puce — hfStepSpace() réécrit l'innerHTML
-    // de #hf-spaces-grid à chaque clic (même puce redessinée pour refléter
-    // le nouveau nombre), des écouteurs posés directement sur les boutons
-    // seraient donc perdus dès le 2e clic. data-space-minus (la pastille
-    // ×N) avant data-space (toute la puce) : la pastille vit À L'INTÉRIEUR
-    // du bouton, closest() la trouverait aussi en cherchant data-space.
-    document.getElementById("hf-spaces-grid").addEventListener("click", function(e){
-      var minusEl = e.target.closest("[data-space-minus]");
-      if(minusEl){ e.stopPropagation(); hfStepSpace(minusEl.getAttribute("data-space-minus"), -1); return; }
-      var plusEl = e.target.closest("[data-space]");
-      if(plusEl) hfStepSpace(plusEl.getAttribute("data-space"), 1);
-    });
-    document.getElementById("hf-region-name").addEventListener("change", function(){
-      document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(this.value, "");
-    });
-    // Compteur de mots (voir HF_CLAIM_MAX_WORDS/HF_DESC_MAX_WORDS) : mis à
-    // jour en direct, et initialisé tout de suite (une annonce en édition
-    // arrive déjà remplie, pas seulement après une première frappe).
-    ["hf-claim","hf-desc"].forEach(function(id){
-      document.getElementById(id).addEventListener("input", function(){ hfUpdateWordCount(id); });
-      hfUpdateWordCount(id);
-    });
-    wireHfAddressAutocomplete();
-    hfHostPhoto = (hostFormEditListing && hostFormEditListing.hostPhotoUrl) ? {type:"existing", url:hostFormEditListing.hostPhotoUrl, thumbUrl:hostFormEditListing.hostPhotoThumbUrl || null} : null;
-    // Repli sur la photo de compte (hostProfiles/{uid}, voir
-    // wireAccountAvatar()) si cette annonce précise n'a pas encore la
-    // sienne — une nouvelle annonce démarre avec la photo déjà choisie
-    // côté Profil, plutôt qu'une case vide à reremplir à chaque fois.
-    if(!hfHostPhoto && authState.uid && typeof firebase!=="undefined"){
-      firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
-        if(hfHostPhoto || !document.getElementById("hf-host-photo-avatar")) return; // l'hôte a déjà choisi une photo entre-temps, ou le volet a changé
-        var url = doc.exists && doc.data().photoUrl;
-        if(url){ hfHostPhoto = {type:"existing", url:url, thumbUrl:doc.data().photoThumbUrl || null}; renderHfHostPhotoPreview(); }
-      });
-    }
-    document.getElementById("hf-host-photo-avatar").addEventListener("click", function(){
-      document.getElementById("hf-host-photo-input").click();
-    });
-    document.getElementById("hf-host-photo-input").addEventListener("change", function(e){
-      var errEl = document.getElementById("hf-err");
-      errEl.textContent = "";
-      var file = e.target.files[0];
-      e.target.value = "";
-      if(!file) return;
-      if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-      cropAndCompressFiles([file]).then(function(files){
-        var f = files[0];
-        if(f.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum)."; return; }
-        hfHostPhoto = {type:"new", file:f};
-        renderHfHostPhotoPreview();
-      });
-    });
-    document.getElementById("hf-photos-btn").addEventListener("click", function(){
-      document.getElementById("hf-photos-input").click();
-    });
-    document.getElementById("hf-photos-input").addEventListener("change", function(e){
-      var errEl = document.getElementById("hf-err");
-      errEl.textContent = "";
-      var accepted = [];
-      Array.prototype.forEach.call(e.target.files, function(file){
-        if(hfSelectedFiles.length+accepted.length>=6){ errEl.textContent = "6 photos maximum."; return; }
-        if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-        accepted.push(file);
-      });
-      e.target.value = "";
-      if(!accepted.length) return;
-      cropAndCompressFiles(accepted).then(function(files){
-        files.forEach(function(file){
-          if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-          var entry = {type:"new", file:file};
-          hfSelectedFiles.push(entry);
-          enhancePhotoEntry(entry, renderHostPhotoGrid);
-        });
-        renderHostPhotoGrid();
-      });
-    });
-    renderHostPhotoGrid();
-    var hfAddUnitBtn = document.getElementById("hf-add-unit");
-    if(hfAddUnitBtn) hfAddUnitBtn.addEventListener("click", function(){
-      hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
-      renderHostUnits();
-    });
-    if(!hostFormEditListing) renderHfSiteSection();
-    /* Retour utilisateur : un gîte peut lui aussi couvrir plusieurs
-       locations à la même adresse (ex. deux gîtes indépendants chez le même
-       hôte) — "+ Ajouter une location" ne dépend donc plus du type
-       d'hébergement (voir updateUnitsFraming()/renderHostUnits()), qui ne
-       sert plus qu'à décrire l'hébergement (pictogramme affiché sur
-       l'annonce), jamais à limiter sa structure. */
-    hfAvailableRooms = [];
-    updateUnitsFraming();
-    resolveHostAccount(function(account){
-      hfAvailableRooms = (account && account.settings && account.settings.rooms) || [];
-      // Un lien saisi avant que la chambre app correspondante soit supprimée
-      // ne doit pas être ré-enregistré tel quel à l'insu de l'hôte (voir
-      // pruneStaleLinkedRoomIds) — nettoyé ici avant tout re-rendu/envoi.
-      var pruned = pruneStaleLinkedRoomIds(hfUnits, hfAvailableRooms);
-      if(pruned.changed) hfUnits = pruned.units;
-      if((hfAvailableRooms.length || pruned.changed) && document.getElementById("hf-units")) renderHostUnits();
-      // Retour utilisateur : "inviter à utiliser l'app de gestion si le
-      // client n'a que la formule hôte, et inviter à modifier ses
-      // réservations via l'app de gestion s'il a une des formules
-      // gestion" (texte), puis "il doit être dans un bouton ... il doit
-      // s'adapter ... soit te diriger vers le changement formule gestion
-      // soit vers l'app directement" (comportement) — même lecture de
-      // compte (account.settings.plan) qu'openHostGestionApp(), pas de
-      // 2e appel à resolveHostAccount() : ce callback-ci la connaît déjà.
-      // Le clic, lui, rappelle openHostGestionApp() (qui refait sa propre
-      // lecture, mise en cache par resolveHostAccount() — pas un vrai 2e
-      // aller-retour réseau) plutôt que de dupliquer ici le choix
-      // app/ vs changement de formule.
-      var gestionLink = document.getElementById("hf-gestion-link");
-      if(gestionLink){
-        var hfPlan = (account && account.settings && account.settings.plan) || "simple";
-        gestionLink.textContent = (hfPlan==="essentiel" || hfPlan==="pro")
-          ? "Accéder à mon espace de gestion →"
-          : "Découvrir l'app de gestion Fiftin →";
-        gestionLink.addEventListener("click", function(){ closeSheet(); openHostGestionApp(); });
-      }
-    });
-    // hf-bio-reuse ("reprendre la présentation d'une autre annonce") retiré
-    // avec le passage de la présentation au niveau du profil (point 3.2) :
-    // une seule présentation partagée par défaut, plus besoin de la
-    // recopier annonce par annonce — hfReuseCandidates()/hfDescCandidates
-    // restent utilisés tels quels pour "desc" (description du logement,
-    // propre à chaque annonce, inchangée par ce chantier).
-    hfDescCandidates = [];
-    updateHfHostBioUI(); // lance la résolution async (resolveHostProfileBio) du bloc Présentation
-    resolveHostProfileName(function(name){ hfProfileName = name; }); // alimente submitHostForm(), aucun champ dans ce formulaire
-    ensureHostListingsLoaded(function(list){
-      var editId = hostFormEditListing && hostFormEditListing.id;
-      hfDescCandidates = hfReuseCandidates(list, editId, "desc");
-      var descWrap = document.getElementById("hf-desc-reuse-wrap");
-      if(descWrap && hfDescCandidates.length){
-        descWrap.innerHTML = hfReuseSelectHtml("hf-desc-reuse", hfDescCandidates, "Reprendre la description d'une autre annonce…");
-        wireHfReuseSelect("hf-desc-reuse", hfDescCandidates, "hf-desc");
-      }
-    });
     return;
   } else if(kind==="hostbooking"){
     if(hostBookingContext.mode==="view"){
@@ -8824,11 +8344,6 @@ function submitForgotPassword(){
     .then(function(){ errEl.style.color = "var(--sauge-deep)"; errEl.textContent = "E-mail envoyé — vérifiez votre boîte de réception."; })
     .catch(function(err){ errEl.style.color = "var(--danger)"; errEl.textContent = authErrorMessage(err); });
 }
-function renderHfHostPhotoPreview(){
-  var el = document.getElementById("hf-host-photo-avatar");
-  if(!el) return;
-  el.innerHTML = (hfHostPhoto ? '<img src="'+photoEntryUrl(hfHostPhoto)+'" alt="">' : '') + avatarBadgeSvg();
-}
 /* Une ligne de la liste photo (maison ou location, voir plus haut le
    commentaire CSS de .hf-photo-list) : vignette + badge Couverture sur la
    1ère, puis Monter/Descendre/Améliorer/Supprimer. "Améliorer" seulement
@@ -9060,14 +8575,7 @@ function wirePhotoListRows(container, arr, rerender){
     });
   });
 }
-function renderHostPhotoGrid(){
-  var grid = document.getElementById("hf-photo-grid");
-  if(!grid) return;
-  grid.innerHTML = hfSelectedFiles.map(function(entry, i){ return photoListRowHtml(entry, i, hfSelectedFiles.length); }).join("");
-  wirePhotoListRows(grid, hfSelectedFiles, renderHostPhotoGrid);
-}
 
-function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
 /* Prix « à partir de » d'une location Fiftin Planning, pour préremplir le
    prix d'une annonce qu'on y relie (règle de César : prix minimum par nuit,
    pour 1 personne, sans petit-déjeuner ni service). Version de tarif EN
@@ -9089,149 +8597,6 @@ function roomFromPrice(room){
   return keys.length ? Number(prices[keys[0]]) : null;
 }
 
-/* Une carte par chambre du formulaire de dépôt, reconstruite entièrement
-   à chaque ajout/retrait de chambre ; les champs texte mettent à jour
-   hfUnits directement sur "input" (pas de re-rendu de toute la liste à
-   chaque frappe, sinon le focus/curseur saute). Seule la grille de
-   photos d'une chambre se re-rend isolément (renderHostUnitPhotoGrid). */
-/* Structure identique quel que soit le type d'hébergement (retour
-   utilisateur : "je veux que la structure soit identique sur les deux, que
-   ce soit chambre d'hôte ou gîte") — le bouton "+ Ajouter une location" et
-   le comportement d'ajout/retrait ne dépendent plus jamais de accomType,
-   seulement du NOMBRE de locations déjà présentes (voir renderHostUnits()).
-   Ne fait plus que garantir qu'il existe toujours au moins une location. */
-function updateUnitsFraming(){
-  if(!hfUnits.length){
-    hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
-  }
-  renderHostUnits();
-}
-/* Retour utilisateur explicite, avec capture d'écran à l'appui : "tu ne
-   devrais pas voir cette partie Chambre 1 tant que tu n'as pas cliqué sur
-   l'option plusieurs locations disponibles" — et, plus largement, "il y a
-   un doublon, le nom de l'annonce répété dans une chambre, comme une
-   poupée russe (...) quand on a qu'une seule location, un seul bloc, pas
-   besoin de poupées russes. Uniquement quand on ajoute une location, là on
-   a ce principe de poupée russe." Tant qu'il n'y a qu'UNE SEULE location
-   (hfUnits.length===1, le cas par défaut au dépôt comme à l'édition — voir
-   son initialisation à l'ouverture du volet), pas de carte "Chambre N"/
-   "Location N" ni de champ Nom séparé (redondant avec le "Nom du logement"
-   déjà rempli plus haut dans ce même formulaire) : juste prix, capacité,
-   lien Fiftin app et photos, à plat. La carte nommée façon poupée russe
-   n'apparaît qu'à partir de la 2e location, ajoutée via "+ Ajouter une
-   location" (jamais masqué par accomType désormais, voir updateUnitsFraming()) —
-   c'est CE geste, pas le type d'hébergement, qui fait exister la notion de
-   "plusieurs locations distinctes à nommer". */
-function renderHostUnits(){
-  var wrap = document.getElementById("hf-units");
-  if(!wrap) return;
-  var multi = hfUnits.length>1;
-  var label = document.getElementById("hf-units-label");
-  if(label) label.textContent = multi ? "Locations — chacune avec son prix, sa capacité et ses photos" : "Capacité et tarif";
-  wrap.innerHTML = hfUnits.map(function(u, i){
-    return '<div class="hf-unit-card" data-unit-id="'+u.id+'">'+
-      (multi ? '<div class="hf-unit-head"><span>Location '+(i+1)+'</span>'+
-        '<button type="button" class="hf-unit-remove" data-unit-id="'+u.id+'" aria-label="Retirer cette location">&times;</button>'+
-      '</div>'+
-      '<div class="field-block"><label>Nom</label><input class="text-input hf-unit-name" data-unit-id="'+u.id+'" value="'+esc(u.name)+'" placeholder="Ex. Location Bleue"></div>' : '')+
-      '<div class="field-block-row">'+
-        '<div class="field-block"><label>Prix / nuit (€)</label><input class="text-input hf-unit-price" type="number" min="1" data-unit-id="'+u.id+'" value="'+esc(u.price)+'"></div>'+
-        '<div class="field-block"><label>Capacité *</label><input class="text-input hf-unit-capacity" type="number" min="1" max="30" data-unit-id="'+u.id+'" value="'+u.maxPersons+'"></div>'+
-      '</div>'+
-      // .host-link-row n'avait aucune règle CSS propre (label et <select>
-      // nu, sans même .text-input) — retour utilisateur : "l'encart n'est
-      // pas beau et n'est pas assez visible, reprends un style graphique
-      // déjà utilisé". Repris en .field-block/.text-input, exactement le
-      // même habillage que tous les autres champs de ce formulaire (Prix,
-      // Capacité juste au-dessus), au lieu d'un style inédit non stylé.
-      (hfAvailableRooms.length ? '<div class="field-block"><label>Relier à une location de votre Fiftin app (optionnel)</label><select class="text-input hf-unit-room" data-unit-id="'+u.id+'">'+
-        '<option value="">— Aucun lien —</option>'+
-        hfAvailableRooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===u.linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
-      '</select></div>' : '')+
-      // Une seule location : ses photos sont celles du logement, plus haut
-      // (un seul endroit où ajouter des photos). Une ancienne annonce qui a
-      // déjà des photos à ce niveau les garde ici, modifiables.
-      (multi || u.photos.length ? '<div class="field-block"><label>Photos de cette location</label>'+
-        '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
-        '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
-        '<div class="hf-photo-list hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
-      '</div>' : '')+
-    '</div>';
-  }).join("");
-
-  hfUnits.forEach(function(u){ renderHostUnitPhotoGrid(u.id); });
-
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-name"), function(el){
-    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).name = el.value; });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-price"), function(el){
-    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).price = el.value; });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-capacity"), function(el){
-    el.addEventListener("input", function(){ findHfUnit(el.getAttribute("data-unit-id")).maxPersons = el.value; });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-room"), function(el){
-    el.addEventListener("change", function(){
-      var unit = findHfUnit(el.getAttribute("data-unit-id"));
-      unit.linkedRoomId = el.value;
-      if(!el.value) return;
-      // Relier à une chambre app existante reprend son prix/capacité actuels
-      // comme point de départ (l'hôte reste libre de les retoucher ensuite) —
-      // évite de ressaisir deux fois la même info.
-      var room = hfAvailableRooms.filter(function(r){ return r.id===el.value; })[0];
-      if(!room) return;
-      var card = el.closest(".hf-unit-card");
-      if(room.maxPersons){
-        unit.maxPersons = room.maxPersons;
-        var capInput = card && card.querySelector(".hf-unit-capacity");
-        if(capInput) capInput.value = room.maxPersons;
-      }
-      var price = roomFromPrice(room);
-      if(price != null){
-        unit.price = String(price);
-        var priceInput = card && card.querySelector(".hf-unit-price");
-        if(priceInput) priceInput.value = unit.price;
-      }
-    });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-remove"), function(el){
-    el.addEventListener("click", function(){
-      var unitId = el.getAttribute("data-unit-id");
-      hfUnits = hfUnits.filter(function(u){ return u.id!==unitId; });
-      renderHostUnits();
-    });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-photos-btn"), function(el){
-    el.addEventListener("click", function(){
-      wrap.querySelector('.hf-unit-photos-input[data-unit-id="'+el.getAttribute("data-unit-id")+'"]').click();
-    });
-  });
-  Array.prototype.forEach.call(wrap.querySelectorAll(".hf-unit-photos-input"), function(el){
-    el.addEventListener("change", function(e){
-      var unitId = el.getAttribute("data-unit-id");
-      var unit = findHfUnit(unitId);
-      var errEl = document.getElementById("hf-err");
-      errEl.textContent = "";
-      var accepted = [];
-      Array.prototype.forEach.call(e.target.files, function(file){
-        if(unit.photos.length+accepted.length>=6){ errEl.textContent = "6 photos maximum par location."; return; }
-        if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-        accepted.push(file);
-      });
-      e.target.value = "";
-      if(!accepted.length) return;
-      cropAndCompressFiles(accepted).then(function(files){
-        files.forEach(function(file){
-          if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-          var entry = {type:"new", file:file};
-          unit.photos.push(entry);
-          enhancePhotoEntry(entry, function(){ renderHostUnitPhotoGrid(unitId); });
-        });
-        renderHostUnitPhotoGrid(unitId);
-      });
-    });
-  });
-}
 /* Redimensionne et recompresse une photo côté client avant envoi — les
    photos de smartphone pèsent souvent 3 à 8 Mo pour une résolution bien
    supérieure à ce qu'un écran affiche jamais dans cette galerie. Réduit le
@@ -9615,13 +8980,6 @@ function cropOneFile(file, index, total){
   });
 }
 
-function renderHostUnitPhotoGrid(unitId){
-  var grid = document.querySelector('.hf-unit-photo-grid[data-unit-id="'+unitId+'"]');
-  if(!grid) return;
-  var unit = findHfUnit(unitId);
-  grid.innerHTML = unit.photos.map(function(entry, i){ return photoListRowHtml(entry, i, unit.photos.length); }).join("");
-  wirePhotoListRows(grid, unit.photos, function(){ renderHostUnitPhotoGrid(unitId); });
-}
 
 /* Envoie le fichier plein format ET sa vignette (makeThumbFile(), voir
    plus haut) en parallèle pour chaque photo — deux fichiers, un seul
@@ -9822,326 +9180,11 @@ function submitContactForm(){
   });
 }
 
-/* Suggestions d'adresse pendant la saisie (Géoplateforme/BAN), avec
-   pré-remplissage automatique de Région/Département/Ville au clic — l'hôte
-   n'a plus besoin de les choisir à la main dans le cas courant (retour
-   utilisateur : "pas pratique de tout remplir"). Ne réécrit jamais un champ
-   déjà rempli par l'hôte lui-même (voir applySuggestion ci-dessous) : un
-   choix manuel n'est jamais écrasé silencieusement par une suggestion
-   d'adresse ultérieure sur un AUTRE champ, seule Région/Département suit
-   toujours la dernière adresse choisie (ils vont ensemble, contrairement à
-   Ville qui peut être volontairement plus précis que ce que l'API renvoie). */
-function wireHfAddressAutocomplete(){
-  var input = document.getElementById("hf-address");
-  var box = document.getElementById("hf-address-suggestions");
-  if(!input || !box) return;
-  var debounceTimer = null;
-  var lastQuery = "";
-
-  function hide(){ box.hidden = true; box.innerHTML = ""; }
-
-  function applySuggestion(result){
-    var p = result.properties || {};
-    input.value = p.label || "";
-    hide();
-    var match = matchRegionDept(p);
-    if(match.regionName){
-      document.getElementById("hf-region-name").value = match.regionName;
-      document.getElementById("hf-dept-name").innerHTML = deptOptionsHtml(match.regionName, match.deptName);
-    }
-    var cityInput = document.getElementById("hf-city");
-    if(match.city && cityInput && !cityInput.value.trim()) cityInput.value = match.city;
-  }
-
-  function renderSuggestions(results){
-    if(!results.length){ hide(); return; }
-    box.innerHTML = results.map(function(r, i){
-      var p = r.properties || {};
-      var isMunicipality = p.type === "municipality";
-      return '<button type="button" class="hf-address-suggestion" data-idx="'+i+'">'+esc(p.label||"")+(isMunicipality?' <span class="hf-suggestion-tag">commune</span>':"")+'</button>';
-    }).join("");
-    box.hidden = false;
-    Array.prototype.forEach.call(box.querySelectorAll(".hf-address-suggestion"), function(btn){
-      btn.addEventListener("click", function(){ applySuggestion(results[Number(btn.getAttribute("data-idx"))]); });
-    });
-  }
-
-  input.addEventListener("input", function(){
-    var q = input.value.trim();
-    if(debounceTimer) clearTimeout(debounceTimer);
-    if(q.length < 5){ hide(); return; }
-    debounceTimer = setTimeout(function(){
-      lastQuery = q;
-      searchAddressSuggestions(q).then(function(results){
-        if(q !== lastQuery) return; // une saisie plus récente a déjà pris le dessus
-        renderSuggestions(results);
-      });
-    }, 400);
-  });
-  // Laisse le temps au clic sur une suggestion de se déclencher avant de la masquer.
-  input.addEventListener("blur", function(){ setTimeout(hide, 150); });
-}
 
 /* Minimum pour mettre une annonce en ligne (formulaire actuel, puis créateur
    d'annonce) : 3 photos, nom, type, accroche, description, adresse localisée,
    prix, capacité, téléphone, nom et présentation de l'hôte, couchage. */
 var LISTING_MIN_PHOTOS = 3;
-function submitHostForm(){
-  var name = document.getElementById("hf-name").value.trim();
-  var accomType = document.getElementById("hf-type").value;
-  // Nom de contact : plus de champ dans ce formulaire (retour utilisateur),
-  // toujours celui du profil — voir hfProfileName (résolu par
-  // resolveHostProfileName(), lancé à l'ouverture du volet juste à côté
-  // d'updateHfHostBioUI()). Vérifié explicitement plus bas (pas via
-  // requiredFields, qui suppose un vrai champ #id à scroller dessus).
-  var hostName = hfProfileName || "";
-  // Présentation : voir le grand commentaire d'updateHfHostBioUI() — soit
-  // ce formulaire EST la présentation de profil (hfProfileBio vide,
-  // première fois), soit elle réutilise celle du profil tel quel, soit
-  // elle la surcharge (case cochée). firstTimeProfileBio déclenche plus
-  // bas l'écriture dans hostProfiles/{uid} (création implicite du profil),
-  // jamais faite pour les deux autres cas (déjà la valeur connue du
-  // profil, ou une présentation volontairement propre à cette annonce).
-  var firstTimeProfileBio = !hfProfileBio;
-  var hostBioOverrideCb = document.getElementById("hf-hostbio-override");
-  var hostBioCustom = !firstTimeProfileBio && !!(hostBioOverrideCb && hostBioOverrideCb.checked);
-  var hostBio = (firstTimeProfileBio || hostBioCustom) ? document.getElementById("hf-hostbio").value.trim() : hfProfileBio;
-  var regionName = document.getElementById("hf-region-name").value;
-  var deptName = document.getElementById("hf-dept-name").value;
-  var city = document.getElementById("hf-city").value.trim();
-  var address = document.getElementById("hf-address").value.trim();
-  var claim = document.getElementById("hf-claim").value.trim();
-  var desc = document.getElementById("hf-desc").value.trim();
-  var phone = document.getElementById("hf-phone").value.trim();
-  var email = document.getElementById("hf-email").value.trim();
-  // extUrl() (voir son commentaire) : ajoute "https://" si l'hôte a tapé
-  // l'adresse sans schéma (cas le plus courant) — sans ça, le lien
-  // enregistré était relatif et ne menait jamais au bon site.
-  var websiteUrl = extUrl(document.getElementById("hf-website").value);
-  var googleUrl = extUrl(document.getElementById("hf-google").value);
-  var instagramUrl = extUrl(document.getElementById("hf-instagram").value);
-  var facebookUrl = extUrl(document.getElementById("hf-facebook").value);
-  var amen = Array.prototype.map.call(document.querySelectorAll("#sheet-root .amenity-chip.active"), function(el){ return el.getAttribute("data-a"); });
-  var errEl = document.getElementById("hf-err");
-  errEl.textContent = "";
-  // LOT 4.1 : un message par champ manquant (plutôt qu'un "remplissez tout"
-  // générique) + scrollIntoView vers le bloc concerné, qui tient lieu de
-  // "lien vers la section" dans ce volet mono-page (pas de vraies ancres
-  // possibles ici, tout vit dans le même sheet scrollable).
-  var scrollToField = function(id){
-    var el = document.getElementById(id);
-    var block = el && el.closest(".field-block");
-    if(block) block.scrollIntoView({behavior:"smooth", block:"center"});
-  };
-  var requiredFields = [
-    ["hf-name", name, "Donnez un nom à votre logement."],
-    ["hf-type", accomType, "Choisissez un type d'hébergement."],
-    ["hf-address", address, "Renseignez l'adresse complète du logement."],
-    ["hf-claim", claim, "Renseignez une accroche courte."],
-    ["hf-desc", desc, "Renseignez la description du logement."],
-    // Téléphone obligatoire (boutons WhatsApp, SMS, Appeler de l'annonce) ;
-    // e-mail facultatif (bouton Mail affiché seulement s'il existe).
-    ["hf-phone", phone, "Renseignez un téléphone de contact."]
-  ];
-  for(var fi=0; fi<requiredFields.length; fi++){
-    if(!requiredFields[fi][1]){
-      errEl.textContent = requiredFields[fi][2];
-      scrollToField(requiredFields[fi][0]);
-      return;
-    }
-  }
-  // Voir HF_CLAIM_MAX_WORDS/HF_DESC_MAX_WORDS (compteur déjà visible en
-  // direct sous chaque champ) : revérifié ici pour de bon à l'envoi, pas
-  // seulement affiché à titre indicatif.
-  if(hfWordCount(claim)>HF_CLAIM_MAX_WORDS){ errEl.textContent = "L'accroche courte dépasse "+HF_CLAIM_MAX_WORDS+" mots."; scrollToField("hf-claim"); return; }
-  if(hfWordCount(desc)>HF_DESC_MAX_WORDS){ errEl.textContent = "La description dépasse "+HF_DESC_MAX_WORDS+" mots."; scrollToField("hf-desc"); return; }
-  // Nom de contact (profil) : pas de champ à scroller ici, le message
-  // renvoie directement vers la section Profil plutôt que vers un id
-  // inexistant dans ce volet.
-  if(!hostName){ errEl.textContent = "Renseignez votre nom dans la section Profil (en tête de votre espace hôte) avant de déposer une annonce."; return; }
-  if(!hostBio){ errEl.textContent = firstTimeProfileBio ? "Merci de renseigner votre présentation." : "Renseignez la présentation spécifique de cette annonce, ou décochez la case."; scrollToField("hf-hostbio"); return; }
-  if(!hfUnits.length){ errEl.textContent = "Ajoutez au moins une location."; return; }
-  // Annonce en ligne dès l'envoi : au moins LISTING_MIN_PHOTOS photos (une
-  // carte et une fiche qui donnent envie, jamais de carte vide dans le fil).
-  // Photos du logement, plus celles d'une ancienne location le cas échéant.
-  var photoCount = hfSelectedFiles.length + hfUnits.reduce(function(n, u){ return n + (u.photos||[]).length; }, 0);
-  if(photoCount < LISTING_MIN_PHOTOS){
-    errEl.textContent = "Ajoutez au moins "+LISTING_MIN_PHOTOS+" photos de votre logement ("+photoCount+"/"+LISTING_MIN_PHOTOS+").";
-    var photoBtn = document.getElementById("hf-photos-btn");
-    if(photoBtn) photoBtn.scrollIntoView({behavior:"smooth", block:"center"});
-    return;
-  }
-  // Le nom par location n'existe (champ affiché) qu'à partir de la 2e —
-  // voir renderHostUnits() — donc jamais exigé pour une seule location
-  // solo, dont le champ reste vide par construction (pas d'input pour le
-  // remplir) : l'exiger ici bloquerait purement et simplement l'envoi de
-  // toute annonce à une seule location.
-  var multiUnits = hfUnits.length>1;
-  for(var i=0;i<hfUnits.length;i++){
-    var u = hfUnits[i];
-    if((multiUnits && !u.name.trim()) || !u.price || Number(u.price)<=0 || !u.maxPersons || Number(u.maxPersons)<=0){
-      errEl.textContent = multiUnits ? "Chaque location a besoin d'un nom, d'un prix et d'une capacité." : "Renseignez un prix et une capacité.";
-      return;
-    }
-    // LOT 4.2 : capacité plafonnée à 30 (champ déjà existant, pas nouveau —
-    // voir .hf-unit-capacity) ; c'est ce même champ maxPersons qui alimente
-    // le futur filtre Voyageurs (LOT 2.3).
-    if(Number(u.maxPersons)>30){
-      errEl.textContent = "La capacité maximum est de 30 voyageurs.";
-      return;
-    }
-  }
-  // LOT 4.1 : catégories de prestations obligatoires (voir AMEN_GROUPS,
-  // required:true) — au moins une case active par catégorie requise, lue
-  // directement sur les chips du DOM (même source que `amen` ci-dessus).
-  for(var gi=0; gi<AMEN_GROUPS.length; gi++){
-    var grp = AMEN_GROUPS[gi];
-    if(!grp.required) continue;
-    var activeInGroup = document.querySelectorAll('#sheet-root .amenity-chip[data-group="'+gi+'"].active').length;
-    if(activeInGroup<1){
-      errEl.textContent = "Catégorie « "+grp.title+" » : cochez au moins une option.";
-      var groupEl = document.querySelector('#sheet-root .amen-group[data-group="'+gi+'"]');
-      if(groupEl) groupEl.scrollIntoView({behavior:"smooth", block:"center"});
-      return;
-    }
-  }
-  if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
-  var editing = !!hostFormEditListing;
-  var editId = editing ? hostFormEditListing.id : null;
-  var siteAssocFailed = false, siteAutoNames = [];
-  var btn = document.getElementById("sheet-apply");
-  var originalLabel = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = "Localisation de l'adresse…";
-  geocodeAddress(address).then(function(coords){
-    // Repli si Région/Département/Ville n'ont jamais été remplis (ni via
-    // une suggestion cliquée pendant la saisie, ni à la main) : ce même
-    // géocodage sert aussi à les déduire — jamais de champ déjà rempli
-    // par l'hôte écrasé ici. l.region (libellé affiché aux voyageurs,
-    // voir locationLineFor()) n'est plus saisi à la main : déduit de ces
-    // mêmes valeurs, avec repli sur l'adresse brute si rien n'a matché.
-    if(!regionName || !deptName || !city){
-      var match = matchRegionDept(coords.address);
-      if(!regionName) regionName = match.regionName;
-      if(!deptName) deptName = match.deptName;
-      if(!city) city = match.city;
-    }
-    var region = (city ? city+", " : "") + (deptName || regionName || address);
-    return resolvePhotoEntries(hfSelectedFiles, authState.uid, "maison", "Envoi des photos de la maison…").then(function(house){
-      return resolvePhotoEntries(hfHostPhoto ? [hfHostPhoto] : [], authState.uid, "hote", "Envoi de votre photo…").then(function(hostPhoto){
-      var uploadUnit = function(i, doneUnits){
-        if(i>=hfUnits.length) return Promise.resolve(doneUnits);
-        var u = hfUnits[i];
-        return resolvePhotoEntries(u.photos, authState.uid, "location-"+(i+1), "Envoi des photos de "+(u.name.trim()||name)+"…").then(function(unitPhotos){
-          doneUnits.push({id:u.id, name:u.name.trim(), price:Number(u.price), maxPersons:Number(u.maxPersons), gallery:unitPhotos.urls, galleryThumb:unitPhotos.thumbs, galleryMid:unitPhotos.mids, linkedRoomId:u.linkedRoomId||""});
-          return uploadUnit(i+1, doneUnits);
-        });
-      };
-      return uploadUnit(0, []).then(function(units){
-        btn.textContent = editing ? "Enregistrement…" : "Envoi de l'annonce…";
-        var payload = {
-          name:name, accomType:accomType, hostName:hostName, hostBio:hostBio, hostBioCustom:hostBioCustom, hostPhotoUrl:hostPhoto.urls[0]||"", hostPhotoThumbUrl:hostPhoto.thumbs[0]||"", region:region, claim:claim, desc:desc, phone:phone, email:email, amen:amen,
-          spaces:hfSpaces,
-          regionName:regionName, deptName:deptName, city:city,
-          address:address, lat:coords.lat, lng:coords.lng, inseeCode:coords.citycode||"",
-          websiteUrl:websiteUrl, googleUrl:googleUrl, instagramUrl:instagramUrl, facebookUrl:facebookUrl,
-          gallery:house.urls, galleryThumb:house.thumbs, galleryMid:house.mids,
-          units:units
-        };
-        var listingWrite;
-        if(editing){
-          /* Ni status, ni ownerUid, ni createdAt dans ce payload : la règle
-             Firestore exige que status ne bouge pas sur un update du
-             propriétaire (voir README), et .update() ne touche que les
-             champs listés — les autres restent tels quels. */
-          listingWrite = firebase.firestore().collection("listings").doc(editId).update(payload);
-        } else {
-          payload.ownerUid = authState.uid;
-          payload.ownerEmail = authState.email;
-          // Modération APRÈS publication : en ligne tout de suite, à
-          // vérifier par un admin (Profil → Annonces à vérifier).
-          payload.status = "published";
-          payload.reviewed = false;
-          payload.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
-          payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-          // « Au même endroit » coché : association appliquée juste après la
-          // création (il faut l'id de la nouvelle annonce). Un échec ici ne
-          // fait pas échouer le dépôt, déjà enregistré (voir siteAssocFailed).
-          var siteSel = hfSiteSel.slice();
-          listingWrite = firebase.firestore().collection("listings").add(payload).then(function(ref){
-            // ensureHostListingsLoaded() ne lit que les annonces de CE compte
-            // (ownerUid == uid) : une annonce d'un autre hôte à la même
-            // adresse n'est jamais associée (et les règles Firestore
-            // l'interdiraient de toute façon).
-            return new Promise(function(res){ ensureHostListingsLoaded(res); }).then(function(listings){
-              var own = listings.filter(function(x){ return x.id!==ref.id; });
-              // Association automatique : un logement de cet hôte à moins
-              // de 50 m est au même endroit, sans case à cocher (évite deux
-              // cartes pour une même maison, volontairement ou non). Se
-              // défait dans Mes annonces → Au même endroit.
-              own.forEach(function(x){
-                if(siteSel.indexOf(x.id)!==-1 || typeof x.lat!=="number") return;
-                if(haversineKm(coords.lat, coords.lng, x.lat, x.lng) <= SITE_AUTO_KM){ siteSel.push(x.id); siteAutoNames.push(x.name||""); }
-              });
-              if(!siteSel.length) return;
-              return applySiteAssociation(own.concat([{id:ref.id, siteId:""}]), ref.id, siteSel);
-            }).catch(function(){ siteAssocFailed = true; });
-          });
-        }
-        // Première présentation de l'hôte (hfProfileBio vide à l'ouverture
-        // du formulaire) : crée hostProfiles/{uid} dans la foulée, en
-        // parallèle de l'écriture de l'annonce — voir le commentaire de
-        // firstTimeProfileBio plus haut. Caches mis à jour tout de suite
-        // (hostProfileBioCache/hfProfileBio) : rouvrir le formulaire ou le
-        // Profil hôte juste après doit déjà voir cette présentation comme
-        // celle du profil, sans attendre une relecture Firestore.
-        if(firstTimeProfileBio){
-          var profileWrite = firebase.firestore().collection("hostProfiles").doc(authState.uid)
-            .set({bio:hostBio, updated:new Date().toISOString()}, {merge:true})
-            .then(function(){ hostProfileBioCache = hostBio; hfProfileBio = hostBio; });
-          return Promise.all([listingWrite, profileWrite]);
-        }
-        return listingWrite;
-      });
-      });
-    });
-  }).then(function(){
-    var root = document.getElementById("sheet-root");
-    root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
-      '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-      (editing
-        ? '<h3>Annonce modifiée</h3><p class="sheet-sub">Vos changements sont enregistrés.</p>'
-        : '<h3>Votre annonce est en ligne</h3><p class="sheet-sub">Les voyageurs peuvent la découvrir dès maintenant. Nous la vérifions sous 48 h.'+
-          (siteAssocFailed ? '<br>Les logements « au même endroit » n’ont pas pu être associés : refaites-le depuis Mes annonces.'
-            : siteAutoNames.length ? '<br>Elle est à la même adresse que '+(siteAutoNames.length>1 ? siteAutoNames.length+' de vos logements' : '« '+esc(siteAutoNames[0])+' »')+' : les voyageurs les découvriront ensemble, sur une seule carte. Pour la présenter séparément : Mes annonces → Au même endroit.'
-            : '')+'</p>')+
-      '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
-    '</div></div></div>';
-    document.getElementById("sheet-close").addEventListener("click", closeSheet);
-    document.getElementById("sheet-ok").addEventListener("click", function(){
-      closeSheet();
-      hostFormEditListing = null;
-      hostListingsCache = []; /* l'annonce créée/modifiée doit se refléter dans Mes annonces */
-      // renderHostListings() recharge aussi le volet calendrier déplié s'il
-      // y en a un (state.hostListingId), plus besoin d'un second appel
-      // séparé depuis la fusion des deux anciens onglets.
-      if(state.hostMode && state.hostTab==="listings") renderHostListings();
-    });
-    document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
-  }).catch(function(err){
-    // Distingue l'échec de géocodage (adresse à corriger, message actionnable)
-    // du reste (upload photo, écriture Firestore...) plutôt qu'un message
-    // générique dans tous les cas — voir geocodeAddress() pour les deux
-    // raisons de rejet possibles (HTTP en échec, ou aucun résultat trouvé).
-    if(err && /^geocode-/.test(err.message||"")){
-      errEl.textContent = "Adresse introuvable — vérifiez qu'elle est complète (numéro, rue, code postal, ville).";
-    } else {
-      errEl.textContent = "Erreur lors de l'envoi : "+(err.message||err.code||"réessayez.");
-    }
-    btn.disabled = false;
-    btn.textContent = originalLabel;
-  });
-}
 
 /* ================= CRÉATEUR D'ANNONCE (« créer comme on explore ») =================
    L'annonce se crée dans son apparence définitive : la fiche voyageur
@@ -10194,9 +9237,8 @@ function listingReadiness(d, profile){
   return {ready: !missing.length, missing: missing, tips: items.filter(function(i){ return !i.required && !i.ok; })};
 }
 /* Entrée unique pour créer ou modifier une annonce (Mes annonces, menu,
-   « Créer un autre logement à cette adresse »). */
+   « Créer un autre logement à cette adresse ») : toujours le créateur. */
 function openListingEditor(listing, siteFrom){
-  if(listing && listing.units && listing.units.length>1){ hostFormEditListing = listing; openSheet("hostform"); return; }
   openCreator(listing || null, siteFrom || null);
 }
 function openCreator(listing, siteFrom){
@@ -11900,14 +10942,9 @@ function wireProfileIdentityCard(){
   var bioInput = document.getElementById("profile-bio-input"); // absent côté voyageur (présentation réservée à l'espace hôte)
   if(!nameInput) return; // bloc absent (non connecté côté voyageur)
   resolveHostProfileName(function(name){
-    hfProfileName = name;
     if(nameInput && document.activeElement!==nameInput) nameInput.value = name;
   });
-  // resolveHostProfileBio() reste appelé même sans textarea visible (côté
-  // voyageur) : alimente hfProfileBio, lu par le formulaire de dépôt si cet
-  // hôte dépose une annonce juste après être passé par l'espace voyageur.
   resolveHostProfileBio(function(bio){
-    hfProfileBio = bio;
     if(bioInput && document.activeElement!==bioInput) bioInput.value = bio;
   });
   document.getElementById("profile-name-save").addEventListener("click", function(){
@@ -11921,7 +10958,7 @@ function wireProfileIdentityCard(){
     firebase.firestore().collection("hostProfiles").doc(authState.uid)
       .set({name:name, updated:new Date().toISOString()}, {merge:true})
       .then(function(){
-        hostProfileNameCache = name; hfProfileName = name;
+        hostProfileNameCache = name;
         ensureHostListingsLoaded(function(list){
           if(list.length){
             var batch = firebase.firestore().batch();
@@ -11949,7 +10986,7 @@ function wireProfileIdentityCard(){
     firebase.firestore().collection("hostProfiles").doc(authState.uid)
       .set({bio:bio, updated:new Date().toISOString()}, {merge:true})
       .then(function(){
-        hostProfileBioCache = bio; hfProfileBio = bio;
+        hostProfileBioCache = bio;
         ensureHostListingsLoaded(function(list){
           var toUpdate = list.filter(function(l){ return !l.hostBioCustom; });
           if(toUpdate.length){
@@ -12253,22 +11290,6 @@ function wireSitePickRows(root, sel){
       if(i===-1) sel.push(id); else sel.splice(i, 1);
       btn.classList.toggle("active", i===-1);
     });
-  });
-}
-/* Formulaire de dépôt : question facultative « Vous avez d'autres
-   hébergements au même endroit ? », seulement si l'hôte a déjà d'autres
-   annonces. Appliquée après la création de l'annonce (voir submitHostForm()). */
-function renderHfSiteSection(){
-  ensureHostListingsLoaded(function(listings){
-    var wrap = document.getElementById("hf-site-wrap");
-    if(!wrap || !listings.length) return;
-    // Préremplissage depuis une annonce : son lieu entier est coché.
-    if(hfSiteFrom) siteOthersOf(hfSiteFrom, listings).forEach(function(x){ if(hfSiteSel.indexOf(x.id)===-1) hfSiteSel.push(x.id); });
-    wrap.innerHTML = '<div class="hf-sec">'+hfSecTitleHtml("home","Au même endroit")+
-      '<p class="field-hint" style="margin-top:0;">Vos logements à la même adresse sont associés automatiquement : les voyageurs les découvrent ensemble, sur une seule carte. Chaque annonce reste indépendante (calendrier, prix, lien Planning). Vous pouvez en cocher d’autres du même lieu.</p>'+
-      '<div class="field-block sort-row" style="margin-bottom:0;">'+sitePickRowsHtml(listings, null, hfSiteSel, hfSiteFrom)+'</div>'+
-    '</div>';
-    wireSitePickRows(wrap, hfSiteSel);
   });
 }
 /* Suggestion d'association (jamais appliquée sans l'hôte) : deux annonces
