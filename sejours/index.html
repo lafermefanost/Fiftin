@@ -477,6 +477,75 @@ a{color:inherit; text-decoration:none;}
 .cover .cover-carousel .cc-slide{min-width:100%; height:100%; object-fit:cover; scroll-snap-align:start; flex-shrink:0;}
 /* Carte d'un lieu (placeCoverHtml()) : diapositives en <div> (photo +
    étiquette du logement). */
+/* ---------- Créateur d'annonce (openCreator()) ----------
+   La fiche voyageur elle-même (.detail…) en mode Modifier, sous les volets
+   (z-index 140 < .sheet-backdrop 150), au-dessus du reste de la page. */
+body.creator-open{overflow:hidden;}
+body.creator-open nav.tabbar{display:none;}
+.detail.creator{z-index:140;}
+.cr-bar{position:sticky; top:0; z-index:20; display:flex; align-items:center; gap:10px; padding:calc(8px + env(safe-area-inset-top,0px)) 12px 8px; background:var(--sauge); color:#fff;}
+.cr-close{width:38px; height:38px; border-radius:13px; border:1.5px solid rgba(255,255,255,.35); background:transparent; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.cr-close svg{width:18px; height:18px;}
+.cr-bar-mid{flex:1; min-width:0; display:flex; flex-direction:column; line-height:1.2;}
+.cr-bar-mid b{font-size:14px; font-weight:700;}
+.cr-bar-mid span{font-size:11.5px; opacity:.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.cr-mode{display:flex; background:rgba(255,255,255,.14); border-radius:13px; padding:3px; flex-shrink:0;}
+.cr-mode button{border:none; background:transparent; color:#fff; font-family:'Jost',sans-serif; font-size:13px; font-weight:600; padding:7px 11px; border-radius:10px;}
+.cr-mode button.on{background:var(--cream); color:var(--sauge);}
+.cr-notice{background:var(--yellow-light); color:var(--sauge-deep); font-size:13px; padding:8px 14px;}
+.cr-notice button{border:none; background:none; padding:0; font-family:inherit; font-size:13px; font-weight:700; color:var(--sauge); text-decoration:underline;}
+.creator .detail-gallery{background:var(--cream-deep);}
+.cr-add-slide{display:flex; align-items:center; justify-content:center; background:var(--sauge-bg);}
+.cr-add{display:flex; flex-direction:column; align-items:center; gap:8px; border:2px dashed rgba(53,75,56,.35); border-radius:22px; background:transparent; color:var(--sauge);
+  padding:34px 28px; font-family:'Jost',sans-serif; text-align:center; max-width:78%;}
+.cr-add svg{width:40px; height:40px;}
+.cr-add b{font-size:17px; font-weight:700;}
+.cr-add span{font-size:13px; color:var(--muted);}
+.cr-spin{width:28px; height:28px; border-radius:50%; border:3px solid rgba(53,75,56,.2); border-top-color:var(--sauge); animation:crspin .8s linear infinite;}
+@keyframes crspin{to{transform:rotate(360deg);}}
+.cr-photo-tap{position:absolute; inset:0; border:none; background:transparent; z-index:2;}
+.cr-cover-tag{position:absolute; left:12px; bottom:34px; z-index:3; background:rgba(20,26,20,.55); color:#fff; font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:999px; text-transform:uppercase; letter-spacing:.06em;}
+.cr-organize{position:absolute; right:12px; bottom:28px; z-index:6; border:none; border-radius:999px; padding:8px 14px; background:rgba(255,255,255,.92); color:var(--sauge-deep);
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:700; box-shadow:0 3px 10px rgba(0,0,0,.18);}
+.cr-ph{color:#B6B3A8; font-weight:500;}
+.creator textarea{display:block; width:100%; border:none; background:transparent; resize:none; padding:0; margin:0; font-family:'Jost',sans-serif; color:inherit; overflow:hidden; outline:none;}
+.creator textarea::placeholder{color:#B6B3A8; opacity:1;}
+.creator textarea:focus{background:var(--sauge-bg); border-radius:8px; box-shadow:0 0 0 6px var(--sauge-bg);}
+.cr-h1{font-size:28px; font-weight:700; line-height:1.1; letter-spacing:-0.01em; margin:3px 0 6px !important; color:var(--ink);}
+.cr-region{display:block; border:none; background:none; padding:0; font-family:inherit; text-align:left; font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; color:var(--sauge);}
+.cr-tagline{display:flex; align-items:baseline; gap:8px; font-size:15px; color:var(--sauge-deep);}
+.cr-type{border:none; background:none; padding:0; font-family:'Jost',sans-serif; font-size:15px; font-weight:700; color:var(--sauge-deep); white-space:nowrap; flex-shrink:0;}
+.cr-tagline .type-sep{align-self:center; flex-shrink:0;}
+.cr-claim{font-size:15px; font-weight:500; line-height:1.3;}
+.cr-desc{font-size:15px; line-height:1.5; color:var(--ink);}
+.cr-count{font-size:11.5px; color:var(--muted); margin:6px 0 0; text-align:right;}
+.cr-count.over{color:#B4432E; font-weight:700;}
+.cr-meta{flex:1; border:none; background:none; padding:0; font-family:inherit; text-align:left;}
+.cr-linked{font-size:12px; color:var(--sauge); font-weight:600; margin:8px 0 0;}
+.cr-block{display:block; width:100%; border:none; background:none; padding:0; font-family:'Jost',sans-serif; font-size:14.5px; text-align:left; color:var(--ink);}
+.cr-block > span{display:block;}
+.cr-block .cr-sub{font-size:13px; color:var(--muted); margin-top:3px;}
+.cr-block .cr-warn{font-size:12.5px; color:#B4432E; font-weight:600; margin-top:4px;}
+.cr-empty{padding:14px; border:1.5px dashed var(--line); border-radius:14px;}
+.cr-edit-link{display:inline-block !important; margin-top:10px; font-size:13px; font-weight:700; color:var(--sauge); text-decoration:underline;}
+.cr-progress{background:#fff; border-radius:16px; padding:14px; margin-bottom:12px; box-shadow:0 2px 8px rgba(0,0,0,.12); border-left:4px solid var(--yellow-deep);}
+.cr-progress.ready{border-left-color:var(--sauge);}
+.cr-progress.warn{border-left-color:#B4432E;}
+.cr-progress b{display:block; font-size:16px; color:var(--ink);}
+.cr-progress p{margin:4px 0 10px; font-size:13.5px; color:var(--muted);}
+.cr-chips, .cr-tips{display:flex; flex-wrap:wrap; gap:6px;}
+.cr-tips{margin-top:12px; align-items:center;}
+.cr-tips > span{width:100%; font-size:12.5px; color:var(--muted);}
+.cr-chip{border:1.5px solid var(--line); background:var(--cream); border-radius:999px; padding:7px 12px; font-family:'Jost',sans-serif; font-size:13px; font-weight:600; color:var(--sauge-deep);}
+.cr-chip.tip{background:#fff;}
+.cr-amen .amen-group{margin-bottom:12px;}
+.cr-photo-preview{border-radius:16px; overflow:hidden; margin-bottom:12px; aspect-ratio:4/3;}
+.cr-photo-preview img{width:100%; height:100%; object-fit:cover; display:block;}
+.cr-danger{color:#B4432E;}
+.cr-preview-bar{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:240; display:flex; align-items:center; gap:12px;
+  background:var(--sauge-deep); color:#fff; border-radius:999px; padding:8px 8px 8px 16px; box-shadow:0 8px 24px rgba(0,0,0,.25); font-size:13px; white-space:nowrap;}
+.cr-preview-bar button{border:none; border-radius:999px; background:var(--yellow); color:var(--sauge-deep); font-family:'Jost',sans-serif; font-weight:700; font-size:14px; padding:9px 16px;}
+body.creator-open.detail-open nav.tabbar{display:none;}
 .place-cover .cc-slide{position:relative;}
 .place-cover .place-badge{display:inline-flex; align-items:center; gap:5px; background:var(--yellow); color:var(--sauge-deep);}
 .place-cover .place-badge svg{width:15px; height:15px;}
@@ -2800,6 +2869,7 @@ function fiftinSetBrandVideoSrc(id){
 
   <nav class="tabbar" id="tabbar"></nav>
 
+  <div id="creator-root"></div>
   <div id="sheet-root"></div>
   <div id="detail-root"></div>
 
@@ -3809,7 +3879,7 @@ function updateHeroMenu(){
   };
   hostBtn.querySelector("span").textContent = authState.uid ? "Déposer une annonce" : "Devenir hôte";
   hostBtn.onclick = function(){
-    if(authState.uid){ hostFormEditListing = null; openSheet("hostform"); }
+    if(authState.uid){ openListingEditor(null); }
     // Visiteur non connecté : la page commerciale (tarifs, Stripe déjà
     // câblé pour l'anonyme — voir startCheckoutFromSejours()) vend la
     // formule bien mieux qu'un sheet d'auth à froid. Navigation classique
@@ -7043,8 +7113,9 @@ function fmtDate(iso){
   return d.getDate()+" "+mois[d.getMonth()];
 }
 
-function wireQuickReq(id, uid, unit){
-  var l = LISTINGS.filter(function(x){ return x.id===id; })[0];
+function wireQuickReq(id, uid, unit, listingOverride){
+  var l = listingOverride || LISTINGS.filter(function(x){ return x.id===id; })[0];
+  if(!l) return; // aperçu d'une annonce pas encore publiée : rien à câbler
   var calSource = unit ? {avail: unit.avail||[]} : l;
   var qid = uid;
   var $in = document.getElementById(qid+"-in"), $out = document.getElementById(qid+"-out"), $g = document.getElementById(qid+"-g");
@@ -7496,7 +7567,7 @@ function openDetail(id, listingOverride, forceVisitorView){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
-  if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit || soleUnitOf(l));
+  if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit || soleUnitOf(l), listingOverride ? l : null);
   fillSiteOthers(l, id);
   document.body.style.overflow = "hidden";
   document.body.classList.add("detail-open");
@@ -8391,9 +8462,7 @@ function openSheet(kind){
     }
     document.getElementById("site-new-btn").addEventListener("click", function(){
       closeSheet();
-      hostFormEditListing = null;
-      hostFormSiteFrom = slc.listing;
-      openSheet("hostform");
+      openListingEditor(null, slc.listing);
     });
     document.getElementById("sheet-apply").addEventListener("click", function(){
       var btn = document.getElementById("sheet-apply");
@@ -8993,16 +9062,25 @@ function renderHostPhotoGrid(){
 }
 
 function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
-/* Tarif actuel d'une chambre Fiftin app pour une capacité donnée — dernière
-   entrée de tariffHistory (triée par date de départ), même logique que
-   addRoomTariff() côté app/. Sert à préremplir le prix/nuit d'une chambre
-   Séjours quand on la relie à cette chambre app (voir .hf-unit-room ci-dessous). */
-function roomCurrentPrice(room, pax){
+/* Prix « à partir de » d'une location Fiftin Planning, pour préremplir le
+   prix d'une annonce qu'on y relie (règle de César : prix minimum par nuit,
+   pour 1 personne, sans petit-déjeuner ni service). Version de tarif EN
+   VIGUEUR AUJOURD'HUI (la dernière dont la date de départ est passée, pas
+   une version future), même choix que getRoomTariffForDate() côté app/ ;
+   palier le plus bas défini (= prix pour 1 personne, l'outil applique le
+   premier palier quand aucun n'est ≤ au nombre de personnes). Saisons,
+   week-ends et remises long séjour ne sont pas pris en compte ici : le
+   calcul exact sur 12 mois viendra d'une fonction serveur (phase 3). */
+function roomFromPrice(room){
   var hist = room && room.tariffHistory;
   if(!hist || !hist.length) return null;
-  var last = hist.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:0; }).pop();
-  if(!last || !last.prices) return null;
-  return last.prices[pax] != null ? last.prices[pax] : null;
+  var today = new Date().toISOString().slice(0, 10);
+  var sorted = hist.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:0; });
+  var cur = sorted[0];
+  sorted.forEach(function(h){ if(h.from<=today) cur = h; });
+  var prices = (cur && cur.prices) || {};
+  var keys = Object.keys(prices).map(Number).filter(function(n){ return !isNaN(n) && prices[n]!=null && prices[n]!==""; }).sort(function(a,b){ return a-b; });
+  return keys.length ? Number(prices[keys[0]]) : null;
 }
 
 /* Une carte par chambre du formulaire de dépôt, reconstruite entièrement
@@ -9102,7 +9180,7 @@ function renderHostUnits(){
         var capInput = card && card.querySelector(".hf-unit-capacity");
         if(capInput) capInput.value = room.maxPersons;
       }
-      var price = roomCurrentPrice(room, unit.maxPersons||room.maxPersons||2);
+      var price = roomFromPrice(room);
       if(price != null){
         unit.price = String(price);
         var priceInput = card && card.querySelector(".hf-unit-price");
@@ -10057,6 +10135,563 @@ function submitHostForm(){
     btn.disabled = false;
     btn.textContent = originalLabel;
   });
+}
+
+/* ================= CRÉATEUR D'ANNONCE (« créer comme on explore ») =================
+   L'annonce se crée dans son apparence définitive : la fiche voyageur
+   (mêmes classes .detail-gallery / .detail-card / .meta-row), en mode
+   Modifier. Contenus manquants en gris (jamais enregistrés), édition sur
+   place, carrousel avec une case « Ajouter une photo » au bout, aucun ordre
+   imposé. Enregistrement automatique : brouillon (status "draft", visible du
+   seul hôte) créé à la première vraie saisie, puis mis à jour au fil de
+   l'eau ; copie de secours sur l'appareil tant que le serveur n'a pas
+   confirmé. « Mettre en ligne » seulement quand le minimum est rempli
+   (listingReadiness()). Une annonce déjà en ligne se modifie pareil, mais
+   une modification qui la ferait passer sous le minimum n'est pas
+   enregistrée (message). Aperçu : la vraie fiche voyageur (openDetail()).
+   Anciennes annonces à plusieurs locations : ancien formulaire. */
+var cr = null; // {id, data, status, timer, chain, uploads, saveState, siteFrom, profile}
+var CR_LOCAL_KEY = "fiftin_cr_";
+function crBlank(){
+  return {name:"", accomType:"", claim:"", desc:"", amen:[], spaces:{},
+    gallery:[], galleryThumb:[], galleryMid:[],
+    units:[{id:newHfUnitId(), name:"", price:null, maxPersons:2, gallery:[], galleryThumb:[], galleryMid:[], linkedRoomId:""}],
+    address:"", lat:null, lng:null, region:"", regionName:"", deptName:"", city:"", inseeCode:"",
+    phone:"", email:authState.email || "", websiteUrl:"", googleUrl:"", instagramUrl:"", facebookUrl:""};
+}
+function crUnit(){ return cr.data.units[0]; }
+function crBedItems(){ var g = AMEN_GROUPS.filter(function(x){ return x.required; })[0]; return g ? g.items : []; }
+/* Minimum pour mettre en ligne (même liste que le formulaire, voir
+   LISTING_MIN_PHOTOS). required : bloque la mise en ligne ; sinon conseil. */
+function listingReadiness(d, profile){
+  var u = (d.units && d.units[0]) || {};
+  var nPhotos = (d.gallery || []).length + (d.units || []).reduce(function(n, x){ return n + (x.gallery || []).length; }, 0);
+  var beds = crBedItems();
+  var items = [
+    {key:"photos", label: nPhotos ? "Photos ("+nPhotos+"/"+LISTING_MIN_PHOTOS+")" : LISTING_MIN_PHOTOS+" photos", ok: nPhotos >= LISTING_MIN_PHOTOS, required:true},
+    {key:"name", label:"Titre", ok: !!(d.name||"").trim(), required:true},
+    {key:"type", label:"Type d’hébergement", ok: !!d.accomType, required:true},
+    {key:"claim", label: hfWordCount(d.claim)>HF_CLAIM_MAX_WORDS ? "Accroche trop longue" : "Accroche", ok: !!(d.claim||"").trim() && hfWordCount(d.claim)<=HF_CLAIM_MAX_WORDS, required:true},
+    {key:"desc", label: hfWordCount(d.desc)>HF_DESC_MAX_WORDS ? "Description trop longue" : "Description", ok: !!(d.desc||"").trim() && hfWordCount(d.desc)<=HF_DESC_MAX_WORDS, required:true},
+    {key:"price", label:"Prix par nuit", ok: Number(u.price) > 0, required:true},
+    {key:"capacity", label:"Capacité", ok: Number(u.maxPersons) > 0 && Number(u.maxPersons) <= 30, required:true},
+    {key:"beds", label:"Couchage", ok: (d.amen || []).some(function(a){ return beds.indexOf(a)!==-1; }), required:true},
+    {key:"address", label:"Adresse", ok: typeof d.lat==="number", required:true},
+    {key:"contact", label:"Téléphone", ok: !!(d.phone||"").trim(), required:true},
+    {key:"host", label:"Votre présentation", ok: !!(profile && profile.name && profile.bio), required:true},
+    {key:"photos", label:"Plus de photos", ok: nPhotos >= 6, required:false},
+    {key:"amen", label:"Équipements & ambiance", ok: (d.amen || []).filter(function(a){ return beds.indexOf(a)===-1; }).length >= 3, required:false},
+    {key:"contact", label:"E-mail ou liens", ok: !!(d.email || d.websiteUrl || d.instagramUrl || d.facebookUrl || d.googleUrl), required:false}
+  ];
+  var missing = items.filter(function(i){ return i.required && !i.ok; });
+  return {ready: !missing.length, missing: missing, tips: items.filter(function(i){ return !i.required && !i.ok; })};
+}
+/* Entrée unique pour créer ou modifier une annonce (Mes annonces, menu,
+   « Créer un autre logement à cette adresse »). */
+function openListingEditor(listing, siteFrom){
+  if(listing && listing.units && listing.units.length>1){ hostFormEditListing = listing; openSheet("hostform"); return; }
+  openCreator(listing || null, siteFrom || null);
+}
+function openCreator(listing, siteFrom){
+  var data = crBlank();
+  if(listing){
+    data = JSON.parse(JSON.stringify(listing));
+    ["id","ownerUid","ownerEmail","status","reviewed","createdAt","publishedAt","reviewedAt","stats","likeCount","siteId","place"].forEach(function(k){ delete data[k]; });
+    if(!data.units || !data.units.length) data.units = crBlank().units;
+    data.amen = data.amen || []; data.gallery = data.gallery || []; data.galleryThumb = data.galleryThumb || []; data.galleryMid = data.galleryMid || [];
+  } else if(siteFrom){
+    sitePrefillFrom && Object.assign(data, sitePrefillFrom(siteFrom));
+    ["lat","lng","region","inseeCode"].forEach(function(k){ if(siteFrom[k]!=null) data[k] = siteFrom[k]; });
+  }
+  cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
+    timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, profile:null, notice:""};
+  // Copie de secours restée sur l'appareil (enregistrement interrompu).
+  try{
+    var local = JSON.parse(localStorage.getItem(CR_LOCAL_KEY+(cr.id||"new")) || "null");
+    if(local && local.data){ cr.serverData = data; cr.data = local.data; cr.saveState = "dirty"; cr.notice = "Modifications non enregistrées récupérées sur cet appareil."; }
+  }catch(e){}
+  cr.profile = {name:"", bio:"", photoUrl:"", photoThumbUrl:""};
+  resolveHostProfileName(function(n){ if(!cr) return; cr.profile.name = n; crRender(); });
+  resolveHostProfileBio(function(b){ if(!cr) return; cr.profile.bio = b; crRender(); });
+  if(authState.uid && typeof firebase!=="undefined") firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+    if(!cr || !doc.exists) return; cr.profile.photoUrl = doc.data().photoUrl || ""; cr.profile.photoThumbUrl = doc.data().photoThumbUrl || ""; crRender();
+  }).catch(function(){});
+  document.body.classList.add("creator-open");
+  crRender();
+  if(cr.saveState==="dirty") crScheduleSave();
+}
+function crClose(){
+  if(!cr) return;
+  if(cr.uploads){ alert("Une photo est encore en cours d’envoi : patientez quelques secondes."); return; }
+  var finish = function(){
+    document.getElementById("creator-root").innerHTML = "";
+    document.body.classList.remove("creator-open");
+    cr = null;
+    hostListingsCache = [];
+    if(state.hostMode && state.hostTab==="listings") renderHostListings();
+  };
+  if(cr.timer){ clearTimeout(cr.timer); cr.timer = null; crSave(); }
+  cr.chain.then(finish, finish);
+}
+/* ---------- rendu ---------- */
+var CR_ICON_CAMERA = "<path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'/><circle cx='12' cy='13' r='4'/>";
+function crSaveLabel(){
+  var s = cr.saveState;
+  return s==="saving" ? "Enregistrement…" : s==="saved" ? "Enregistré" : s==="offline" ? "Hors connexion · gardé sur cet appareil"
+    : s==="blocked" ? "Non enregistré · annonce en ligne incomplète" : s==="error" ? "Erreur d’enregistrement · gardé sur cet appareil" : s==="dirty" ? "Modifications en attente" : "";
+}
+function crPh(cond, html, phText){ return cond ? html : '<span class="cr-ph">'+phText+'</span>'; }
+function crRender(){
+  if(!cr) return;
+  var d = cr.data, u = crUnit();
+  var root = document.getElementById("creator-root");
+  var keepScroll = document.getElementById("creator-panel") ? document.getElementById("creator-panel").scrollTop : 0;
+  var r = listingReadiness(d, cr.profile);
+  registerPhotoVariants(d);
+  var shots = (d.gallery || []).slice();
+  (d.units || []).forEach(function(x){ shots = shots.concat(x.gallery || []); });
+  var slides = shots.map(function(src, i){
+    return '<div class="slide"><img src="'+photoMid(src)+'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">'+
+      '<button type="button" class="cr-photo-tap" data-cr-photo="'+i+'" aria-label="Modifier cette photo"></button>'+(i===0?'<span class="cr-cover-tag">Couverture</span>':'')+'</div>';
+  });
+  for(var k=0;k<cr.uploads;k++) slides.push('<div class="slide cr-add-slide"><div class="cr-add"><span class="cr-spin"></span><b>Envoi de la photo…</b></div></div>');
+  slides.push('<div class="slide cr-add-slide"><button type="button" class="cr-add" id="cr-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+CR_ICON_CAMERA+'</svg><b>'+(shots.length ? "Ajouter une photo" : "Ajoutez votre première photo")+'</b>'+(shots.length && shots.length<LISTING_MIN_PHOTOS ? '<span>'+shots.length+' sur '+LISTING_MIN_PHOTOS+' minimum</span>' : (!shots.length ? '<span>'+LISTING_MIN_PHOTOS+' photos minimum pour mettre en ligne</span>' : ''))+'</button></div>');
+  var dots = slides.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("");
+  var type = d.accomType && ACCOM_TYPES[d.accomType] ? ACCOM_TYPES[d.accomType].label : "";
+  var amenChosen = (d.amen || []).length;
+  var statusTxt = cr.status==="published" ? "En ligne" : cr.status==="paused" ? "En pause" : cr.status==="removed" ? "Retirée" : "Brouillon";
+  var progress = "";
+  if(cr.status==="draft"){
+    progress = r.ready
+      ? '<div class="cr-progress ready"><b>Votre annonce est prête</b><p>Vous pouvez la mettre en ligne : les voyageurs la verront tout de suite.</p><button type="button" class="btn-apply" id="cr-publish">Mettre en ligne</button>'+
+          (r.tips.length ? '<div class="cr-tips"><span>Pour la rendre encore plus belle :</span>'+r.tips.map(function(t){ return '<button type="button" class="cr-chip tip" data-cr-go="'+t.key+'">'+esc(t.label)+'</button>'; }).join("")+'</div>' : '')+'</div>'
+      : '<div class="cr-progress"><b>'+(r.missing.length<=3 ? "Votre annonce est presque prête" : "Votre annonce prend forme")+'</b><p>Il manque encore :</p><div class="cr-chips">'+
+          r.missing.map(function(m){ return '<button type="button" class="cr-chip" data-cr-go="'+m.key+'">'+esc(m.label)+'</button>'; }).join("")+'</div></div>';
+  } else if(!r.ready){
+    progress = '<div class="cr-progress warn"><b>Modifications non enregistrées</b><p>Une annonce en ligne doit garder le minimum. Il manque :</p><div class="cr-chips">'+
+      r.missing.map(function(m){ return '<button type="button" class="cr-chip" data-cr-go="'+m.key+'">'+esc(m.label)+'</button>'; }).join("")+'</div></div>';
+  }
+  var dKm = null;
+  var host = cr.profile || {};
+  root.innerHTML = '<div class="detail creator" id="creator-panel">'+
+    '<div class="cr-bar">'+
+      '<button type="button" class="cr-close" id="cr-close" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+      '<div class="cr-bar-mid"><b>'+statusTxt+'</b><span id="cr-save">'+esc(crSaveLabel())+'</span></div>'+
+      '<div class="cr-mode"><button type="button" class="on">Modifier</button><button type="button" id="cr-preview">Aperçu</button></div>'+
+    '</div>'+
+    (cr.notice ? '<div class="cr-notice">'+esc(cr.notice)+(cr.serverData && cr.id ? ' <button type="button" id="cr-discard">Revenir à la version enregistrée</button>' : '')+'</div>' : '')+
+    '<div class="detail-gallery" id="cr-gallery">'+
+      '<div class="detail-gallery-scroll" id="cr-gallery-scroll">'+slides.join("")+'</div>'+
+      (shots.length>1 ? '<button type="button" class="cr-organize" id="cr-organize">Organiser les photos</button>' : '')+
+      '<div class="dots">'+dots+'</div>'+
+    '</div>'+
+    '<div class="detail-body">'+
+      progress+
+      '<div class="detail-card" data-cr-sec="name">'+
+        '<button type="button" class="region cr-region" data-cr-open="address">'+(d.city || d.deptName || d.regionName ? esc(locationLineFor(d)) : d.region ? esc(d.region) : '<span class="cr-ph">Lieu · ajoutez l’adresse</span>')+'</button>'+
+        '<textarea class="cr-h1" id="cr-name" rows="1" placeholder="Titre de votre logement">'+esc(d.name||"")+'</textarea>'+
+        '<div class="cr-tagline"><button type="button" class="type-label cr-type'+(type?'':' cr-ph')+'" data-cr-open="type">'+(type ? esc(type) : 'Type')+'</button><span class="type-sep" aria-hidden="true"></span>'+
+          '<textarea class="cr-claim" id="cr-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(d.claim||"")+'</textarea></div>'+
+        '<p class="cr-count" id="cr-claim-count"></p>'+
+      '</div>'+
+      '<div class="detail-cards">'+
+        '<div class="detail-card" data-cr-sec="price"><div class="meta-row">'+
+          '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_PRICE, Number(u.price)>0 ? u.price+"€" : '<span class="cr-ph">— €</span>', "par nuit")+'</button>'+
+          '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_GUESTS, Number(u.maxPersons)>0 ? u.maxPersons : '<span class="cr-ph">—</span>', "voyageurs max")+'</button>'+
+        '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Relié à Fiftin Planning</p>' : '')+'</div>'+
+        '<div class="detail-card" data-cr-sec="desc"><textarea class="desc cr-desc" id="cr-desc" rows="3" placeholder="Décrivez votre logement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
+        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
+          (amenChosen ? '<button type="button" class="cr-block" data-cr-open="amen">'+detailAmenitiesHtml(d)+'<span class="cr-edit-link">Modifier les prestations</span></button>'
+            : '<button type="button" class="cr-block cr-empty" data-cr-open="amen"><span class="cr-ph">Couchage, équipements, ambiance… Touchez pour compléter.</span></button>')+'</div>'+
+        '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
+          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse du logement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>'+
+        '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
+          '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
+          '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
+        '<div class="detail-card" data-cr-sec="contact"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-cr-open="contact">'+
+          crPh(d.phone, '<span>'+esc(d.phone)+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(d.email ? '<span class="cr-sub">'+esc(d.email)+'</span>' : '')+
+          ((d.websiteUrl||d.googleUrl||d.instagramUrl||d.facebookUrl) ? '<span class="cr-sub">Liens : '+[d.websiteUrl&&"site",d.googleUrl&&"Google",d.instagramUrl&&"Instagram",d.facebookUrl&&"Facebook"].filter(Boolean).join(", ")+'</span>' : '')+'</button></div>'+
+      '</div>'+
+    '</div>'+
+    '<input type="file" id="cr-file" accept="image/*" multiple style="display:none">'+
+  '</div>';
+  var panel = document.getElementById("creator-panel");
+  panel.scrollTop = keepScroll;
+  crWire();
+}
+function crAutosize(el){ el.style.height = "auto"; el.style.height = el.scrollHeight+"px"; }
+function crCount(id, text, max){
+  var el = document.getElementById(id);
+  if(!el) return;
+  var n = hfWordCount(text);
+  el.textContent = n ? n+" / "+max+" mots" : "";
+  el.classList.toggle("over", n>max);
+}
+function crWire(){
+  var d = cr.data;
+  document.getElementById("cr-close").addEventListener("click", crClose);
+  document.getElementById("cr-preview").addEventListener("click", crPreview);
+  var discard = document.getElementById("cr-discard");
+  if(discard) discard.addEventListener("click", function(){
+    clearTimeout(cr.timer); cr.timer = null;
+    try{ localStorage.removeItem(CR_LOCAL_KEY+cr.id); }catch(e){}
+    cr.data = cr.serverData; cr.serverData = null; cr.notice = ""; cr.saveState = "saved"; crRender();
+  });
+  [["cr-name","name",null],["cr-claim","claim",HF_CLAIM_MAX_WORDS],["cr-desc","desc",HF_DESC_MAX_WORDS]].forEach(function(f){
+    var el = document.getElementById(f[0]);
+    crAutosize(el);
+    if(f[2]) crCount(f[0]+"-count", el.value, f[2]);
+    el.addEventListener("input", function(){
+      if(f[0]==="cr-name") el.value = el.value.replace(/\n/g, " ");
+      d[f[1]] = el.value;
+      crAutosize(el);
+      if(f[2]) crCount(f[0]+"-count", el.value, f[2]);
+      crScheduleSave();
+    });
+    // Le rendu complet (indicateur de progression) attend la fin de la
+    // saisie, pour ne jamais déplacer le texte sous les doigts.
+    el.addEventListener("blur", function(){ setTimeout(function(){ if(cr && !document.activeElement.matches("#creator-panel textarea")) crRender(); }, 0); });
+  });
+  var gal = document.getElementById("cr-gallery-scroll");
+  gal.addEventListener("scroll", function(){
+    var idx = Math.round(gal.scrollLeft / gal.clientWidth);
+    Array.prototype.forEach.call(document.querySelectorAll("#cr-gallery .dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
+  });
+  var addBtn = document.getElementById("cr-add-photo");
+  if(addBtn) addBtn.addEventListener("click", function(){ document.getElementById("cr-file").click(); });
+  document.getElementById("cr-file").addEventListener("change", function(e){ crAddFiles(e.target.files); e.target.value = ""; });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cr-photo]"), function(b){
+    b.addEventListener("click", function(){ crSheet("photo", Number(b.getAttribute("data-cr-photo"))); });
+  });
+  var org = document.getElementById("cr-organize");
+  if(org) org.addEventListener("click", function(){ crSheet("organize"); });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cr-open]"), function(b){
+    b.addEventListener("click", function(){ crSheet(b.getAttribute("data-cr-open")); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cr-go]"), function(b){
+    b.addEventListener("click", function(){ crGo(b.getAttribute("data-cr-go")); });
+  });
+  var pub = document.getElementById("cr-publish");
+  if(pub) pub.addEventListener("click", crPublish);
+}
+/* Toucher un élément manquant conduit à sa place (ou ouvre son réglage). */
+function crGo(key){
+  var panel = document.getElementById("creator-panel");
+  if(key==="photos"){ panel.scrollTo({top:0, behavior:"smooth"}); var g = document.getElementById("cr-gallery-scroll"); g.scrollTo({left:g.scrollWidth, behavior:"smooth"}); return; }
+  if(key==="name" || key==="claim" || key==="desc"){ var el = document.getElementById("cr-"+key); el.scrollIntoView({behavior:"smooth", block:"center"}); el.focus(); return; }
+  crSheet({type:"type", price:"price", capacity:"price", beds:"amen", amen:"amen", address:"address", contact:"contact", host:"host"}[key] || key);
+}
+/* ---------- photos : envoi immédiat (mêmes trois tailles que partout) ---------- */
+function crAddFiles(fileList){
+  var files = Array.prototype.filter.call(fileList || [], function(f){ return /^image\//.test(f.type); });
+  if(!files.length) return;
+  cropAndCompressFiles(files).then(function(out){
+    out.forEach(function(file){
+      if(file.size > 8*1024*1024){ alert("Photo trop lourde (8 Mo maximum) : "+file.name); return; }
+      cr.uploads++;
+      var entry = {type:"new", file:file};
+      var go = function(){
+        uploadPhotoFiles([entry.file], authState.uid, "maison", "Envoi").then(function(res){
+          if(!cr) return;
+          cr.data.gallery.push(res.urls[0]); cr.data.galleryThumb.push(res.thumbUrls[0] || null); cr.data.galleryMid.push(res.midUrls[0] || null);
+          cr.uploads--; crRender(); crScheduleSave();
+        }).catch(function(){ if(!cr) return; cr.uploads--; crRender(); alert("La photo n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."); });
+      };
+      // Amélioration automatique (comme le formulaire), puis envoi.
+      var waited = false;
+      enhancePhotoEntry(entry, function(){ if(!entry.busy && !waited){ waited = true; go(); } });
+      if(!entry.busy && !waited){ waited = true; go(); }
+    });
+    crRender();
+    var g = document.getElementById("cr-gallery-scroll");
+    if(g) g.scrollLeft = g.scrollWidth;
+  });
+}
+function crPhotoArrays(){ // liste à plat des photos (annonce puis anciennes photos de location)
+  var d = cr.data, out = [];
+  d.gallery.forEach(function(u, i){ out.push({u:u, t:d.galleryThumb[i]||null, m:d.galleryMid[i]||null}); });
+  d.units.forEach(function(x){ (x.gallery||[]).forEach(function(u, i){ out.push({u:u, t:(x.galleryThumb||[])[i]||null, m:(x.galleryMid||[])[i]||null}); }); });
+  return out;
+}
+function crSetPhotos(list){ // tout est ramené au niveau de l'annonce (un logement, un seul jeu de photos)
+  var d = cr.data;
+  d.gallery = list.map(function(p){ return p.u; }); d.galleryThumb = list.map(function(p){ return p.t; }); d.galleryMid = list.map(function(p){ return p.m; });
+  d.units.forEach(function(x){ x.gallery = []; x.galleryThumb = []; x.galleryMid = []; });
+  crRender(); crScheduleSave();
+}
+/* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
+function crSheet(kind, arg){
+  var d = cr.data, u = crUnit(), inner = "", apply = "Valider";
+  if(kind==="type"){
+    apply = null;
+    inner = '<h3>Type d’hébergement</h3><div class="sort-row">'+Object.keys(ACCOM_TYPES).map(function(k){
+      return '<button type="button" class="radio-row'+(d.accomType===k?' active':'')+'" data-v="'+k+'">'+esc(ACCOM_TYPES[k].label)+'</button>'; }).join("")+'</div>';
+  } else if(kind==="price"){
+    inner = '<h3>Prix et capacité</h3>'+
+      '<div class="field-block-row"><div class="field-block"><label>Prix / nuit (€)</label><input class="text-input" type="number" min="1" id="crs-price" value="'+(u.price!=null?esc(u.price):"")+'"></div>'+
+      '<div class="field-block"><label>Voyageurs max</label><input class="text-input" type="number" min="1" max="30" id="crs-cap" value="'+(u.maxPersons||"")+'"></div></div>'+
+      '<p class="field-hint">Prix indicatif d’une nuit, affiché « à partir de » aux voyageurs.</p>'+
+      '<div id="crs-rooms"></div>';
+  } else if(kind==="amen"){
+    inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.</p>'+
+      '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
+  } else if(kind==="address"){
+    inner = '<h3>Adresse du logement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
+      '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
+      '<p class="field-hint">Sert à placer votre logement sur la carte et à calculer les distances ; jamais montrée telle quelle aux voyageurs.</p><div class="auth-err" id="crs-err"></div>';
+  } else if(kind==="host"){
+    inner = '<h3>Votre présentation</h3><p class="sheet-sub">Partagée par toutes vos annonces (modifiable aussi dans votre profil).</p>'+
+      '<div class="field-block"><label>Prénom</label><input class="text-input" id="crs-hname" value="'+esc(cr.profile.name||"")+'"></div>'+
+      '<div class="field-block"><label>Quelques mots sur vous</label><textarea class="text-input" id="crs-hbio" rows="4">'+esc(cr.profile.bio||"")+'</textarea></div><div class="auth-err" id="crs-err"></div>';
+  } else if(kind==="contact"){
+    inner = '<h3>Contact</h3>'+
+      '<div class="field-block"><label>Téléphone *</label><input class="text-input" type="tel" id="crs-phone" placeholder="+33…" value="'+esc(d.phone||"")+'"></div>'+
+      '<div class="field-block"><label>E-mail (facultatif)</label><input class="text-input" type="email" id="crs-email" value="'+esc(d.email||"")+'"></div>'+
+      '<div class="field-block"><label>Site personnel</label><input class="text-input" type="url" id="crs-web" placeholder="https://…" value="'+esc(d.websiteUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Avis Google</label><input class="text-input" type="url" id="crs-google" value="'+esc(d.googleUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Instagram</label><input class="text-input" type="url" id="crs-insta" value="'+esc(d.instagramUrl||"")+'"></div>'+
+      '<div class="field-block"><label>Facebook</label><input class="text-input" type="url" id="crs-fb" value="'+esc(d.facebookUrl||"")+'"></div>';
+  } else if(kind==="photo"){
+    apply = null;
+    var list = crPhotoArrays(), p = list[arg];
+    if(!p) return;
+    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(p.u)+'" alt=""></div><div class="sort-row">'+
+      (arg>0 ? '<button type="button" class="radio-row" data-act="cover">Choisir comme couverture</button>' : '')+
+      '<button type="button" class="radio-row" data-act="replace">Remplacer</button>'+
+      '<button type="button" class="radio-row cr-danger" data-act="delete">Supprimer</button></div>';
+  } else if(kind==="organize"){
+    apply = "Terminé";
+    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">La première est la couverture.</p><div class="hf-photo-list" id="crs-org"></div>';
+  }
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+inner+
+    (apply ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">'+apply+'</button></div>' : '')+
+  '</div></div></div>';
+  var close = function(){ root.innerHTML = ""; };
+  document.getElementById("sheet-close").addEventListener("click", close);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") close(); });
+  var done = function(){ close(); crRender(); crScheduleSave(); };
+  var applyBtn = document.getElementById("sheet-apply");
+  if(kind==="type"){
+    Array.prototype.forEach.call(root.querySelectorAll("[data-v]"), function(b){ b.addEventListener("click", function(){ d.accomType = b.getAttribute("data-v"); done(); }); });
+  } else if(kind==="price"){
+    // Planning (phase 3 du chantier) : une location de l'outil peut déjà
+    // être reliée ici ; elle préremplit prix et capacité.
+    resolveHostAccount(function(account){
+      var rooms = (account && account.settings && account.settings.rooms) || [];
+      var box = document.getElementById("crs-rooms");
+      if(!box || !rooms.length) return;
+      box.innerHTML = '<div class="field-block"><label>Relier à une location de Fiftin Planning (facultatif)</label><select class="text-input" id="crs-room"><option value="">— Aucun lien —</option>'+
+        rooms.map(function(rm){ return '<option value="'+esc(rm.id)+'"'+(rm.id===u.linkedRoomId?' selected':'')+'>'+esc(rm.name)+'</option>'; }).join("")+'</select>'+
+        '<p class="field-hint">Vos disponibilités Planning s’afficheront sur l’annonce. Le prix est repris du tarif en vigueur (1 personne) ; il ne suit pas encore vos changements de tarifs dans Planning.</p></div>';
+      document.getElementById("crs-room").addEventListener("change", function(){
+        var rm = rooms.filter(function(x){ return x.id===this.value; }, this)[0];
+        if(!rm) return;
+        if(rm.maxPersons) document.getElementById("crs-cap").value = rm.maxPersons;
+        var pr = roomFromPrice(rm);
+        if(pr!=null) document.getElementById("crs-price").value = pr;
+      });
+    });
+    applyBtn.addEventListener("click", function(){
+      var p = Number(document.getElementById("crs-price").value), c = Number(document.getElementById("crs-cap").value);
+      u.price = p>0 ? p : null; u.maxPersons = c>0 ? Math.min(c, 30) : null;
+      var sel = document.getElementById("crs-room"); if(sel) u.linkedRoomId = sel.value;
+      done();
+    });
+  } else if(kind==="amen"){
+    Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
+      chip.addEventListener("click", function(){
+        var a = chip.getAttribute("data-a"), g = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
+        var on = !chip.classList.contains("active");
+        if(on && g && g.single) Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-group="'+chip.getAttribute("data-group")+'"].active'), function(o){ o.classList.remove("active"); });
+        chip.classList.toggle("active", on);
+      });
+    });
+    applyBtn.addEventListener("click", function(){
+      d.amen = Array.prototype.map.call(root.querySelectorAll(".amenity-chip.active"), function(c){ return c.getAttribute("data-a"); });
+      done();
+    });
+  } else if(kind==="address"){
+    var input = document.getElementById("crs-address"), box = document.getElementById("crs-suggest"), timer = null, picked = null;
+    input.addEventListener("input", function(){
+      picked = null;
+      var q = input.value.trim(); clearTimeout(timer);
+      if(q.length<5){ box.hidden = true; return; }
+      timer = setTimeout(function(){ searchAddressSuggestions(q).then(function(res){
+        if(input.value.trim()!==q) return;
+        if(!res.length){ box.hidden = true; return; }
+        box.innerHTML = res.map(function(x, i){ return '<button type="button" class="hf-address-suggestion" data-i="'+i+'">'+esc((x.properties||{}).label||"")+'</button>'; }).join("");
+        box.hidden = false;
+        Array.prototype.forEach.call(box.querySelectorAll("[data-i]"), function(b){ b.addEventListener("click", function(){ picked = res[Number(b.getAttribute("data-i"))]; input.value = (picked.properties||{}).label || input.value; box.hidden = true; }); });
+      }); }, 400);
+    });
+    applyBtn.addEventListener("click", function(){
+      var addr = input.value.trim(), err = document.getElementById("crs-err");
+      if(!addr){ err.textContent = "Renseignez l’adresse."; return; }
+      applyBtn.disabled = true; applyBtn.textContent = "Localisation…";
+      geocodeAddress(addr).then(function(coords){
+        var m = matchRegionDept(coords.address || (picked && picked.properties) || {});
+        d.address = addr; d.lat = coords.lat; d.lng = coords.lng; d.inseeCode = coords.citycode || "";
+        d.regionName = m.regionName || d.regionName || ""; d.deptName = m.deptName || d.deptName || ""; d.city = m.city || d.city || "";
+        d.region = (d.city ? d.city+", " : "") + (d.deptName || d.regionName || addr);
+        done();
+      }).catch(function(){
+        err.textContent = "Adresse introuvable : vérifiez qu’elle est complète (numéro, rue, code postal, ville).";
+        applyBtn.disabled = false; applyBtn.textContent = apply;
+      });
+    });
+  } else if(kind==="host"){
+    applyBtn.addEventListener("click", function(){
+      var n = document.getElementById("crs-hname").value.trim(), b = document.getElementById("crs-hbio").value.trim();
+      applyBtn.disabled = true;
+      firebase.firestore().collection("hostProfiles").doc(authState.uid).set({name:n, bio:b, updated:new Date().toISOString()}, {merge:true}).then(function(){
+        hostProfileNameCache = n; hostProfileBioCache = b; cr.profile.name = n; cr.profile.bio = b;
+        done();
+      }).catch(function(e){ document.getElementById("crs-err").textContent = "Erreur : "+(e.message||e.code); applyBtn.disabled = false; });
+    });
+  } else if(kind==="contact"){
+    applyBtn.addEventListener("click", function(){
+      d.phone = document.getElementById("crs-phone").value.trim(); d.email = document.getElementById("crs-email").value.trim();
+      d.websiteUrl = extUrl(document.getElementById("crs-web").value); d.googleUrl = extUrl(document.getElementById("crs-google").value);
+      d.instagramUrl = extUrl(document.getElementById("crs-insta").value); d.facebookUrl = extUrl(document.getElementById("crs-fb").value);
+      done();
+    });
+  } else if(kind==="photo"){
+    Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){
+      b.addEventListener("click", function(){
+        var act = b.getAttribute("data-act"), list = crPhotoArrays();
+        if(act==="cover"){ list.unshift(list.splice(arg, 1)[0]); close(); crSetPhotos(list); }
+        else if(act==="delete"){
+          if(cr.status!=="draft" && list.length-1 < LISTING_MIN_PHOTOS){ close(); alert("Votre annonce est en ligne : elle doit garder au moins "+LISTING_MIN_PHOTOS+" photos. Ajoutez-en une autre avant de supprimer celle-ci."); return; }
+          list.splice(arg, 1); close(); crSetPhotos(list);
+        } else if(act==="replace"){
+          close();
+          var inp = document.getElementById("cr-file");
+          var once = function(e){
+            inp.removeEventListener("change", once, true);
+            e.stopImmediatePropagation();
+            var f = e.target.files && e.target.files[0]; e.target.value = "";
+            if(!f) return;
+            var before = crPhotoArrays().length;
+            crAddFiles([f]);
+            // Une fois envoyée, la nouvelle photo prend la place de l'ancienne.
+            var wait = setInterval(function(){
+              if(!cr){ clearInterval(wait); return; }
+              var l2 = crPhotoArrays();
+              if(l2.length > before){ clearInterval(wait); var np = l2.pop(); l2.splice(arg, 1, np); crSetPhotos(l2); }
+            }, 400);
+          };
+          inp.addEventListener("change", once, true);
+          inp.click();
+        }
+      });
+    });
+  } else if(kind==="organize"){
+    var list = crPhotoArrays().map(function(p){ return {type:"existing", url:p.u, thumbUrl:p.t, midUrl:p.m}; });
+    var grid = document.getElementById("crs-org");
+    var rr = function(){ grid.innerHTML = list.map(function(e, i){ return photoListRowHtml(e, i, list.length); }).join(""); wirePhotoListRows(grid, list, rr); };
+    rr();
+    applyBtn.addEventListener("click", function(){
+      if(cr.status!=="draft" && list.length < LISTING_MIN_PHOTOS){ alert("Votre annonce est en ligne : elle doit garder au moins "+LISTING_MIN_PHOTOS+" photos."); return; }
+      close(); crSetPhotos(list.map(function(e){ return {u:e.url, t:e.thumbUrl||null, m:e.midUrl||null}; }));
+    });
+  }
+}
+/* ---------- enregistrement automatique ---------- */
+function crPayload(){
+  var d = cr.data, p = {};
+  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
+  p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
+  p.hostName = cr.profile.name || "";
+  if(!cr.hostBioCustom) p.hostBio = cr.profile.bio || "";
+  if(cr.profile.photoUrl){ p.hostPhotoUrl = cr.profile.photoUrl; p.hostPhotoThumbUrl = cr.profile.photoThumbUrl || ""; }
+  return p;
+}
+function crHasContent(d){ return !!((d.name||"").trim() || (d.claim||"").trim() || (d.desc||"").trim() || (d.gallery||[]).length || d.address || d.accomType); }
+function crScheduleSave(){
+  if(!cr) return;
+  cr.saveState = "dirty";
+  try{ localStorage.setItem(CR_LOCAL_KEY+(cr.id||"new"), JSON.stringify({at:Date.now(), data:cr.data})); }catch(e){}
+  crSetSaveLabel();
+  clearTimeout(cr.timer);
+  cr.timer = setTimeout(function(){ cr && (cr.timer = null, crSave()); }, 800);
+}
+function crSetSaveLabel(){ var el = document.getElementById("cr-save"); if(el && cr) el.textContent = crSaveLabel(); }
+function crSave(){
+  var c = cr;
+  c.chain = c.chain.then(function(){
+    if(cr!==c) return;
+    if(!c.id && !crHasContent(c.data)) return;
+    // Une annonce en ligne garde toujours le minimum : sinon rien n'est
+    // enregistré (les modifications restent sur l'appareil).
+    if(c.status!=="draft" && !listingReadiness(c.data, c.profile).ready){ c.saveState = "blocked"; crSetSaveLabel(); return; }
+    c.saveState = "saving"; crSetSaveLabel();
+    var payload = crPayload();
+    var db = firebase.firestore();
+    var write = c.id ? db.collection("listings").doc(c.id).update(payload)
+      : db.collection("listings").add(Object.assign(payload, {ownerUid:authState.uid, ownerEmail:authState.email||"", status:"draft", reviewed:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
+          .then(function(ref){ try{ localStorage.removeItem(CR_LOCAL_KEY+"new"); }catch(e){} c.id = ref.id; });
+    var timeout = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, 12000); });
+    return Promise.race([write, timeout]).then(function(){
+      if(c.saveState==="dirty") return;
+      c.saveState = "saved";
+      try{ localStorage.removeItem(CR_LOCAL_KEY+c.id); }catch(e){}
+      crSetSaveLabel();
+    }).catch(function(err){
+      c.saveState = (err && err.message==="timeout") || !navigator.onLine ? "offline" : "error";
+      try{ localStorage.setItem(CR_LOCAL_KEY+(c.id||"new"), JSON.stringify({at:Date.now(), data:c.data})); }catch(e){}
+      crSetSaveLabel();
+      if(c.saveState==="offline") setTimeout(function(){ if(cr===c && c.saveState==="offline") crSave(); }, 15000);
+    });
+  });
+  return c.chain;
+}
+/* ---------- mise en ligne ---------- */
+function crPublish(){
+  var c = cr, btn = document.getElementById("cr-publish");
+  if(!listingReadiness(c.data, c.profile).ready) return;
+  btn.disabled = true; btn.textContent = "Mise en ligne…";
+  clearTimeout(c.timer); c.timer = null;
+  crSave().then(function(){
+    if(!c.id) throw new Error("Brouillon non enregistré");
+    return firebase.firestore().collection("listings").doc(c.id).update({status:"published", publishedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  }).then(function(){
+    c.status = "published";
+    // Logements du même hôte à moins de 50 m : associés d'office (comme au dépôt).
+    hostListingsCache = [];
+    return new Promise(function(res){ ensureHostListingsLoaded(res); }).then(function(listings){
+      var own = listings.filter(function(x){ return x.id!==c.id; }), sel = c.siteFrom ? [c.siteFrom.id] : [];
+      own.forEach(function(x){ if(sel.indexOf(x.id)===-1 && typeof x.lat==="number" && typeof c.data.lat==="number" && haversineKm(c.data.lat, c.data.lng, x.lat, x.lng) <= SITE_AUTO_KM) sel.push(x.id); });
+      if(!sel.length) return 0;
+      return applySiteAssociation(own.concat([{id:c.id, siteId:""}]), c.id, sel).then(function(){ return sel.length; });
+    }).catch(function(){ return 0; });
+  }).then(function(n){
+    var root = document.getElementById("sheet-root");
+    root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+      '<div class="sheet-handle"></div><h3>Votre annonce est en ligne</h3><p class="sheet-sub">Les voyageurs peuvent la découvrir dès maintenant. Nous la vérifions sous 48 h.'+
+      (n ? '<br>Elle est à la même adresse que '+(n>1 ? n+' de vos logements' : 'un de vos logements')+' : les voyageurs les découvriront ensemble.' : '')+'</p>'+
+      '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">Voir mes annonces</button></div></div></div></div>';
+    document.getElementById("sheet-ok").addEventListener("click", function(){ root.innerHTML = ""; crClose(); });
+  }).catch(function(err){
+    alert("La mise en ligne a échoué : "+(err.message||err.code||"réessayez."));
+    if(cr===c) crRender();
+  });
+}
+/* ---------- aperçu : la vraie fiche voyageur ---------- */
+function crPreview(){
+  var d = cr.data, p = crPayload();
+  var l = Object.assign({}, p, {id: cr.id || "apercu", docId: cr.id || "apercu", ownerUid: authState.uid, status: cr.status, likeCount: 0});
+  try{ openDetail(l.id, l, true); }catch(e){ console.warn("[aperçu]", e); }
+  var bar = document.createElement("div");
+  bar.className = "cr-preview-bar"; bar.id = "cr-preview-bar";
+  bar.innerHTML = '<span>Aperçu · ce que voient les voyageurs</span><button type="button" id="cr-back-edit">Modifier</button>';
+  document.body.appendChild(bar);
+  var back = function(){ closeDetail(); var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); };
+  document.getElementById("cr-back-edit").addEventListener("click", back);
+  var db = document.getElementById("detail-back");
+  if(db) db.addEventListener("click", function(){ var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); });
 }
 
 /* ---------------- tabs ---------------- */
@@ -11591,7 +12226,7 @@ function renderHostListings(){
       siteHintHtml(listings)+
       listings.map(function(l){ return hostListingCardHtml(l, listings); }).join("")+
     '</div>';
-    document.getElementById("host-new-listing").addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
+    document.getElementById("host-new-listing").addEventListener("click", function(){ openListingEditor(null); });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-link]"), function(btn){
       btn.addEventListener("click", function(){
         var l = listings.filter(function(x){ return x.id===btn.getAttribute("data-site-link"); })[0];
@@ -11633,8 +12268,7 @@ function renderHostListings(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-edit]"), function(btn){
       btn.addEventListener("click", function(){
         var listingId = btn.getAttribute("data-host-edit");
-        hostFormEditListing = listings.filter(function(l){ return l.id===listingId; })[0];
-        openSheet("hostform");
+        openListingEditor(listings.filter(function(l){ return l.id===listingId; })[0]);
       });
     });
     // Aperçu (openDetail() avec listingOverride, voir son commentaire) :
@@ -11769,7 +12403,7 @@ function hostListingCardHtml(l, listings){
     '<div class="admin-card-row">'+cover+
       '<div class="admin-card-body">'+
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-        (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">'+(l.status==="removed" ? 'Retirée par Fiftin — contactez-nous' : 'En attente de validation')+'</span></div>' : '')+
+        (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">'+(l.status==="removed" ? 'Retirée par Fiftin — contactez-nous' : l.status==="draft" ? 'Brouillon — à terminer' : 'En attente de validation')+'</span></div>' : '')+
         (l.units && l.units.length ? '<span>'+l.units.length+' location'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune location — à compléter</span>')+
         // Retour utilisateur : "mets aussi la description courte" —
         // l'accroche (taglineHtml(), même fonction que le fil), pas la
@@ -11822,7 +12456,7 @@ function hostEmptyHtml(){
 }
 function wireHostEmpty(){
   var btn = document.getElementById("host-new-listing-empty");
-  if(btn) btn.addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
+  if(btn) btn.addEventListener("click", function(){ openListingEditor(null); });
 }
 
 /* ---------------- calendrier simplifié (année, mini-mois) ---------------- */
@@ -11969,10 +12603,7 @@ function loadHostListingCalendar(listing){
   if(!units.length){
     panel.innerHTML = '<p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de location.</p>'+
       '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button>';
-    document.getElementById("cal-edit-listing").addEventListener("click", function(){
-      hostFormEditListing = listing;
-      openSheet("hostform");
-    });
+    document.getElementById("cal-edit-listing").addEventListener("click", function(){ openListingEditor(listing); });
     return;
   }
   if(!state.hostUnitId || !units.some(function(u){ return u.id===state.hostUnitId; })){
