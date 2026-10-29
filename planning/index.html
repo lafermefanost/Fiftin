@@ -605,7 +605,7 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
         <div>
           <ol class="pl-tour-steps">
             <li class="on"><b>Grille</b><span>Toute la saison d'un coup d'œil, chambre par chambre.</span></li>
-            <li><b>Location</b><span>Chaque logement en détail : occupation, revenus, durée moyenne des séjours.</span></li>
+            <li><b>Location</b><span>Chaque hébergement en détail : occupation, revenus, durée moyenne des séjours.</span></li>
             <li><b>Semaine</b><span>Arrivées, départs, repas et extras de la semaine, jour par jour.</span></li>
             <li><b>Mois</b><span>Le bilan du mois : revenus, occupation, charges et marge.</span></li>
             <li><b>Année</b><span>L'année entière : chiffre d'affaires réalisé et projeté, marge nette, structures.</span></li>
@@ -1005,7 +1005,7 @@ var FIFTIN_FIREBASE_CONFIG = {
   measurementId:"G-4PJLYEPW01"
 };
 // Même formules que le Profil hôte de Séjours (HOST_FORMULAS dans sejours/index.html).
-var HOST_FORMULAS = [{"value": "simple", "name": "Formule Hôte", "price": "0 €/mois", "desc": "Listez votre hébergement, calendrier simplifié inclus.", "planName": "Formule Hôte", "planPrice": "0 €", "planPer": "cette année, puis 7 €/mois", "bullets": ["Listez votre hébergement, calendrier simplifié inclus."]}, {"value": "essentiel", "name": "Formule Gestion simplifiée", "price": "24 €/mois", "desc": "Planning complet Fiftin app : réservations, fichier client, compta.", "planName": "Essentiel", "planPrice": "24 €", "planPer": "par mois", "bullets": ["Tous les outils : planning, réservations, fichier client, comptabilité", "Une seule structure juridique", "Jusqu'à 4 locations", "Gestion par une seule personne"]}, {"value": "pro", "name": "Formule Gestion avancée", "price": "47 €/mois", "desc": "Tout l'Essentiel + plusieurs structures juridiques, accès équipe.", "planName": "Avancé", "planPrice": "47 €", "planPer": "par mois", "bullets": ["Tout l'Essentiel", "Jusqu'à 8 locations", "Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)", "1 sous-compte Staff, lecture ou écriture au choix", "Scalable : +5 € par logement supplémentaire, +5 € par sous-compte staff supplémentaire"]}];
+var HOST_FORMULAS = [{"value": "simple", "name": "Formule Hôte", "price": "0 €/mois", "desc": "Listez votre hébergement, calendrier simplifié inclus.", "planName": "Formule Hôte", "planPrice": "0 €", "planPer": "cette année, puis 7 €/mois", "bullets": ["Listez votre hébergement, calendrier simplifié inclus."]}, {"value": "essentiel", "name": "Formule Gestion simplifiée", "price": "24 €/mois", "desc": "Planning complet Fiftin app : réservations, fichier client, compta.", "planName": "Essentiel", "planPrice": "24 €", "planPer": "par mois", "bullets": ["Tous les outils : planning, réservations, fichier client, comptabilité", "Une seule structure juridique", "Jusqu'à 4 locations", "Gestion par une seule personne"]}, {"value": "pro", "name": "Formule Gestion avancée", "price": "47 €/mois", "desc": "Tout l'Essentiel + plusieurs structures juridiques, accès équipe.", "planName": "Avancé", "planPrice": "47 €", "planPer": "par mois", "bullets": ["Tout l'Essentiel", "Jusqu'à 8 locations", "Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)", "1 sous-compte Staff, lecture ou écriture au choix", "Scalable : +5 € par hébergement supplémentaire, +5 € par sous-compte staff supplémentaire"]}];
 
 // Même sonde que l'accueil et Séjours : IndexedDB figé → session dans localStorage.
 function probeIndexedDB(cb){
