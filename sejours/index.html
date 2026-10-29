@@ -7777,7 +7777,7 @@ function openSheet(kind){
     // mute cet objet en place, ne jamais muter les données déjà en cache.
     hfSpaces = (hfEf && hfEf.spaces) ? Object.assign({}, hfEf.spaces) : {};
     inner = '<div class="hf-head"><h3>'+(hfEditing?"Modifier l'annonce":"Déposer une annonce")+'</h3>'+
-      '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera vérifiée avant de devenir visible sur Fiftin Séjours.")+'</p>'+
+      '<p class="sheet-sub">'+(hfEditing?"Les modifications restent soumises au statut actuel de l'annonce.":"Elle sera en ligne dès l’envoi. Nous la vérifions ensuite, sous 48 h.")+'</p>'+
       '</div>'+
       '<p class="field-hint">Les champs marqués <b>*</b> sont obligatoires.</p>'+
       '<div class="hf-sec">'+hfSecTitleHtml("home","Votre logement")+
@@ -9956,7 +9956,11 @@ function submitHostForm(){
         } else {
           payload.ownerUid = authState.uid;
           payload.ownerEmail = authState.email;
-          payload.status = "pending";
+          // Modération APRÈS publication : en ligne tout de suite, à
+          // vérifier par un admin (Profil → Annonces à vérifier).
+          payload.status = "published";
+          payload.reviewed = false;
+          payload.publishedAt = firebase.firestore.FieldValue.serverTimestamp();
           payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
           // « Au même endroit » coché : association appliquée juste après la
           // création (il faut l'id de la nouvelle annonce). Un échec ici ne
@@ -10005,7 +10009,7 @@ function submitHostForm(){
       '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
       (editing
         ? '<h3>Annonce modifiée</h3><p class="sheet-sub">Vos changements sont enregistrés.</p>'
-        : '<h3>Annonce envoyée</h3><p class="sheet-sub">Merci ! On la vérifie et elle sera mise en ligne prochainement.'+
+        : '<h3>Votre annonce est en ligne</h3><p class="sheet-sub">Les voyageurs peuvent la découvrir dès maintenant. Nous la vérifions sous 48 h.'+
           (siteAssocFailed ? '<br>Les logements « au même endroit » n’ont pas pu être associés : refaites-le depuis Mes annonces.'
             : siteAutoNames.length ? '<br>Elle est à la même adresse que '+(siteAutoNames.length>1 ? siteAutoNames.length+' de vos logements' : '« '+esc(siteAutoNames[0])+' »')+' : les voyageurs les découvriront ensemble, sur une seule carte. Pour la présenter séparément : Mes annonces → Au même endroit.'
             : '')+'</p>')+
@@ -10468,7 +10472,7 @@ function renderProfile(){
 
   feed.innerHTML = '<div class="profile-view">'+
     profileIdentityCardHtml("voyageur", connected)+
-    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à vérifier<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       (connected ? changePasswordRowHtml() : '')+
@@ -10512,10 +10516,27 @@ function renderProfile(){
    Masqué (hidden) plutôt qu'à "0" quand la file est vide — le but est de
    signaler qu'il y a quelque chose à faire, pas d'afficher un compteur
    greffé en permanence. */
+/* À vérifier : annonces mises en ligne pas encore vues par un admin
+   (reviewed == false, hors brouillons), plus d'anciens dépôts "pending". */
+function fetchAdminQueue(){
+  var db = firebase.firestore();
+  return Promise.all([
+    db.collection("listings").where("reviewed","==",false).get(),
+    db.collection("listings").where("status","==","pending").get()
+  ]).then(function(res){
+    var seen = {}, docs = [];
+    res.forEach(function(snap){ snap.docs.forEach(function(d){
+      if(seen[d.id] || d.data().status==="draft" || d.data().status==="removed") return;
+      seen[d.id] = true; docs.push(d);
+    }); });
+    var t = function(d){ var c = d.data().createdAt; return c && c.toMillis ? c.toMillis() : 0; };
+    return docs.sort(function(a, b){ return t(b)-t(a); });
+  });
+}
 function loadAdminQueueCount(){
-  firebase.firestore().collection("listings").where("status","==","pending").get().then(function(snap){
+  fetchAdminQueue().then(function(docs){
     var badge = document.getElementById("admin-queue-badge");
-    var n = snap.docs.length;
+    var n = docs.length;
     if(!badge || !n) return;
     badge.textContent = String(n);
     badge.hidden = false;
@@ -10525,15 +10546,15 @@ function renderAdminQueue(){
   var feed = document.getElementById("feed");
   feed.innerHTML = '<div class="admin-queue">'+
     '<button type="button" class="admin-back" id="admin-back">&larr; Retour au profil</button>'+
-    '<h2>Annonces à valider</h2>'+
+    '<h2>Annonces à vérifier</h2>'+
     '<div id="admin-list"><p class="sheet-sub">Chargement…</p></div>'+
   '</div>';
   document.getElementById("admin-back").addEventListener("click", renderProfile);
 
-  firebase.firestore().collection("listings").where("status","==","pending").orderBy("createdAt","desc").get().then(function(snap){
+  fetchAdminQueue().then(function(docs){
     var list = document.getElementById("admin-list");
-    if(snap.empty){ list.innerHTML = '<p class="sheet-sub">Aucune annonce en attente pour le moment.</p>'; return; }
-    list.innerHTML = snap.docs.map(function(doc){
+    if(!docs.length){ list.innerHTML = '<p class="sheet-sub">Aucune annonce à vérifier pour le moment.</p>'; return; }
+    list.innerHTML = docs.map(function(doc){
       var l = doc.data();
       registerPhotoVariants(l);
       var coverUrl = listingCoverUrl(l);
@@ -10545,32 +10566,45 @@ function renderAdminQueue(){
         '<div class="admin-card-body">'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
           '<span>'+esc(l.region||"")+' · '+listingPriceLabel(l)+(listingDistanceKm(l)!=null ? ' · '+listingDistanceKm(l)+' km' : '')+(l.units?' · '+l.units.length+' location'+(l.units.length>1?'s':''):'')+'</span>'+
-          '<span class="admin-owner">Déposée par '+esc(l.hostName||"")+' — '+esc(l.ownerEmail||"")+'</span>'+
+          '<span class="admin-owner">'+(l.status==="pending" ? 'En attente · ' : 'En ligne · ')+'Déposée par '+esc(l.hostName||"")+' — '+esc(l.ownerEmail||"")+'</span>'+
           '<div class="admin-actions">'+
-            '<button type="button" class="btn-apply admin-approve" data-id="'+doc.id+'">Publier</button>'+
-            '<button type="button" class="admin-reject" data-id="'+doc.id+'">Refuser</button>'+
+            '<button type="button" class="host-preview-btn admin-preview" data-id="'+doc.id+'">Voir</button>'+
+            '<button type="button" class="btn-apply admin-approve" data-id="'+doc.id+'">'+(l.status==="pending" ? 'Publier' : 'C’est bon')+'</button>'+
+            '<button type="button" class="admin-reject" data-id="'+doc.id+'">Retirer</button>'+
           '</div>'+
         '</div>'+
       '</div></div>';
     }).join("");
     Array.prototype.forEach.call(list.querySelectorAll(".admin-approve"), function(btn){
       btn.addEventListener("click", function(){
-        btn.disabled = true; btn.textContent = "Publication…";
-        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).update({
-          status:"published", publishedAt:firebase.firestore.FieldValue.serverTimestamp()
-        }).then(function(){
+        var label = btn.textContent;
+        btn.disabled = true; btn.textContent = "Enregistrement…";
+        var d = docs.filter(function(x){ return x.id===btn.getAttribute("data-id"); })[0];
+        var upd = {reviewed:true, reviewedAt:firebase.firestore.FieldValue.serverTimestamp()};
+        if(d && d.data().status==="pending"){ upd.status = "published"; upd.publishedAt = firebase.firestore.FieldValue.serverTimestamp(); }
+        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).update(upd).then(function(){
           fetchPublishedListings();
           fetchListingIndex(); // la carte doit refléter tout de suite la nouvelle annonce publiée, pas seulement le fil de cartes
           renderAdminQueue();
-        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; btn.textContent = "Publier"; });
+        }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; btn.textContent = label; });
+      });
+    });
+    Array.prototype.forEach.call(list.querySelectorAll(".admin-preview"), function(btn){
+      btn.addEventListener("click", function(){
+        var d = docs.filter(function(x){ return x.id===btn.getAttribute("data-id"); })[0];
+        if(d){ var raw = d.data(); raw.id = d.id; openDetail(raw.id, raw, true); }
       });
     });
     Array.prototype.forEach.call(list.querySelectorAll(".admin-reject"), function(btn){
       btn.addEventListener("click", function(){
-        if(!confirm("Supprimer définitivement cette annonce ?")) return;
+        // Retirer, pas supprimer : l'annonce disparaît du site, l'hôte la
+        // garde (et peut la modifier ou la supprimer) mais ne peut plus la
+        // remettre en ligne lui-même (règle Firestore).
+        if(!confirm("Retirer cette annonce du site ? L’hôte ne pourra plus la remettre en ligne lui-même.")) return;
         btn.disabled = true;
-        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).delete()
-          .then(renderAdminQueue)
+        firebase.firestore().collection("listings").doc(btn.getAttribute("data-id")).update({
+          status:"removed", reviewed:true, reviewedAt:firebase.firestore.FieldValue.serverTimestamp()
+        }).then(function(){ fetchListingIndex(); renderAdminQueue(); })
           .catch(function(err){ alert("Erreur : "+(err.message||err.code)); btn.disabled = false; });
       });
     });
@@ -11269,7 +11303,7 @@ function renderHostProfile(){
   var feed = document.getElementById("feed");
   feed.innerHTML = '<div class="profile-view">'+
     profileIdentityCardHtml("hotes")+
-    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à valider<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
+    (isAdmin() ? '<div class="profile-card"><div class="profile-list"><div class="profile-row" id="row-admin-queue">Annonces à vérifier<span class="profile-row-right"><span class="profile-row-badge" id="admin-queue-badge" hidden></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></span></div></div></div>' : '')+
     '<div class="profile-card"><div class="profile-list">'+
       '<div class="profile-row" id="row-contact">Aide &amp; contact Fiftin<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>'+
       changePasswordRowHtml()+
@@ -11456,7 +11490,7 @@ function siteOthersOf(l, listings){
 }
 function sitePickRowsHtml(listings, excludeId, sel, from){
   return listings.filter(function(x){ return x.id!==excludeId; }).map(function(x){
-    var st = x.status==="pending" ? " · en attente de validation" : x.status==="paused" ? " · en pause" : "";
+    var st = x.status==="pending" ? " · en attente de validation" : x.status==="paused" ? " · en pause" : x.status==="removed" ? " · retirée" : "";
     // Distance affichée : un logement à une autre adresse (ex. un gîte à
     // quelques kilomètres) n'est pas « au même endroit » — il reste une
     // annonce à part, montrée dans « Ailleurs chez … » de la fiche.
@@ -11717,7 +11751,7 @@ function hostListingCardHtml(l, listings){
     '<div class="admin-card-row">'+cover+
       '<div class="admin-card-body">'+
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-        (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">En attente de validation</span></div>' : '')+
+        (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">'+(l.status==="removed" ? 'Retirée par Fiftin — contactez-nous' : 'En attente de validation')+'</span></div>' : '')+
         (l.units && l.units.length ? '<span>'+l.units.length+' location'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune location — à compléter</span>')+
         // Retour utilisateur : "mets aussi la description courte" —
         // l'accroche (taglineHtml(), même fonction que le fil), pas la
