@@ -1154,3 +1154,15 @@ Chaque fusion sur `main` republie tout le site (workflow « pages build and depl
 - Mentions légales, CGU/CGV, politique de confidentialité (page de présentation commerciale).
 - Vérifier en conditions réelles (hors sandbox, où Leaflet ne charge pas) le rendu des pins colorés et de la popup miniature du filtre Date sur la carte Explorer — code relu avec soin mais jamais vu s'exécuter, voir l'entrée « Carte Explorer » ci-dessus.
 - Filtre Date : changer un autre filtre (prix, lieu…) après avoir posé les dates ne relance pas la recherche de disponibilité pour les annonces nouvellement incluses (restent "non renseigné" jusqu'à la prochaine recherche de dates) — limite acceptée, voir l'entrée « Carte Explorer » ci-dessus.
+
+### Établissement : page voyageur et regroupement dans Mes annonces
+
+Retour de César : la carte d'un lieu montrait bien la vitrine commune, mais « Voir plus » ouvrait directement un des logements, et dans Mes annonces rien ne montrait qu'un établissement regroupe plusieurs annonces. Désormais :
+
+- **Voyageur** — « Voir plus » d'une carte de lieu ouvre la page de l'établissement (`openPlace()`) : photos du lieu (à défaut, la première photo de chaque logement), nom, type, nombre de logements, prix « dès », capacité totale (une location Planning reliée à deux annonces comptée une fois, comme dans le fil), présentation de l'établissement, liste « Choisissez votre logement » (photo, nom, type · capacité, accroche, prix, libre/complet aux dates filtrées), prestations cochées sur tous les logements, hôte, demande au niveau du lieu (même message que depuis le fil). Chaque ligne ouvre la fiche du logement ; « ‹ » y ramène à l'établissement. La fiche d'un logement associé porte en tête un bandeau « Fait partie de l’établissement » qui ouvre cette page.
+- **Hôte** — Mes annonces affiche un bloc par établissement : en-tête vert (photo, nom, type, nombre de logements, ce qui reste à compléter pour les voyageurs), boutons Modifier l’établissement / Aperçu (la page établissement, brouillons compris) / + Logement, puis ses annonces dans un cadre relié par un filet. Les annonces seules restent des cartes simples (« Établissement — Regrouper avec un autre logement »).
+- **Données** — `place` (recopié sur chaque annonce de l'établissement par `applySiteAssociation()`) gagne `kind` (`maison`, `hotel`, `domaine`, `ferme`, `insolite`) et `desc` (1 200 caractères au plus), saisis dans le volet « Établissement ». Aucune règle Firestore modifiée (le propriétaire écrivait déjà `place`). Aucun type n'est déduit automatiquement : tant que l'hôte n'en a pas choisi, rien n'est affiché.
+- **Non fait** — pas de lien profond vers la page établissement (le partage d'une carte de lieu partage toujours l'annonce mise en avant).
+
+Vérifié sur émulateurs (téléphone 390 px) : fil → page établissement → logement → retour → fermeture ; Mes annonces groupé (7 logements dans l'établissement, 2 annonces seules) ; type et présentation enregistrés sur les 7 annonces, repris sur la carte du fil (« Maison d’hôtes · 7 logements ») et sur la page ; aperçu hôte et retour ; aucune erreur de page.
+
