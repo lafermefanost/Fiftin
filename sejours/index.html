@@ -542,6 +542,11 @@ body.creator-open nav.tabbar{display:none;}
 .cr-photo-preview{border-radius:16px; overflow:hidden; margin-bottom:12px; aspect-ratio:4/3;}
 .cr-photo-preview img{width:100%; height:100%; object-fit:cover; display:block;}
 .cr-danger{color:#B4432E;}
+.cr-opt{font-size:11.5px; font-weight:500; color:var(--muted); text-transform:none; letter-spacing:0; margin-left:6px;}
+.cr-note{font-size:13.5px; color:var(--muted); margin:0; line-height:1.45;}
+.cr-drag-handle{touch-action:none; cursor:grab;}
+.hf-photo-row{transition:transform .15s ease;}
+.hf-photo-row.dragging{transition:none; z-index:5; position:relative; box-shadow:0 10px 24px rgba(0,0,0,.22); cursor:grabbing;}
 .cr-preview-bar{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:240; display:flex; align-items:center; gap:12px;
   background:var(--sauge-deep); color:#fff; border-radius:999px; padding:8px 8px 8px 16px; box-shadow:0 8px 24px rgba(0,0,0,.25); font-size:13px; white-space:nowrap;}
 .cr-preview-bar button{border:none; border-radius:999px; background:var(--yellow); color:var(--sauge-deep); font-family:'Jost',sans-serif; font-weight:700; font-size:14px; padding:9px 16px;}
@@ -8482,6 +8487,7 @@ function openSheet(kind){
         btn.textContent = "Enregistrement…";
         return applySiteAssociation(slc.listings, slc.listing.id, sel, place);
       }).then(function(){
+        crRefreshSite();
         closeSheet();
         if(state.hostMode && state.hostTab==="listings") renderHostListings();
       }).catch(function(err){
@@ -10181,7 +10187,8 @@ function listingReadiness(d, profile){
     {key:"host", label:"Votre présentation", ok: !!(profile && profile.name && profile.bio), required:true},
     {key:"photos", label:"Plus de photos", ok: nPhotos >= 6, required:false},
     {key:"amen", label:"Équipements & ambiance", ok: (d.amen || []).filter(function(a){ return beds.indexOf(a)===-1; }).length >= 3, required:false},
-    {key:"contact", label:"E-mail ou liens", ok: !!(d.email || d.websiteUrl || d.instagramUrl || d.facebookUrl || d.googleUrl), required:false}
+    {key:"contact", label:"E-mail ou liens", ok: !!(d.email || d.websiteUrl || d.instagramUrl || d.facebookUrl || d.googleUrl), required:false},
+    {key:"spaces", label:"Pièces & annexes", ok: Object.keys(d.spaces || {}).length > 0, required:false}
   ];
   var missing = items.filter(function(i){ return i.required && !i.ok; });
   return {ready: !missing.length, missing: missing, tips: items.filter(function(i){ return !i.required && !i.ok; })};
@@ -10218,6 +10225,7 @@ function openCreator(listing, siteFrom){
   }).catch(function(){});
   document.body.classList.add("creator-open");
   crRender();
+  crRefreshSite();
   if(cr.saveState==="dirty") crScheduleSave();
 }
 function crClose(){
@@ -10303,6 +10311,10 @@ function crRender(){
         '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
           (amenChosen ? '<button type="button" class="cr-block" data-cr-open="amen">'+detailAmenitiesHtml(d)+'<span class="cr-edit-link">Modifier les prestations</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-cr-open="amen"><span class="cr-ph">Couchage, équipements, ambiance… Touchez pour compléter.</span></button>')+'</div>'+
+        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Pièces & annexes <small class="cr-opt">facultatif</small></div>'+
+          (detailSpacesHtml(d) ? '<button type="button" class="cr-block" data-cr-open="spaces">'+detailSpacesHtml(d)+'<span class="cr-edit-link">Modifier</span></button>'
+            : '<button type="button" class="cr-block cr-empty" data-cr-open="spaces"><span class="cr-ph">Chambres, salle de bain, jardin, terrasse…</span></button>')+'</div>'+
+        crSiteCardHtml()+
         '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
           (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse du logement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>'+
         '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
@@ -10373,13 +10385,37 @@ function crWire(){
   });
   var pub = document.getElementById("cr-publish");
   if(pub) pub.addEventListener("click", crPublish);
+  var site = document.getElementById("cr-site");
+  if(site) site.addEventListener("click", function(){
+    ensureHostListingsLoaded(function(listings){
+      var me = listings.filter(function(x){ return x.id===cr.id; })[0];
+      if(me) openSiteLink(me, listings);
+    });
+  });
+}
+/* « Au même endroit » : association avec les autres logements de l'hôte
+   et « Le lieu » (volet existant de Mes annonces, kind==="siteLink").
+   Brouillon : association automatique à la mise en ligne (< 50 m). */
+function crSiteCardHtml(){
+  var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Au même endroit <small class="cr-opt">facultatif</small></div>';
+  if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos logements à la même adresse seront associés automatiquement à la mise en ligne. Vous pourrez ensuite ajouter « Le lieu » : un nom et des photos des espaces communs.</p></div>';
+  var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
+  if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
+  var others = siteOthersOf(me, hostListingsCache);
+  return head+'<button type="button" class="cr-block" id="cr-site">'+
+    (others.length ? '<span>'+(me.place && me.place.name ? esc(me.place.name)+' · ' : '')+others.length+' autre'+(others.length>1?'s':'')+' logement'+(others.length>1?'s':'')+'</span>' : '<span class="cr-ph">Associer d’autres logements à la même adresse, présenter le lieu</span>')+
+    '<span class="cr-edit-link">'+(others.length ? 'Gérer le lieu' : 'Ajouter')+'</span></button></div>';
+}
+function crRefreshSite(){
+  if(!cr || !cr.id || cr.status==="draft") return;
+  ensureHostListingsLoaded(function(){ if(cr) crRender(); });
 }
 /* Toucher un élément manquant conduit à sa place (ou ouvre son réglage). */
 function crGo(key){
   var panel = document.getElementById("creator-panel");
   if(key==="photos"){ panel.scrollTo({top:0, behavior:"smooth"}); var g = document.getElementById("cr-gallery-scroll"); g.scrollTo({left:g.scrollWidth, behavior:"smooth"}); return; }
   if(key==="name" || key==="claim" || key==="desc"){ var el = document.getElementById("cr-"+key); el.scrollIntoView({behavior:"smooth", block:"center"}); el.focus(); return; }
-  crSheet({type:"type", price:"price", capacity:"price", beds:"amen", amen:"amen", address:"address", contact:"contact", host:"host"}[key] || key);
+  crSheet({type:"type", price:"price", capacity:"price", beds:"amen", amen:"amen", address:"address", contact:"contact", host:"host", spaces:"spaces"}[key] || key);
 }
 /* ---------- photos : envoi immédiat (mêmes trois tailles que partout) ---------- */
 function crAddFiles(fileList){
@@ -10418,6 +10454,45 @@ function crSetPhotos(list){ // tout est ramené au niveau de l'annonce (un logem
   d.gallery = list.map(function(p){ return p.u; }); d.galleryThumb = list.map(function(p){ return p.t; }); d.galleryMid = list.map(function(p){ return p.m; });
   d.units.forEach(function(x){ x.gallery = []; x.galleryThumb = []; x.galleryMid = []; });
   crRender(); crScheduleSave();
+}
+/* Glisser-déposer des lignes de photos (volet « Organiser les photos ») :
+   on attrape la vignette et on la fait glisser, au doigt comme à la
+   souris (événements pointer, la page ne défile pas pendant le geste).
+   Les flèches ↑ ↓ restent l'alternative simple. */
+function enableRowDrag(container, arr, rerender){
+  Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-row"), function(row, idx){
+    var handle = row.querySelector(".hf-photo-row-thumb");
+    if(!handle) return;
+    handle.classList.add("cr-drag-handle");
+    handle.addEventListener("pointerdown", function(e){
+      e.preventDefault();
+      var rows = Array.prototype.slice.call(container.querySelectorAll(".hf-photo-row"));
+      var mids = rows.map(function(r){ var b = r.getBoundingClientRect(); return b.top + b.height/2; });
+      var startY = e.clientY, target = idx;
+      row.classList.add("dragging");
+      try{ handle.setPointerCapture(e.pointerId); }catch(err){}
+      var move = function(ev){
+        var dy = ev.clientY - startY;
+        row.style.transform = "translateY("+dy+"px)";
+        // Position d'arrivée = nombre d'autres photos situées au-dessus du doigt.
+        var y = mids[idx] + dy;
+        target = mids.filter(function(m, i){ return i!==idx && m < y; }).length;
+        rows.forEach(function(r, i){
+          if(i===idx) return;
+          var shift = (idx < target && i > idx && i <= target) ? -1 : (idx > target && i >= target && i < idx) ? 1 : 0;
+          r.style.transform = shift ? "translateY("+(shift*(row.offsetHeight+8))+"px)" : "";
+        });
+      };
+      var up = function(){
+        handle.removeEventListener("pointermove", move); handle.removeEventListener("pointerup", up); handle.removeEventListener("pointercancel", up);
+        rows.forEach(function(r){ r.style.transform = ""; });
+        row.classList.remove("dragging");
+        if(target!==idx){ var it = arr.splice(idx, 1)[0]; arr.splice(target, 0, it); }
+        rerender();
+      };
+      handle.addEventListener("pointermove", move); handle.addEventListener("pointerup", up); handle.addEventListener("pointercancel", up);
+    });
+  });
 }
 /* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
 function crSheet(kind, arg){
@@ -10459,9 +10534,12 @@ function crSheet(kind, arg){
       (arg>0 ? '<button type="button" class="radio-row" data-act="cover">Choisir comme couverture</button>' : '')+
       '<button type="button" class="radio-row" data-act="replace">Remplacer</button>'+
       '<button type="button" class="radio-row cr-danger" data-act="delete">Supprimer</button></div>';
+  } else if(kind==="spaces"){
+    hfSpaces = Object.assign({}, d.spaces || {});
+    inner = '<h3>Pièces & annexes</h3><p class="sheet-sub">Touchez pour ajouter, touchez le nombre pour retirer.</p><div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>';
   } else if(kind==="organize"){
     apply = "Terminé";
-    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">La première est la couverture.</p><div class="hf-photo-list" id="crs-org"></div>';
+    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture.</p><div class="hf-photo-list" id="crs-org"></div>';
   }
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -10587,10 +10665,18 @@ function crSheet(kind, arg){
         }
       });
     });
+  } else if(kind==="spaces"){
+    document.getElementById("hf-spaces-grid").addEventListener("click", function(e){
+      var minusEl = e.target.closest("[data-space-minus]");
+      if(minusEl){ e.stopPropagation(); hfStepSpace(minusEl.getAttribute("data-space-minus"), -1); return; }
+      var plusEl = e.target.closest("[data-space]");
+      if(plusEl) hfStepSpace(plusEl.getAttribute("data-space"), 1);
+    });
+    applyBtn.addEventListener("click", function(){ d.spaces = Object.assign({}, hfSpaces); done(); });
   } else if(kind==="organize"){
     var list = crPhotoArrays().map(function(p){ return {type:"existing", url:p.u, thumbUrl:p.t, midUrl:p.m}; });
     var grid = document.getElementById("crs-org");
-    var rr = function(){ grid.innerHTML = list.map(function(e, i){ return photoListRowHtml(e, i, list.length); }).join(""); wirePhotoListRows(grid, list, rr); };
+    var rr = function(){ grid.innerHTML = list.map(function(e, i){ return photoListRowHtml(e, i, list.length); }).join(""); wirePhotoListRows(grid, list, rr); enableRowDrag(grid, list, rr); };
     rr();
     applyBtn.addEventListener("click", function(){
       if(cr.status!=="draft" && list.length < LISTING_MIN_PHOTOS){ alert("Votre annonce est en ligne : elle doit garder au moins "+LISTING_MIN_PHOTOS+" photos."); return; }
