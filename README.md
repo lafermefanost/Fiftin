@@ -1061,6 +1061,17 @@ Retour utilisateur après avoir testé le chantier précédent en conditions ré
 
 **Rappel important** : ce chantier touche encore `functions/index.js` (ajout de `thumbUrl`) — nécessite un nouveau `firebase deploy --only functions` pour apparaître en production, en plus du déploiement déjà requis pour `unitIds` du chantier précédent si ce n'est pas encore fait.
 
+## Logements au même endroit (Fiftin Séjours)
+
+Un logement = une annonce. Les annonces d'un même hôte à la même adresse peuvent être **associées** par l'hôte (Mes annonces → « Au même endroit », ou à la création d'une annonce) : champ `siteId` commun sur `listings/{id}`, recopié dans `listingIndex` avec `linkedRoomIds` (fonction `syncPublicListingIndex`). Jamais déduit automatiquement : une suggestion s'affiche quand deux annonces sont à moins de 150 m, appliquée seulement si l'hôte accepte. Aucune règle Firestore modifiée (le propriétaire modifie déjà ses annonces) ; aucune donnée Planning touchée.
+
+- **Fil Explorer et carte** : une seule carte (et un seul point) par lieu (`collapseSites()`), avec la mention « + N autres logements au même endroit ». Représentant : un logement qui suffit seul au nombre de voyageurs, puis (tri par défaut) le premier disponible aux dates, puis le moins cher ; il garde sa propre place dans le tri (le nombre de logements n'avantage jamais un lieu).
+- **Groupes** : avec un nombre de voyageurs qu'aucun logement n'atteint seul, un lieu apparaît si la somme des capacités de ses logements correspondant aux autres filtres et **libres aux dates choisies** suffit (« Jusqu'à N voyageurs avec les logements associés »). Une location Planning reliée à deux annonces n'est comptée qu'une fois. Un logement sans calendrier renseigné compte (même règle qu'une annonce seule). Remplace l'ancien bloc « Pour votre groupe… » (regroupement automatique par hôte et coordonnées, sans dates).
+- **Fiche** : « Au même endroit » (autres logements associés, pour choisir ou venir à plusieurs) puis « Ailleurs chez <hôte> » (autres annonces de l'hôte à une autre adresse, avec la distance ; une vignette par lieu).
+- **Formulaire** : plus d'ajout de location dans une nouvelle annonce ni de second endroit pour les photos (« Photos du logement ») ; « Créer un autre logement à cette adresse » préremplit adresse, type, prestations et contact. Les anciennes annonces à plusieurs locations restent modifiables telles quelles.
+- Associer / dissocier : un seul lot d'écritures (`planSiteAssociation()`, `applySiteAssociation()`) ; décocher un logement le sépare sans défaire le reste du lieu ; un lieu réduit à un logement perd son `siteId`.
+- **Déploiement** : `functions/index.js` modifié → workflow « Déploiement des fonctions Firebase » à la fusion. Tant que l'index n'est pas republié pour une annonce (toute écriture de l'annonce le republie), elle n'est pas regroupée dans le fil.
+
 ## Calendriers Airbnb / Booking (iCal)
 
 Import (Airbnb/Booking → Fiftin) et export (Fiftin → Airbnb/Booking), **par location**, depuis Réglages → Locations → « Calendriers Airbnb / Booking ». Pas un channel manager : seules des dates circulent, jamais de nom, de prix ni de nombre de voyageurs (les flux iCal des plateformes n'en contiennent pas).

@@ -559,6 +559,22 @@ a{color:inherit; text-decoration:none;}
    qu'avant, pas juste la taille qui grandit sans le reste). */
 .cover-info .tagline{font-size:15px; line-height:1.3; color:rgba(245,240,229,.88); margin:0 0 12px; max-width:88%;}
 .cover-cta{display:flex; gap:8px;}
+/* Mention « + N autres logements au même endroit » / « Jusqu'à N voyageurs
+   avec les logements associés » (siteNoteHtml()) : discrète, entre
+   l'accroche et les boutons. */
+.cover-info .site-note{display:flex; align-items:center; gap:6px; margin:-4px 0 12px; font-size:12.5px; font-weight:600; color:rgba(245,240,229,.95);}
+.cover-info .site-note svg{width:15px; height:15px; flex-shrink:0;}
+/* Fiche : « Au même endroit » — petites cartes des autres logements
+   associés, défilement horizontal (siteOthersHtml()). */
+.site-sub{font-size:13.5px; color:var(--muted); margin:-4px 0 12px; line-height:1.4;}
+.site-others{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-padding:0 14px; margin:0 -14px; padding:0 14px 4px; scrollbar-width:none;}
+.site-others::-webkit-scrollbar{display:none;}
+.site-other{flex:0 0 150px; width:150px; min-width:0; scroll-snap-align:start; border:none; padding:0; background:none; text-align:left; font-family:'Jost',sans-serif; cursor:pointer; color:var(--ink);}
+.site-other-img{width:150px; height:112px; border-radius:16px; overflow:hidden; background:var(--line);}
+.site-other-img img{width:100%; height:100%; object-fit:cover; display:block;}
+.site-other b{display:block; font-size:14px; font-weight:600; margin:7px 0 1px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.site-other span{display:block; font-size:12.5px; color:var(--sauge); font-weight:600;}
+.site-other .site-other-km{color:var(--muted); font-weight:500;}
 .btn{border:none; border-radius:16px; font-family:'Jost',sans-serif; font-weight:700; font-size:13.5px;
   padding:8px 16px; display:flex; align-items:center; justify-content:center; gap:6px;}
 /* Retour utilisateur : "fais l'encart moins large, que les deux bulles ne
@@ -894,17 +910,6 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .sort-row{display:flex; flex-direction:column; gap:8px;}
 .radio-row{display:flex; align-items:center; gap:10px; padding:11px 14px; border:1.5px solid var(--line); border-radius:16px; font-size:13.5px; font-weight:600;}
 .radio-row.active{border-color:var(--sauge-deep); background:var(--sauge-deep); color:var(--cream);}
-/* Bloc "Pour votre groupe, en réservant plusieurs hébergements" (LOT 2.3),
-   sous le fil Explorer — même carte que .detail-card, contenu propre. */
-.group-capacity-group{margin-bottom:14px;}
-.group-capacity-group:last-child{margin-bottom:0;}
-.group-capacity-total{font-size:12.5px; color:var(--gray-mid); margin:0 0 8px;}
-.group-capacity-members{display:flex; flex-direction:column; gap:8px;}
-.group-capacity-member{display:flex; justify-content:space-between; align-items:center; width:100%;
-  text-align:left; background:var(--cream-deep); border:none; border-radius:12px; padding:10px 14px;
-  font-family:'Jost',sans-serif; cursor:pointer;}
-.group-capacity-member-name{font-size:13px; font-weight:600; color:var(--ink);}
-.group-capacity-member-cap{font-size:11.5px; color:var(--sauge-deep); white-space:nowrap; margin-left:10px;}
 /* Volet "Ajouter à une collection" (kind==="collPicker") : mêmes lignes que
    .radio-row, mais à choix MULTIPLE — un rond à cocher plutôt qu'un simple
    changement de fond, pour ne jamais laisser croire qu'une seule case peut
@@ -2243,6 +2248,22 @@ body.map-fullscreen{overflow:hidden;}
   font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:#fff; text-align:center; cursor:pointer;}
 .cal-disclose-chevron{width:16px; height:16px; color:#fff; flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
 .cal-disclose.expanded .cal-disclose-chevron{transform:rotate(180deg);}
+/* « Au même endroit » (Mes annonces) : ligne claire au-dessus du
+   Calendrier, ouvre le volet d'association (kind==="siteLink"). */
+.cal-disclose.site-disclose{flex-direction:row; justify-content:space-between; background:var(--sauge-bg); color:var(--sauge); padding:12px 14px;}
+.site-disclose .site-disclose-val{margin-left:auto; font-weight:600; margin-right:6px;}
+.site-disclose .cal-disclose-chevron{color:var(--sauge);}
+.site-pick-row{justify-content:flex-start;}
+.site-pick-thumb{width:40px; height:40px; border-radius:10px; overflow:hidden; background:var(--line); flex-shrink:0;}
+.site-pick-thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+.site-pick-name{flex:1; min-width:0; text-align:left;}
+.site-pick-name small{display:block; font-size:11.5px; font-weight:500; color:var(--muted);}
+.site-hint{background:var(--sauge-bg); border-radius:16px; padding:14px; margin-bottom:14px; color:var(--sauge);}
+.site-hint p{margin:0 0 10px; font-size:13.5px; line-height:1.4; font-weight:500;}
+.site-hint-actions{display:flex; gap:8px;}
+.site-hint-actions button{border:none; border-radius:999px; padding:9px 16px; font-family:'Jost',sans-serif; font-size:13px; font-weight:600; cursor:pointer;}
+.site-hint-go{background:var(--sauge); color:#fff;}
+.site-hint-off{background:transparent; color:var(--sauge);}
 /* Contenu du calendrier déplié — toujours DANS .admin-card désormais (une
    seule carte, retour utilisateur), juste un peu d'espace sous la ligne
    .cal-disclose qui l'ouvre. */
@@ -3547,6 +3568,10 @@ function updateHfHostBioUI(){
    sur ce document au lieu d'un .add(). Remis à null par chaque point
    d'entrée "créer" (voir updateHeroMenu, renderHostListings, hostEmptyHtml). */
 var hostFormEditListing = null;
+var hostFormSiteFrom = null; // annonce dont on crée un logement voisin (voir sitePrefillFrom())
+var hfSiteFrom = null;       // idem, pour le formulaire actuellement ouvert
+var hfSiteSel = [];          // annonces cochées « Au même endroit » dans ce formulaire
+var siteLinkContext = null;  // {listing, listings, sel} — volet kind==="siteLink"
 function newHfUnitId(){ return "u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function photoEntryUrl(entry){ return entry.type==="existing" ? entry.url : URL.createObjectURL(entry.file); }
 
@@ -3872,6 +3897,7 @@ function normalizeHostListing(doc){
     id: idFromString(doc.id),
     docId: doc.id, // id Firestore réel (string) — le "id" ci-dessus n'est qu'un hash numérique pour homogénéité avec les annonces statiques (listings.json), qui elles n'ont pas de document Firestore. Nécessaire pour cibler le bon document (toggleLike, likeCount).
     ownerUid: l.ownerUid || "", // pour n'afficher le taux de conversion (voir conversionLabelFor()) qu'au propriétaire connecté, jamais aux autres voyageurs.
+    siteId: l.siteId || "", // logements associés au même endroit (voir siteOf())
     stats: l.stats || null, // {demandeCount, confirmedCount} — écrit uniquement par la Cloud Function syncListingContactStats (functions/index.js), jamais par un client (voir la règle Firestore listings/{listingId}).
     name: l.name, region: l.region, claim: l.claim,
     price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
@@ -4915,46 +4941,89 @@ function matchesAllFilters(l, f){
   if(f.amen.length && !f.amen.every(function(a){ return l.amen.indexOf(a)!==-1; })) return false;
   return true;
 }
-/* Clé de regroupement "même hôte, même adresse" (LOT 2.3) : ownerUid +
-   coordonnées arrondies à 3 décimales (~110m), plus fiable qu'une
-   comparaison de chaîne d'adresse (le même hôte peut la saisir
-   différemment d'une annonce à l'autre) — ce sont les deux seuls champs
-   assez stables synchronisés dans l'index public pour ça (voir
-   functions/index.js, syncPublicListingIndex). Annonce sans l'un des
-   deux (ownerUid vide ou pas encore géocodée) -> jamais regroupée. */
-function groupKeyFor(l){
-  if(!l.ownerUid || l.lat==null || l.lng==null) return null;
-  return l.ownerUid+"|"+l.lat.toFixed(3)+"|"+l.lng.toFixed(3);
+/* Logements associés au même endroit (champ siteId) : c'est l'hôte qui
+   les associe (Mes annonces → « Au même endroit »), jamais une déduction
+   à partir de l'adresse. Remplace l'ancien regroupement automatique
+   « même hôte, mêmes coordonnées » (LOT 2.3), qui additionnait des
+   capacités sans regarder les dates. Un lieu = une seule carte dans le
+   fil et un seul point sur la carte (voir collapseSites()) : on met en
+   avant une maison et son hôte, pas un nombre de chambres. */
+function siteOf(l){ return (l && l.siteId) || ""; }
+function indexSource(){ return (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS; }
+function siteMembers(siteId, source){
+  if(!siteId) return [];
+  return (source || indexSource()).filter(function(x){ return siteOf(x)===siteId; });
 }
-/* "Pour votre groupe, en réservant plusieurs hébergements" (LOT 2.3) :
-   parmi les annonces qui correspondent à TOUS les filtres SAUF la
-   capacité seule (aucune ne l'atteint individuellement), regroupées par
-   hôte+adresse, celles dont la somme des capacités suffit. Ne mélange
-   jamais avec les résultats principaux (matchingIndexListings()) — un
-   groupe à part, affiché en dessous (voir renderFeedBody()). Ne
-   recoupe pas le filtre Dates (disponibilité par chambre) : simplifié
-   volontairement, l'intersection des deux critères sur un regroupement
-   multi-annonces serait une tâche distincte. */
-function groupedCapacityMatches(f){
-  if(f.capacity==null) return [];
-  var withoutCapacity = {}; for(var k in f) withoutCapacity[k] = f[k];
-  withoutCapacity.capacity = null;
-  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
-  var shortfall = source.filter(function(l){
-    return matchesAllFilters(l, withoutCapacity) && listingMaxCapacity(l) < f.capacity && groupKeyFor(l);
+function linkedRoomKeys(l){
+  if(l.linkedRoomIds) return l.linkedRoomIds;
+  return (l.units || []).map(function(u){ return u.linkedRoomId || ""; }).filter(Boolean);
+}
+/* Capacité réellement disponible d'un lieu : somme des capacités de ses
+   logements qui correspondent aux autres filtres (members) et ne sont pas
+   occupés aux dates choisies. Une location Planning reliée à deux annonces
+   n'est comptée qu'une fois (linkedRoomIds, voir l'index public). Un
+   logement sans calendrier renseigné compte, comme une annonce seule sans
+   calendrier reste dans le fil. */
+function siteAvailableCapacity(members, f){
+  var seen = {}, total = 0;
+  members.forEach(function(m){
+    if(hasDateFilter(f) && availabilityCache[m.id]==="occupied") return;
+    var keys = linkedRoomKeys(m);
+    if(keys.length && keys.every(function(k){ return seen[k]; })) return;
+    keys.forEach(function(k){ seen[k] = true; });
+    total += listingMaxCapacity(m);
   });
-  var byKey = {};
-  shortfall.forEach(function(l){
-    var k = groupKeyFor(l);
-    (byKey[k] = byKey[k] || []).push(l);
+  return total;
+}
+/* Annonces qui correspondent à tous les filtres sauf la capacité, et qui
+   peuvent l'atteindre seules OU avec les logements associés de leur lieu
+   (calcul exact dans matchingIndexListings(), une fois les disponibilités
+   connues). Sert aussi à savoir quelles disponibilités lire. */
+function filterCandidates(f){
+  var noCap = {}; for(var k in f) noCap[k] = f[k];
+  noCap.capacity = null;
+  return indexSource().filter(function(l){
+    return matchesAllFilters(l, noCap) && (f.capacity==null || listingMaxCapacity(l)>=f.capacity || !!siteOf(l));
   });
-  var groups = [];
-  Object.keys(byKey).forEach(function(k){
-    var members = byKey[k];
-    var total = members.reduce(function(s,l){ return s+listingMaxCapacity(l); }, 0);
-    if(members.length>1 && total>=f.capacity) groups.push({members:members, total:total});
+}
+/* Une seule carte par lieu. Représentant : un logement qui suffit seul au
+   nombre de voyageurs demandé, puis, en tri par défaut, le premier
+   disponible aux dates puis le moins cher ; avec un autre tri, le premier
+   selon ce tri. Il garde sa propre place dans la liste : un lieu à
+   nombreux logements n'est jamais mieux classé qu'une maison qui n'en a
+   qu'un. siteNotes[docId du représentant] porte la mention de la carte. */
+var siteNotes = {};
+function collapseSites(list, candidates, f){
+  var notes = {}, rep = {}, fits = function(l){ return f.capacity==null || listingMaxCapacity(l)>=f.capacity; };
+  list.forEach(function(l){
+    var s = siteOf(l);
+    if(!s) return;
+    var cur = rep[s];
+    if(!cur){ rep[s] = l; return; }
+    if(fits(l)!==fits(cur)){ if(fits(l)) rep[s] = l; return; }
+    if(state.sort!=="reco") return;
+    var d = availabilityRank(l)-availabilityRank(cur);
+    if(d<0 || (d===0 && (l.price||0)<(cur.price||0))) rep[s] = l;
   });
-  return groups;
+  var out = list.filter(function(l){ var s = siteOf(l); return !s || rep[s]===l; });
+  Object.keys(rep).forEach(function(s){
+    var r = rep[s];
+    var others = siteMembers(s).length - 1;
+    if(others<1) return;
+    var note = {others:others, groupCapacity:null};
+    if(!fits(r)) note.groupCapacity = siteAvailableCapacity(siteMembers(s, candidates), f);
+    notes[r.docId || r.id] = note;
+  });
+  siteNotes = notes;
+  return out;
+}
+function siteNoteHtml(l){
+  var n = siteNotes[l.docId || l.id];
+  if(!n) return "";
+  var text = n.groupCapacity!=null
+    ? "Jusqu’à "+n.groupCapacity+" voyageurs avec les logements associés"
+    : "+ "+n.others+" autre"+(n.others>1?"s":"")+" logement"+(n.others>1?"s":"")+" au même endroit";
+  return '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>'+esc(text)+'</span></div>';
 }
 
 function sortListings(list){
@@ -5028,24 +5097,22 @@ function fetchListingAvailability(l, dateIn, dateOut, cb){
    aux AUTRES filtres actifs (lieu/distance/prix/prestations, jamais les
    dates elles-mêmes) pour la paire de dates donnée, puis appelle cb(). Un
    simple cache par dateIn+dateOut évite de relire Firestore à chaque
-   rendu — mais reste borné à l'ensemble d'annonces qui correspondait aux
-   AUTRES filtres au moment de la recherche : changer lieu/prix/prestations
-   ensuite, sans rouvrir le volet Dates, peut laisser une annonce
-   nouvellement incluse en "non renseigné" (rang neutre, jamais masquée à
-   tort) jusqu'à la prochaine recherche de dates — limite connue, acceptée
-   plutôt que de recalculer à chaque changement de filtre. token : une
+   rendu ; une annonce nouvellement incluse par un autre filtre (lieu,
+   voyageurs…) est complétée au rendu suivant du fil (voir
+   renderFeedBody(), availabilityMissing()). token : une
    recherche de dates relancée avant la fin de la précédente (édition
    rapide du volet) ignore silencieusement les réponses de l'ancienne. */
 var availabilityFetchToken = 0;
 function ensureAvailabilityFor(dateIn, dateOut, cb){
   if(!dateIn || !dateOut){ availabilityCache = {}; availabilityCacheKey = null; availabilitySearching = false; cb(); return; }
   var key = dateIn+"|"+dateOut;
-  if(key===availabilityCacheKey){ cb(); return; }
-  availabilityCache = {}; availabilityCacheKey = key;
-  var token = ++availabilityFetchToken;
-  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
-  var list = source.filter(function(l){ return matchesAllFilters(l, state.filters); });
+  if(key!==availabilityCacheKey){ availabilityCache = {}; availabilityCacheKey = key; }
+  // Seulement les annonces dont la disponibilité n'est pas encore connue
+  // pour ces dates : changer ensuite un autre filtre (lieu, voyageurs…)
+  // complète le cache au lieu de laisser des annonces « non renseignées ».
+  var list = filterCandidates(state.filters).filter(function(l){ return !(l.id in availabilityCache); });
   if(!list.length){ availabilitySearching = false; cb(); return; }
+  var token = ++availabilityFetchToken;
   availabilitySearching = true;
   var pending = list.length;
   list.forEach(function(l){
@@ -5056,6 +5123,14 @@ function ensureAvailabilityFor(dateIn, dateOut, cb){
       if(pending===0){ availabilitySearching = false; cb(); }
     });
   });
+}
+function availabilityMissing(){
+  var f = state.filters;
+  if(!hasDateFilter(f) || availabilitySearching) return false;
+  // Dates reprises d'une visite précédente (jamais passées par le volet
+  // Dates) : aucune disponibilité encore lue pour elles.
+  if(availabilityCacheKey!==f.dateIn+"|"+f.dateOut) return true;
+  return filterCandidates(f).some(function(l){ return !(l.id in availabilityCache); });
 }
 function availabilityRank(l){
   var s = availabilityCache[l.id];
@@ -5100,14 +5175,23 @@ function matchingIndexListings(opts){
   // catalogue est vide — dans ce cas seulement, retomber sur LISTINGS
   // (pagination alors inactive) plutôt que d'afficher "Aucun hébergement"
   // à tort.
-  var source = (listingIndexCache.length || !LISTINGS.length) ? listingIndexCache : LISTINGS;
-  var list = source.filter(function(l){ return matchesAllFilters(l, f); });
+  // Capacité : une annonce passe si elle suffit seule, ou si son lieu
+  // (logements associés, voir siteOf()) atteint le nombre de voyageurs
+  // avec les logements libres aux dates choisies.
+  var candidates = filterCandidates(f);
+  var siteFit = {};
+  var list = candidates.filter(function(l){
+    if(f.capacity==null || listingMaxCapacity(l)>=f.capacity) return true;
+    var s = siteOf(l);
+    if(!(s in siteFit)) siteFit[s] = siteAvailableCapacity(siteMembers(s, candidates), f) >= f.capacity;
+    return siteFit[s];
+  });
   list = sortListings(list);
   if(hasDateFilter(f)){
     if(!opts.keepOccupied) list = list.filter(function(l){ return availabilityCache[l.id]!=="occupied"; });
     list = sortByAvailability(list);
   }
-  return list;
+  return collapseSites(list, candidates, f);
 }
 
 /* ---------------- render: filter bar ---------------- */
@@ -5265,6 +5349,7 @@ function coverHtml(l){
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(l.name)+'</h2>'+
       taglineHtml(l)+
+      siteNoteHtml(l)+
       '<div class="cover-cta">'+
         '<button class="btn primary" data-quickreq="'+l.id+'"><span>Contact et disponibilités</span></button>'+
         '<button class="btn ghost-dark" data-open="'+l.id+'"><span>Voir plus</span></button>'+
@@ -5318,16 +5403,13 @@ function renderFeedBody(){
     wireExploreMap();
     return;
   }
-  // LOT 2.3 : les annonces d'un éventuel regroupement "même hôte, même
-  // adresse" n'apparaissent jamais dans pageEntries (exclues par
-  // matchesAllFilters, capacité individuelle insuffisante) — leurs fiches
-  // complètes ne sont donc pas déjà en cours de chargement, il faut les
-  // demander en plus pour pouvoir afficher nom/capacité dans le bloc.
-  var groups = groupedCapacityMatches(state.filters);
-  var groupDocIds = [];
-  groups.forEach(function(g){ g.members.forEach(function(m){ if(groupDocIds.indexOf(m.docId)===-1) groupDocIds.push(m.docId); }); });
+  // Disponibilités pas encore lues pour une annonce entrée par un autre
+  // filtre (voir availabilityMissing()) : lecture puis nouveau rendu.
+  if(availabilityMissing()){
+    ensureAvailabilityFor(state.filters.dateIn, state.filters.dateOut, function(){ if(state.tab==="explore" && !state.hostMode){ renderFeedBody(); renderResultLine(); } });
+  }
   var docIds = pageEntries.map(function(ix){ return ix.docId; });
-  var allDocIds = docIds.concat(groupDocIds.filter(function(id){ return docIds.indexOf(id)===-1; }));
+  var allDocIds = docIds;
   ensureListingDocsLoaded(allDocIds, function(){
     if(gen!==feedRenderGen) return; // un rendu plus récent a déjà pris le dessus
     var list = docIds.map(function(id){ return LISTINGS.filter(function(l){ return listingKey(l)===id; })[0]; }).filter(Boolean);
@@ -5336,8 +5418,7 @@ function renderFeedBody(){
       return '<article class="card" id="card-'+l.id+'">'+coverHtml(l)+
         '<div class="qr-panel" id="qr-'+l.id+'" hidden>'+quickReqHtml(l, "qr"+l.id)+'</div>'+
       '</article>';
-    }).join("") + (hasMore ? '<button type="button" class="load-more-btn" id="feed-load-more">Charger plus d’hébergements</button>' : '') +
-      groupedCapacityBlockHtml(groups);
+    }).join("") + (hasMore ? '<button type="button" class="load-more-btn" id="feed-load-more">Charger plus d’hébergements</button>' : '');
     wireExploreMap();
     wireFeedEvents();
     if(hasMore){
@@ -5349,36 +5430,6 @@ function renderFeedBody(){
     }
   });
 }
-/* LOT 2.3 : rendu du bloc de regroupement, sous le fil principal — jamais
-   mélangé aux cartes (voir le grand commentaire de groupedCapacityMatches()).
-   Suppose que les annonces membres sont déjà chargées dans LISTINGS (voir
-   allDocIds dans renderFeedBody()) ; une annonce pas encore résolue est
-   simplement omise plutôt que de casser l'affichage du groupe. */
-function groupedCapacityBlockHtml(groups){
-  if(!groups.length) return "";
-  return '<div class="detail-card group-capacity-card">'+
-    '<div class="section-title">Pour votre groupe, en réservant plusieurs hébergements</div>'+
-    groups.map(function(g){
-      // Capacité/nom lus sur l'entrée d'index (m) elle-même, pas sur la
-      // fiche complète : déjà la valeur exacte qui a servi au regroupement
-      // (voir groupedCapacityMatches()), aucune raison de la recalculer
-      // depuis `units[]` une seconde fois. La fiche complète (LISTINGS,
-      // chargée via allDocIds plus haut) ne sert qu'à ce que le clic
-      // (data-open, openDetail()) trouve l'annonce déjà prête.
-      var memberTiles = g.members.map(function(m){
-        return '<button type="button" class="group-capacity-member" data-open="'+m.id+'">'+
-          '<span class="group-capacity-member-name">'+esc(m.name)+'</span>'+
-          '<span class="group-capacity-member-cap">'+listingMaxCapacity(m)+' voyageurs max</span>'+
-        '</button>';
-      }).join("");
-      return '<div class="group-capacity-group">'+
-        '<p class="group-capacity-total">Capacité cumulée : jusqu\'à '+g.total+' voyageurs</p>'+
-        '<div class="group-capacity-members">'+memberTiles+'</div>'+
-      '</div>';
-    }).join("")+
-  '</div>';
-}
-
 function wireFeedEvents(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-cc]"), function(cc){
     var dots = cc.parentElement.querySelector(".cover-dots");
@@ -7169,6 +7220,7 @@ function openDetail(id, listingOverride, forceVisitorView){
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
         (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
+        '<div id="site-others-slot"></div>'+
       '</div>'+
     '</div>'+
   '</div>';
@@ -7211,8 +7263,81 @@ function openDetail(id, listingOverride, forceVisitorView){
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
   if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit || soleUnitOf(l));
+  fillSiteOthers(l, id);
   document.body.style.overflow = "hidden";
   document.body.classList.add("detail-open");
+}
+/* Bas de la fiche, deux sections distinctes :
+   - « Au même endroit » : les autres logements publiés que l'hôte a
+     associés à celui-ci (siteId, même adresse) — pour comparer et choisir,
+     ou venir à plusieurs ;
+   - « Ailleurs chez <hôte> » : ses autres annonces publiées, à une autre
+     adresse (ex. un gîte à quelques kilomètres des chambres), avec la
+     distance. Elles ont leur propre carte dans le fil et ne comptent
+     jamais dans la capacité d'un lieu.
+   Lus dans l'index public déjà chargé ; à défaut (index pas encore
+   republié), une requête sur les annonces publiées du lieu. Une section
+   sans contenu n'est pas affichée. */
+/* « Chambre 2 — La Ferme Fanost » affiché « Chambre 2 » à côté d'une
+   annonce du même établissement (même suffixe après le tiret). */
+function siteShortName(name, refName){
+  var m = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(name || ""), r = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(refName || "");
+  return (m && r && m[2].trim().toLowerCase()===r[2].trim().toLowerCase()) ? m[1] : (name || "");
+}
+function placeCardsHtml(list, from, refName, siteCounts){
+  return '<div class="site-others">'+list.map(function(o){
+    var more = siteCounts && o.siteId ? (siteCounts[o.siteId]||1)-1 : 0;
+    var img = o.thumbUrl || listingThumbUrl(o);
+    var cap = o.maxPersons!=null ? o.maxPersons : listingMaxCapacity(o);
+    var km = (from && typeof from.lat==="number" && typeof o.lat==="number") ? haversineKm(from.lat, from.lng, o.lat, o.lng) : null;
+    var kmLabel = km==null ? "" : (km<1 ? "à moins d’1 km" : "à "+(km<10 ? km.toFixed(1).replace(".", ",") : Math.round(km))+" km");
+    return '<button type="button" class="site-other" data-site-open="'+o.id+'">'+
+      '<div class="site-other-img">'+(img ? '<img src="'+esc(img)+'" alt="" loading="lazy">' : '')+'</div>'+
+      '<b>'+esc(refName ? siteShortName(o.name, refName) : (o.name||""))+'</b>'+
+      '<span>'+(cap ? cap+' voyageur'+(cap>1?'s':'')+' · ' : '')+(o.price!=null ? o.price+' € / nuit' : '')+'</span>'+
+      (more>0 ? '<span class="site-other-km">+ '+more+' autre'+(more>1?'s':'')+' logement'+(more>1?'s':'')+' sur place</span>' : '')+
+      (kmLabel ? '<span class="site-other-km">'+kmLabel+'</span>' : '')+
+    '</button>';
+  }).join("")+'</div>';
+}
+function fillSiteOthers(l, id){
+  var siteId = l.siteId || "";
+  var selfId = l.docId || l.id;
+  var host = (l.host && l.host.name && l.host.name!=="Hôte Fiftin") ? l.host.name : "votre hôte";
+  var siteCounts = {};
+  var render = function(same, elsewhere){
+    var slot = document.getElementById("site-others-slot");
+    if(!slot || state.detailListingId!==id) return;
+    slot.innerHTML =
+      (same.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Au même endroit</div>'+
+        '<p class="site-sub">D’autres logements chez '+esc(host)+', pour choisir celui qui vous convient ou venir à plusieurs.</p>'+
+        placeCardsHtml(same, null, l.name)+'</div>' : '')+
+      (elsewhere.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Ailleurs chez '+esc(host)+'</div>'+
+        placeCardsHtml(elsewhere, l, null, siteCounts)+'</div>' : '');
+    Array.prototype.forEach.call(slot.querySelectorAll("[data-site-open]"), function(btn){
+      btn.addEventListener("click", function(){
+        var oid = Number(btn.getAttribute("data-site-open"));
+        resolveListingById(oid, function(found){ if(found) openDetail(oid); });
+      });
+    });
+  };
+  var split = function(list){
+    var same = [], elsewhere = [], seenSite = {};
+    list.forEach(function(x){ if(x.siteId) siteCounts[x.siteId] = (siteCounts[x.siteId]||0)+1; });
+    list.forEach(function(x){
+      if((x.docId||x.id)===selfId) return;
+      if(siteId && x.siteId===siteId){ same.push(x); return; }
+      // Un autre lieu du même hôte : une seule vignette par lieu.
+      if(x.siteId){ if(seenSite[x.siteId]) return; seenSite[x.siteId] = true; }
+      elsewhere.push(x);
+    });
+    return {same:same, elsewhere:elsewhere};
+  };
+  var fromIndex = l.ownerUid ? listingIndexCache.filter(function(x){ return x.ownerUid===l.ownerUid; }) : [];
+  var indexHasSites = !siteId || fromIndex.some(function(x){ return x.siteId===siteId; });
+  if(listingIndexCache.length && indexHasSites){ var r = split(fromIndex); render(r.same, r.elsewhere); return; }
+  if(!l.ownerUid || typeof firebase==="undefined" || !firebase.apps || !firebase.apps.length) return;
+  fetchOtherListingsByHost(l.ownerUid, selfId, function(others){ var r2 = split(others); render(r2.same, r2.elsewhere); });
 }
 function closeDetail(){
   document.getElementById("detail-root").innerHTML = "";
@@ -7404,7 +7529,14 @@ function openSheet(kind){
       (authMode==="signin" ? '<button type="button" class="ff-auth-forgot" id="auth-forgot">Mot de passe oublié ?</button>' : '');
   } else if(kind==="hostform"){
     var hfEditing = !!hostFormEditListing;
-    var hfEf = hostFormEditListing;
+    // « Créer un autre logement à cette adresse » (Mes annonces → Au même
+    // endroit) : nouvelle annonce préremplie avec ce qui est commun au lieu
+    // (adresse, type, prestations, contact) — jamais le nom, les textes,
+    // les photos ni le prix, propres à chaque logement.
+    hfSiteFrom = hostFormSiteFrom; hostFormSiteFrom = null;
+    var hfEf = hostFormEditListing || (hfSiteFrom ? sitePrefillFrom(hfSiteFrom) : null);
+    hfSiteSel = hfSiteFrom ? [hfSiteFrom.id] : [];
+    var hfLegacyMulti = !!(hfEditing && hfEf.units && hfEf.units.length>1);
     // Avant la construction d'`inner` (hfSpaceChipsHtml() y est appelée,
     // voir plus bas) : contrairement à hfUnits/hfSelectedFiles (remplis
     // après, car affichés via un <div id> vide + rendu JS séparé),
@@ -7442,14 +7574,18 @@ function openSheet(kind){
       // plus souvent") — avant tous les champs modifiés bien plus
       // rarement une fois l'annonce créée (adresse, description, réseaux…).
       '<div class="hf-sec">'+hfSecTitleHtml("photos","Photos & tarifs")+
-        '<div class="field-block"><label>Photos de la maison / espaces communs (6 maximum, 8 Mo par photo)</label>'+
+        '<div class="field-block"><label>'+(hfLegacyMulti ? 'Photos de la maison / espaces communs' : 'Photos du logement')+' (6 maximum, 8 Mo par photo)</label>'+
           '<input type="file" id="hf-photos-input" accept="image/*" multiple style="display:none">'+
           '<button type="button" class="btn-photo-add" id="hf-photos-btn">+ Ajouter des photos</button>'+
           '<div class="hf-photo-list" id="hf-photo-grid"></div>'+
         '</div>'+
         '<div class="field-block"><label id="hf-units-label">Capacité et tarif *</label>'+
           '<div id="hf-units"></div>'+
-          '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>'+
+          // Un logement = une annonce : plus d'ajout de location dans une
+          // annonce (« Au même endroit » dans Mes annonces pour les autres
+          // logements du lieu). Gardé pour les anciennes annonces à
+          // plusieurs locations, qui restent modifiables telles quelles.
+          (hfLegacyMulti ? '<button type="button" class="btn-photo-add" id="hf-add-unit">+ Ajouter une location</button>' : '')+
         '</div>'+
       '</div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("host","Vous, l\'hôte")+
@@ -7505,6 +7641,7 @@ function openSheet(kind){
         '</select></div>'+
         '<div class="field-block"><label>Ville / quartier</label><input class="text-input" id="hf-city" placeholder="Se remplit avec l\'adresse, ou à saisir à la main" value="'+(hfEf?esc(hfEf.city||""):"")+'"></div>'+
       '</div>'+
+      '<div id="hf-site-wrap"></div>'+
       '<div class="hf-sec">'+hfSecTitleHtml("phone","Contact & réseaux")+
         '<div class="field-block"><label>Téléphone de contact *</label><input class="text-input" type="tel" id="hf-phone" placeholder="+33…" value="'+(hfEf?esc(hfEf.phone||""):"")+'"></div>'+
         '<div class="field-block"><label>E-mail de contact *</label><input class="text-input" type="email" id="hf-email" placeholder="vous@exemple.com" value="'+(hfEf?esc(hfEf.email||""):"")+'">'+
@@ -7623,6 +7760,16 @@ function openSheet(kind){
           '<button type="button" class="link-btn" id="coll-new-btn">+ Nouvelle collection</button>'+
         '</div>';
     }
+  } else if(kind==="siteLink"){
+    var slCtx = siteLinkContext;
+    var slOthers = slCtx.listings.filter(function(x){ return x.id!==slCtx.listing.id; });
+    inner = '<h3>Au même endroit</h3>'+
+      '<p class="sheet-sub">'+(slOthers.length
+        ? 'Vos autres logements à la même adresse. Les voyageurs les découvrent ensemble ; chaque annonce garde son calendrier, son prix et son lien Planning.'
+        : 'Chaque logement a sa propre annonce. Créez celle d’un autre logement de ce lieu : adresse, type, prestations et contact sont repris.')+'</p>'+
+      (slOthers.length ? '<div class="field-block sort-row">'+sitePickRowsHtml(slCtx.listings, slCtx.listing.id, slCtx.sel, slCtx.listing)+'</div>' : '')+
+      '<button type="button" class="link-btn" id="site-new-btn">+ Créer un autre logement à cette adresse</button>'+
+      '<div class="auth-err" id="site-err"></div>';
   } else if(kind==="collRename"){
     inner = '<h3>Renommer la collection</h3>'+
       '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-rename-name" value="'+esc(collectionRenameContext.name)+'"></div>'+
@@ -7689,6 +7836,7 @@ function openSheet(kind){
     : kind==="loginPrompt" ? "Se connecter"
     : kind==="collPicker" ? (collectionPickerContext.creating ? "Créer" : "Terminé")
     : kind==="collRename" ? "Enregistrer"
+    : kind==="siteLink" ? "Enregistrer"
     : kind==="collCreate" ? "Créer"
     : kind==="roomlink" ? "Fermer"
     : kind==="hostBio" ? "Fermer"
@@ -7819,10 +7967,12 @@ function openSheet(kind){
       });
     });
     renderHostPhotoGrid();
-    document.getElementById("hf-add-unit").addEventListener("click", function(){
+    var hfAddUnitBtn = document.getElementById("hf-add-unit");
+    if(hfAddUnitBtn) hfAddUnitBtn.addEventListener("click", function(){
       hfUnits.push({id:newHfUnitId(), name:"", price:"", maxPersons:2, photos:[], linkedRoomId:""});
       renderHostUnits();
     });
+    if(!hostFormEditListing) renderHfSiteSection();
     /* Retour utilisateur : un gîte peut lui aussi couvrir plusieurs
        locations à la même adresse (ex. deux gîtes indépendants chez le même
        hôte) — "+ Ajouter une location" ne dépend donc plus du type
@@ -7955,6 +8105,29 @@ function openSheet(kind){
         openSheet("collPicker");
       });
     }
+    return;
+  } else if(kind==="siteLink"){
+    var slc = siteLinkContext;
+    wireSitePickRows(root, slc.sel);
+    document.getElementById("site-new-btn").addEventListener("click", function(){
+      closeSheet();
+      hostFormEditListing = null;
+      hostFormSiteFrom = slc.listing;
+      openSheet("hostform");
+    });
+    document.getElementById("sheet-apply").addEventListener("click", function(){
+      var btn = document.getElementById("sheet-apply");
+      var errEl = document.getElementById("site-err");
+      errEl.textContent = "";
+      btn.disabled = true;
+      applySiteAssociation(slc.listings, slc.listing.id, slc.sel.slice()).then(function(){
+        closeSheet();
+        if(state.hostMode && state.hostTab==="listings") renderHostListings();
+      }).catch(function(err){
+        errEl.textContent = "Erreur : "+(err.message||err.code||"réessayez.");
+        btn.disabled = false;
+      });
+    });
     return;
   } else if(kind==="collRename"){
     document.getElementById("sheet-apply").addEventListener("click", function(){
@@ -8598,11 +8771,14 @@ function renderHostUnits(){
         '<option value="">— Aucun lien —</option>'+
         hfAvailableRooms.map(function(r){ return '<option value="'+esc(r.id)+'"'+(r.id===u.linkedRoomId?' selected':'')+'>'+esc(r.name)+'</option>'; }).join("")+
       '</select></div>' : '')+
-      '<div class="field-block"><label>Photos de cette location</label>'+
+      // Une seule location : ses photos sont celles du logement, plus haut
+      // (un seul endroit où ajouter des photos). Une ancienne annonce qui a
+      // déjà des photos à ce niveau les garde ici, modifiables.
+      (multi || u.photos.length ? '<div class="field-block"><label>Photos de cette location</label>'+
         '<input type="file" class="hf-unit-photos-input" data-unit-id="'+u.id+'" accept="image/*" multiple style="display:none">'+
         '<button type="button" class="btn-photo-add hf-unit-photos-btn" data-unit-id="'+u.id+'">+ Ajouter des photos</button>'+
         '<div class="hf-photo-list hf-unit-photo-grid" data-unit-id="'+u.id+'"></div>'+
-      '</div>'+
+      '</div>' : '')+
     '</div>';
   }).join("");
 
@@ -9440,6 +9616,7 @@ function submitHostForm(){
   if(!authState.uid || typeof firebase==="undefined"){ errEl.textContent = "Connexion requise — réessayez dans un instant."; return; }
   var editing = !!hostFormEditListing;
   var editId = editing ? hostFormEditListing.id : null;
+  var siteAssocFailed = false;
   var btn = document.getElementById("sheet-apply");
   var originalLabel = btn.textContent;
   btn.disabled = true;
@@ -9491,7 +9668,17 @@ function submitHostForm(){
           payload.ownerEmail = authState.email;
           payload.status = "pending";
           payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-          listingWrite = firebase.firestore().collection("listings").add(payload);
+          // « Au même endroit » coché : association appliquée juste après la
+          // création (il faut l'id de la nouvelle annonce). Un échec ici ne
+          // fait pas échouer le dépôt, déjà enregistré (voir siteAssocFailed).
+          var siteSel = hfSiteSel.slice();
+          listingWrite = firebase.firestore().collection("listings").add(payload).then(function(ref){
+            if(!siteSel.length) return;
+            return new Promise(function(res){ ensureHostListingsLoaded(res); }).then(function(listings){
+              var all = listings.filter(function(x){ return x.id!==ref.id; }).concat([{id:ref.id, siteId:""}]);
+              return applySiteAssociation(all, ref.id, siteSel);
+            }).catch(function(){ siteAssocFailed = true; });
+          });
         }
         // Première présentation de l'hôte (hfProfileBio vide à l'ouverture
         // du formulaire) : crée hostProfiles/{uid} dans la foulée, en
@@ -9516,7 +9703,8 @@ function submitHostForm(){
       '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
       (editing
         ? '<h3>Annonce modifiée</h3><p class="sheet-sub">Vos changements sont enregistrés.</p>'
-        : '<h3>Annonce envoyée</h3><p class="sheet-sub">Merci ! On la vérifie et elle sera mise en ligne prochainement.</p>')+
+        : '<h3>Annonce envoyée</h3><p class="sheet-sub">Merci ! On la vérifie et elle sera mise en ligne prochainement.'+
+          (siteAssocFailed ? '<br>Les logements « au même endroit » n’ont pas pu être associés : refaites-le depuis Mes annonces.' : '')+'</p>')+
       '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">OK</button></div>'+
     '</div></div></div>';
     document.getElementById("sheet-close").addEventListener("click", closeSheet);
@@ -10889,6 +11077,127 @@ function hostGuestName(guestId){
   return g ? g.name : "Client";
 }
 
+/* ---------------- Logements au même endroit (siteId) ----------------
+   Chaque logement a sa propre annonce ; l'hôte peut associer celles qui
+   sont au même endroit. Une association n'est qu'un champ siteId commun :
+   elle ne fusionne rien, ne touche ni aux calendriers ni à Planning, et se
+   défait en décochant. Un lieu réduit à un seul logement n'en est plus un
+   (siteId retiré). Toutes les écritures d'une modification partent dans un
+   seul lot (batch) : tout ou rien. */
+function newSiteId(){ return "site_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function planSiteAssociation(listings, listingId, otherIds){
+  var byId = {}; listings.forEach(function(l){ byId[l.id] = l; });
+  var cur = byId[listingId];
+  var group = [listingId].concat(otherIds);
+  var target = "";
+  if(otherIds.length){
+    target = (cur && cur.siteId) || otherIds.map(function(id){ return byId[id] && byId[id].siteId; }).filter(Boolean)[0] || newSiteId();
+  }
+  var next = {};
+  listings.forEach(function(l){ next[l.id] = l.siteId || ""; });
+  // Décocher un logement le sépare de celui-ci, sans défaire le reste :
+  // les logements retirés restent ensemble entre eux (sous l'ancien lieu
+  // si celui-ci part ailleurs, sinon sous un nouveau).
+  if(cur && cur.siteId){
+    var removed = listings.filter(function(l){ return l.siteId===cur.siteId && group.indexOf(l.id)===-1; });
+    var rid = target===cur.siteId ? newSiteId() : cur.siteId;
+    removed.forEach(function(l){ next[l.id] = rid; });
+  }
+  group.forEach(function(id){ next[id] = target; });
+  var count = {};
+  Object.keys(next).forEach(function(id){ if(next[id]) count[next[id]] = (count[next[id]]||0)+1; });
+  Object.keys(next).forEach(function(id){ if(next[id] && count[next[id]]<2) next[id] = ""; });
+  var changes = {};
+  listings.forEach(function(l){ if((l.siteId||"")!==next[l.id]) changes[l.id] = next[l.id]; });
+  return changes;
+}
+function applySiteAssociation(listings, listingId, otherIds){
+  var changes = planSiteAssociation(listings, listingId, otherIds);
+  var ids = Object.keys(changes);
+  if(!ids.length) return Promise.resolve();
+  var db = firebase.firestore(), batch = db.batch();
+  ids.forEach(function(id){
+    batch.update(db.collection("listings").doc(id), {siteId: changes[id] || firebase.firestore.FieldValue.delete()});
+  });
+  return batch.commit().then(function(){ hostListingsCache = []; });
+}
+function sitePrefillFrom(l){
+  var keep = ["accomType","address","regionName","deptName","city","amen","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"];
+  var o = {};
+  keep.forEach(function(k){ if(l[k]!=null) o[k] = Array.isArray(l[k]) ? l[k].slice() : l[k]; });
+  return o;
+}
+function siteOthersOf(l, listings){
+  if(!l.siteId) return [];
+  return listings.filter(function(x){ return x.id!==l.id && x.siteId===l.siteId; });
+}
+function sitePickRowsHtml(listings, excludeId, sel, from){
+  return listings.filter(function(x){ return x.id!==excludeId; }).map(function(x){
+    var st = x.status==="pending" ? " · en attente de validation" : x.status==="paused" ? " · en pause" : "";
+    // Distance affichée : un logement à une autre adresse (ex. un gîte à
+    // quelques kilomètres) n'est pas « au même endroit » — il reste une
+    // annonce à part, montrée dans « Ailleurs chez … » de la fiche.
+    if(from && typeof from.lat==="number" && typeof x.lat==="number"){
+      var km = haversineKm(from.lat, from.lng, x.lat, x.lng);
+      if(km>=0.3) st += " · à "+(km<10 ? km.toFixed(1).replace(".", ",") : Math.round(km))+" km";
+    }
+    var thumb = listingThumbUrl(x);
+    return '<button type="button" class="coll-pick-row site-pick-row'+(sel.indexOf(x.id)!==-1?' active':'')+'" data-site-pick="'+esc(x.id)+'">'+
+      '<span class="site-pick-thumb">'+(thumb ? '<img src="'+esc(thumb)+'" alt="">' : '')+'</span>'+
+      '<span class="site-pick-name">'+esc(x.name||"(sans nom)")+(st ? '<small>'+st+'</small>' : '')+'</span>'+
+      '<span class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 13l4 4L19 7"/></svg></span>'+
+    '</button>';
+  }).join("");
+}
+function wireSitePickRows(root, sel){
+  Array.prototype.forEach.call(root.querySelectorAll("[data-site-pick]"), function(btn){
+    btn.addEventListener("click", function(){
+      var id = btn.getAttribute("data-site-pick");
+      var i = sel.indexOf(id);
+      if(i===-1) sel.push(id); else sel.splice(i, 1);
+      btn.classList.toggle("active", i===-1);
+    });
+  });
+}
+/* Formulaire de dépôt : question facultative « Vous avez d'autres
+   hébergements au même endroit ? », seulement si l'hôte a déjà d'autres
+   annonces. Appliquée après la création de l'annonce (voir submitHostForm()). */
+function renderHfSiteSection(){
+  ensureHostListingsLoaded(function(listings){
+    var wrap = document.getElementById("hf-site-wrap");
+    if(!wrap || !listings.length) return;
+    // Préremplissage depuis une annonce : son lieu entier est coché.
+    if(hfSiteFrom) siteOthersOf(hfSiteFrom, listings).forEach(function(x){ if(hfSiteSel.indexOf(x.id)===-1) hfSiteSel.push(x.id); });
+    wrap.innerHTML = '<div class="hf-sec">'+hfSecTitleHtml("home","Au même endroit")+
+      '<p class="field-hint" style="margin-top:0;">Vous avez d’autres hébergements au même endroit ? Cochez-les (facultatif) : les voyageurs les découvriront ensemble, chaque annonce reste indépendante.</p>'+
+      '<div class="field-block sort-row" style="margin-bottom:0;">'+sitePickRowsHtml(listings, null, hfSiteSel, hfSiteFrom)+'</div>'+
+    '</div>';
+    wireSitePickRows(wrap, hfSiteSel);
+  });
+}
+/* Suggestion d'association (jamais appliquée sans l'hôte) : deux annonces
+   non associées à moins de 150 m l'une de l'autre. Masquable. */
+function siteSuggestion(listings){
+  var dismissed = {};
+  try{ dismissed = JSON.parse(localStorage.getItem("fiftin_site_hint_off")||"{}"); }catch(e){}
+  for(var i=0;i<listings.length;i++){
+    for(var j=i+1;j<listings.length;j++){
+      var a = listings[i], b = listings[j];
+      if(typeof a.lat!=="number" || typeof b.lat!=="number") continue;
+      if(a.siteId && a.siteId===b.siteId) continue;
+      if(dismissed[a.id+"|"+b.id]) continue;
+      if(haversineKm(a.lat, a.lng, b.lat, b.lng) <= 0.15) return {a:a, b:b};
+    }
+  }
+  return null;
+}
+function openSiteLink(listing, listings, preselect){
+  var sel = siteOthersOf(listing, listings).map(function(x){ return x.id; });
+  (preselect||[]).forEach(function(id){ if(sel.indexOf(id)===-1) sel.push(id); });
+  siteLinkContext = {listing:listing, listings:listings, sel:sel};
+  openSheet("siteLink");
+}
+
 function renderHostListings(){
   var feed = document.getElementById("feed");
   feed.innerHTML = '<div class="host-view"><p class="sheet-sub" style="margin-top:0;">Chargement…</p></div>';
@@ -10902,9 +11211,28 @@ function renderHostListings(){
     }
     feed.innerHTML = '<div class="host-view">'+
       '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Nouvelle annonce</button>'+
-      listings.map(hostListingCardHtml).join("")+
+      siteHintHtml(listings)+
+      listings.map(function(l){ return hostListingCardHtml(l, listings); }).join("")+
     '</div>';
     document.getElementById("host-new-listing").addEventListener("click", function(){ hostFormEditListing = null; openSheet("hostform"); });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-site-link]"), function(btn){
+      btn.addEventListener("click", function(){
+        var l = listings.filter(function(x){ return x.id===btn.getAttribute("data-site-link"); })[0];
+        if(l) openSiteLink(l, listings);
+      });
+    });
+    var hint = siteSuggestion(listings);
+    var hintGo = document.getElementById("site-hint-go");
+    if(hint && hintGo) hintGo.addEventListener("click", function(){ openSiteLink(hint.a, listings, [hint.b.id]); });
+    var hintOff = document.getElementById("site-hint-off");
+    if(hint && hintOff) hintOff.addEventListener("click", function(){
+      try{
+        var d = JSON.parse(localStorage.getItem("fiftin_site_hint_off")||"{}");
+        d[hint.a.id+"|"+hint.b.id] = 1;
+        localStorage.setItem("fiftin_site_hint_off", JSON.stringify(d));
+      }catch(e){}
+      renderHostListings();
+    });
     // Carousel de chaque carte (hostListingCoverShots(), mêmes classes
     // .cover-carousel/.cc-slide/.cover-dots que le fil) : wireFeedEvents()
     // cherche tout [data-cc] du document pour synchroniser les points au
@@ -11027,8 +11355,9 @@ function hostListingCoverShots(l){
     l.units.reduce(function(acc,u){ return acc.concat(u.gallery||[]); }, []) : null;
   return l.gallery && l.gallery.length ? l.gallery.slice(0,3) : (fallbackShots && fallbackShots.length ? fallbackShots.slice(0,3) : null);
 }
-function hostListingCardHtml(l){
+function hostListingCardHtml(l, listings){
   registerPhotoVariants(l);
+  var siteCount = siteOthersOf(l, listings || []).length;
   var shots = hostListingCoverShots(l);
   var cover = shots
     ? '<div class="hlc-photo"><div class="cover-carousel" data-cc="hlc-'+esc(l.id)+'">'+
@@ -11089,12 +11418,24 @@ function hostListingCardHtml(l){
       '<button type="button" class="host-edit-btn" data-host-edit="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg><span>Modifier</span></button>'+
       '<button type="button" class="host-delete-btn" data-host-delete="'+esc(l.id)+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><span>Supprimer</span></button>'+
     '</div>'+
+    // Logements au même endroit (voir openSiteLink()).
+    '<button type="button" class="cal-disclose site-disclose" data-site-link="'+esc(l.id)+'">'+
+      '<span>Au même endroit</span>'+
+      '<span class="site-disclose-val">'+(siteCount ? siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'Ajouter')+'</span>'+
+      '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
+    '</button>'+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
       '<span>Calendrier</span>'+
       '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>'+
     '</button>'+
     (expanded ? '<div class="host-cal-panel" id="host-cal-panel"><p class="sheet-sub" style="margin:0;">Chargement du calendrier…</p></div>' : '')+
   '</div>';
+}
+function siteHintHtml(listings){
+  var h = siteSuggestion(listings);
+  if(!h) return "";
+  return '<div class="site-hint"><p>« '+esc(h.a.name||"")+' » et « '+esc(h.b.name||"")+' » semblent être au même endroit. Les présenter ensemble aux voyageurs ?</p>'+
+    '<div class="site-hint-actions"><button type="button" class="site-hint-go" id="site-hint-go">Les associer</button><button type="button" class="site-hint-off" id="site-hint-off">Non merci</button></div></div>';
 }
 function hostEmptyHtml(){
   return '<div class="host-view">'+
