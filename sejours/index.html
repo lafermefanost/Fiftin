@@ -9585,7 +9585,7 @@ function crRender(){
         // Prestations et pièces cochées directement sur la carte (retour de
         // César : plus de volet à ouvrir).
         '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher. Le couchage est indispensable.'+(cr.site && placeSharedAmen(cr.site.place).length ? ' Les prestations grisées sont celles de l’établissement.' : '')+'</p>'+
+          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher. Le couchage est indispensable.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
           crAmenEditHtml()+'</div>'+
         '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Pièces & annexes <small class="cr-opt">facultatif</small></div>'+
           '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour ajouter, touchez le nombre pour retirer.</p>'+
@@ -9714,7 +9714,10 @@ function crWire(){
 function crAmenEditHtml(){
   var d = cr.data, locked = cr.site ? placeSharedAmen(cr.site.place) : [];
   return AMEN_GROUPS.map(function(g, gi){
-    var items = g.items.filter(function(a){ return a!=="Parking privé"; });
+    // Hébergement d'un établissement : les prestations qui se règlent dans
+    // l'établissement (PE_SHARED_AMEN) ne sont pas répétées ici.
+    var items = g.items.filter(function(a){ return a!=="Parking privé" && !(cr.site && PE_SHARED_AMEN.indexOf(a)!==-1); });
+    if(!items.length) return "";
     var groupLocked = g.single && g.items.some(function(x){ return locked.indexOf(x)!==-1; });
     return '<div class="amen-group"><div class="amen-group-title">'+esc(g.title)+(g.required?' *':'')+'</div><div class="amenity-grid">'+items.map(function(a){
       var isLocked = locked.indexOf(a)!==-1 || groupLocked;
