@@ -2241,6 +2241,124 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
   #modalContract .mhead,#modalContract .macts{display:none!important;}
   #modalContract .modal{box-shadow:none;max-width:100%;border-radius:0;padding:24px;}
 }
+
+/* ═══ Prise en main (assistant de démarrage + visite guidée) ═══════════════
+   Voir le module « PRISE EN MAIN » en fin de script : assistant affiché une
+   seule fois, à un compte tout neuf (aucune réservation, aucune location
+   enregistrée), puis bulles ciblées sur chaque menu ; visite relançable
+   depuis Réglages. Préfixe .ob- pour ne rien toucher au reste de l'outil. */
+.ob-wiz{position:fixed;inset:0;z-index:3000;background:rgba(20,26,20,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+  display:flex;align-items:stretch;justify-content:center;font-family:'Jost',sans-serif;}
+.ob-card{background:var(--cream);width:100%;max-width:560px;display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+@media(min-width:600px){.ob-wiz{align-items:center;padding:24px;}.ob-card{border-radius:26px;max-height:min(860px,94vh);box-shadow:0 30px 80px rgba(0,0,0,.35);}}
+.ob-head{background:var(--green);color:#fff;padding:calc(18px + env(safe-area-inset-top,0px)) 22px 18px;flex:none;}
+.ob-head-top{display:flex;align-items:center;gap:12px;}
+.ob-head-top img{width:30px;height:24px;flex:none;}
+.ob-kicker{font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.75);}
+.ob-title{font-size:23px;font-weight:600;line-height:1.2;margin:12px 0 0;}
+.ob-progress{display:flex;gap:6px;margin-top:16px;}
+.ob-progress i{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.22);}
+.ob-progress i.on{background:var(--yellow);}
+.ob-steps-lbl{display:flex;justify-content:space-between;margin-top:7px;font-size:11px;color:rgba(255,255,255,.7);}
+.ob-steps-lbl span.on{color:#fff;font-weight:600;}
+.ob-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:22px 22px 8px;}
+.ob-lead{font-size:15.5px;line-height:1.5;color:#4a4a44;margin:0 0 18px;}
+.ob-q{font-size:15px;font-weight:600;color:var(--green-deep);margin:20px 0 10px;}
+.ob-q:first-child{margin-top:0;}
+.ob-hint{font-size:12.5px;line-height:1.45;color:var(--gray);margin:8px 2px 0;}
+.ob-input{width:100%;box-sizing:border-box;border:1.5px solid var(--light);background:#fff;border-radius:14px;padding:13px 15px;
+  font:500 16px 'Jost',sans-serif;color:var(--dark);outline:none;transition:border-color .15s;}
+.ob-input:focus{border-color:var(--green);}
+.ob-input.small{padding:11px 13px;font-size:15px;}
+.ob-feats{display:flex;flex-direction:column;gap:10px;margin:4px 0 6px;}
+.ob-feat{display:flex;align-items:center;gap:14px;background:#fff;border-radius:16px;padding:14px 16px;font-size:14.5px;font-weight:500;color:var(--dark);}
+.ob-feat-ic{width:38px;height:38px;border-radius:12px;background:#EDF1E8;color:var(--green);display:flex;align-items:center;justify-content:center;flex:none;}
+.ob-feat-ic svg{width:19px;height:19px;}
+.ob-feat small{display:block;font-size:12.5px;font-weight:400;color:var(--gray);margin-top:1px;}
+.ob-toggle{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:#fff;border:1.5px solid var(--light);border-radius:16px;
+  padding:13px 15px;margin-bottom:10px;cursor:pointer;font:500 14.5px 'Jost',sans-serif;color:var(--dark);transition:border-color .15s, background .15s;}
+.ob-toggle small{display:block;font-size:12.5px;font-weight:400;color:var(--gray);}
+.ob-toggle .ob-check{width:24px;height:24px;border-radius:8px;border:1.5px solid var(--light);flex:none;display:flex;align-items:center;justify-content:center;margin-left:auto;}
+.ob-toggle.on{border-color:var(--green);background:#EDF1E8;}
+.ob-toggle.on .ob-check{background:var(--green);border-color:var(--green);}
+.ob-toggle.on .ob-check::after{content:'';width:10px;height:6px;border:2.4px solid #fff;border-top:none;border-right:none;transform:rotate(-45deg) translate(1px,-1px);}
+.ob-room{background:#fff;border-radius:18px;padding:14px;margin-bottom:12px;position:relative;}
+.ob-room-top{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ob-room-dot{width:12px;height:12px;border-radius:4px;flex:none;}
+.ob-room-top .ob-input{flex:1;}
+.ob-del{width:38px;height:38px;border-radius:12px;border:none;background:var(--cream);color:var(--gray);cursor:pointer;flex:none;display:flex;align-items:center;justify-content:center;}
+.ob-del svg{width:17px;height:17px;}
+.ob-room-row{display:flex;gap:10px;}
+.ob-field{flex:1;min-width:0;}
+.ob-field label{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);margin:0 0 6px 2px;}
+.ob-stepper{display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--light);border-radius:14px;background:#fff;height:46px;}
+.ob-stepper button{width:44px;height:100%;border:none;background:none;font-size:20px;color:var(--green);cursor:pointer;}
+.ob-stepper b{font-size:16px;font-weight:600;}
+.ob-price{position:relative;}
+.ob-price .ob-input{padding-right:52px;height:46px;}
+.ob-price span{position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--gray);pointer-events:none;}
+.ob-link-badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--lavender-deep);background:var(--lavender-bg);border-radius:20px;padding:3px 9px;margin:0 0 8px;}
+.ob-add{width:100%;border:1.5px dashed rgba(53,75,56,.4);background:none;border-radius:16px;padding:13px;font:600 14.5px 'Jost',sans-serif;color:var(--green);cursor:pointer;}
+.ob-import{background:#EDF1E8;border-radius:16px;padding:14px;margin-bottom:16px;}
+.ob-import p{margin:0 0 10px;font-size:13.5px;color:var(--green-deep);font-weight:500;}
+.ob-chip{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:20px;padding:7px 12px;
+  font:600 13px 'Jost',sans-serif;margin:0 6px 6px 0;cursor:pointer;}
+.ob-choice{display:flex;gap:10px;}
+.ob-choice button{flex:1;background:#fff;border:1.5px solid var(--light);border-radius:16px;padding:16px 12px;font:600 14.5px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.3;}
+.ob-choice button small{display:block;font-weight:400;font-size:12px;color:var(--gray);margin-top:3px;}
+.ob-choice button.on{border-color:var(--green);background:#EDF1E8;color:var(--green-deep);}
+.ob-help{background:#fff;border-radius:16px;margin:14px 0;overflow:hidden;}
+.ob-help summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:14px;color:var(--green);display:flex;align-items:center;justify-content:space-between;}
+.ob-help summary::-webkit-details-marker{display:none;}
+.ob-help summary::after{content:'+';font-size:20px;font-weight:400;}
+.ob-help[open] summary::after{content:'−';}
+.ob-help ol{margin:0;padding:0 16px 14px 34px;font-size:13.5px;line-height:1.5;color:#4a4a44;}
+.ob-help h4{margin:4px 16px 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);}
+.ob-cal{background:#fff;border-radius:18px;padding:14px;margin-bottom:12px;}
+.ob-cal h3{margin:0 0 10px;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.ob-plat{display:flex;align-items:center;gap:8px;margin:10px 0 6px;font-size:12.5px;font-weight:600;color:var(--dark);}
+.ob-plat i{width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-style:normal;font-size:11px;font-weight:700;}
+.ob-plat i.ab{background:#FF5A5F;} .ob-plat i.bk{background:#003B95;}
+.ob-st{font-size:12.5px;margin:6px 2px 0;min-height:1em;color:var(--gray);}
+.ob-st.ok{color:var(--green);font-weight:600;} .ob-st.err{color:var(--danger);}
+.ob-exp{border-top:1px solid var(--light);margin-top:12px;padding-top:12px;}
+.ob-exp p{margin:0 0 8px;font-size:12.5px;line-height:1.45;color:var(--gray);}
+.ob-exp-row{display:flex;gap:8px;}
+.ob-exp-row .ob-input{font-size:12px;padding:10px 12px;}
+.ob-btn-mini{border:none;border-radius:12px;background:var(--green);color:#fff;font:600 13px 'Jost',sans-serif;padding:0 14px;cursor:pointer;white-space:nowrap;}
+.ob-btn-mini.ghost{background:#EDF1E8;color:var(--green);}
+.ob-sum{display:flex;flex-direction:column;gap:10px;}
+.ob-sum div{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:14px 16px;font-size:14.5px;}
+.ob-sum svg{width:20px;height:20px;color:var(--green);flex:none;}
+.ob-err{color:var(--danger);font-size:13px;margin:10px 2px 0;min-height:1em;}
+.ob-foot{flex:none;display:flex;align-items:center;gap:10px;padding:14px 22px calc(14px + env(safe-area-inset-bottom,0px));background:var(--cream);border-top:1px solid var(--light);}
+.ob-primary{flex:1;border:none;border-radius:999px;background:var(--yellow);color:var(--green-deep);font:600 16px 'Jost',sans-serif;padding:15px 20px;cursor:pointer;}
+.ob-primary:disabled{opacity:.55;cursor:default;}
+.ob-back{border:none;background:none;font:500 15px 'Jost',sans-serif;color:var(--gray);padding:12px 6px;cursor:pointer;}
+.ob-skip{display:block;margin:14px auto 0;border:none;background:none;font:500 14px 'Jost',sans-serif;color:var(--gray);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+/* Visite guidée : voile percé autour de l'élément ciblé + bulle. */
+.ob-tour{position:fixed;inset:0;z-index:3100;}
+.ob-tour-hole{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(20,26,20,.62);transition:all .32s cubic-bezier(.4,0,.2,1);pointer-events:none;}
+.ob-tour-hole::after{content:'';position:absolute;inset:-4px;border-radius:17px;border:2px solid var(--yellow);animation:obPulse 1.6s ease-in-out infinite;}
+@keyframes obPulse{0%,100%{opacity:.9;transform:scale(1);}50%{opacity:.35;transform:scale(1.04);}}
+@media (prefers-reduced-motion:reduce){.ob-tour-hole{transition:none;}.ob-tour-hole::after{animation:none;}}
+.ob-bubble{position:fixed;width:min(340px,calc(100vw - 24px));background:#fff;border-radius:20px;padding:18px 18px 14px;box-shadow:0 18px 50px rgba(0,0,0,.35);
+  font-family:'Jost',sans-serif;transition:top .32s cubic-bezier(.4,0,.2,1),left .32s cubic-bezier(.4,0,.2,1);}
+.ob-bubble::before{content:'';position:absolute;left:var(--ax,50%);width:16px;height:16px;background:#fff;transform:translateX(-50%) rotate(45deg);border-radius:3px;}
+.ob-bubble.below::before{top:-7px;} .ob-bubble.above::before{bottom:-7px;}
+.ob-bubble-kicker{font-size:11.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--green);opacity:.8;}
+.ob-bubble h4{margin:4px 0 6px;font-size:18px;font-weight:600;color:var(--green-deep);}
+.ob-bubble p{margin:0;font-size:14px;line-height:1.5;color:#4a4a44;}
+.ob-bubble-foot{display:flex;align-items:center;gap:10px;margin-top:14px;}
+.ob-dots{display:flex;gap:4px;flex:1;}
+.ob-dots i{width:6px;height:6px;border-radius:3px;background:var(--light);transition:width .2s;}
+.ob-dots i.on{width:16px;background:var(--green);}
+.ob-bubble .ob-primary{flex:none;padding:10px 18px;font-size:14.5px;}
+.ob-bubble .ob-back{padding:8px 4px;font-size:14px;}
+.ob-replay{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#EDF1E8;border:none;border-radius:14px;padding:12px 14px;margin:0 0 12px;
+  font:600 14px 'Jost',sans-serif;color:var(--green-deep);cursor:pointer;}
+.ob-replay small{display:block;font-weight:400;font-size:12px;color:var(--gray);}
+.ob-replay svg{width:20px;height:20px;color:var(--green);flex:none;}
 </style>
 </head>
 <body>
@@ -4929,6 +5047,7 @@ function connectFirestoreForUser(){
       if(!(snap.metadata&&snap.metadata.fromCache))syncStale=false;
       if(snap.exists) applyRemoteData(snap.data(),snap.metadata);
       markServerSync();
+      obMaybeStart(snap.exists?snap.data():null); // prise en main d'un compte neuf (une seule fois par session)
       onOk();
       setSyncPip('ok','Synchronisé ✓'+delayTxt());
     },onErr);
@@ -9632,6 +9751,8 @@ function updateRoomTariffSvc(roomId,tid,field,val){
 function renderSettings(){
   const st=S.settings;
   let h='';
+  // Prise en main : relancer la visite guidée (voir obStartTour).
+  if(currentRole==='owner')h+=`<button type="button" class="ob-replay" onclick="commitSettings();setTimeout(obStartTour,250)">${OB_ICON.map}<span>Visite guidée de l'outil<small>Revoir à quoi sert chaque menu, en une minute</small></span></button>`;
 
   // — Établissement —
   const etabBody=`<div class="set-card">
@@ -13455,6 +13576,9 @@ function init(){
 
   // Backup reminder: show if no export in 7 days
   setTimeout(()=>{
+    // Compte encore vide (nouveau compte, en pleine prise en main) : rien à
+    // sauvegarder, le rappel ne ferait que gêner.
+    if(!S.bookings.length)return;
     const last=localStorage.getItem('ff2_lastExport');
     if(!last){
       byId('backupMsg').textContent='💾 Aucune sauvegarde locale effectuée';
@@ -13467,6 +13591,381 @@ function init(){
       byId('backupReminder').classList.add('show');
     }
   },3000);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRISE EN MAIN — assistant de démarrage + visite guidée
+//  Assistant : affiché UNE fois, à un compte propriétaire tout neuf (aucune
+//  réservation, aucune location jamais enregistrée — voir obMaybeStart,
+//  appelé à la première réception du document du compte). Quatre étapes :
+//  établissement, locations (reprise possible des chambres déjà déposées
+//  sur Fiftin Séjours), calendriers Airbnb/Booking (import vérifié par
+//  icalSetImportUrl, lien d'export à recopier chez eux), récapitulatif.
+//  Rien n'est enregistré avant la dernière étape (obFinish), sauf les liens
+//  iCal, vérifiés et enregistrés côté serveur au moment de la saisie comme
+//  dans Réglages (retirés à la fin si leur location a été supprimée).
+//  Visite guidée : bulles posées sur chaque menu (OB_TOUR), relançable
+//  depuis Réglages. Drapeau S.settings.onboarding (+ copie sur l'appareil).
+// ═══════════════════════════════════════════════════════════════
+const OB_COLORS=['#7A8C65','#7A8CB5','#B57A8C','#8CB57A','#C9A86A','#6FA3A0','#A07AB5','#B5927A'];
+const OB_ICON={
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  sync:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5M3 21v-5h5"/></svg>',
+  map:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m16.2 7.8-2.1 6.3-6.3 2.1 2.1-6.3z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>',
+  cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>'
+};
+const OB_STEP_LABELS=['Établissement','Locations','Airbnb & Booking','C\'est prêt'];
+let obChecked=false, ob=null;
+function obDoneKey(){return 'ff2_ob_'+currentUid;}
+function obMaybeStart(d){
+  if(obChecked)return;
+  obChecked=true;
+  if(currentRole==='personnel'||wantsOpenSettings)return;
+  const isNew=!d||(!(d.bookings&&d.bookings.length)&&!(d.settings&&d.settings.rooms&&d.settings.rooms.length));
+  if(!isNew)return;
+  if(S.settings.onboarding&&S.settings.onboarding.wizardDone)return;
+  try{if(localStorage.getItem(obDoneKey()))return;}catch(e){}
+  setTimeout(obOpenWizard,350);
+}
+function obNewRoom(name,max,price,link){
+  return {id:uid(),name:name||'',max:max||2,price:price!=null?String(price):'',link:link||null,ical:{airbnb:{url:'',state:'',msg:'',saved:''},booking:{url:'',state:'',msg:'',saved:''}},exportUrl:''};
+}
+function obOpenWizard(){
+  ob={step:0,name:S.settings.name&&S.settings.name!=='Planning'?S.settings.name:'',breakfast:true,dinner:false,
+    rooms:[obNewRoom('',2,'')],hasOta:null,sejours:null,err:''};
+  let el=byId('obWiz');
+  if(!el){el=document.createElement('div');el.id='obWiz';el.className='ob-wiz';document.body.appendChild(el);}
+  el.style.display='flex';
+  resolveSejoursListings(list=>{ if(!ob)return; ob.sejours=list||[]; if(ob.step===2)obRender(); });
+  obRender();
+}
+function obClose(){const el=byId('obWiz');if(el)el.style.display='none';ob=null;}
+function obMarkDone(extra){
+  S.settings.onboarding=Object.assign({},S.settings.onboarding||{},{wizardDone:true,at:new Date().toISOString()},extra||{});
+  try{localStorage.setItem(obDoneKey(),'1');}catch(e){}
+}
+function obSkip(){
+  obMarkDone({skipped:true});
+  saveSettings();
+  obClose();
+}
+function obEsc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+function obRender(){
+  const el=byId('obWiz');if(!el||!ob)return;
+  const st=ob.step;
+  const titles=['Bienvenue sur Fiftin Planning','Votre établissement','Vos locations','Airbnb & Booking','Votre planning est prêt'];
+  const progress=st>0?'<div class="ob-progress">'+OB_STEP_LABELS.map((_,i)=>'<i class="'+(i<st?'on':'')+'"></i>').join('')+'</div>'+
+    '<div class="ob-steps-lbl">'+OB_STEP_LABELS.map((l,i)=>'<span class="'+(i===st-1?'on':'')+'">'+l+'</span>').join('')+'</div>':'';
+  let body='', foot='';
+  if(st===0){
+    body='<p class="ob-lead">En deux minutes, on prépare votre planning ensemble. Tout restera modifiable ensuite, dans les Réglages.</p>'+
+      '<div class="ob-feats">'+
+        '<div class="ob-feat"><span class="ob-feat-ic">'+OB_ICON.home+'</span><div>Vos locations et leurs tarifs<small>Chambres, gîtes, logements : un nom, une capacité, un prix.</small></div></div>'+
+        '<div class="ob-feat"><span class="ob-feat-ic">'+OB_ICON.sync+'</span><div>Airbnb et Booking reliés<small>Leurs réservations arrivent toutes seules dans votre planning.</small></div></div>'+
+        '<div class="ob-feat"><span class="ob-feat-ic">'+OB_ICON.map+'</span><div>Une visite guidée<small>Une minute pour savoir à quoi sert chaque menu.</small></div></div>'+
+      '</div>'+
+      '<button class="ob-skip" onclick="obSkip()">Passer, je découvrirai seul</button>';
+    foot='<button class="ob-primary" onclick="obGo(1)">C\'est parti</button>';
+  }else if(st===1){
+    body='<div class="ob-q">Comment s\'appelle votre établissement ?</div>'+
+      '<input class="ob-input" id="obName" placeholder="Ex. Les Aulnes" value="'+obEsc(ob.name)+'" oninput="ob.name=this.value" autocomplete="organization">'+
+      '<p class="ob-hint">Il s\'affiche en haut de votre planning.</p>'+
+      '<div class="ob-q">Que proposez-vous à vos hôtes ?</div>'+
+      '<button type="button" class="ob-toggle'+(ob.breakfast?' on':'')+'" onclick="ob.breakfast=!ob.breakfast;obRender()"><div>Petit-déjeuner<small>Compté dans le séjour et la vue Semaine</small></div><span class="ob-check"></span></button>'+
+      '<button type="button" class="ob-toggle'+(ob.dinner?' on':'')+'" onclick="ob.dinner=!ob.dinner;obRender()"><div>Table d\'hôtes<small>Repas du soir, couverts et menus du jour</small></div><span class="ob-check"></span></button>'+
+      '<p class="ob-hint">Réglable ensuite location par location.</p>';
+    foot='<button class="ob-back" onclick="obGo(0)">Retour</button><button class="ob-primary" onclick="obGo(2)">Continuer</button>';
+  }else if(st===2){
+    const linked=new Set(ob.rooms.map(r=>r.link&&r.link.unitId).filter(Boolean));
+    const units=[];
+    (ob.sejours||[]).forEach(l=>(l.units||[]).forEach(u=>{ if(!u.linkedRoomId&&!linked.has(u.id))units.push({l,u}); }));
+    body='<p class="ob-lead" style="margin-bottom:14px">Ajoutez chaque chambre, gîte ou logement que vous louez.</p>'+
+      (units.length?'<div class="ob-import"><p>Reprendre depuis votre annonce Fiftin Séjours :</p>'+
+        units.map(x=>'<button type="button" class="ob-chip" onclick="obAddFromSejours(\''+obEsc(x.l.id)+'\',\''+obEsc(x.u.id)+'\')">+ '+obEsc(x.u.name||x.l.name||'Location')+(x.u.maxPersons?' · '+x.u.maxPersons+' pers.':'')+'</button>').join('')+'</div>':'')+
+      ob.rooms.map((r,i)=>
+        '<div class="ob-room">'+
+          (r.link?'<div class="ob-link-badge">'+OB_ICON.link.replace('<svg','<svg width="12" height="12"')+'Reliée à Fiftin Séjours</div>':'')+
+          '<div class="ob-room-top"><span class="ob-room-dot" style="background:'+OB_COLORS[i%OB_COLORS.length]+'"></span>'+
+            '<input class="ob-input small" placeholder="Nom (ex. Chambre Glycine)" value="'+obEsc(r.name)+'" oninput="ob.rooms['+i+'].name=this.value;ob.err=\'\';var e=byId(\'obErr\');if(e)e.textContent=\'\'">'+
+            (ob.rooms.length>1?'<button type="button" class="ob-del" aria-label="Retirer cette location" onclick="obDelRoom('+i+')">'+OB_ICON.trash+'</button>':'')+
+          '</div>'+
+          '<div class="ob-room-row">'+
+            '<div class="ob-field"><label>Capacité</label><div class="ob-stepper"><button type="button" onclick="obMax('+i+',-1)" aria-label="Moins">−</button><b>'+r.max+' pers.</b><button type="button" onclick="obMax('+i+',1)" aria-label="Plus">+</button></div></div>'+
+            '<div class="ob-field"><label>Prix par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="1" placeholder="Ex. 90" value="'+obEsc(r.price)+'" oninput="ob.rooms['+i+'].price=this.value"><span>€</span></div></div>'+
+          '</div>'+
+        '</div>').join('')+
+      '<button type="button" class="ob-add" onclick="obAddRoom()">+ Ajouter une location</button>'+
+      '<p class="ob-hint">Le prix pré-remplit vos réservations. Vous pourrez le détailler par nombre de personnes et par saison dans Réglages → Locations &amp; services.</p>'+
+      '<div class="ob-err" id="obErr">'+obEsc(ob.err)+'</div>';
+    foot='<button class="ob-back" onclick="obGo(1)">Retour</button><button class="ob-primary" onclick="obGo(3)">Continuer</button>';
+  }else if(st===3){
+    body='<div class="ob-q">Vos locations sont-elles aussi sur Airbnb ou Booking ?</div>'+
+      '<div class="ob-choice"><button type="button" class="'+(ob.hasOta===true?'on':'')+'" onclick="ob.hasOta=true;obRender()">Oui<small>Je veux les relier</small></button>'+
+      '<button type="button" class="'+(ob.hasOta===false?'on':'')+'" onclick="ob.hasOta=false;obRender()">Non<small>Pas pour l\'instant</small></button></div>';
+    if(ob.hasOta===false){
+      body+='<p class="ob-hint" style="margin-top:14px">Aucun souci : vous pourrez les relier à tout moment dans Réglages → Locations &amp; services.</p>';
+    }else if(ob.hasOta===true){
+      body+='<p class="ob-lead" style="margin:18px 0 6px">Pour chaque location, collez le lien de calendrier de son annonce. Ses réservations arriveront toutes seules dans votre planning (dates uniquement, vérifiées toutes les 30 minutes).</p>'+
+        '<details class="ob-help"><summary>Où trouver ce lien ?</summary>'+
+          '<h4>Airbnb</h4><ol><li>Ouvrez <b>Calendrier</b>, puis l\'annonce concernée.</li><li>Dans <b>Disponibilités</b>, touchez <b>Associer des calendriers</b>.</li><li>Choisissez <b>Exporter le calendrier</b> et copiez le lien.</li></ol>'+
+          '<h4>Booking.com</h4><ol><li>Dans l\'extranet, ouvrez <b>Tarifs et disponibilités</b>.</li><li>Touchez <b>Synchroniser les calendriers</b>, puis <b>Ajouter une connexion</b>.</li><li>Copiez le lien d\'<b>exportation</b> proposé.</li></ol>'+
+        '</details>'+
+        ob.rooms.filter(r=>r.name.trim()).map(r=>{
+          const i=ob.rooms.indexOf(r);
+          const fld=(p,label,cls,ph)=>{
+            const c=r.ical[p];
+            return '<div class="ob-plat"><i class="'+cls+'">'+(p==='airbnb'?'A':'B')+'</i>'+label+'</div>'+
+              '<input class="ob-input small" placeholder="'+ph+'" value="'+obEsc(c.url)+'" oninput="ob.rooms['+i+'].ical.'+p+'.url=this.value" onblur="obCheckIcal('+i+',\''+p+'\')" autocomplete="off" autocapitalize="off" spellcheck="false">'+
+              '<div class="ob-st '+(c.state==='ok'?'ok':c.state==='err'?'err':'')+'" id="obSt-'+i+'-'+p+'">'+obEsc(c.msg)+'</div>';
+          };
+          return '<div class="ob-cal"><h3><span class="ob-room-dot" style="background:'+OB_COLORS[i%OB_COLORS.length]+'"></span>'+obEsc(r.name)+'</h3>'+
+            fld('airbnb','Airbnb','ab','https://www.airbnb.fr/calendar/ical/…')+
+            fld('booking','Booking.com','bk','https://ical.booking.com/v1/export?t=…')+
+            '<div class="ob-exp"><p><b>Dans l\'autre sens :</b> collez ce lien dans Airbnb et Booking (« Importer un calendrier ») pour qu\'ils bloquent les dates réservées ici. Il évite les doubles réservations.</p>'+
+              (r.exportUrl
+                ?'<div class="ob-exp-row"><input class="ob-input" readonly value="'+obEsc(r.exportUrl)+'" onclick="this.select()"><button type="button" class="ob-btn-mini" onclick="obCopy('+i+',this)">Copier</button></div>'
+                :'<button type="button" class="ob-btn-mini ghost" style="padding:10px 14px" onclick="obExport('+i+',this)">Obtenir mon lien</button>')+
+            '</div></div>';
+        }).join('')+
+        '<p class="ob-hint">Vous n\'avez pas les liens sous la main ? Continuez : tout se retrouve dans Réglages → Locations &amp; services.</p>';
+    }
+    body+='<div class="ob-err" id="obErr">'+obEsc(ob.err)+'</div>';
+    foot='<button class="ob-back" onclick="obGo(2)">Retour</button><button class="ob-primary" id="obFinishBtn" onclick="obFinish()"'+(ob.hasOta===null?' disabled':'')+'>Créer mon planning</button>';
+  }else{
+    const n=ob.result.rooms, c=ob.result.cals;
+    body='<p class="ob-lead">C\'est fait. Voici ce qui est prêt :</p>'+
+      '<div class="ob-sum">'+
+        '<div>'+OB_ICON.check+'<span><b>'+obEsc(S.settings.name||'Votre établissement')+'</b></span></div>'+
+        '<div>'+OB_ICON.home+'<span>'+n+' location'+(n>1?'s':'')+' dans votre planning</span></div>'+
+        (c?'<div>'+OB_ICON.sync+'<span>'+c+' calendrier'+(c>1?'s':'')+' Airbnb / Booking relié'+(c>1?'s':'')+'</span></div>':'')+
+      '</div>'+
+      '<p class="ob-hint" style="margin-top:16px">Prenez une minute pour découvrir l\'outil : on vous montre à quoi sert chaque menu.</p>'+
+      '<button class="ob-skip" onclick="obClose()">Plus tard, je commence directement</button>';
+    foot='<button class="ob-primary" onclick="obClose();obStartTour()">Découvrir l\'outil</button>';
+  }
+  el.innerHTML='<div class="ob-card" role="dialog" aria-modal="true" aria-labelledby="obTitle">'+
+    '<div class="ob-head"><div class="ob-head-top"><img src="../assets/logo-fiftin-mark-glass.png" alt=""><span class="ob-kicker">'+(st>0&&st<4?'Étape '+st+' sur 3':'Fiftin Planning')+'</span></div>'+
+      '<h2 class="ob-title" id="obTitle">'+titles[st]+'</h2>'+(st<4?progress:'')+'</div>'+
+    '<div class="ob-body">'+body+'</div>'+
+    '<div class="ob-foot">'+foot+'</div>'+
+  '</div>';
+  const bodyEl=el.querySelector('.ob-body'); if(bodyEl&&ob._scrollTop!=null){bodyEl.scrollTop=ob._scrollTop;ob._scrollTop=null;}
+}
+// Re-rendu en gardant la position de défilement (ajout/retrait d'une location…).
+function obRerender(){const b=byId('obWiz')&&byId('obWiz').querySelector('.ob-body');if(b&&ob)ob._scrollTop=b.scrollTop;obRender();}
+function obGo(step){
+  if(!ob)return;
+  ob.err='';
+  if(step===3&&ob.step===2){
+    const named=ob.rooms.filter(r=>r.name.trim());
+    if(!named.length){ob.err='Ajoutez au moins une location, avec son nom.';obRerender();return;}
+    ob.rooms=named.length===ob.rooms.length?ob.rooms:obPruneRooms(named);
+  }
+  ob.step=step;obRender();
+  const b=byId('obWiz').querySelector('.ob-body');if(b)b.scrollTop=0;
+  if(step===1)setTimeout(()=>{const i=byId('obName');if(i&&!i.value)i.focus();},60);
+}
+// Même écriture retour que writeBackSejoursLink (unit.linkedRoomId sur
+// l'annonce Séjours), mais groupée par annonce : plusieurs chambres de la
+// même annonce reprises d'un coup s'écraseraient sinon l'une l'autre (lecture
+// puis réécriture de tout le tableau units en parallèle).
+function obWriteBackLinks(rooms){
+  if(!db)return;
+  const byListing={};
+  rooms.forEach(rm=>{ if(rm.linkedListingId)(byListing[rm.linkedListingId]=byListing[rm.linkedListingId]||{})[rm.linkedUnitId]=rm.id; });
+  Object.keys(byListing).forEach(listingId=>{
+    const map=byListing[listingId], ref=db.collection('listings').doc(listingId);
+    ref.get().then(doc=>{
+      if(!doc.exists)return;
+      const units=(doc.data().units||[]).map(u=>map[u.id]?Object.assign({},u,{linkedRoomId:map[u.id]}):u);
+      return ref.update({units});
+    }).catch(err=>console.error('[sejours-link] échec de l\'écriture retour',err));
+  });
+}
+// Retire les locations sans nom (et le lien iCal déjà enregistré pour elles).
+function obPruneRooms(keep){
+  ob.rooms.filter(r=>keep.indexOf(r)<0).forEach(obDropIcal);
+  return keep;
+}
+function obDropIcal(r){
+  ['airbnb','booking'].forEach(p=>{ if(r.ical[p].saved&&icalAvailable())icalCall('icalSetImportUrl',{roomId:r.id,platform:p,url:''}).catch(()=>{}); });
+}
+function obAddRoom(){ob.rooms.push(obNewRoom('',2,''));obRerender();
+  setTimeout(()=>{const ins=byId('obWiz').querySelectorAll('.ob-room .ob-room-top .ob-input');const l=ins[ins.length-1];if(l)l.focus();},60);}
+function obDelRoom(i){const r=ob.rooms[i];if(!r)return;obDropIcal(r);ob.rooms.splice(i,1);obRerender();}
+function obMax(i,d){const r=ob.rooms[i];if(!r)return;r.max=Math.max(1,Math.min(30,r.max+d));obRerender();}
+function obAddFromSejours(listingId,unitId){
+  const l=(ob.sejours||[]).find(x=>x.id===listingId);const u=l&&(l.units||[]).find(x=>x.id===unitId);if(!u)return;
+  const room=obNewRoom(u.name||l.name||'',u.maxPersons||2,u.price!=null?u.price:'',{listingId,unitId});
+  // La première location, encore vide, est remplacée plutôt que laissée en trop.
+  const empty=ob.rooms.length===1&&!ob.rooms[0].name.trim()&&!ob.rooms[0].price;
+  if(empty)ob.rooms=[room];else ob.rooms.push(room);
+  obRerender();
+}
+function obCheckIcal(i,p){
+  const r=ob.rooms[i];if(!r)return;
+  const c=r.ical[p];const url=c.url.trim();
+  if(url===c.saved&&(c.state==='ok'||!url))return;
+  const st=byId('obSt-'+i+'-'+p);
+  const show=(state,msg)=>{c.state=state;c.msg=msg;const e=byId('obSt-'+i+'-'+p);if(e){e.className='ob-st '+(state==='ok'?'ok':state==='err'?'err':'');e.textContent=msg;}};
+  if(!url){
+    if(c.saved&&icalAvailable())icalCall('icalSetImportUrl',{roomId:r.id,platform:p,url:''}).catch(()=>{});
+    c.saved='';show('','');return;
+  }
+  if(!icalAvailable()){show('err','Connexion requise pour vérifier ce lien.');return;}
+  show('busy','Vérification du lien…');
+  icalCall('icalSetImportUrl',{roomId:r.id,platform:p,url}).then(res=>{
+    if(!ob||ob.rooms[i]!==r)return;
+    c.saved=url;
+    const n=res&&res.feed&&typeof res.feed.eventCount==='number'?res.feed.eventCount:null;
+    show('ok','✓ Calendrier reconnu'+(n!=null?' · '+n+' période'+(n>1?'s':'')+' réservée'+(n>1?'s':'')+' à venir':''));
+  }).catch(e=>{
+    if(!ob||ob.rooms[i]!==r)return; c.saved='';
+    // Erreurs explicites du serveur (lien refusé, calendrier illisible…) affichées
+    // telles quelles ; panne réseau ou serveur injoignable : message lisible.
+    const code=String((e&&e.code)||''), raw=(e&&e.message)||'';
+    const generic=!raw||/internal|unavailable|deadline|network|Failed to fetch/i.test(code+' '+raw);
+    show('err',generic?'Vérification impossible pour le moment. Réessayez, ou ajoutez ce lien plus tard dans Réglages → Locations & services.':raw);
+  });
+}
+function obExport(i,btn){
+  const r=ob.rooms[i];if(!r)return;
+  if(!icalAvailable()){ob.err='Connexion requise pour créer le lien.';obRerender();return;}
+  btn.disabled=true;btn.textContent='Création…';
+  icalCall('icalGetExportUrl',{roomId:r.id}).then(res=>{ if(!ob)return; r.exportUrl=res.url; obRerender(); })
+    .catch(e=>{ btn.disabled=false;btn.textContent='Obtenir mon lien'; ob.err='Création du lien impossible : '+((e&&e.message)||e); const er=byId('obErr');if(er)er.textContent=ob.err; });
+}
+function obCopy(i,btn){
+  const r=ob.rooms[i];if(!r||!r.exportUrl)return;
+  const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(r.exportUrl).then(done).catch(()=>{});
+  else{const inp=btn.previousElementSibling;inp.select();document.execCommand('copy');done();}
+}
+function obShort(name,i){
+  const w=name.trim().split(/\s+/).filter(Boolean);
+  return w.length>1?w.slice(0,3).map(x=>x[0]).join('').toUpperCase():(w[0]?w[0].charAt(0).toUpperCase()+w[0].slice(1,3):'L'+(i+1));
+}
+function obFinish(){
+  if(!ob)return;
+  // Un lien saisi mais pas (encore) accepté : on le signale plutôt que de le perdre en silence.
+  const pending=[];
+  ob.rooms.forEach(r=>['airbnb','booking'].forEach(p=>{const c=r.ical[p];if(ob.hasOta&&c.url.trim()&&c.url.trim()!==c.saved)pending.push(r.name+' ('+(p==='airbnb'?'Airbnb':'Booking')+')');}));
+  if(pending.length){ob.err='Lien non vérifié pour : '+pending.join(', ')+'. Corrigez-le ou videz le champ.';obRerender();return;}
+  if(offlineBlocked())return;
+  const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const keepExisting=S.bookings.length>0; // garde-fou : jamais de locations remplacées sous des réservations
+  const base=keepExisting?(S.settings.rooms||[]):[];
+  let cals=0;
+  const rooms=ob.rooms.map((r,i)=>{
+    const max=r.max||2;
+    const prices=defaultRoomPrices(max);
+    const price=parseFloat(String(r.price).replace(',','.'));
+    if(price>0)for(let k=1;k<=max;k++)prices[k]=price;
+    const room={id:r.id,name:r.name.trim(),short:obShort(r.name,base.length+i),color:OB_COLORS[(base.length+i)%OB_COLORS.length],maxPersons:max,
+      babyCrib:false,babyCribPrice:15,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices}]};
+    if(!ob.breakfast)room.noBreakfastService=true;
+    if(!ob.dinner)room.noDinnerService=true;
+    if(r.link){room.linkedListingId=r.link.listingId;room.linkedUnitId=r.link.unitId;}
+    if(ob.hasOta){
+      const imp={};
+      ['airbnb','booking'].forEach(p=>{if(r.ical[p].saved){imp[p]=r.ical[p].saved;cals++;}});
+      if(Object.keys(imp).length)room.icalImports=imp;
+    }else obDropIcal(r);
+    if(r.exportUrl)room.icalExportUrl=r.exportUrl;
+    return room;
+  });
+  const name=ob.name.trim();
+  if(name)S.settings.name=name;
+  S.settings.rooms=base.concat(rooms);
+  delete S.settings.dinnerEnabled;delete S.settings.breakfastEnabled;
+  obMarkDone();
+  saveSettings();applySettings();renderGrid();refreshRevenueViews();
+  obWriteBackLinks(rooms);
+  if(cals){icalLastRun=0;maybeRunIcalImport(true);}
+  ob.result={rooms:rooms.length,cals};
+  ob.step=4;obRender();
+}
+
+// ── Visite guidée ───────────────────────────────────────────────
+// sel : premier élément VISIBLE de la liste (ordinateur / téléphone n'ont pas
+// les mêmes boutons) ; étape sautée si aucun n'est visible. view : vue
+// affichée pendant la bulle, pour voir ce dont on parle.
+const OB_TOUR=[
+  {sel:['#mn-grid','#vt-grid'],view:'grid',title:'Grille',text:'Toutes vos locations, jour par jour. Touchez une case libre (ou faites glisser sur plusieurs jours) pour réserver ; touchez une réservation pour l\'ouvrir.'},
+  {sel:['#mn-today','#vt-today'],view:'today',title:'Location',text:'L\'année d\'un seul logement à la fois : ses périodes occupées et libres d\'un coup d\'œil. Passez d\'une location à l\'autre avec les flèches.'},
+  {sel:['#mn-week','#vt-week'],view:'week',title:'Semaine',text:'Votre quotidien : arrivées, départs, ménage, table d\'hôtes et extras du jour, jour par jour.'},
+  {sel:['#mn-month','#vt-month'],view:'month',title:'Mois',text:'Le bilan du mois : revenus, taux d\'occupation, charges et marge.'},
+  {sel:['#mn-year','#vt-year'],view:'year',title:'Année',text:'Vos comptes de l\'année par structure, avec vos seuils fiscaux et un simulateur d\'impôt.'},
+  {sel:['#addResaBtn'],view:'grid',title:'Nouvelle réservation',text:'Ajoutez une réservation en quelques secondes : client, dates, location, prix. Les réservations Airbnb et Booking, elles, arrivent toutes seules.'},
+  {sel:['#guestsBtn'],title:'Clients',text:'Votre fichier client : coordonnées, séjours passés, notes. Il se remplit au fil des réservations.'},
+  {sel:['button[title="Événements"]'],title:'Événements',text:'Vos rendez-vous pro et perso, et les échéances fiscales de votre structure, déjà inscrites.'},
+  {sel:['#settingsBtn'],title:'Réglages',text:'Locations et tarifs, liens Airbnb et Booking, équipe, compte et formule. Vous pourrez y relancer cette visite.'},
+  {sel:['#syncPip'],title:'Enregistrement',text:'Ce point indique l\'état de l\'enregistrement : vert, tout est sauvegardé et visible sur vos autres appareils.'},
+  {sel:['#backToSejoursBtn'],title:'Fiftin Séjours',text:'Votre annonce en réservation directe : vos disponibilités y sont mises à jour depuis ce planning.'}
+];
+let obTourIdx=0, obTourSteps=[];
+function obVisible(sel){
+  for(const s of sel){const e=document.querySelector(s);if(e){const r=e.getBoundingClientRect();if(r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden')return e;}}
+  return null;
+}
+function obStartTour(){
+  if(currentRole==='personnel')return;
+  obTourSteps=OB_TOUR.filter(s=>obVisible(s.sel));
+  if(!obTourSteps.length)return;
+  obTourIdx=0;
+  let t=byId('obTour');
+  if(!t){t=document.createElement('div');t.id='obTour';t.className='ob-tour';
+    t.innerHTML='<div class="ob-tour-hole" id="obHole"></div><div class="ob-bubble" id="obBubble" role="dialog" aria-live="polite"></div>';
+    document.body.appendChild(t);
+    window.addEventListener('resize',obPlace);
+    document.addEventListener('keydown',e=>{ if(!byId('obTour')||byId('obTour').style.display==='none')return;
+      if(e.key==='Escape')obEndTour(); else if(e.key==='ArrowRight')obTourGo(1); else if(e.key==='ArrowLeft')obTourGo(-1); });
+  }
+  t.style.display='block';
+  obTourShow();
+}
+function obTourShow(){
+  const s=obTourSteps[obTourIdx];if(!s)return obEndTour();
+  if(s.view&&S.view!==s.view)setView(s.view);
+  const n=obTourSteps.length, last=obTourIdx===n-1;
+  byId('obBubble').innerHTML='<div class="ob-bubble-kicker">Visite guidée · '+(obTourIdx+1)+'/'+n+'</div><h4>'+s.title+'</h4><p>'+s.text+'</p>'+
+    '<div class="ob-bubble-foot"><div class="ob-dots">'+obTourSteps.map((_,i)=>'<i class="'+(i===obTourIdx?'on':'')+'"></i>').join('')+'</div>'+
+      (obTourIdx>0?'<button class="ob-back" onclick="obTourGo(-1)">Retour</button>':'<button class="ob-back" onclick="obEndTour()">Passer</button>')+
+      '<button class="ob-primary" onclick="obTourGo(1)">'+(last?'Terminer':'Suivant')+'</button></div>';
+  requestAnimationFrame(obPlace);
+}
+function obPlace(){
+  const t=byId('obTour');if(!t||t.style.display==='none')return;
+  const s=obTourSteps[obTourIdx];const el=s&&obVisible(s.sel);
+  if(!el){obTourGo(1);return;}
+  const r=el.getBoundingClientRect(), pad=6;
+  const hole=byId('obHole'), b=byId('obBubble');
+  hole.style.left=(r.left-pad)+'px';hole.style.top=(r.top-pad)+'px';hole.style.width=(r.width+pad*2)+'px';hole.style.height=(r.height+pad*2)+'px';
+  const vw=window.innerWidth, vh=window.innerHeight, bw=b.offsetWidth, bh=b.offsetHeight, gap=16;
+  const below=r.bottom+pad+gap+bh<vh-8 || r.top-pad-gap-bh<8;
+  const top=below?Math.min(r.bottom+pad+gap,vh-bh-8):Math.max(8,r.top-pad-gap-bh);
+  const cx=r.left+r.width/2;
+  const left=Math.max(12,Math.min(vw-bw-12,cx-bw/2));
+  b.classList.toggle('below',below);b.classList.toggle('above',!below);
+  b.style.top=top+'px';b.style.left=left+'px';
+  b.style.setProperty('--ax',Math.max(18,Math.min(bw-18,cx-left))+'px');
+}
+function obTourGo(d){
+  obTourIdx+=d;
+  if(obTourIdx<0)obTourIdx=0;
+  if(obTourIdx>=obTourSteps.length)return obEndTour();
+  obTourShow();
+}
+function obEndTour(){
+  const t=byId('obTour');if(t)t.style.display='none';
+  if(S.view!=='grid')setView('grid');
+  if(!(S.settings.onboarding&&S.settings.onboarding.tourDone)){
+    S.settings.onboarding=Object.assign({},S.settings.onboarding||{},{tourDone:true});
+    saveSettings();
+  }
 }
 
 // Service worker : permet d'ouvrir l'app sans réseau (voir app/sw.js).

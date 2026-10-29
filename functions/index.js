@@ -103,10 +103,9 @@ const FREE_PRO_EMAILS = [
  * refusée, ou effacée), jamais montré tant qu'un admin ne l'a pas validée.
  *
  * maxPersons/ownerUid (LOT 2.3, sejours/index.html) : ajoutés pour le
- * filtre Voyageurs — capacité par annonce (matchesAllFilters()) et
- * regroupement "même hôte, même adresse" quand aucune annonce seule
- * n'atteint la capacité demandée (groupedCapacityMatches()), qui a aussi
- * besoin de lat/lng, déjà présents ci-dessous. */
+ * filtre Voyageurs — capacité par annonce (matchesAllFilters()) ;
+ * ownerUid sert aussi à « Ailleurs chez <hôte> » sur la fiche. Logements
+ * associés au même endroit : siteId/linkedRoomIds, plus bas. */
 function listingIndexPrice(listing) {
   if (listing.units && listing.units.length) {
     return Math.min.apply(null, listing.units.map(function (u) { return u.price; }));
@@ -170,6 +169,13 @@ exports.syncPublicListingIndex = onDocumentWritten({document: "listings/{listing
     // sans avoir à charger l'annonce complète.
     unitIds: (after.units || []).map(function (u) { return u.id; }),
     thumbUrl: listingIndexThumb(after),
+    // Association de logements au même endroit (choisie par l'hôte, jamais
+    // déduite) : une seule carte par lieu dans le fil, section « Vous venez
+    // à plusieurs ? » de la fiche, capacité cumulée selon les dates.
+    siteId: after.siteId || "",
+    // Locations Planning reliées : une même location Planning comptée une
+    // seule fois dans une capacité cumulée, même reliée à deux annonces.
+    linkedRoomIds: (after.units || []).map(function (u) { return u.linkedRoomId || ""; }).filter(Boolean),
   });
 });
 
