@@ -12511,11 +12511,21 @@ function renderHostListings(){
     // volet ouvert à la fois (state.hostListingId), comme l'ancien onglet ne
     // montrait qu'une seule annonce à la fois lui aussi.
     Array.prototype.forEach.call(document.querySelectorAll("[data-cal-expand]"), function(btn){
+      // Ouvre / ferme le seul calendrier de cette annonce, sans reconstruire
+      // la liste (retour de César : sinon toutes les photos se rechargeaient).
       btn.addEventListener("click", function(){
         var id = btn.getAttribute("data-cal-expand");
-        state.hostListingId = (state.hostListingId===id) ? null : id;
+        var opening = state.hostListingId!==id;
+        var old = document.getElementById("host-cal-panel");
+        if(old) old.remove();
+        Array.prototype.forEach.call(document.querySelectorAll("[data-cal-expand].expanded"), function(b){ b.classList.remove("expanded"); });
+        state.hostListingId = opening ? id : null;
         state.hostUnitId = null;
-        renderHostListings();
+        if(!opening) return;
+        btn.classList.add("expanded");
+        btn.insertAdjacentHTML("afterend", '<div class="host-cal-panel" id="host-cal-panel"><p class="sheet-sub" style="margin:0;">Chargement du calendrier…</p></div>');
+        var l = listings.filter(function(x){ return x.id===id; })[0];
+        if(l) loadHostListingCalendar(l);
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-edit]"), function(btn){
