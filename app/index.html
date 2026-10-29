@@ -2071,6 +2071,10 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .set-card-room.open .set-card-body{display:block;}
 .set-card-room.open{box-shadow:0 4px 16px rgba(29,40,32,.16);}
 .set-card-summary{font-size:12px;color:var(--gray);margin:6px 0 0 24px;cursor:pointer;}
+.set-sejours-link{display:flex;gap:8px;align-items:flex-start;margin:8px 0 2px 24px;font-size:12.5px;color:var(--ink,#2E2B22);line-height:1.4;}
+.set-sejours-link .ssl-dot{width:8px;height:8px;border-radius:50%;background:#4E6F53;margin-top:5px;flex-shrink:0;}
+.set-sejours-link small{color:var(--gray);font-size:11.5px;}
+.set-sejours-link a{color:#354B38;font-weight:600;}
 .set-card-toggle{border:none;background:#EEF3EC;color:var(--green);font-family:'Jost',sans-serif;font-size:12px;font-weight:600;border-radius:14px;padding:5px 11px;cursor:pointer;flex-shrink:0;white-space:nowrap;}
 .set-card .set-tariff-row .set-fi-sm{padding:7px 2px;font-size:12px;}
 /* ── Year view ── */
@@ -9884,6 +9888,7 @@ function renderSettings(){
         <button type="button" class="set-card-toggle" onclick="toggleRoomCard('${r.id}')">${rOpen?'Replier ▴':'Modifier ▾'}</button>
       </div>
       ${rOpen?'':`<div class="set-card-summary" onclick="toggleRoomCard('${r.id}')">${summary}</div>`}
+      ${sejoursLinkHTML(r)}
       <div class="set-card-body">
       <div class="set-card-grid">
         <div class="sc-field">
@@ -10379,12 +10384,31 @@ function resolveSejoursListings(cb){
 // de re-rendu forcé ici sauf si un nettoyage de lien caduc s'impose (voir
 // pruneStaleRoomLinks).
 function prefetchSejoursListings(){
+  const firstLoad=sejoursListingsCache===undefined;
   resolveSejoursListings(function(listings){
-    if(pruneStaleRoomLinks(listings)){
-      saveSettings();applySettings();
-      if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
-    }
+    const pruned=pruneStaleRoomLinks(listings);
+    if(pruned){saveSettings();applySettings();}
+    // Premier chargement : réaffiche les locations pour leur indicateur
+    // « Connecté à Fiftin Séjours » (sejoursLinkOf()).
+    if((pruned||(firstLoad&&listings.length))&&byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
   });
+}
+// Annonce Fiftin Séjours reliée à une location de l'outil : d'abord le lien
+// porté par l'annonce (unit.linkedRoomId, celui qu'utilise la publication
+// des disponibilités et des prix), sinon celui noté côté outil.
+function sejoursLinkOf(room){
+  const listings=sejoursListingsCache||[];
+  let l=listings.find(x=>(x.units||[]).some(u=>u.linkedRoomId===room.id));
+  if(!l&&room.linkedListingId)l=listings.find(x=>x.id===room.linkedListingId&&(x.units||[]).some(u=>u.id===room.linkedUnitId&&!u.linkedRoomId));
+  return l||null;
+}
+function sejoursDeepId(docId){let h=0;for(let i=0;i<docId.length;i++){h=(Math.imul(31,h)+docId.charCodeAt(i))|0;}return 100000+Math.abs(h%900000);}
+function sejoursLinkHTML(room){
+  const l=sejoursLinkOf(room);
+  if(!l)return '';
+  const st=l.status==='published'?'':l.status==='draft'?' (brouillon)':l.status==='paused'?' (en pause)':' (hors ligne)';
+  const view=l.status==='published'?`<a href="/sejours/?listing=${sejoursDeepId(l.id)}" target="_blank" rel="noopener">Voir l'annonce</a> · `:'';
+  return `<div class="set-sejours-link"><span class="ssl-dot"></span><span><b>Connecté à Fiftin Séjours</b> · « ${escHtml(l.name||'Annonce')} »${st}<br><small>Disponibilités, prix « dès » et capacité de l'annonce suivent cette location. ${view}<a href="/sejours/?espace=hote" target="_blank" rel="noopener">Gérer dans Séjours</a></small></span></div>`;
 }
 // Une chambre reliée (linkedListingId/linkedUnitId, voir addRoomFromListingUnit)
 // dont la chambre Séjours d'origine a été supprimée (annonce entière ou juste
@@ -10413,6 +10437,7 @@ function roomAddChoiceEntries(){
   const linkedIds=new Set((S.settings.rooms||[]).map(r=>r.linkedUnitId).filter(Boolean));
   const entries=[];
   listings.forEach(l=>{
+    if(l.status==='removed')return;
     (l.units||[]).forEach(u=>{
       if(linkedIds.has(u.id))return;
       if(u.linkedRoomId)return; // déjà reliée depuis Séjours (unit.linkedRoomId) -> ne pas la reproposer
@@ -10425,7 +10450,7 @@ function openRoomAddChoice(entries){
   const body=byId('roomAddBody');
   body.innerHTML =
     '<p style="padding:0 2px 12px;color:var(--gray);font-size:13px">Locations déposées sur Fiftin Séjours pas encore reliées à votre planning — reprendre l\'une d\'elles, ou repartir d\'une location vierge :</p>'+
-    entries.map(e=>`<button type="button" class="set-card set-card-row" style="width:100%;text-align:left;cursor:pointer" onclick="addRoomFromListingUnit('${e.listingId}','${e.unit.id}')"><div><b>${escHtml(e.unit.name||'(sans nom)')}</b><div style="font-size:12px;color:var(--gray)">${escHtml(e.listingName)}${e.unit.maxPersons?' · '+e.unit.maxPersons+' pers':''}</div></div></button>`).join('')+
+    entries.map(e=>`<button type="button" class="set-card set-card-row" style="width:100%;text-align:left;cursor:pointer" onclick="addRoomFromListingUnit('${e.listingId}','${e.unit.id}')"><div><b>${escHtml(e.unit.name||e.listingName)}</b><div style="font-size:12px;color:var(--gray)">${e.unit.name?escHtml(e.listingName)+' · ':''}${e.unit.maxPersons?e.unit.maxPersons+' pers':''}${e.unit.price?' · '+escHtml(String(e.unit.price))+' €/nuit':''}</div></div></button>`).join('')+
     '<button type="button" class="set-add" style="width:100%;margin-top:8px" onclick="closeM(\'modalRoomAdd\');addRoomBlank();">+ Location vierge</button>';
   openM('modalRoomAdd');
 }
@@ -10453,13 +10478,21 @@ function addRoomFromListingUnit(listingId,unitId){
   const structs=S.settings.structures&&S.settings.structures.length?S.settings.structures:DEFAULT_SETTINGS.structures;
   const max=unit.maxPersons||2;
   const prices=defaultRoomPrices(max);
-  if(unit.price) prices[max]=Number(unit.price);
+  // Séjours n'a qu'un prix par nuit : repris pour tous les paliers de
+  // personnes (à affiner ensuite dans le tarif de la location).
+  if(unit.price) for(let p=1;p<=max;p++) prices[p]=Number(unit.price);
   const newRoomId=uid();
   roomCardOpen[newRoomId]=true;
-  S.settings.rooms.push({id:newRoomId,name:(unit.name||'Location '+n).trim()||('Location '+n),short:'L'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
+  // Nom : celui de la location, sinon de l'annonce (une annonce = un logement).
+  const nm=(unit.name||entry.listingName||'').trim();
+  S.settings.rooms.push({id:newRoomId,name:nm&&nm!=='(sans nom)'?nm:('Location '+n),short:'L'+n,maxPersons:max,group:structs[0].id,linkedListingId:listingId,linkedUnitId:unit.id,tariffHistory:[{id:uid(),from:'2000-01-01',prices:prices}]});
   saveSettings();applySettings();renderSettings();renderGrid();
   refreshRevenueViews();
-  writeBackSejoursLink(listingId,unitId,newRoomId);
+  // Paramètres en brouillon : la location n'existe dans Planning qu'à « ✓ OK ».
+  // Le lien côté annonce attend donc ce moment (commitSettings) ; « ✕ » ou un
+  // import l'abandonnent avec le brouillon, et l'annonce reste proposée.
+  if(settingsDraft)(settingsDraft.sejoursLinks=settingsDraft.sejoursLinks||[]).push({listingId,unitId,roomId:newRoomId});
+  else writeBackSejoursLink(listingId,unitId,newRoomId);
 }
 // Referme la boucle du lien créé ci-dessus : écrit unit.linkedRoomId sur
 // l'annonce Séjours d'origine, pour que son calendrier (Espace hôtes,
@@ -12728,6 +12761,9 @@ function commitSettings(){
     try{localStorage.setItem('ff2_settings',JSON.stringify(S.settings));}catch(e){}
     saveCatalog();
     persist();
+    // Liens Séjours en attente (addRoomFromListingUnit), pour les seules
+    // locations encore présentes à l'enregistrement.
+    (d.sejoursLinks||[]).forEach(k=>{if((S.settings.rooms||[]).some(r=>r.id===k.roomId))writeBackSejoursLink(k.listingId,k.unitId,k.roomId);});
   }
   closeM('modalSettings');
 }
@@ -13681,7 +13717,7 @@ function obRender(){
   }else if(st===2){
     const linked=new Set(ob.rooms.map(r=>r.link&&r.link.unitId).filter(Boolean));
     const units=[];
-    (ob.sejours||[]).forEach(l=>(l.units||[]).forEach(u=>{ if(!u.linkedRoomId&&!linked.has(u.id))units.push({l,u}); }));
+    (ob.sejours||[]).forEach(l=>{ if(l.status==='removed')return; (l.units||[]).forEach(u=>{ if(!u.linkedRoomId&&!linked.has(u.id))units.push({l,u}); }); });
     body='<p class="ob-lead" style="margin-bottom:14px">Ajoutez chaque chambre, gîte ou logement que vous louez.</p>'+
       (units.length?'<div class="ob-import"><p>Reprendre depuis votre annonce Fiftin Séjours :</p>'+
         units.map(x=>'<button type="button" class="ob-chip" onclick="obAddFromSejours(\''+obEsc(x.l.id)+'\',\''+obEsc(x.u.id)+'\')">+ '+obEsc(x.u.name||x.l.name||'Location')+(x.u.maxPersons?' · '+x.u.maxPersons+' pers.':'')+'</button>').join('')+'</div>':'')+
