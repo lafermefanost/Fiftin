@@ -2376,8 +2376,8 @@ body.map-fullscreen{overflow:hidden;}
   font-family:'Jost',sans-serif; font-size:12.5px; font-weight:800; color:#fff; text-align:center; cursor:pointer;}
 .cal-disclose-chevron{width:16px; height:16px; color:#fff; flex-shrink:0; transition:transform .18s ease; transform:rotate(0deg);}
 .cal-disclose.expanded .cal-disclose-chevron{transform:rotate(180deg);}
-/* « Au même endroit » (Mes annonces) : ligne claire au-dessus du
-   Calendrier, ouvre le volet d'association (kind==="siteLink"). */
+/* « Établissement » (Mes annonces, annonce seule) : ligne claire
+   au-dessus du Calendrier, ouvre l'éditeur d'établissement. */
 .cal-disclose.site-disclose{flex-direction:row; justify-content:space-between; background:var(--sauge-bg); color:var(--sauge); padding:12px 14px;}
 .site-disclose .site-disclose-val{margin-left:auto; font-weight:600; margin-right:6px;}
 .site-disclose .cal-disclose-chevron{color:var(--sauge);}
@@ -2390,10 +2390,11 @@ body.map-fullscreen{overflow:hidden;}
 .site-place.first{margin-top:4px; padding-top:0; border-top:none;}
 .site-place-title{font-size:15px; font-weight:700; color:var(--ink); margin-bottom:6px;}
 .site-place-title small{font-size:12px; font-weight:500; color:var(--muted); margin-left:6px;}
-/* Mes annonces : bloc d'un établissement (hostSiteHtml()) — en-tête vert
-   propriétaire, puis ses annonces dans un cadre relié par un filet. */
-.host-site{margin-bottom:22px;}
-.host-site-head{display:flex; align-items:center; gap:14px; background:var(--sauge); color:#fff; border-radius:20px 20px 0 0; padding:14px;}
+/* Mes annonces : un établissement = une carte (hostSiteHtml()), en-tête
+   vert propriétaire puis ses logements en sous-cartes blanches. */
+.host-site{background:var(--sauge-bg); border-radius:22px; overflow:hidden; margin-bottom:22px; box-shadow:0 2px 10px rgba(0,0,0,.12);}
+.host-site-head{background:var(--sauge); color:#fff; padding:14px;}
+.hsh-top{display:flex; align-items:center; gap:14px;}
 .hsh-photo{flex:0 0 76px; width:76px; height:76px; border-radius:16px; overflow:hidden; background:rgba(255,255,255,.15);}
 .hsh-photo img{width:100%; height:100%; object-fit:cover; display:block;}
 .hsh-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
@@ -2401,12 +2402,17 @@ body.map-fullscreen{overflow:hidden;}
 .hsh-body small svg{width:16px; height:16px;}
 .hsh-body b{font-size:20px; font-weight:700; line-height:1.15;}
 .hsh-body span{font-size:13.5px; opacity:.85;}
-.hsh-todo{margin:0; padding:10px 14px 0; background:var(--sauge); color:#fff; font-size:13px; opacity:1;}
-.hsh-actions{display:flex; flex-wrap:wrap; gap:8px; background:var(--sauge); padding:12px 14px 14px; border-radius:0 0 20px 20px;}
+.hsh-todo{margin:12px 0 0; font-size:13px; opacity:.9;}
+.hsh-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
 .hsh-btn{border:1.5px solid rgba(255,255,255,.55); background:transparent; color:#fff; border-radius:999px; padding:8px 14px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:600; cursor:pointer;}
 .hsh-btn.main{background:var(--yellow); border-color:var(--yellow); color:var(--sauge-deep);}
-.host-site-members{margin:10px 0 0 10px; padding-left:12px; border-left:3px solid var(--sauge-light);}
-.hsm-label{font-size:12.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge); margin:2px 0 10px;}
+.host-site-members{padding:12px;}
+.host-site-members .host-listing-card{background:#fff; margin-bottom:12px; box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.hsm-label{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge); margin:2px 4px 10px;}
+.hsm-add{display:block; width:100%; border:1.5px dashed var(--sauge-light); background:transparent; border-radius:16px; padding:13px; font-family:'Jost',sans-serif; font-size:14px; font-weight:600; color:var(--sauge); cursor:pointer;}
+/* Éditeur d'établissement : type modifiable sous le nom. */
+.pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
+.pe-add{margin-top:10px;}
 .site-kind-chips{display:flex; flex-wrap:wrap; gap:8px;}
 .site-kind-chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:600; color:var(--sauge); cursor:pointer;}
 .site-kind-chip.on{background:var(--sauge); border-color:var(--sauge); color:#fff;}
@@ -3587,7 +3593,6 @@ function hfStepSpace(name,delta){
   var wrap = document.getElementById("hf-spaces-grid");
   if(wrap) wrap.innerHTML = hfSpaceChipsHtml();
 }
-var siteLinkContext = null;  // {listing, listings, sel} — volet kind==="siteLink"
 function newHfUnitId(){ return "u"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function photoEntryUrl(entry){ return entry.type==="existing" ? entry.url : URL.createObjectURL(entry.file); }
 
@@ -7995,32 +8000,6 @@ function openSheet(kind){
           '<button type="button" class="link-btn" id="coll-new-btn">+ Nouvelle collection</button>'+
         '</div>';
     }
-  } else if(kind==="siteLink"){
-    var slCtx = siteLinkContext;
-    var slOthers = slCtx.listings.filter(function(x){ return x.id!==slCtx.listing.id; });
-    inner = '<h3>Établissement</h3>'+
-      '<p class="sheet-sub">'+(slOthers.length
-        ? 'Vos logements à la même adresse, présentés ensemble aux voyageurs : d’abord l’établissement, puis chaque logement. Chaque annonce garde son calendrier, son prix et son lien Planning.'
-        : 'Chaque logement a sa propre annonce. Créez celle d’un autre logement de cet établissement : adresse, type, prestations et contact sont repris.')+'</p>'+
-      // « Le lieu » en premier : c'est ce que les voyageurs voient d'abord
-      // sur la carte du fil (nom, photos des espaces communs, puis logements).
-      (slOthers.length ? '<div class="site-place first">'+
-        '<div class="site-place-title">Présentation <small>recommandée</small></div>'+
-        '<p class="field-hint" style="margin-top:0;">Ce que les voyageurs voient en premier : la carte du fil et la page de l’établissement.</p>'+
-        '<div class="field-block"><label>Nom de l’établissement</label><input class="text-input" id="site-place-name" placeholder="Ex. La Ferme Fanost" value="'+esc(slCtx.placeName)+'"></div>'+
-        '<div class="field-block"><label>Type d’établissement</label><div class="site-kind-chips">'+
-          PLACE_KINDS.map(function(k){ return '<button type="button" class="site-kind-chip'+(slCtx.placeKind===k[0]?' on':'')+'" data-kind="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+
-        '</div></div>'+
-        '<div class="field-block"><label>Présentation de l’établissement</label><textarea class="text-input" id="site-place-desc" rows="4" maxlength="1200" placeholder="Le lieu, son histoire, ce qui est commun à tous les logements (jardin, piscine, petit-déjeuner…)">'+esc(slCtx.placeDesc)+'</textarea></div>'+
-        '<div class="field-block" style="margin-bottom:0;"><label>Photos de l’établissement (6 maximum)</label>'+
-          '<input type="file" id="site-place-input" accept="image/*" multiple style="display:none">'+
-          '<button type="button" class="btn-photo-add" id="site-place-btn">+ Ajouter des photos</button>'+
-          '<div class="hf-photo-list" id="site-place-grid"></div>'+
-        '</div>'+
-      '</div>' : '')+
-      (slOthers.length ? '<div class="site-place-title" style="margin-top:18px;">Logements de l’établissement</div><div class="field-block sort-row">'+sitePickRowsHtml(slCtx.listings, slCtx.listing.id, slCtx.sel, slCtx.listing)+'</div>' : '')+
-      '<button type="button" class="link-btn" id="site-new-btn">+ Ajouter un logement à cet établissement</button>'+
-      '<div class="auth-err" id="site-err"></div>';
   } else if(kind==="collRename"){
     inner = '<h3>Renommer la collection</h3>'+
       '<div class="field-block"><label>Nom</label><input class="text-input" id="coll-rename-name" value="'+esc(collectionRenameContext.name)+'"></div>'+
@@ -8086,7 +8065,6 @@ function openSheet(kind){
     : kind==="loginPrompt" ? "Se connecter"
     : kind==="collPicker" ? (collectionPickerContext.creating ? "Créer" : "Terminé")
     : kind==="collRename" ? "Enregistrer"
-    : kind==="siteLink" ? "Enregistrer"
     : kind==="collCreate" ? "Créer"
     : kind==="roomlink" ? "Fermer"
     : kind==="hostBio" ? "Fermer"
@@ -8210,87 +8188,6 @@ function openSheet(kind){
         openSheet("collPicker");
       });
     }
-    return;
-  } else if(kind==="siteLink"){
-    var slc = siteLinkContext;
-    wireSitePickRows(root, slc.sel);
-    var renderPlaceGrid = function(){
-      var grid = document.getElementById("site-place-grid");
-      if(!grid) return;
-      grid.innerHTML = slc.placePhotos.map(function(entry, i){ return photoListRowHtml(entry, i, slc.placePhotos.length); }).join("");
-      wirePhotoListRows(grid, slc.placePhotos, renderPlaceGrid);
-    };
-    renderPlaceGrid();
-    var placeName = document.getElementById("site-place-name");
-    if(placeName) placeName.addEventListener("input", function(){ slc.placeName = placeName.value; });
-    var placeDesc = document.getElementById("site-place-desc");
-    if(placeDesc) placeDesc.addEventListener("input", function(){ slc.placeDesc = placeDesc.value; });
-    Array.prototype.forEach.call(root.querySelectorAll(".site-kind-chip"), function(chip){
-      chip.addEventListener("click", function(){
-        var k = chip.getAttribute("data-kind");
-        slc.placeKind = slc.placeKind===k ? "" : k; // re-toucher le type choisi l'enlève
-        Array.prototype.forEach.call(root.querySelectorAll(".site-kind-chip"), function(c){ c.classList.toggle("on", c.getAttribute("data-kind")===slc.placeKind); });
-      });
-    });
-    var placeBtn = document.getElementById("site-place-btn");
-    if(placeBtn){
-      placeBtn.addEventListener("click", function(){ document.getElementById("site-place-input").click(); });
-      document.getElementById("site-place-input").addEventListener("change", function(e){
-        var errEl = document.getElementById("site-err");
-        errEl.textContent = "";
-        var accepted = [];
-        Array.prototype.forEach.call(e.target.files, function(file){
-          if(slc.placePhotos.length+accepted.length>=6){ errEl.textContent = "6 photos maximum."; return; }
-          if(!/^image\//.test(file.type)){ errEl.textContent = "Seules les images sont acceptées."; return; }
-          accepted.push(file);
-        });
-        e.target.value = "";
-        if(!accepted.length) return;
-        cropAndCompressFiles(accepted).then(function(files){
-          files.forEach(function(file){
-            if(file.size > 8*1024*1024){ errEl.textContent = "Photo trop lourde (8 Mo maximum) : "+file.name; return; }
-            var entry = {type:"new", file:file};
-            slc.placePhotos.push(entry);
-            enhancePhotoEntry(entry, renderPlaceGrid);
-          });
-          renderPlaceGrid();
-        });
-      });
-    }
-    document.getElementById("site-new-btn").addEventListener("click", function(){
-      closeSheet();
-      openListingEditor(null, slc.listing);
-    });
-    document.getElementById("sheet-apply").addEventListener("click", function(){
-      var btn = document.getElementById("sheet-apply");
-      var errEl = document.getElementById("site-err");
-      errEl.textContent = "";
-      btn.disabled = true;
-      var sel = slc.sel.slice();
-      // Lieu saisi : photos envoyées d'abord (mêmes trois tailles que les
-      // annonces), puis association + copie du lieu en un seul lot.
-      var placeReady = !sel.length ? Promise.resolve(null)
-        : resolvePhotoEntries(slc.placePhotos, authState.uid, "lieu", "Envoi des photos du lieu…").then(function(ph){
-            var name = (slc.placeName||"").trim(), desc = (slc.placeDesc||"").trim(), kind = slc.placeKind || "";
-            if(!name && !desc && !kind && !ph.urls.length) return null;
-            var out = {name:name, gallery:ph.urls, galleryThumb:ph.thumbs, galleryMid:ph.mids};
-            if(kind) out.kind = kind;
-            if(desc) out.desc = desc;
-            return out;
-          });
-      placeReady.then(function(place){
-        btn.textContent = "Enregistrement…";
-        return applySiteAssociation(slc.listings, slc.listing.id, sel, place);
-      }).then(function(){
-        crRefreshSite();
-        closeSheet();
-        if(state.hostMode && state.hostTab==="listings") renderHostListings();
-      }).catch(function(err){
-        errEl.textContent = "Erreur : "+(err.message||err.code||"réessayez.");
-        btn.disabled = false;
-        btn.textContent = "Enregistrer";
-      });
-    });
     return;
   } else if(kind==="collRename"){
     document.getElementById("sheet-apply").addEventListener("click", function(){
@@ -9546,7 +9443,7 @@ function openCreator(listing, siteFrom){
   crLoadPlanningPrice();
   if(cr.saveState==="dirty") crScheduleSave();
 }
-function crClose(){
+function crClose(after){
   if(!cr) return;
   if(cr.uploads){ alert("Une photo est encore en cours d’envoi : patientez quelques secondes."); return; }
   var finish = function(){
@@ -9555,6 +9452,7 @@ function crClose(){
     cr = null;
     hostListingsCache = [];
     if(state.hostMode && state.hostTab==="listings") renderHostListings();
+    if(after) after();
   };
   if(cr.timer){ clearTimeout(cr.timer); cr.timer = null; crSave(); }
   cr.chain.then(finish, finish);
@@ -9707,14 +9605,17 @@ function crWire(){
   if(pub) pub.addEventListener("click", crPublish);
   var site = document.getElementById("cr-site");
   if(site) site.addEventListener("click", function(){
-    ensureHostListingsLoaded(function(listings){
-      var me = listings.filter(function(x){ return x.id===cr.id; })[0];
-      if(me) openSiteLink(me, listings);
+    var myId = cr.id;
+    crClose(function(){
+      ensureHostListingsLoaded(function(listings){
+        var me = listings.filter(function(x){ return x.id===myId; })[0];
+        if(me) openSiteLink(me, listings);
+      });
     });
   });
 }
-/* « Au même endroit » : association avec les autres logements de l'hôte
-   et « Le lieu » (volet existant de Mes annonces, kind==="siteLink").
+/* « Établissement » : regroupement avec les autres logements de l'hôte et
+   présentation commune (éditeur d'établissement, openPlaceEditor()).
    Brouillon : association automatique à la mise en ligne (< 50 m). */
 function crSiteCardHtml(){
   var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement <small class="cr-opt">facultatif</small></div>';
@@ -10131,6 +10032,340 @@ function crPreview(){
   var d = cr.data, p = crPayload();
   var l = Object.assign({}, p, {id: cr.id || "apercu", docId: cr.id || "apercu", ownerUid: authState.uid, status: cr.status, likeCount: 0});
   try{ openDetail(l.id, l, true); }catch(e){ console.warn("[aperçu]", e); }
+  var bar = document.createElement("div");
+  bar.className = "cr-preview-bar"; bar.id = "cr-preview-bar";
+  bar.innerHTML = '<span>Aperçu · ce que voient les voyageurs</span><button type="button" id="cr-back-edit">Modifier</button>';
+  document.body.appendChild(bar);
+  var back = function(){ closeDetail(); var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); };
+  document.getElementById("cr-back-edit").addEventListener("click", back);
+  var db = document.getElementById("detail-back");
+  if(db) db.addEventListener("click", function(){ var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); });
+}
+
+/* ================= ÉDITEUR D'ÉTABLISSEMENT (« créer comme on explore ») =================
+   Même principe que le créateur d'annonce : la page établissement voyageur
+   elle-même (openPlace(), mêmes classes) en mode Modifier — photos du lieu
+   dans le carrousel avec une case « Ajouter une photo » au bout, nom et
+   présentation modifiés sur place, type dans un volet, logements de
+   l'établissement (en ajouter, en retirer, modifier une annonce), chiffres
+   clés et prestations communes calculés. Enregistrement automatique : nom,
+   type, présentation et photos sont recopiés sur chaque annonce de
+   l'établissement (place), avec l'association (siteId), par
+   applySiteAssociation(). Un établissement n'existe qu'à partir de deux
+   logements : avant, rien n'est enregistré. Aperçu = la vraie page
+   établissement (openPlace() avec override). */
+var pe = null; // {listings, memberIds, place, uploads, timer, chain, saveState}
+var PE_MAX_PHOTOS = 6;
+function openPlaceEditor(listing, listings, preselect){
+  var ids = [listing.id].concat(siteOthersOf(listing, listings).map(function(x){ return x.id; }));
+  (preselect || []).forEach(function(id){ if(ids.indexOf(id)===-1) ids.push(id); });
+  var byId = function(id){ return listings.filter(function(x){ return x.id===id; })[0]; };
+  var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
+  var pl = (withPlace && withPlace.place) || {};
+  pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:ids.length>1 ? "saved" : "solo",
+    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+  document.body.classList.add("creator-open");
+  peRender();
+  // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
+  if(preselect && preselect.length) peScheduleSave(0);
+}
+function peMembers(){
+  return pe.memberIds.map(function(id){ return pe.listings.filter(function(x){ return x.id===id; })[0]; }).filter(Boolean);
+}
+function pePlaceObj(){
+  var p = pe.place, name = (p.name || "").trim(), desc = (p.desc || "").trim();
+  if(!name && !desc && !p.kind && !p.gallery.length) return null;
+  var out = {name:name, gallery:p.gallery.slice(), galleryThumb:p.galleryThumb.slice(), galleryMid:p.galleryMid.slice()};
+  if(p.kind) out.kind = p.kind;
+  if(desc) out.desc = desc;
+  return out;
+}
+function peSaveLabel(){
+  var s = pe.saveState;
+  return s==="saving" ? "Enregistrement…" : s==="saved" ? "Enregistré" : s==="solo" ? "Ajoutez un 2e logement pour l’enregistrer"
+    : s==="error" ? "Erreur d’enregistrement · réessayez" : s==="dirty" ? "Modifications en attente" : "";
+}
+function peSetSaveLabel(){ var el = document.getElementById("pe-save"); if(el && pe) el.textContent = peSaveLabel(); }
+function peScheduleSave(delay){
+  if(!pe) return;
+  pe.saveState = "dirty"; peSetSaveLabel();
+  clearTimeout(pe.timer);
+  pe.timer = setTimeout(peSave, delay==null ? 1200 : delay);
+}
+function peSave(){
+  if(!pe) return pe;
+  var c = pe;
+  c.timer = null;
+  if(c.memberIds.length<2){ c.saveState = "solo"; peSetSaveLabel(); return; }
+  c.saveState = "saving"; peSetSaveLabel();
+  c.chain = c.chain.then(function(){
+    return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj()).then(function(){
+      // Données à jour (siteId attribué, lieu recopié) pour la suite.
+      return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(function(ls){ c.listings = ls; res(); }); });
+    }).then(function(){
+      if(pe!==c) return;
+      if(!c.timer) c.saveState = "saved";
+      peSetSaveLabel();
+    }, function(err){
+      console.warn("[établissement]", err);
+      if(pe!==c) return;
+      c.saveState = "error"; peSetSaveLabel();
+    });
+  });
+}
+function peClose(){
+  if(!pe) return;
+  if(pe.uploads){ alert("Une photo est encore en cours d’envoi : patientez quelques secondes."); return; }
+  var c = pe;
+  if(c.timer){ clearTimeout(c.timer); peSave(); }
+  var finish = function(){
+    if(pe!==c) return;
+    document.getElementById("creator-root").innerHTML = "";
+    document.body.classList.remove("creator-open");
+    pe = null;
+    hostListingsCache = [];
+    if(state.hostMode && state.hostTab==="listings") renderHostListings();
+  };
+  c.chain.then(finish, finish);
+}
+function peRender(){
+  if(!pe) return;
+  var root = document.getElementById("creator-root");
+  var keepScroll = document.getElementById("creator-panel") ? document.getElementById("creator-panel").scrollTop : 0;
+  var p = pe.place, members = peMembers(), views = members.map(visitorViewOf);
+  registerPhotoVariants(p);
+  var slides = p.gallery.map(function(src, i){
+    return '<div class="slide"><img src="'+photoMid(src)+'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;">'+
+      '<button type="button" class="cr-photo-tap" data-pe-photo="'+i+'" aria-label="Modifier cette photo"></button>'+(i===0?'<span class="cr-cover-tag">Couverture</span>':'')+'</div>';
+  });
+  for(var k=0;k<pe.uploads;k++) slides.push('<div class="slide cr-add-slide"><div class="cr-add"><span class="cr-spin"></span><b>Envoi de la photo…</b></div></div>');
+  if(p.gallery.length+pe.uploads<PE_MAX_PHOTOS) slides.push('<div class="slide cr-add-slide"><button type="button" class="cr-add" id="pe-add-photo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+CR_ICON_CAMERA+'</svg>'+
+    '<b>'+(p.gallery.length ? "Ajouter une photo" : "Photos de l’établissement")+'</b><span>'+(p.gallery.length ? p.gallery.length+' sur '+PE_MAX_PHOTOS+' au plus' : 'Maison, jardin, espaces communs, environnement…')+'</span></button></div>');
+  var dots = slides.map(function(_, i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("");
+  var kind = placeKindLabel(p);
+  var prices = views.map(displayPriceOf).filter(function(v){ return v!=null; });
+  var minPrice = prices.length ? Math.min.apply(null, prices) : null;
+  var cap = siteAvailableCapacity(views, {});
+  var common = placeCommonAmen(views);
+  var first = views[0] || {};
+  var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"]].filter(Boolean);
+  var progress = members.length<2
+    ? '<div class="cr-progress"><b>Ajoutez un autre logement</b><p>Un établissement regroupe au moins deux de vos logements à la même adresse. Rien n’est enregistré avant.</p><button type="button" class="btn-apply" data-pe-open="add">Ajouter un logement</button></div>'
+    : missing.length
+      ? '<div class="cr-progress"><b>'+(missing.length<=2 ? "Votre vitrine est presque prête" : "Votre établissement prend forme")+'</b><p>Pour bien le présenter aux voyageurs, ajoutez :</p><div class="cr-chips">'+
+          missing.map(function(m){ return '<button type="button" class="cr-chip" data-pe-go="'+m[0]+'">'+m[1]+'</button>'; }).join("")+'</div></div>'
+      : '<div class="cr-progress ready"><b>Votre vitrine est complète</b><p>Les voyageurs découvrent l’établissement, puis choisissent leur logement.</p></div>';
+  root.innerHTML = '<div class="detail creator place-detail" id="creator-panel">'+
+    '<div class="cr-bar">'+
+      '<button type="button" class="cr-close" id="pe-close" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+      '<div class="cr-bar-mid"><b>Établissement</b><span id="pe-save">'+esc(peSaveLabel())+'</span></div>'+
+      '<div class="cr-mode"><button type="button" class="on">Modifier</button><button type="button" id="pe-preview">Aperçu</button></div>'+
+    '</div>'+
+    '<div class="detail-gallery" id="pe-gallery">'+
+      '<div class="detail-gallery-scroll" id="pe-gallery-scroll">'+slides.join("")+'</div>'+
+      '<div class="dots">'+dots+'</div>'+
+    '</div>'+
+    '<div class="detail-body">'+
+      progress+
+      '<div class="detail-card">'+
+        '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : esc(first.region || ""))+'</div>'+
+        '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
+        '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
+          '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' logement'+(members.length>1?'s':'')+'</span></div>'+
+      '</div>'+
+      '<div class="detail-cards">'+
+        '<div class="detail-card"><div class="meta-row">'+
+          metaItemHtml(META_ICON_PRICE, minPrice!=null ? "dès "+minPrice+"€" : '<span class="cr-ph">— €</span>', "par nuit")+
+          metaItemHtml(PLACE_ICON, members.length, "logements")+
+          metaItemHtml(META_ICON_GUESTS, cap || '<span class="cr-ph">—</span>', "voyageurs en tout")+
+        '</div><p class="cr-linked">Calculés à partir de chaque logement</p></div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">L’établissement</div>'+
+          '<textarea class="desc cr-desc" id="pe-desc" rows="3" maxlength="1200" placeholder="Le lieu, son histoire, ce qui est commun à tous les logements : jardin, piscine, petit-déjeuner…">'+esc(p.desc)+'</textarea></div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre logement</div>'+
+          '<p class="site-sub">Ce que voient les voyageurs. Touchez un logement pour le modifier ou le retirer.</p>'+
+          '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
+          '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un logement à l’établissement</span></button>'+
+        '</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les logements</div>'+
+          (common.length ? detailAmenitiesHtml({amen:common}) : '<p class="cr-note">Les prestations cochées sur tous vos logements apparaîtront ici.</p>')+'</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
+          '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+esc((first.host && first.host.name) || "")+'</b></div></div>'+
+          '<p class="cr-note">Votre présentation, commune à toutes vos annonces.</p></div>'+
+      '</div>'+
+    '</div>'+
+    '<input type="file" id="pe-file" accept="image/*" multiple style="display:none">'+
+  '</div>';
+  document.getElementById("creator-panel").scrollTop = keepScroll;
+  peWire();
+}
+function peWire(){
+  var p = pe.place;
+  document.getElementById("pe-close").addEventListener("click", peClose);
+  document.getElementById("pe-preview").addEventListener("click", pePreview);
+  [["pe-name","name"],["pe-desc","desc"]].forEach(function(f){
+    var el = document.getElementById(f[0]);
+    crAutosize(el);
+    el.addEventListener("input", function(){
+      if(f[0]==="pe-name") el.value = el.value.replace(/\n/g, " ");
+      p[f[1]] = el.value; crAutosize(el); peScheduleSave();
+    });
+    el.addEventListener("blur", function(){ setTimeout(function(){ if(pe && !document.activeElement.matches("#creator-panel textarea")) peRender(); }, 0); });
+  });
+  var gal = document.getElementById("pe-gallery-scroll");
+  gal.addEventListener("scroll", function(){
+    var idx = Math.round(gal.scrollLeft / gal.clientWidth);
+    Array.prototype.forEach.call(document.querySelectorAll("#pe-gallery .dots span"), function(s, i){ s.classList.toggle("on", i===idx); });
+  });
+  var add = document.getElementById("pe-add-photo");
+  if(add) add.addEventListener("click", function(){ document.getElementById("pe-file").click(); });
+  document.getElementById("pe-file").addEventListener("change", function(e){ peAddFiles(e.target.files); e.target.value = ""; });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pe-photo]"), function(b){
+    b.addEventListener("click", function(){ peSheet("photo", Number(b.getAttribute("data-pe-photo"))); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pe-open]"), function(b){
+    b.addEventListener("click", function(){ peSheet(b.getAttribute("data-pe-open")); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#creator-panel [data-place-unit]"), function(b){
+    b.addEventListener("click", function(){ peSheet("member", b.getAttribute("data-place-unit")); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pe-go]"), function(b){
+    b.addEventListener("click", function(){
+      var key = b.getAttribute("data-pe-go");
+      if(key==="kind"){ peSheet("kind"); return; }
+      if(key==="photos"){ var g = document.getElementById("pe-gallery-scroll"); document.getElementById("creator-panel").scrollTo({top:0, behavior:"smooth"}); g.scrollTo({left:g.scrollWidth, behavior:"smooth"}); return; }
+      var el = document.getElementById("pe-"+key); el.scrollIntoView({behavior:"smooth", block:"center"}); el.focus();
+    });
+  });
+}
+function peAddFiles(fileList){
+  var files = Array.prototype.filter.call(fileList || [], function(f){ return /^image\//.test(f.type); });
+  var room = PE_MAX_PHOTOS - pe.place.gallery.length - pe.uploads;
+  if(files.length>room){ alert(PE_MAX_PHOTOS+" photos au plus pour l’établissement."); files = files.slice(0, Math.max(0, room)); }
+  if(!files.length) return;
+  cropAndCompressFiles(files).then(function(out){
+    out.forEach(function(file){
+      if(file.size > 8*1024*1024){ alert("Photo trop lourde (8 Mo maximum) : "+file.name); return; }
+      var c = pe;
+      c.uploads++;
+      var entry = {type:"new", file:file}, waited = false;
+      var go = function(){
+        uploadPhotoFiles([entry.file], authState.uid, "lieu", "Envoi").then(function(res){
+          if(pe!==c) return;
+          c.place.gallery.push(res.urls[0]); c.place.galleryThumb.push(res.thumbUrls[0] || null); c.place.galleryMid.push(res.midUrls[0] || null);
+          c.uploads--; peRender(); peScheduleSave();
+        }).catch(function(){ if(pe!==c) return; c.uploads--; peRender(); alert("La photo n’a pas pu être envoyée. Vérifiez votre connexion et réessayez."); });
+      };
+      enhancePhotoEntry(entry, function(){ if(!entry.busy && !waited){ waited = true; go(); } });
+      if(!entry.busy && !waited){ waited = true; go(); }
+    });
+    peRender();
+    var g = document.getElementById("pe-gallery-scroll");
+    if(g) g.scrollLeft = g.scrollWidth;
+  });
+}
+function peSheet(kind, arg){
+  var p = pe.place, inner = "", apply = null, sel = [];
+  if(kind==="kind"){
+    inner = '<h3>Type d’établissement</h3><div class="sort-row">'+PLACE_KINDS.map(function(k){
+      return '<button type="button" class="radio-row'+(p.kind===k[0]?' active':'')+'" data-v="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+
+      (p.kind ? '<button type="button" class="radio-row" data-v="">Ne pas préciser</button>' : '')+'</div>';
+  } else if(kind==="photo"){
+    var src = p.gallery[arg];
+    if(!src) return;
+    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(src)+'" alt=""></div><div class="sort-row">'+
+      (arg>0 ? '<button type="button" class="radio-row" data-act="cover">Choisir comme couverture</button>' : '')+
+      (arg>0 ? '<button type="button" class="radio-row" data-act="left">Avancer d’un cran</button>' : '')+
+      '<button type="button" class="radio-row cr-danger" data-act="delete">Supprimer</button></div>';
+  } else if(kind==="member"){
+    var m = peMembers().filter(function(x){ return x.id===arg; })[0];
+    if(!m) return;
+    inner = '<h3>'+esc(m.name || "(sans nom)")+'</h3><div class="sort-row">'+
+      '<button type="button" class="radio-row" data-act="edit">Modifier l’annonce</button>'+
+      (pe.memberIds.length>1 ? '<button type="button" class="radio-row cr-danger" data-act="remove">Retirer de l’établissement</button>' : '')+'</div>'+
+      '<p class="field-hint">Retirer un logement ne supprime pas son annonce : elle redevient une annonce seule.</p>';
+  } else if(kind==="add"){
+    apply = "Ajouter";
+    var cands = pe.listings.filter(function(x){ return pe.memberIds.indexOf(x.id)===-1 && x.status!=="removed"; });
+    inner = '<h3>Ajouter un logement</h3>'+
+      (cands.length ? '<p class="sheet-sub">Vos autres annonces. Un logement à une autre adresse reste en général une annonce à part.</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>'
+        : '<p class="sheet-sub">Vous n’avez pas d’autre annonce à ajouter.</p>')+
+      '<button type="button" class="link-btn" id="pe-new-listing">+ Créer un nouveau logement à cette adresse</button>';
+    if(!cands.length) apply = null;
+  }
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+inner+
+    (apply ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">'+apply+'</button></div>' : '')+
+  '</div></div></div>';
+  var close = function(){ root.innerHTML = ""; };
+  document.getElementById("sheet-close").addEventListener("click", close);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") close(); });
+  var done = function(){ close(); peRender(); peScheduleSave(); };
+  var acts = function(fn){ Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){ b.addEventListener("click", function(){ fn(b.getAttribute("data-act")); }); }); };
+  if(kind==="kind"){
+    Array.prototype.forEach.call(root.querySelectorAll("[data-v]"), function(b){ b.addEventListener("click", function(){ p.kind = b.getAttribute("data-v"); done(); }); });
+  } else if(kind==="photo"){
+    acts(function(act){
+      var move = function(from, to){ ["gallery","galleryThumb","galleryMid"].forEach(function(k){ var it = p[k].splice(from, 1)[0]; if(to!=null) p[k].splice(to, 0, it); }); };
+      if(act==="cover") move(arg, 0);
+      else if(act==="left") move(arg, arg-1);
+      else if(act==="delete") move(arg, null);
+      done();
+    });
+  } else if(kind==="member"){
+    acts(function(act){
+      if(act==="edit"){
+        var m = peMembers().filter(function(x){ return x.id===arg; })[0];
+        close();
+        if(pe.timer){ clearTimeout(pe.timer); peSave(); }
+        var c = pe;
+        c.chain.then(function(){ if(pe!==c) return; document.getElementById("creator-root").innerHTML = ""; pe = null; openListingEditor(m); });
+        return;
+      }
+      if(act==="remove"){
+        var dissolve = pe.memberIds.length<=2;
+        if(!confirm(dissolve
+          ? "Retirer ce logement ? Il ne resterait qu’un logement : l’établissement serait défait (son nom, son type, sa présentation et ses photos effacés). Les annonces restent en ligne."
+          : "Retirer ce logement de l’établissement ? Son annonce reste en ligne, seule.")) return;
+        pe.memberIds = pe.memberIds.filter(function(id){ return id!==arg; });
+        close();
+        if(!dissolve){ peRender(); peScheduleSave(0); return; }
+        // Un seul logement restant : plus d'établissement (association et
+        // copies du lieu retirées des deux annonces).
+        var c2 = pe;
+        clearTimeout(c2.timer); c2.timer = null;
+        c2.saveState = "saving"; peSetSaveLabel();
+        c2.chain = c2.chain.then(function(){
+          return applySiteAssociation(c2.listings, c2.memberIds[0], [], null);
+        }).then(function(){ return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(function(ls){ c2.listings = ls; res(); }); }); })
+          .then(function(){ if(pe!==c2) return; c2.place = {name:"", kind:"", desc:"", gallery:[], galleryThumb:[], galleryMid:[]}; c2.saveState = "solo"; peRender(); },
+                function(e){ console.warn("[établissement]", e); if(pe===c2){ c2.saveState = "error"; peSetSaveLabel(); } });
+        peRender();
+      }
+    });
+  } else if(kind==="add"){
+    wireSitePickRows(root, sel);
+    document.getElementById("pe-new-listing").addEventListener("click", function(){
+      var from = peMembers()[0];
+      close();
+      if(pe.timer){ clearTimeout(pe.timer); peSave(); }
+      var c = pe;
+      c.chain.then(function(){ if(pe!==c) return; document.getElementById("creator-root").innerHTML = ""; pe = null; openListingEditor(null, from); });
+    });
+    var ab = document.getElementById("sheet-apply");
+    if(ab) ab.addEventListener("click", function(){
+      sel.forEach(function(id){ if(pe.memberIds.indexOf(id)===-1) pe.memberIds.push(id); });
+      close(); peRender();
+      if(sel.length) peScheduleSave(0);
+    });
+  }
+}
+function pePreview(){
+  var place = pePlaceObj();
+  var members = peMembers().map(function(m){ return Object.assign({}, m, {place:place}); });
+  if(!members.length) return;
+  var shown = members.filter(function(x){ return x.status!=="removed"; });
+  openPlace(null, {rep:shown.filter(function(x){ return x.status==="published"; })[0] || shown[0], members:shown});
   var bar = document.createElement("div");
   bar.className = "cr-preview-bar"; bar.id = "cr-preview-bar";
   bar.innerHTML = '<span>Aperçu · ce que voient les voyageurs</span><button type="button" id="cr-back-edit">Modifier</button>';
@@ -11627,13 +11862,10 @@ function siteSuggestion(listings){
   }
   return null;
 }
+// Toutes les entrées (Mes annonces, suggestion « Les associer », créateur
+// d'annonce) ouvrent l'éditeur d'établissement.
 function openSiteLink(listing, listings, preselect){
-  var sel = siteOthersOf(listing, listings).map(function(x){ return x.id; });
-  (preselect||[]).forEach(function(id){ if(sel.indexOf(id)===-1) sel.push(id); });
-  var pl = listing.place || (siteOthersOf(listing, listings).filter(function(x){ return x.place; })[0] || {}).place || null;
-  siteLinkContext = {listing:listing, listings:listings, sel:sel, placeName:(pl && pl.name) || "", placeKind:(pl && pl.kind) || "", placeDesc:(pl && pl.desc) || "",
-    placePhotos:((pl && pl.gallery) || []).map(function(url, i){ return {type:"existing", url:url, thumbUrl:(pl.galleryThumb && pl.galleryThumb[i]) || null, midUrl:(pl.galleryMid && pl.galleryMid[i]) || null}; })};
-  openSheet("siteLink");
+  openPlaceEditor(listing, listings, preselect);
 }
 
 function renderHostListings(){
@@ -11663,8 +11895,9 @@ function renderHostListings(){
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-add]"), function(btn){
       btn.addEventListener("click", function(){
+        // Logement existant ou nouveau : le volet « Ajouter un logement » de l'éditeur.
         var from = listings.filter(function(x){ return x.id===btn.getAttribute("data-site-add"); })[0];
-        if(from) openListingEditor(null, from);
+        if(from){ openSiteLink(from, listings); peSheet("add"); }
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-link]"), function(btn){
@@ -11828,23 +12061,28 @@ function hostSiteHtml(g, listings){
   var photo = place.gallery && place.gallery[0] ? photoMid(place.gallery[0]) : memberCoverUrl(first);
   var kind = placeKindLabel(place);
   var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation"].filter(Boolean);
+  // Une seule carte : en-tête vert propriétaire (l'établissement), puis
+  // ses logements en sous-cartes.
   return '<section class="host-site">'+
     '<div class="host-site-head">'+
-      '<div class="hsh-photo">'+(photo ? '<img src="'+esc(photo)+'" alt="" loading="lazy">' : '')+'</div>'+
-      '<div class="hsh-body">'+
-        '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
-        '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
-        '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' logements</span>'+
+      '<div class="hsh-top">'+
+        '<div class="hsh-photo">'+(photo ? '<img src="'+esc(photo)+'" alt="" loading="lazy">' : '')+'</div>'+
+        '<div class="hsh-body">'+
+          '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
+          '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
+          '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' logements</span>'+
+        '</div>'+
+      '</div>'+
+      (todo.length ? '<p class="hsh-todo">À compléter pour les voyageurs : '+todo.join(", ")+'.</p>' : '')+
+      '<div class="hsh-actions">'+
+        '<button type="button" class="hsh-btn main" data-site-link="'+esc(first.id)+'">Modifier l’établissement</button>'+
+        '<button type="button" class="hsh-btn" data-site-preview="'+esc(g.siteId)+'">Aperçu</button>'+
       '</div>'+
     '</div>'+
-    (todo.length ? '<p class="hsh-todo">À compléter pour les voyageurs : '+todo.join(", ")+'.</p>' : '')+
-    '<div class="hsh-actions">'+
-      '<button type="button" class="hsh-btn main" data-site-link="'+esc(first.id)+'">Modifier l’établissement</button>'+
-      '<button type="button" class="hsh-btn" data-site-preview="'+esc(g.siteId)+'">Aperçu</button>'+
-      '<button type="button" class="hsh-btn" data-site-add="'+esc(first.id)+'">+ Logement</button>'+
-    '</div>'+
-    '<div class="host-site-members"><div class="hsm-label">Les '+g.members.length+' logements de l’établissement</div>'+
+    '<div class="host-site-members">'+
+      '<div class="hsm-label">Les '+g.members.length+' logements</div>'+
       g.members.map(function(l){ return hostListingCardHtml(l, listings, true); }).join("")+
+      '<button type="button" class="hsm-add" data-site-add="'+esc(first.id)+'">+ Ajouter un logement à l’établissement</button>'+
     '</div>'+
   '</section>';
 }
