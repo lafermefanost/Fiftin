@@ -1,0 +1,33 @@
+# Vérification des sauvegardes Firestore — LECTURE SEULE.
+#
+# Affiche dans le journal du job l'état de la récupération à un instant
+# précis (PITR) et des sauvegardes programmées de la base (default). Ne
+# crée, ne modifie et ne supprime rien. Se lance quand ce fichier change
+# (sur n'importe quelle branche) ou à la main.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Vérification des sauvegardes
+
+on:
+  push:
+    paths: [".github/workflows/check-backups.yml"]
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Récupération à un instant précis (PITR)
+        run: |
+          gcloud firestore databases describe --database="(default)" --project=fiftin-e30c2 \
+            --format="yaml(name,locationId,pointInTimeRecoveryEnablement,versionRetentionPeriod,earliestVersionTime,deleteProtectionState)"
+      - name: Sauvegardes programmées
+        if: always()
+        run: gcloud firestore backups schedules list --database="(default)" --project=fiftin-e30c2
+      - name: Sauvegardes existantes
+        if: always()
+        run: gcloud firestore backups list --project=fiftin-e30c2 --format="table(name.basename(),database.basename(),state,snapshotTime,expireTime)"
