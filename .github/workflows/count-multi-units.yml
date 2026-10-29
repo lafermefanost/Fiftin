@@ -1,0 +1,28 @@
+# Comptage des annonces Fiftin Séjours à plusieurs locations — LECTURE SEULE
+# (scripts/count-multi-units.js). Rapport dans le journal du job : nombres et
+# identifiants techniques uniquement. Ne crée, ne modifie, ne supprime rien.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Comptage des annonces à plusieurs locations
+
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/count-multi-units.js", ".github/workflows/count-multi-units.yml"]
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Dépendances
+        run: npm install --no-save --no-package-lock --silent firebase-admin@12
+        working-directory: scripts
+      - name: Comptage
+        run: node scripts/count-multi-units.js
