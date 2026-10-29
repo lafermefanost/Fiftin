@@ -9062,16 +9062,25 @@ function renderHostPhotoGrid(){
 }
 
 function findHfUnit(unitId){ return hfUnits.filter(function(u){ return u.id===unitId; })[0]; }
-/* Tarif actuel d'une chambre Fiftin app pour une capacité donnée — dernière
-   entrée de tariffHistory (triée par date de départ), même logique que
-   addRoomTariff() côté app/. Sert à préremplir le prix/nuit d'une chambre
-   Séjours quand on la relie à cette chambre app (voir .hf-unit-room ci-dessous). */
-function roomCurrentPrice(room, pax){
+/* Prix « à partir de » d'une location Fiftin Planning, pour préremplir le
+   prix d'une annonce qu'on y relie (règle de César : prix minimum par nuit,
+   pour 1 personne, sans petit-déjeuner ni service). Version de tarif EN
+   VIGUEUR AUJOURD'HUI (la dernière dont la date de départ est passée, pas
+   une version future), même choix que getRoomTariffForDate() côté app/ ;
+   palier le plus bas défini (= prix pour 1 personne, l'outil applique le
+   premier palier quand aucun n'est ≤ au nombre de personnes). Saisons,
+   week-ends et remises long séjour ne sont pas pris en compte ici : le
+   calcul exact sur 12 mois viendra d'une fonction serveur (phase 3). */
+function roomFromPrice(room){
   var hist = room && room.tariffHistory;
   if(!hist || !hist.length) return null;
-  var last = hist.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:0; }).pop();
-  if(!last || !last.prices) return null;
-  return last.prices[pax] != null ? last.prices[pax] : null;
+  var today = new Date().toISOString().slice(0, 10);
+  var sorted = hist.slice().sort(function(a,b){ return a.from<b.from?-1:a.from>b.from?1:0; });
+  var cur = sorted[0];
+  sorted.forEach(function(h){ if(h.from<=today) cur = h; });
+  var prices = (cur && cur.prices) || {};
+  var keys = Object.keys(prices).map(Number).filter(function(n){ return !isNaN(n) && prices[n]!=null && prices[n]!==""; }).sort(function(a,b){ return a-b; });
+  return keys.length ? Number(prices[keys[0]]) : null;
 }
 
 /* Une carte par chambre du formulaire de dépôt, reconstruite entièrement
@@ -9171,7 +9180,7 @@ function renderHostUnits(){
         var capInput = card && card.querySelector(".hf-unit-capacity");
         if(capInput) capInput.value = room.maxPersons;
       }
-      var price = roomCurrentPrice(room, unit.maxPersons||room.maxPersons||2);
+      var price = roomFromPrice(room);
       if(price != null){
         unit.price = String(price);
         var priceInput = card && card.querySelector(".hf-unit-price");
@@ -10475,12 +10484,12 @@ function crSheet(kind, arg){
       if(!box || !rooms.length) return;
       box.innerHTML = '<div class="field-block"><label>Relier à une location de Fiftin Planning (facultatif)</label><select class="text-input" id="crs-room"><option value="">— Aucun lien —</option>'+
         rooms.map(function(rm){ return '<option value="'+esc(rm.id)+'"'+(rm.id===u.linkedRoomId?' selected':'')+'>'+esc(rm.name)+'</option>'; }).join("")+'</select>'+
-        '<p class="field-hint">Vos disponibilités Planning s’afficheront sur l’annonce.</p></div>';
+        '<p class="field-hint">Vos disponibilités Planning s’afficheront sur l’annonce. Le prix est repris du tarif en vigueur (1 personne) ; il ne suit pas encore vos changements de tarifs dans Planning.</p></div>';
       document.getElementById("crs-room").addEventListener("change", function(){
         var rm = rooms.filter(function(x){ return x.id===this.value; }, this)[0];
         if(!rm) return;
         if(rm.maxPersons) document.getElementById("crs-cap").value = rm.maxPersons;
-        var pr = roomCurrentPrice(rm, Number(document.getElementById("crs-cap").value) || rm.maxPersons || 2);
+        var pr = roomFromPrice(rm);
         if(pr!=null) document.getElementById("crs-price").value = pr;
       });
     });
