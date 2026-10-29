@@ -674,9 +674,6 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 /* Page établissement (openPlace()) : type + nombre de logements sous le
    nom, liste des logements en lignes (photo, nom, type · capacité, accroche,
    prix), chacune ouvrant la fiche du logement. */
-.place-kind-line{display:flex; align-items:center; gap:7px; margin-top:4px; font-size:14.5px; color:var(--sauge);}
-.place-kind-line svg{width:18px; height:18px; flex-shrink:0;}
-.place-kind-line b{font-weight:700;}
 .place-units{display:flex; flex-direction:column; gap:10px;}
 .place-unit-row{display:flex; align-items:center; gap:12px; width:100%; padding:8px; border:1.5px solid var(--line); border-radius:18px; background:#fff;
   text-align:left; font-family:'Jost',sans-serif; color:var(--ink); cursor:pointer;}
@@ -3954,6 +3951,34 @@ function renderTopAccount(){
   }, {passive:true});
 })();
 
+/* Carrousels de photos des cartes (fil, Mes annonces) : même principe que
+   le bandeau de filtres (retour de César) — une carte dont on a fait
+   défiler les photos revient à sa première photo dès que l'on reprend le
+   défilement du fil (24 px de défilement vertical après le dernier geste
+   sur un carrousel ; jamais pendant qu'on le manipule). */
+(function(){
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var anchorY = window.scrollY, touching = 0, shifted = false;
+  var isCc = function(el){ return el && el.classList && el.classList.contains("cover-carousel"); };
+  document.addEventListener("touchstart", function(e){ if(e.target.closest && e.target.closest(".cover-carousel")) touching++; }, {passive:true, capture:true});
+  document.addEventListener("touchend", function(e){ if(e.target.closest && e.target.closest(".cover-carousel")){ touching = Math.max(0, touching-1); anchorY = window.scrollY; } }, {passive:true, capture:true});
+  // « scroll » ne remonte pas : écouté en phase de capture.
+  document.addEventListener("scroll", function(e){
+    if(!isCc(e.target)) return;
+    if(e.target.scrollLeft > 2){ shifted = true; if(!e.target.dataset.ccReturning) anchorY = window.scrollY; }
+    else delete e.target.dataset.ccReturning;
+  }, {passive:true, capture:true});
+  window.addEventListener("scroll", function(){
+    if(!shifted) return;
+    if(touching){ anchorY = window.scrollY; return; }
+    if(Math.abs(window.scrollY - anchorY) < 24) return;
+    shifted = false;
+    Array.prototype.forEach.call(document.querySelectorAll(".cover-carousel"), function(cc){
+      if(cc.scrollLeft > 2){ cc.dataset.ccReturning = "1"; cc.scrollTo({left:0, behavior: reduce ? "auto" : "smooth"}); }
+    });
+  }, {passive:true});
+})();
+
 /* Fusionne dans LISTINGS les annonces d'hôtes publiées (Firestore,
    listings/{id} status=="published") avec le fil statique (listings.json).
    Lecture publique déjà autorisée par les règles Firestore pour les
@@ -5511,10 +5536,9 @@ function placeCoverHtml(l, members){
   }));
   var minPrice = Math.min.apply(null, members.map(function(m){ var v = displayPriceOf(m); return v!=null ? v : Infinity; }));
   var note = siteNotes[l.docId] || {};
-  var kindLabel = placeKindLabel(place);
-  var line = note.groupCapacity!=null
-    ? "Jusqu’à "+note.groupCapacity+" voyageurs avec les hébergements associés"
-    : (kindLabel ? kindLabel+" · " : "")+members.length+" hébergements";
+  // « N hébergements » est déjà dans la pastille en haut : seule la
+  // capacité cumulée (filtre Voyageurs) garde une ligne à part.
+  var line = note.groupCapacity!=null ? "Jusqu’à "+note.groupCapacity+" voyageurs avec les hébergements associés" : "";
   return '<div class="cover has-photos place-cover">'+
     '<div class="cover-carousel" data-cc="'+l.id+'">'+slides.join("")+'</div>'+
     (slides.length>1 ? '<div class="cover-dots">'+slides.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
@@ -5528,7 +5552,8 @@ function placeCoverHtml(l, members){
     '<div class="cover-info">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(placeName || l.name)+'</h2>'+
-      '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg><span>'+esc(line)+'</span></div>'+
+      placeTaglineHtml(place)+
+      (line ? '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg><span>'+esc(line)+'</span></div>' : '')+
       '<div class="cover-cta">'+
         '<button class="btn primary" data-placereq="'+l.id+'"><span>Contacter l’hôte</span></button>'+
         '<button class="btn ghost-dark" data-openplace="'+l.id+'"><span>Voir plus</span></button>'+
@@ -7670,6 +7695,12 @@ function placeKindLabel(place){
   for(var i=0;i<PLACE_KINDS.length;i++) if(PLACE_KINDS[i][0]===k) return PLACE_KINDS[i][1];
   return "";
 }
+// « Maison d'hôtes • accroche » : même ligne que « Gîte • accroche » des annonces (taglineHtml()).
+function placeTaglineHtml(place){
+  var kind = esc(placeKindLabel(place)), claim = esc((place && place.claim) || "");
+  if(!kind && !claim) return "";
+  return '<p class="tagline claim">'+(kind ? '<span class="type-label">'+kind+'</span>'+(claim ? ' <span class="type-sep" aria-hidden="true"></span> ' : '') : '')+claim+'</p>';
+}
 function placeMemberName(m, l){ return l.place && l.place.name ? stripPlaceName(m.name, l.place.name) : siteShortName(m.name, l.name); }
 var detailBackToPlace = null; // {id, override} : logement ouvert depuis la page de son établissement
 function placeBannerHtml(l, listingOverride){
@@ -7724,7 +7755,6 @@ function openPlace(id, override, loaded){
   registerPhotoVariants(l);
   registerPhotoVariants(place);
   var title = place.name || l.name;
-  var kind = placeKindLabel(place);
   var shots = (place.gallery || []).slice();
   if(!shots.length) members.forEach(function(m){ var c = m.gallery && m.gallery[0]; if(c) shots.push(c); });
   var slides = shots.map(function(src){ return '<div class="slide"><img src="'+photoMid(src)+'" alt="'+esc(title)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>'; }).join("");
@@ -7744,8 +7774,7 @@ function openPlace(id, override, loaded){
     '<div class="detail-body">'+
       '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
         '<h1>'+esc(title)+'</h1>'+
-        '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
-          '<span>'+(kind ? '<b>'+esc(kind)+'</b> · ' : '')+members.length+' hébergements</span></div>'+
+        placeTaglineHtml(place)+
         (place.desc ? '<p class="desc desc-under">'+esc(place.desc)+'</p>' : '')+
       '</div>'+
       '<div class="detail-cards">'+
@@ -10349,7 +10378,7 @@ function openPlaceEditor(listing, listings, preselect){
     var dp = (draft && draft.place) || {};
     pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
       shared:(draft && draft.shared) || peSharedFrom({email:authState.email || ""}), savedAmen:[], dirty:{},
-      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", amen:dp.amen || [], parking:dp.parking || null, gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+      place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], parking:dp.parking || null, gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
     document.body.classList.add("creator-open");
     peRender();
     return;
@@ -10362,7 +10391,7 @@ function openPlaceEditor(listing, listings, preselect){
   if(!withPlace && listing.parking) pl = {parking:listing.parking};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     shared:peSharedFrom(byId(ids[0])), savedAmen:placeSharedAmen(pl), dirty:{},
-    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", parking:pl.parking || null, amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", parking:pl.parking || null, amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
@@ -10377,6 +10406,8 @@ function pePlaceObj(ctx){
   var p = (ctx || pe).place, name = (p.name || "").trim(), desc = (p.desc || "").trim();
   var out = {name:name, gallery:p.gallery.slice(), galleryThumb:p.galleryThumb.slice(), galleryMid:p.galleryMid.slice()};
   if(p.kind) out.kind = p.kind;
+  var claim = (p.claim || "").trim();
+  if(claim) out.claim = claim;
   if(desc) out.desc = desc;
   if(p.amen && p.amen.length) out.amen = p.amen.slice();
   if(p.parking && p.parking.kind) out.parking = p.parking.note ? {kind:p.parking.kind, note:p.parking.note} : {kind:p.parking.kind};
@@ -10473,7 +10504,7 @@ function peRender(){
   var cap = siteAvailableCapacity(views, {});
   var first = views[0] || {};
   var sh = pe.shared;
-  var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"],
+  var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !(p.claim||"").trim() && ["claim","Accroche"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"],
     typeof sh.lat!=="number" && ["address","Adresse"], !(sh.phone||"").trim() && ["contact","Téléphone"]].filter(Boolean);
   var progress = !members.length
     ? '<div class="cr-progress"><b>Présentez votre établissement, puis créez ses hébergements</b><p>Un établissement est un lieu qui comprend plusieurs hébergements (chambres, gîtes…). Nom, type, photos et présentation sont communs à tous ; chaque hébergement a ensuite sa propre annonce, son prix et son calendrier.</p><button type="button" class="btn-apply" id="pe-first">Créer le premier hébergement</button></div>'
@@ -10496,8 +10527,9 @@ function peRender(){
       '<div class="detail-card">'+
         '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : first.region ? esc(first.region) : '<span class="cr-ph">Lieu · celui de vos hébergements</span>')+'</div>'+
         '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
-        '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
-          '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' hébergement'+(members.length>1?'s':'')+'</span></div>'+
+        '<div class="cr-tagline"><button type="button" class="type-label cr-type'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type")+'</button><span class="type-sep" aria-hidden="true"></span>'+
+          '<textarea class="cr-claim" id="pe-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(p.claim||"")+'</textarea></div>'+
+        '<p class="cr-count" id="pe-claim-count"></p>'+
         '<textarea class="desc cr-desc desc-under" id="pe-desc" rows="3" maxlength="1200" placeholder="Présentez l’établissement : le lieu, son histoire, ce qui est commun à tous les hébergements…">'+esc(p.desc)+'</textarea>'+
       '</div>'+
       '<div class="detail-cards">'+
@@ -10557,12 +10589,14 @@ function peWire(){
   if(firstBtn) firstBtn.addEventListener("click", peNewListing);
   var undo = document.getElementById("pe-undo");
   if(undo) undo.addEventListener("click", peUndo);
-  [["pe-name","name"],["pe-desc","desc"]].forEach(function(f){
+  [["pe-name","name"],["pe-claim","claim"],["pe-desc","desc"]].forEach(function(f){
     var el = document.getElementById(f[0]);
     crAutosize(el);
+    if(f[0]==="pe-claim") crCount("pe-claim-count", el.value, HF_CLAIM_MAX_WORDS);
     el.addEventListener("input", function(){
-      if(f[0]==="pe-name") el.value = el.value.replace(/\n/g, " ");
+      if(f[0]!=="pe-desc") el.value = el.value.replace(/\n/g, " ");
       p[f[1]] = el.value; crAutosize(el); peScheduleSave();
+      if(f[0]==="pe-claim") crCount("pe-claim-count", el.value, HF_CLAIM_MAX_WORDS);
     });
     el.addEventListener("blur", function(){ setTimeout(function(){ if(pe && !document.activeElement.matches("#creator-panel textarea")) peRender(); }, 0); });
   });
