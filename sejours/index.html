@@ -559,12 +559,11 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 .place-cover .place-badge{display:inline-flex; align-items:center; gap:5px; background:var(--yellow); color:var(--sauge-deep);}
 .place-cover .place-badge svg{width:15px; height:15px;}
 .place-cover .cc-slide img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
-.place-unit-tag{position:absolute; left:16px; top:76px; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
-  max-width:calc(100% - 32px); padding:8px 14px; border:none; border-radius:16px; background:rgba(255,255,255,.92); color:var(--ink);
-  font-family:'Jost',sans-serif; text-align:left; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.18);}
-.place-unit-tag b{font-size:14px; font-weight:700;}
-.place-unit-tag span{font-size:12.5px; font-weight:600; color:var(--sauge);}
-.place-unit-tag.full span{color:var(--muted);}
+.place-unit-cap{position:absolute; left:16px; top:68px; z-index:3; max-width:calc(100% - 32px); padding:5px 11px; border-radius:999px;
+  background:rgba(20,26,20,.55); color:#fff; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:500; line-height:1.3;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; pointer-events:none;}
+.place-unit-cap b{font-weight:700;}
+.place-unit-cap.full{background:rgba(20,26,20,.4); color:rgba(255,255,255,.8);}
 .place-pick{margin-top:14px; text-align:center;}
 .place-pick > span{display:block; font-size:12.5px; color:var(--muted); margin-bottom:8px;}
 .place-pick-list{display:flex; flex-wrap:wrap; justify-content:center; gap:6px;}
@@ -5457,9 +5456,9 @@ function placeCoverHtml(l, members){
     var full = dates && availabilityCache[m.id]==="occupied";
     var name = placeName ? stripPlaceName(m.name, placeName) : siteShortName(m.name, l.name);
     return '<div class="cc-slide">'+(img ? '<img src="'+img+'" alt="'+esc(m.name||"")+'" loading="lazy">' : '')+
-      '<button type="button" class="place-unit-tag'+(full?' full':'')+'" data-open="'+m.id+'">'+
-        '<b>'+esc(name)+'</b><span>'+(cap ? cap+' pers. · ' : '')+(displayPriceOf(m)!=null ? displayPriceOf(m)+' €' : '')+(full ? ' · Complet à ces dates' : '')+'</span>'+
-      '</button></div>';
+      // Légende simple, non cliquable : on regarde dans le fil, on choisit
+      // sur la page de l'établissement (« Voir plus »).
+      '<span class="place-unit-cap'+(full?' full':'')+'"><b>'+esc(name)+'</b>'+(cap ? ' · '+cap+' pers.' : '')+(full ? ' · complet à vos dates' : (displayPriceOf(m)!=null ? ' · dès '+displayPriceOf(m)+' €' : ''))+'</span></div>';
   }));
   var minPrice = Math.min.apply(null, members.map(function(m){ var v = displayPriceOf(m); return v!=null ? v : Infinity; }));
   var note = siteNotes[l.docId] || {};
