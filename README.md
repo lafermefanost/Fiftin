@@ -1211,3 +1211,5 @@ Retours de César (captures à l'appui) :
 
 Vérifié sur émulateurs (téléphone 390 px) : fiche (description sous l'accroche, une seule carte hôte, 72 prestations dont 5 pleines, pièces), page établissement (présentation sous le titre, prestations de l'établissement), volet de filtre ; aucune erreur.
 
+**Cocher sur place** (retour de César : toucher une prestation ouvrait un volet de cases à cocher). Dans le créateur d'annonce, les cartes Prestations et Pièces & annexes affichent toutes les pastilles et se cochent directement : un toucher coche ou décoche (groupes à choix unique — Séjours, Environnement — respectés, prestations de l'établissement verrouillées, « Parking privé » toujours réglé par la carte Stationnement) ; pour les pièces, un toucher ajoute, toucher le nombre retire. Même chose pour les prestations de l'éditeur d'établissement. Enregistrement automatique comme le reste ; « Couchage » manquant dans « Votre annonce est presque prête » fait défiler jusqu'à la carte. Vérifié sur émulateurs : Familial remplace Professionnels, Climatisation ajoutée, Chambre ×2, Salle de douche retirée, enregistré ; aucun volet ouvert ; aucune erreur.
+
