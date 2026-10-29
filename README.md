@@ -1231,3 +1231,5 @@ Retour de César (captures) : même aperçu que dans le fil, texte sur l'image, 
 
 **Calendrier de Mes annonces sans rechargement des photos** (retour de César : chaque toucher sur « Calendrier » rechargeait toutes les images). Le bouton reconstruisait toute la liste (`renderHostListings()`) ; il ouvre ou ferme désormais seulement le volet de cette annonce (retrait de l'ancien volet, insertion du nouveau sous le bouton, `loadHostListingCalendar()`), un seul ouvert à la fois. Vérifié sur émulateur : ouverture, passage à une autre annonce, fermeture ; aucune requête d'image, les cartes ne sont pas reconstruites ; aucune erreur.
 
+**Aperçu avec la barre Modifier / Aperçu** (retour de César : l'aperçu ouvrait la fiche sans le double bouton). L'aperçu d'une annonce et celui d'un établissement gardent désormais la barre de l'éditeur en haut (fermer, statut, « Modifier » / « Aperçu », Aperçu actif) au lieu de la bulle flottante en bas : « Modifier » revient à l'éditeur, la croix ferme l'aperçu et l'éditeur. Dans l'aperçu d'un établissement, ouvrir un hébergement garde la barre et la flèche de retour vers l'établissement. Vérifié sur émulateurs ; aucune erreur.
+

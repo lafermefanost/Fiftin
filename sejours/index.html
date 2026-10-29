@@ -563,9 +563,7 @@ body.creator-open nav.tabbar{display:none;}
 .cr-drag-handle{touch-action:none; cursor:grab;}
 .hf-photo-row{transition:transform .15s ease;}
 .hf-photo-row.dragging{transition:none; z-index:5; position:relative; box-shadow:0 10px 24px rgba(0,0,0,.22); cursor:grabbing;}
-.cr-preview-bar{position:fixed; left:50%; transform:translateX(-50%); bottom:calc(16px + env(safe-area-inset-bottom,0px)); z-index:240; display:flex; align-items:center; gap:12px;
-  background:var(--sauge-deep); color:#fff; border-radius:999px; padding:8px 8px 8px 16px; box-shadow:0 8px 24px rgba(0,0,0,.25); font-size:13px; white-space:nowrap;}
-.cr-preview-bar button{border:none; border-radius:999px; background:var(--yellow); color:var(--sauge-deep); font-family:'Jost',sans-serif; font-weight:700; font-size:14px; padding:9px 16px;}
+.detail.in-preview .detail-back{display:none;}
 body.creator-open.detail-open nav.tabbar{display:none;}
 .place-cover .cc-slide{position:relative;}
 .place-cover .place-badge{display:inline-flex; align-items:center; gap:5px; background:var(--yellow); color:var(--sauge-deep);}
@@ -7618,6 +7616,7 @@ function openDetail(id, listingOverride, forceVisitorView){
   fillSiteOthers(l, id);
   document.body.style.overflow = "hidden";
   document.body.classList.add("detail-open");
+  applyPreviewBar();
 }
 /* Bas de la fiche, deux sections distinctes :
    - « Au même endroit » : les autres logements publiés que l'hôte a
@@ -7821,7 +7820,11 @@ function openPlace(id, override, loaded){
     var back = {id:id, override:override || null};
     if(override){
       var raw = override.members.filter(function(x){ return String(x.id)===String(mid); })[0];
-      if(raw){ openDetail(raw.id, raw, true); detailBackToPlace = back; }
+      if(raw){
+        openDetail(raw.id, raw, true); detailBackToPlace = back;
+        // Aperçu : la flèche ramène à l'établissement, on la garde.
+        var pn = document.getElementById("detail-panel"); if(pn) pn.classList.remove("in-preview");
+      }
       return;
     }
     resolveListingById(Number(mid), function(found){ if(found){ openDetail(found.id); detailBackToPlace = back; } });
@@ -7839,9 +7842,11 @@ function openPlace(id, override, loaded){
   document.body.classList.add("detail-open");
   var panel = document.getElementById("detail-panel");
   if(panel) panel.scrollTop = 0;
+  applyPreviewBar();
 }
 function closeDetail(){
   detailBackToPlace = null;
+  previewBarCtx = null;
   document.getElementById("detail-root").innerHTML = "";
   document.body.style.overflow = "";
   document.body.classList.remove("detail-open");
@@ -10342,18 +10347,30 @@ function crPublish(){
   });
 }
 /* ---------- aperçu : la vraie fiche voyageur ---------- */
+/* Aperçu : la vraie fiche voyageur, sous la même barre que l'éditeur
+   (fermer, statut, Modifier / Aperçu) — retour de César. Gardée aussi en
+   passant de la page établissement à un hébergement (voir openDetail()/
+   openPlace(), qui appellent applyPreviewBar()). */
+var previewBarCtx = null; // {status, save, onClose}
+function applyPreviewBar(){
+  if(!previewBarCtx) return;
+  var panel = document.getElementById("detail-panel");
+  if(!panel || panel.querySelector(".cr-bar")) return;
+  panel.classList.add("in-preview");
+  panel.insertAdjacentHTML("afterbegin", '<div class="cr-bar">'+
+    '<button type="button" class="cr-close" id="pv-close" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
+    '<div class="cr-bar-mid"><b>'+esc(previewBarCtx.status)+'</b><span>'+esc(previewBarCtx.save)+'</span></div>'+
+    '<div class="cr-mode"><button type="button" id="pv-edit">Modifier</button><button type="button" class="on">Aperçu</button></div></div>');
+  var ctx = previewBarCtx;
+  document.getElementById("pv-edit").addEventListener("click", function(){ closeDetail(); });
+  document.getElementById("pv-close").addEventListener("click", function(){ closeDetail(); ctx.onClose(); });
+}
 function crPreview(){
   var d = cr.data, p = crPayload();
   var l = Object.assign({}, p, {id: cr.id || "apercu", docId: cr.id || "apercu", ownerUid: authState.uid, status: cr.status, likeCount: 0});
+  var statusTxt = cr.status==="published" ? "En ligne" : cr.status==="paused" ? "En pause" : cr.status==="removed" ? "Retirée" : "Brouillon";
+  previewBarCtx = {status: statusTxt, save: crSaveLabel(), onClose: crClose};
   try{ openDetail(l.id, l, true); }catch(e){ console.warn("[aperçu]", e); }
-  var bar = document.createElement("div");
-  bar.className = "cr-preview-bar"; bar.id = "cr-preview-bar";
-  bar.innerHTML = '<span>Aperçu · ce que voient les voyageurs</span><button type="button" id="cr-back-edit">Modifier</button>';
-  document.body.appendChild(bar);
-  var back = function(){ closeDetail(); var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); };
-  document.getElementById("cr-back-edit").addEventListener("click", back);
-  var db = document.getElementById("detail-back");
-  if(db) db.addEventListener("click", function(){ var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); });
 }
 
 /* ================= ÉDITEUR D'ÉTABLISSEMENT (« créer comme on explore ») =================
@@ -10929,15 +10946,8 @@ function pePreview(){
   var members = peMembers().map(function(m){ return Object.assign({}, m, {place:place}); });
   if(!members.length) return;
   var shown = members.filter(function(x){ return x.status!=="removed"; });
+  previewBarCtx = {status: "Établissement", save: peSaveLabel(), onClose: peClose};
   openPlace(null, {rep:shown.filter(function(x){ return x.status==="published"; })[0] || shown[0], members:shown});
-  var bar = document.createElement("div");
-  bar.className = "cr-preview-bar"; bar.id = "cr-preview-bar";
-  bar.innerHTML = '<span>Aperçu · ce que voient les voyageurs</span><button type="button" id="cr-back-edit">Modifier</button>';
-  document.body.appendChild(bar);
-  var back = function(){ closeDetail(); var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); };
-  document.getElementById("cr-back-edit").addEventListener("click", back);
-  var db = document.getElementById("detail-back");
-  if(db) db.addEventListener("click", function(){ var b = document.getElementById("cr-preview-bar"); if(b) b.remove(); });
 }
 
 /* ---------------- tabs ---------------- */
