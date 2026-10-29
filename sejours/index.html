@@ -478,6 +478,8 @@ a{color:inherit; text-decoration:none;}
 /* Carte d'un lieu (placeCoverHtml()) : diapositives en <div> (photo +
    étiquette du logement). */
 .place-cover .cc-slide{position:relative;}
+.place-cover .place-badge{display:inline-flex; align-items:center; gap:5px; background:var(--yellow); color:var(--sauge-deep);}
+.place-cover .place-badge svg{width:15px; height:15px;}
 .place-cover .cc-slide img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
 .place-unit-tag{position:absolute; left:16px; top:76px; z-index:3; display:flex; flex-direction:column; align-items:flex-start; gap:1px;
   max-width:calc(100% - 32px); padding:8px 14px; border:none; border-radius:16px; background:rgba(255,255,255,.92); color:var(--ink);
@@ -5424,6 +5426,8 @@ function stripPlaceName(name, placeName){
   var m = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(name || "");
   return (m && m[2].trim().toLowerCase()===String(placeName).trim().toLowerCase()) ? m[1] : (name || "");
 }
+/* Picto « plusieurs logements » : deux maisons, la petite derrière. */
+var PLACE_ICON = "<path d='M2 12l6-5 6 5'/><path d='M3.5 11v8h9v-8'/><path d='M14 8.5l3.5-3 4.5 4'/><path d='M20.5 8.5V19h-6'/><path d='M6.5 19v-4h3v4'/>";
 function placeCoverHtml(l, members){
   registerPhotoVariants(l);
   members.forEach(registerPhotoVariants);
@@ -5452,14 +5456,16 @@ function placeCoverHtml(l, members){
     '<div class="cover-carousel" data-cc="'+l.id+'">'+slides.join("")+'</div>'+
     (slides.length>1 ? '<div class="cover-dots">'+slides.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
     '<div class="scrim"></div>'+
-    '<div class="top-badges">'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
+    // Pastille « N logements » en tête : on comprend d'un coup d'œil que la
+    // carte propose plusieurs hébergements.
+    '<div class="top-badges"><span class="pill-badge place-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+members.length+' logements</span>'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
     '<button class="save-btn'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
     '<div class="cover-info">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(placeName || l.name)+'</h2>'+
-      '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>'+esc(line)+'</span></div>'+
+      '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg><span>'+esc(line)+'</span></div>'+
       '<div class="cover-cta">'+
         '<button class="btn primary" data-placereq="'+l.id+'"><span>Contacter l’hôte</span></button>'+
         '<button class="btn ghost-dark" data-open="'+l.id+'"><span>Voir plus</span></button>'+
