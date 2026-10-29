@@ -540,6 +540,11 @@ body.creator-open nav.tabbar{display:none;}
    de app/index.html), même mouvement — s'ouvre, se replie en rond au bout
    de 10 s, se rouvre au toucher ; largeur et hauteur animées ensemble
    (briefAnimate(), technique FLIP mesurée sur un clone), même courbe. */
+/* Adresse sous la description (créateur, éditeur d'établissement). */
+.cr-addr{display:flex; align-items:flex-start; gap:8px; width:100%; margin-top:10px; padding:10px 0 0; border:none; border-top:1px solid var(--line); background:none;
+  text-align:left; font-family:'Jost',sans-serif; font-size:14px; color:var(--ink); cursor:pointer;}
+.cr-addr svg{flex:0 0 18px; width:18px; height:18px; color:var(--sauge); margin-top:1px;}
+.cr-addr em{font-style:normal;}
 .cr-brief-wrap{display:flex; justify-content:center; width:100%; margin-bottom:12px;}
 .cr-brief{display:flex; align-items:center; gap:10px; background:var(--lavender-bg); border:1.5px solid var(--lavender);
   color:var(--ink); border-radius:12px; padding:14px 16px; font-size:13.5px; line-height:1.45; cursor:pointer; width:100%; box-sizing:border-box; overflow:hidden;
@@ -2453,8 +2458,6 @@ body.map-fullscreen{overflow:hidden;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
 .pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
 .pe-add{margin-top:10px;}
-.parking-line{display:flex; align-items:flex-start; gap:12px; font-size:14.5px; line-height:1.4;}
-.parking-line svg{flex:0 0 34px; width:34px; height:34px; padding:7px; border-radius:11px; background:var(--sauge-mid); color:var(--cream);}
 .amenity-chip.cr-locked{opacity:.45; cursor:default;}
 .site-bridge{margin-top:10px; text-align:center;}
 .site-bridge small{display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px;}
@@ -4046,7 +4049,7 @@ function normalizeHostListing(doc){
     galleryMid: l.galleryMid || null, // version d'affichage 1280 px (voir registerPhotoVariants())
     galleryThumb: l.galleryThumb || null, // vignette légère de gallery[0] (voir listingThumbUrl()) — absente sur une annonce créée avant ce chantier, repli automatique sur gallery[0]
     units: units, // chaque chambre porte déjà son propre galleryThumb tel quel (même mécanisme, pas besoin de le remapper ici)
-    amen: l.amen || [],
+    amen: listingAmenWithParking(l),
     // Oubli repéré en corrigeant le bouton Aperçu (voir openDetail()) :
     // sans ce champ, detailSpacesHtml()/l.spaces était TOUJOURS vide côté
     // fiche détail publique (data-open/LISTINGS, le seul chemin qu'un
@@ -4318,7 +4321,9 @@ function fetchListingIndex(){
 var AMEN_GROUPS = [
   {title:"Séjours", items:["Professionnels","Familial","Romantique"], single:true},
   {title:"Environnement", items:["Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert"], single:true},
-  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Ventilateur","Ventilateur plafond","Moustiquaire","Chauffage","Wifi","Parking privé","Accès PMR","Sèche-cheveux"]},
+  {title:"Équipements", items:["Cuisine équipée","Micro-ondes","Four","Lave-vaisselle","Lave-linge","Sèche-linge","Machine à café à capsules","Climatisation","Ventilateur","Ventilateur plafond","Moustiquaire","Chauffage","Wifi","Accès PMR","Sèche-cheveux"]},
+  // Stationnement : une rubrique de prestations comme les autres (César) — plusieurs choix possibles.
+  {title:"Stationnement", items:["Parking privé","Stationnement gratuit dans la rue","Parking public à proximité","Garage fermé","Borne de recharge","Local à vélos"]},
   {title:"Accueil", items:["Accueil en personne","Installation autonome"]},
   {title:"Confort — Literie", items:["Lit 180 cm","Lit 160 cm","Lit 140 cm","Lit 90 cm","Lits jumeaux 2×80 cm","Lits jumeaux 2×90 cm","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
   {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
@@ -4594,6 +4599,11 @@ var AMEN_ICONS = {
   "Moustiquaire":"<rect x='4' y='4' width='16' height='16' rx='1'/><path d='M4 9.3h16M4 14.7h16M9.3 4v16M14.7 4v16'/>",
   "Chauffage":"<rect x='5' y='6' width='14' height='12' rx='1'/><path d='M8 6v12M12 6v12M16 6v12'/>",
   "Parking privé":"<rect x='4' y='4' width='16' height='16' rx='3'/><path d='M9 8h3.5a2.5 2.5 0 010 5H9V8zm0 5v4'/>",
+  "Stationnement gratuit dans la rue":"<path d='M4 20h16'/><path d='M7 16V9a5 5 0 0110 0v7'/><path d='M10 14V9.5h2.2a1.6 1.6 0 010 3.2H10'/>",
+  "Parking public à proximité":"<circle cx='12' cy='12' r='8'/><path d='M10 16V8h2.6a2.4 2.4 0 010 4.8H10'/>",
+  "Garage fermé":"<path d='M3 10l9-6 9 6v10H3z'/><path d='M7 20v-7h10v7M7 16h10'/>",
+  "Borne de recharge":"<rect x='5' y='3' width='9' height='18' rx='2'/><path d='M10 7l-2 4h3l-2 4'/><path d='M14 9h2a2 2 0 012 2v5a1.5 1.5 0 003 0V8l-2-2'/>",
+  "Local à vélos":"<circle cx='6' cy='16' r='3.5'/><circle cx='18' cy='16' r='3.5'/><path d='M6 16l4-7h6l2 7M10 9l-1-2H7M13 16l3-7'/>",
   "Wifi":"<path d='M5 12a11 11 0 0114 0M8 15.5a6.5 6.5 0 018 0M11.5 19a1.5 1.5 0 011 0'/>",
   "Accès PMR":"<circle cx='12' cy='5' r='2'/><path d='M6 20l4-9 2 3h5M10 11l1-4 5 1'/>",
   "Sèche-cheveux":"<path d='M4 10a6 6 0 0112 0c0 2-1 3-3 3H7c-2 0-3-1-3-3z'/><path d='M10 13v4a2 2 0 002 2h1'/><path d='M16 9h4'/>",
@@ -7485,7 +7495,6 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
-      parkingCardHtml({parking:listingParkingOf(l)})+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -7802,7 +7811,6 @@ function openPlace(id, override, loaded){
         // tout le lieu (place.amen), jamais une intersection des chambres
         // (qui faisait apparaître le couchage).
         ((place.amen || []).length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
-        parkingCardHtml(place)+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
           (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p>' : '')+
@@ -9536,8 +9544,9 @@ function openCreator(listing, siteFrom, siteJoin){
     PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ var v = siteJoin.shared[k]; if(v!=null && v!=="") data[k] = v; });
   }
   if(site) data.amen = mergeSharedAmen(data.amen, [], placeSharedAmen(site.place));
-  // Ancienne case « Parking privé » d'une annonce seule : reprise en stationnement.
-  if(!site && !data.parking && (data.amen || []).indexOf("Parking privé")!==-1) data.parking = {kind:"private"};
+  // Ancien stationnement en carte à part : repris dans les prestations.
+  if(!site && data.parking){ parkingToAmen(data.parking).forEach(function(a){ if(data.amen.indexOf(a)===-1) data.amen.push(a); }); }
+  delete data.parking;
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
     timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, site: site, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
@@ -9586,6 +9595,7 @@ function crSaveLabel(){
     : s==="blocked" ? "Non enregistré · annonce en ligne incomplète" : s==="error" ? "Erreur d’enregistrement · gardé sur cet appareil" : s==="dirty" ? "Modifications en attente" : "";
 }
 /* Bulle « complet » (voir CSS .cr-brief) : state = cr ou pe. */
+var PIN_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>';
 var BRIEF_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.287L3 12l5.8 1.9a2 2 0 0 1 1.287 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.287L21 12l-5.8-1.9a2 2 0 0 1-1.287-1.287L12 3Z"/></svg>';
 function briefBubbleHtml(id, state, text){
   return '<div class="cr-brief-wrap"><div class="cr-brief'+(state.briefCollapsed?' collapsed':'')+'" id="'+id+'" role="button" tabindex="0" aria-label="'+esc(text)+'">'+BRIEF_ICON_SVG+'<span class="cr-brief-text">'+esc(text)+'</span></div></div>';
@@ -9689,6 +9699,9 @@ function crRender(){
           '<textarea class="cr-claim" id="cr-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(d.claim||"")+'</textarea></div>'+
         '<p class="cr-count" id="cr-claim-count"></p>'+
         '<div data-cr-sec="desc"><textarea class="desc cr-desc desc-under" id="cr-desc" rows="3" placeholder="Décrivez votre hébergement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
+        // Adresse sous la description (retour de César) ; dans un établissement, celle de l'établissement.
+        (cr.site ? '' : '<button type="button" class="cr-addr" data-cr-sec="address" data-cr-open="address">'+PIN_ICON_SVG+
+          (d.address ? '<span>'+esc(d.address)+(typeof d.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>')+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card" data-cr-sec="price"><div class="meta-row">'+
@@ -9710,13 +9723,10 @@ function crRender(){
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg> '+esc(name)+
               (qty>0 ? '<span class="xchip-qty" data-cr-space-minus="'+esc(name)+'">×'+qty+'</span>' : '')+'</button>';
           }).join("")+'</div></div>'+
-        // Hébergement d'un établissement : stationnement, adresse et contact
-        // se remplissent dans l'établissement — pas de cartes en doublon ici
-        // (retour de César), la carte Établissement y renvoie.
-        (cr.site ? '' : crParkingCardHtml())+
+        // Hébergement d'un établissement : adresse et contact se remplissent
+        // dans l'établissement — pas de cartes en doublon ici (retour de
+        // César), la carte Établissement y renvoie.
         crSiteCardHtml()+
-        (cr.site ? '' : '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
-          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>')+
         '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
           '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
           '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
@@ -9832,7 +9842,7 @@ function crAmenEditHtml(){
   return AMEN_GROUPS.map(function(g, gi){
     // Hébergement d'un établissement : les prestations qui se règlent dans
     // l'établissement (PE_SHARED_AMEN) ne sont pas répétées ici.
-    var items = g.items.filter(function(a){ return a!=="Parking privé" && !(cr.site && PE_SHARED_AMEN.indexOf(a)!==-1); });
+    var items = g.items.filter(function(a){ return !(cr.site && PE_SHARED_AMEN.indexOf(a)!==-1); });
     if(!items.length) return "";
     var groupLocked = g.single && g.items.some(function(x){ return locked.indexOf(x)!==-1; });
     return '<div class="amen-group"><div class="amen-group-title">'+esc(g.title)+(g.required?' *':'')+'</div><div class="amenity-grid">'+items.map(function(a){
@@ -9849,7 +9859,7 @@ function crSiteCardHtml(){
   var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement'+(cr.site ? '' : ' <small class="cr-opt">facultatif</small>')+'</div>';
   if(cr.site) return head+(cr.id ? '<button type="button" class="cr-block" id="cr-site-open">' : '<div class="cr-block">')+
     '<span>Fait partie de l’établissement'+(cr.site.place && cr.site.place.name ? ' « '+esc(cr.site.place.name)+' »' : '')+'</span>'+
-    '<span class="cr-sub">Adresse, contact, stationnement et prestations communes se règlent dans l’établissement.</span>'+
+    '<span class="cr-sub">Adresse, contact et prestations communes se règlent dans l’établissement.</span>'+
     (cr.id ? '<span class="cr-edit-link">Ouvrir l’établissement</span></button>' : '</div>')+'</div>';
   if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos hébergements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
   var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
@@ -9963,7 +9973,7 @@ function enableRowDrag(container, arr, rerender){
 /* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
 function crSheet(kind, arg){
   var d = cr.data, u = crUnit(), inner = "", apply = "Valider";
-  if(cr.site && (kind==="address" || kind==="contact" || kind==="parking")){ crSiteInfoSheet(kind); return; }
+  if(cr.site && (kind==="address" || kind==="contact")){ crSiteInfoSheet(kind); return; }
   if(kind==="type"){
     apply = null;
     inner = '<h3>Type d’hébergement</h3><div class="sort-row">'+Object.keys(ACCOM_TYPES).map(function(k){
@@ -9993,12 +10003,6 @@ function crSheet(kind, arg){
     inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.'+
       (siteAmen.length ? ' Les prestations grisées sont celles de l’établissement : elles se modifient dans l’établissement.' : '')+'</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
-  } else if(kind==="parking"){
-    var cpk = d.parking || {};
-    inner = '<h3>Stationnement</h3><div class="sort-row">'+PARKING_KINDS.map(function(k){
-      return '<button type="button" class="radio-row'+(cpk.kind===k[0]?' active':'')+'" data-pk="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+'</div>'+
-      '<div class="field-block" style="margin-top:12px;"><label>Précision (facultatif)</label><input class="text-input" id="pk-note" maxlength="120" placeholder="Ex. 2 places, borne de recharge, garage à vélos" value="'+esc(cpk.note||"")+'"></div>'+
-      (cpk.kind ? '<button type="button" class="link-btn" id="pk-clear">Ne pas préciser</button>' : '');
   } else if(kind==="address"){
     inner = '<h3>Adresse de l’hébergement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
       '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
@@ -10083,8 +10087,6 @@ function crSheet(kind, arg){
     });
   } else if(kind==="amen"){
     var lockedAmen = cr.site ? placeSharedAmen(cr.site.place) : [];
-    // « Parking privé » : réglé par la carte Stationnement, pas ici.
-    Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-a="Parking privé"]'), function(c){ c.remove(); });
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
       var la = chip.getAttribute("data-a"), lg = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
       // Prestation de l'établissement (ou groupe à choix unique déjà fixé par lui) : non modifiable ici.
@@ -10098,25 +10100,7 @@ function crSheet(kind, arg){
       });
     });
     applyBtn.addEventListener("click", function(){
-      var hadParking = d.amen.indexOf("Parking privé")!==-1; // géré par la carte Stationnement, absent du volet
       d.amen = Array.prototype.map.call(root.querySelectorAll(".amenity-chip.active"), function(c){ return c.getAttribute("data-a"); });
-      if(hadParking) d.amen.push("Parking privé");
-      done();
-    });
-  } else if(kind==="parking"){
-    var cpkSel = (d.parking && d.parking.kind) || "";
-    Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(b){
-      b.addEventListener("click", function(){
-        cpkSel = b.getAttribute("data-pk");
-        Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(o){ o.classList.toggle("active", o===b); });
-      });
-    });
-    var cclr = document.getElementById("pk-clear");
-    if(cclr) cclr.addEventListener("click", function(){ d.parking = null; d.amen = syncParkingAmen(d.amen, null); done(); });
-    applyBtn.addEventListener("click", function(){
-      var note = document.getElementById("pk-note").value.trim();
-      d.parking = cpkSel ? (note ? {kind:cpkSel, note:note} : {kind:cpkSel}) : null;
-      d.amen = syncParkingAmen(d.amen, d.parking);
       done();
     });
   } else if(kind==="address"){
@@ -10152,8 +10136,8 @@ function crSheet(kind, arg){
     applyBtn.addEventListener("click", function(){
       var n = document.getElementById("crs-hname").value.trim(), b = document.getElementById("crs-hbio").value.trim();
       applyBtn.disabled = true;
-      firebase.firestore().collection("hostProfiles").doc(authState.uid).set({name:n, bio:b, updated:new Date().toISOString()}, {merge:true}).then(function(){
-        hostProfileNameCache = n; hostProfileBioCache = b; cr.profile.name = n; cr.profile.bio = b;
+      saveHostProfile(n, b).then(function(){
+        cr.profile.name = n; cr.profile.bio = b;
         done();
       }).catch(function(e){ document.getElementById("crs-err").textContent = "Erreur : "+(e.message||e.code); applyBtn.disabled = false; });
     });
@@ -10217,14 +10201,12 @@ function crSheet(kind, arg){
    dans l'établissement (un seul endroit, recopiés sur tous). */
 function crSiteInfoSheet(kind){
   var d = cr.data, name = (cr.site.place && cr.site.place.name) || "l’établissement";
-  var pk = kind==="parking" ? crParkingOf() : null;
   var val = kind==="address" ? esc(d.address || "Pas encore d’adresse")
-    : kind==="parking" ? (pk && pk.kind ? esc(parkingLabel(pk))+(pk.note ? '<br>'+esc(pk.note) : '') : "Pas encore renseigné")
     : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    '<h3>'+(kind==="address" ? "Adresse" : kind==="parking" ? "Stationnement" : "Contact")+'</h3>'+
+    '<h3>'+(kind==="address" ? "Adresse" : "Contact")+'</h3>'+
     '<p class="sheet-sub">'+(kind==="address" ? 'Commune' : 'Commun')+' à tous les hébergements de « '+esc(name)+' » : '+(kind==="address" ? 'elle se modifie' : 'il se modifie')+' une seule fois, dans l’établissement.</p>'+
     '<div class="cr-planning-box"><b>'+val+'</b></div>'+
     (cr.id ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">Modifier dans l’établissement</button></div>' : '')+
@@ -10244,28 +10226,24 @@ function crOpenSite(){
     });
   });
 }
-/* Stationnement : même carte pour une annonce seule (cr.data.parking) et un
-   hébergement d'établissement (celui de l'établissement, en lecture). */
-function crParkingOf(){ return cr.site ? (cr.site.place.parking || null) : (cr.data.parking || null); }
-function crParkingCardHtml(){
-  var pk = crParkingOf();
-  return '<div class="detail-card" data-cr-sec="parking"><div class="section-title">Stationnement <small class="cr-opt">facultatif</small></div>'+
-    '<button type="button" class="cr-block'+(pk && pk.kind ? '' : ' cr-empty')+'" data-cr-open="parking">'+
-    (pk && pk.kind ? '<span>'+esc(parkingLabel(pk))+'</span>'+(pk.note ? '<span class="cr-sub">'+esc(pk.note)+'</span>' : '')
-      : '<span class="cr-ph">'+(cr.site ? 'Non renseigné dans l’établissement' : 'Parking sur place, dans la rue, à proximité…')+'</span>')+
-    (cr.site ? '<span class="cr-sub">Celui de l’établissement</span>' : '')+'</button></div>';
-}
-// « Parking privé » (filtre des voyageurs) suit le stationnement choisi.
-function syncParkingAmen(amen, parking){
-  var out = (amen || []).filter(function(a){ return a!=="Parking privé"; });
-  if(parking && parking.kind==="private") out.push("Parking privé");
-  return out;
+/* Présentation de l'hôte (prénom + quelques mots) : profil du compte, puis
+   recopiée sur toutes ses annonces (présentation : sauf celles qui ont la
+   leur, hostBioCustom) — comme depuis le Profil. */
+function saveHostProfile(name, bio){
+  return firebase.firestore().collection("hostProfiles").doc(authState.uid).set({name:name, bio:bio, updated:new Date().toISOString()}, {merge:true}).then(function(){
+    hostProfileNameCache = name; hostProfileBioCache = bio;
+    return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(res); });
+  }).then(function(list){
+    if(!list.length) return;
+    var batch = firebase.firestore().batch();
+    list.forEach(function(l){ var u = {hostName:name}; if(!l.hostBioCustom) u.hostBio = bio; batch.update(firebase.firestore().collection("listings").doc(l.id), u); });
+    return batch.commit();
+  });
 }
 /* ---------- enregistrement automatique ---------- */
 function crPayload(){
   var d = cr.data, p = {};
-  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","parking"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
-  if(p.parking===undefined) p.parking = null;
+  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
   p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
   p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
   p.hostName = cr.profile.name || "";
@@ -10294,7 +10272,8 @@ function crSave(){
     c.saveState = "saving"; crSetSaveLabel();
     var payload = crPayload();
     var db = firebase.firestore();
-    var write = c.id ? db.collection("listings").doc(c.id).update(payload)
+    // Ancien stationnement en carte à part : désormais dans les prestations, retiré à l'enregistrement.
+    var write = c.id ? db.collection("listings").doc(c.id).update(Object.assign({parking:firebase.firestore.FieldValue.delete()}, payload))
       : db.collection("listings").add(Object.assign(payload, {ownerUid:authState.uid, ownerEmail:authState.email||"", status:"draft", reviewed:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()},
           c.siteJoin ? (c.siteJoin.place ? {siteId:c.siteJoin.siteId, place:c.siteJoin.place} : {siteId:c.siteJoin.siteId}) : {}))
           .then(function(ref){ try{ localStorage.removeItem(CR_LOCAL_KEY+"new"); }catch(e){} c.id = ref.id; });
@@ -10405,32 +10384,24 @@ var PE_SHARED_AMEN = [
   "Accueil en personne","Installation autonome",
   "Piscine","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition",
   "Barbecue","Plancha","Brasero",
-  "Accessible sans voiture","Privatisation / événements possibles"
+  "Accessible sans voiture","Privatisation / événements possibles",
+  "Parking privé","Stationnement gratuit dans la rue","Parking public à proximité","Garage fermé","Borne de recharge","Local à vélos"
 ];
-/* Stationnement (carte à part de l'établissement, place.parking {kind, note}) :
-   « Parking privé sur place » coche aussi la prestation « Parking privé »
-   de chaque hébergement (filtre Prestations des voyageurs). */
-var PARKING_KINDS = [["private","Parking privé sur place"],["street","Stationnement gratuit dans la rue"],["public","Parking public à proximité"],["none","Pas de stationnement"]];
-function parkingLabel(pk){
-  var k = pk && pk.kind;
-  for(var i=0;i<PARKING_KINDS.length;i++) if(PARKING_KINDS[i][0]===k) return PARKING_KINDS[i][1];
-  return "";
-}
+/* Ancien stationnement en carte à part (place.parking / listing.parking
+   {kind}) : repris en prestations de la rubrique Stationnement. */
+var PARKING_LEGACY = {"private":"Parking privé", "street":"Stationnement gratuit dans la rue", "public":"Parking public à proximité"};
+function parkingToAmen(pk){ var a = pk && PARKING_LEGACY[pk.kind]; return a ? [a] : []; }
 // Prestations que l'établissement impose à ses hébergements.
 function placeSharedAmen(place){
   var out = ((place && place.amen) || []).slice();
-  if(place && place.parking && place.parking.kind==="private" && out.indexOf("Parking privé")===-1) out.push("Parking privé");
+  parkingToAmen(place && place.parking).forEach(function(a){ if(out.indexOf(a)===-1) out.push(a); });
   return out;
 }
-// Stationnement affiché pour une annonce : celui de son établissement s'il
-// en a un, sinon le sien — même carte dans les deux cas.
-function listingParkingOf(l){ return (l && l.siteId && l.place) ? (l.place.parking || null) : ((l && l.parking) || null); }
-function parkingCardHtml(place){
-  var lab = parkingLabel(place && place.parking);
-  if(!lab) return "";
-  return '<div class="detail-card"><div class="section-title" style="margin-top:0">Stationnement</div>'+
-    '<div class="parking-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M9.5 17V7h3.5a3 3 0 0 1 0 6H9.5"/></svg>'+
-    '<span><b>'+esc(lab)+'</b>'+(place.parking.note ? '<br>'+esc(place.parking.note) : '')+'</span></div></div>';
+// Prestations d'une annonce, ancien stationnement compris.
+function listingAmenWithParking(l){
+  var out = ((l && l.amen) || []).slice();
+  parkingToAmen((l && l.siteId && l.place) ? l.place.parking : (l && l.parking)).forEach(function(a){ if(out.indexOf(a)===-1) out.push(a); });
+  return out;
 }
 function peSharedFrom(l){
   var out = {};
@@ -10459,7 +10430,7 @@ function openPlaceEditor(listing, listings, preselect){
     var dp = (draft && draft.place) || {};
     pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
       shared:(draft && draft.shared) || peSharedFrom({email:authState.email || ""}), savedAmen:[], dirty:{},
-      place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], parking:dp.parking || null, gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+      place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
     document.body.classList.add("creator-open");
     peRender();
     return;
@@ -10469,10 +10440,10 @@ function openPlaceEditor(listing, listings, preselect){
   var byId = function(id){ return listings.filter(function(x){ return x.id===id; })[0]; };
   var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
   var pl = (withPlace && withPlace.place) || {};
-  if(!withPlace && listing.parking) pl = {parking:listing.parking};
+  if(!withPlace && listing.parking) pl = {amen:parkingToAmen(listing.parking)};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     shared:peSharedFrom(byId(ids[0])), savedAmen:placeSharedAmen(pl), dirty:{},
-    place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", parking:pl.parking || null, amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", amen:placeSharedAmen(pl).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
@@ -10491,7 +10462,6 @@ function pePlaceObj(ctx){
   if(claim) out.claim = claim;
   if(desc) out.desc = desc;
   if(p.amen && p.amen.length) out.amen = p.amen.slice();
-  if(p.parking && p.parking.kind) out.parking = p.parking.note ? {kind:p.parking.kind, note:p.parking.note} : {kind:p.parking.kind};
   return out;
 }
 function peSaveLabel(){
@@ -10603,6 +10573,8 @@ function peRender(){
     '</div>'+
     '<div class="detail-gallery" id="pe-gallery">'+
       '<div class="detail-gallery-scroll" id="pe-gallery-scroll">'+slides.join("")+'</div>'+
+      // « Organiser les photos » comme dans l'éditeur d'hébergement (retour de César).
+      (p.gallery.length>1 ? '<button type="button" class="cr-organize" data-pe-open="organize">Organiser les photos</button>' : '')+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
     '<div class="detail-body">'+
@@ -10614,6 +10586,9 @@ function peRender(){
           '<textarea class="cr-claim" id="pe-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(p.claim||"")+'</textarea></div>'+
         '<p class="cr-count" id="pe-claim-count"></p>'+
         '<textarea class="desc cr-desc desc-under" id="pe-desc" rows="3" maxlength="1200" placeholder="Présentez l’établissement : le lieu, son histoire, ce qui est commun à tous les hébergements…">'+esc(p.desc)+'</textarea>'+
+        // Adresse sous la description (retour de César).
+        '<button type="button" class="cr-addr" data-pe-open="address">'+PIN_ICON_SVG+
+          (sh.address ? '<span>'+esc(sh.address)+(typeof sh.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>'+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card"><div class="meta-row">'+
@@ -10635,18 +10610,14 @@ function peRender(){
               return '<button type="button" class="amenity-chip'+((p.amen||[]).indexOf(a)!==-1?' active':'')+'" data-pe-amen="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
             }).join("")+'</div></div>';
           }).join("")+'</div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Stationnement</div><button type="button" class="cr-block'+(p.parking && p.parking.kind ? '' : ' cr-empty')+'" data-pe-open="parking">'+
-          (p.parking && p.parking.kind ? '<span>'+esc(parkingLabel(p.parking))+'</span>'+(p.parking.note ? '<span class="cr-sub">'+esc(p.parking.note)+'</span>' : '')+'<span class="cr-edit-link">Modifier</span>'
-            : '<span class="cr-ph">Parking sur place, dans la rue, à proximité… Commun à tous les hébergements.</span>')+'</button></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Adresse</div><button type="button" class="cr-block" data-pe-open="address">'+
-          (sh.address ? '<span>'+esc(sh.address)+'</span>'+(typeof sh.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+
-          '<span class="cr-sub">Commune à tous ses hébergements</span></button></div>'+
+        // Hôte (modifiable ici aussi) puis contact en dernier, comme sur une annonce.
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-pe-open="host">'+
+          '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+crPh(first.host && first.host.name && first.host.name!=="Hôte Fiftin", esc((first.host && first.host.name) || ""), "Votre prénom")+'</b></div></div>'+
+          '<p class="host-bio-text" style="margin-top:8px">'+crPh(first.host && first.host.bio, esc((first.host && first.host.bio) || ""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p>'+
+          '<span class="cr-edit-link">Modifier</span></button></div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-pe-open="contact">'+
           crPh(sh.phone, '<span>'+esc(sh.phone||"")+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(sh.email ? '<span class="cr-sub">'+esc(sh.email)+'</span>' : '')+
           '<span class="cr-sub">Commun à tous ses hébergements</span></button></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
-          '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+esc((first.host && first.host.name) || "")+'</b></div></div>'+
-          '<p class="cr-note">Votre présentation, commune à toutes vos annonces.</p></div>'+
         (members.length ? '<button type="button" class="link-btn pe-undo" id="pe-undo">Défaire l’établissement</button>' : '')+
       '</div>'+
     '</div>'+
@@ -10748,13 +10719,15 @@ function peSheet(kind, arg){
           return '<button type="button" class="amenity-chip'+((p.amen||[]).indexOf(a)!==-1?' active':'')+'" data-a="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
         }).join("")+'</div></div>';
       }).join("")+'</div>';
-  } else if(kind==="parking"){
-    apply = "Valider";
-    var pk = p.parking || {};
-    inner = '<h3>Stationnement</h3><p class="sheet-sub">Commun à tous les hébergements de l’établissement.</p><div class="sort-row">'+PARKING_KINDS.map(function(k){
-      return '<button type="button" class="radio-row'+(pk.kind===k[0]?' active':'')+'" data-pk="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+'</div>'+
-      '<div class="field-block" style="margin-top:12px;"><label>Précision (facultatif)</label><input class="text-input" id="pk-note" maxlength="120" placeholder="Ex. 4 places, borne de recharge, garage à vélos" value="'+esc(pk.note||"")+'"></div>'+
-      (pk.kind ? '<button type="button" class="link-btn" id="pk-clear">Ne pas préciser</button>' : '');
+  } else if(kind==="organize"){
+    apply = "Terminé";
+    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture.</p><div class="hf-photo-list" id="pe-org"></div>';
+  } else if(kind==="host"){
+    apply = "Enregistrer";
+    var fh = (peMembers()[0] && visitorViewOf(peMembers()[0]).host) || {};
+    inner = '<h3>Votre présentation</h3><p class="sheet-sub">Partagée par toutes vos annonces (modifiable aussi dans votre profil).</p>'+
+      '<div class="field-block"><label>Prénom</label><input class="text-input" id="crs-hname" value="'+esc(fh.name && fh.name!=="Hôte Fiftin" ? fh.name : "")+'"></div>'+
+      '<div class="field-block"><label>Quelques mots sur vous</label><textarea class="text-input" id="crs-hbio" rows="4">'+esc(fh.bio||"")+'</textarea></div><div class="auth-err" id="crs-err"></div>';
   } else if(kind==="address"){
     apply = "Valider";
     inner = '<h3>Adresse de l’établissement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(pe.shared.address||"")+'">'+
@@ -10810,20 +10783,24 @@ function peSheet(kind, arg){
   var done = function(){ close(); peRender(); peScheduleSave(); };
   var acts = function(fn){ Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){ b.addEventListener("click", function(){ fn(b.getAttribute("data-act")); }); }); };
   var applyBtn = document.getElementById("sheet-apply");
-  if(kind==="parking"){
-    var pkSel = (p.parking && p.parking.kind) || "";
-    Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(b){
-      b.addEventListener("click", function(){
-        pkSel = b.getAttribute("data-pk");
-        Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(o){ o.classList.toggle("active", o===b); });
-      });
-    });
-    var clr = document.getElementById("pk-clear");
-    if(clr) clr.addEventListener("click", function(){ p.parking = null; pe.dirty.amen = true; done(); });
+  if(kind==="organize"){
+    var olist = p.gallery.map(function(u, i){ return {type:"existing", url:u, thumbUrl:p.galleryThumb[i]||null, midUrl:p.galleryMid[i]||null}; });
+    var ogrid = document.getElementById("pe-org");
+    var orr = function(){ ogrid.innerHTML = olist.map(function(e, i){ return photoListRowHtml(e, i, olist.length); }).join(""); wirePhotoListRows(ogrid, olist, orr); enableRowDrag(ogrid, olist, orr); };
+    orr();
     applyBtn.addEventListener("click", function(){
-      var note = document.getElementById("pk-note").value.trim();
-      p.parking = pkSel ? {kind:pkSel, note:note} : null;
-      pe.dirty.amen = true; done();
+      p.gallery = olist.map(function(e){ return e.url; }); p.galleryThumb = olist.map(function(e){ return e.thumbUrl||null; }); p.galleryMid = olist.map(function(e){ return e.midUrl||null; });
+      done();
+    });
+  } else if(kind==="host"){
+    applyBtn.addEventListener("click", function(){
+      var n = document.getElementById("crs-hname").value.trim(), b = document.getElementById("crs-hbio").value.trim();
+      if(!n || !b){ document.getElementById("crs-err").textContent = "Le prénom et la présentation sont indispensables."; return; }
+      applyBtn.disabled = true;
+      saveHostProfile(n, b).then(function(){
+        hostListingsCache = [];
+        ensureHostListingsLoaded(function(ls){ pe.listings = ls; close(); peRender(); });
+      }).catch(function(e){ document.getElementById("crs-err").textContent = "Erreur : "+(e.message||e.code); applyBtn.disabled = false; });
     });
   } else if(kind==="amen"){
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
