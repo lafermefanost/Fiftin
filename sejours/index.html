@@ -10137,7 +10137,19 @@ var PE_LOCAL_NEW = "fiftin_pe_new"; // établissement en création, avant son pr
    couchage ni le confort propres à chaque chambre. */
 var PE_ADDR_KEYS = ["address","lat","lng","region","regionName","deptName","city","inseeCode"];
 var PE_CONTACT_KEYS = ["phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"];
-var PE_AMEN_EXCLUDED = ["Séjours","Confort — Literie","Confort — Autres"];
+/* Prestations proposées au niveau de l'établissement : celles qui tiennent
+   au lieu (environnement, accueil, wifi, parking, piscine, barbecue,
+   règles de la maison…). Tout ce qui peut différer d'un hébergement à
+   l'autre (couchage, cuisine, climatisation, télévision, cheminée, jacuzzi
+   privatif, vis-à-vis, vue, accès PMR…) se coche dans chaque hébergement. */
+var PE_SHARED_AMEN = [
+  "Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert",
+  "Wifi","Parking privé","Lave-linge","Sèche-linge",
+  "Accueil en personne","Installation autonome",
+  "Piscine","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition",
+  "Barbecue","Plancha","Brasero",
+  "Au calme","Enfants bienvenus","Animaux acceptés","Accessible sans voiture","Privatisation / événements possibles"
+];
 function peSharedFrom(l){
   var out = {};
   PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ out[k] = (l && l[k]!=null) ? l[k] : (k==="lat"||k==="lng" ? null : ""); });
@@ -10177,7 +10189,7 @@ function openPlaceEditor(listing, listings, preselect){
   var pl = (withPlace && withPlace.place) || {};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     shared:peSharedFrom(byId(ids[0])), savedAmen:(pl.amen || []).slice(), dirty:{},
-    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", amen:(pl.amen || []).slice(), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
@@ -10419,10 +10431,11 @@ function peSheet(kind, arg){
   var p = pe.place, inner = "", apply = null, sel = [];
   if(kind==="amen"){
     apply = "Valider";
-    inner = '<h3>Prestations de l’établissement</h3><p class="sheet-sub">Cochées ici, elles valent pour tous ses hébergements. Le couchage et le confort de chaque chambre se règlent dans chaque annonce.</p>'+
+    inner = '<h3>Prestations de l’établissement</h3><p class="sheet-sub">Ce qui vaut pour tous ses hébergements. Le reste (couchage, cuisine, climatisation, télévision, vue…) se coche dans chaque hébergement.</p>'+
       '<div class="cr-amen">'+AMEN_GROUPS.map(function(g, gi){
-        if(PE_AMEN_EXCLUDED.indexOf(g.title)!==-1) return "";
-        return '<div class="amen-group" data-group="'+gi+'"><div class="amen-group-title">'+esc(g.title)+'</div><div class="amenity-grid">'+g.items.map(function(a){
+        var items = g.items.filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; });
+        if(!items.length) return "";
+        return '<div class="amen-group" data-group="'+gi+'"><div class="amen-group-title">'+esc(g.title)+'</div><div class="amenity-grid">'+items.map(function(a){
           return '<button type="button" class="amenity-chip'+((p.amen||[]).indexOf(a)!==-1?' active':'')+'" data-a="'+esc(a)+'" data-group="'+gi+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[a]+'</svg>'+esc(a)+'</button>';
         }).join("")+'</div></div>';
       }).join("")+'</div>';
