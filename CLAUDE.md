@@ -16,6 +16,8 @@ Outil de planning pour hébergeurs (calendrier de réservations, fichier client,
 
 ## `sejours/` — Fiftin Séjours, l'annuaire de réservation directe (nouveau projet)
 
+Vocabulaire (textes visibles, Séjours et page Planning) : « hébergement » (jamais « logement ») et « établissement » (un lieu qui comprend plusieurs hébergements). L'outil `app/` garde son propre vocabulaire (« location »).
+
 Annuaire mobile-first de location courte durée en réservation directe pour les voyageurs : recherche filtrée (distance, lieu, prix, prestations), fiches détaillées, contact hôte pré-rempli (WhatsApp / SMS / appel).
 
 - `sejours/index.html` — l'application complète (une seule page, pas de build) : fiftin.fr/sejours/.

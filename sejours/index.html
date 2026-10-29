@@ -3231,7 +3231,7 @@ function sharePlace(l, members){
   if(!pid){ shareListing(l); return; }
   var name = (l.place && l.place.name) || l.name;
   var kind = placeKindLabel(l.place);
-  shareUrl(location.origin + "/sejours/?etablissement=" + pid, name, name + " — " + (kind ? kind + ", " : "") + members.length + " logements");
+  shareUrl(location.origin + "/sejours/?etablissement=" + pid, name, name + " — " + (kind ? kind + ", " : "") + members.length + " hébergements");
 }
 function shareUrl(url, title, text){
   if(navigator.share){
@@ -3369,7 +3369,7 @@ var HOST_FORMULAS = [
     bullets:["Tous les outils : planning, réservations, fichier client, comptabilité","Une seule structure juridique","Jusqu'à 4 locations","Gestion par une seule personne"]},
   {value:"pro", name:"Formule Gestion avancée", price:"47 €/mois", desc:"Tout l'Essentiel + plusieurs structures juridiques, accès équipe.",
     planName:"Avancé", planPrice:"47 €", planPer:"par mois",
-    bullets:["Tout l'Essentiel","Jusqu'à 8 locations","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par logement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
+    bullets:["Tout l'Essentiel","Jusqu'à 8 locations","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par hébergement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
 ];
 /* LOT 5.2 : contenu FAQ écrit à partir du fonctionnement réel de l'app
    (lu dans ce fichier même — filtres, formules HOST_FORMULAS ci-dessus,
@@ -5094,8 +5094,8 @@ function siteNoteHtml(l){
   var n = siteNotes[l.docId || l.id];
   if(!n) return "";
   var text = n.groupCapacity!=null
-    ? "Jusqu’à "+n.groupCapacity+" voyageurs avec les logements associés"
-    : "+ "+n.others+" autre"+(n.others>1?"s":"")+" logement"+(n.others>1?"s":"")+" au même endroit";
+    ? "Jusqu’à "+n.groupCapacity+" voyageurs avec les hébergements associés"
+    : "+ "+n.others+" autre"+(n.others>1?"s":"")+" hébergement"+(n.others>1?"s":"")+" au même endroit";
   return '<div class="site-note"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>'+esc(text)+'</span></div>';
 }
 
@@ -5465,15 +5465,15 @@ function placeCoverHtml(l, members){
   var note = siteNotes[l.docId] || {};
   var kindLabel = placeKindLabel(place);
   var line = note.groupCapacity!=null
-    ? "Jusqu’à "+note.groupCapacity+" voyageurs avec les logements associés"
-    : (kindLabel ? kindLabel+" · " : "")+members.length+" logements";
+    ? "Jusqu’à "+note.groupCapacity+" voyageurs avec les hébergements associés"
+    : (kindLabel ? kindLabel+" · " : "")+members.length+" hébergements";
   return '<div class="cover has-photos place-cover">'+
     '<div class="cover-carousel" data-cc="'+l.id+'">'+slides.join("")+'</div>'+
     (slides.length>1 ? '<div class="cover-dots">'+slides.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '')+
     '<div class="scrim"></div>'+
     // Pastille « N logements » en tête : on comprend d'un coup d'œil que la
     // carte propose plusieurs hébergements.
-    '<div class="top-badges"><span class="pill-badge place-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+members.length+' logements</span>'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
+    '<div class="top-badges"><span class="pill-badge place-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+members.length+' hébergements</span>'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
     '<button class="save-btn'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
     '<button class="share-btn" data-shareplace="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
@@ -6956,7 +6956,7 @@ function placeReqHtml(l, members, qid){
     '</div>'+
     '<div class="msg-preview" id="'+qid+'-preview"></div>'+
     sendRowHtml(l, qid)+
-    '<div class="place-pick"><span>ou choisir un logement précis</span><div class="place-pick-list">'+
+    '<div class="place-pick"><span>ou choisir un hébergement précis</span><div class="place-pick-list">'+
       members.map(function(m){ return '<button type="button" class="place-pick-chip" data-open="'+m.id+'">'+esc(l.place && l.place.name ? stripPlaceName(m.name, l.place.name) : siteShortName(m.name, l.name))+'</button>'; }).join("")+
     '</div></div>';
 }
@@ -6965,10 +6965,10 @@ function buildPlaceMessage(l, members, free, din, dout, guests){
   var maxOne = Math.max.apply(null, members.map(function(m){ return m.maxPersons!=null ? m.maxPersons : listingMaxCapacity(m); }));
   var who = guests>1 ? "Nous sommes "+guests : "Je suis seul·e";
   var ask = guests>maxOne
-    ? " et aimerions séjourner ensemble : quels logements pourriez-vous nous proposer ?"
-    : " : un de vos logements est-il disponible ? Lequel "+(guests>1?"nous":"me")+" conseillez-vous ?";
+    ? " et aimerions séjourner ensemble : quels hébergements pourriez-vous nous proposer ?"
+    : " : un de vos hébergements est-il disponible ? Lequel "+(guests>1?"nous":"me")+" conseillez-vous ?";
   var freeTxt = !free || !free.length ? ""
-    : free.length===members.length && members.length>1 ? " D’après votre calendrier, tous vos logements sont libres."
+    : free.length===members.length && members.length>1 ? " D’après votre calendrier, tous vos hébergements sont libres."
     : " D’après votre calendrier, "+(free.length>1 ? "sont libres : " : "est libre : ")+free.join(", ")+".";
   return "Bonjour "+l.host.name+", votre lieu \""+placeName+"\" ("+l.region+") "+(guests>1?"nous":"me")+" plaît beaucoup. "+who+" du "+fmtDate(din)+" au "+fmtDate(dout)+ask+freeTxt+" Merci ! — via Fiftin";
 }
@@ -7034,7 +7034,7 @@ function wirePlaceReq(id, qid){
 }
 function buildMessage(l, din, dout, guests, unitName){
   var label = unitName ? (l.name+" – "+unitName) : l.name;
-  return "Bonjour "+l.host.name+", je suis intéressé·e par \""+label+"\" ("+l.region+") du "+fmtDate(din)+" au "+fmtDate(dout)+" pour "+guests+" voyageur"+(guests>1?"s":"")+". Ce logement est-il disponible sur ces dates ? Merci ! — via Fiftin";
+  return "Bonjour "+l.host.name+", je suis intéressé·e par \""+label+"\" ("+l.region+") du "+fmtDate(din)+" au "+fmtDate(dout)+" pour "+guests+" voyageur"+(guests>1?"s":"")+". Cet hébergement est-il disponible sur ces dates ? Merci ! — via Fiftin";
 }
 /* wa.me exige un numéro en format international complet, chiffres purs
    (aucun espace/point/tiret/parenthèse, pas de "+") — contrairement à
@@ -7561,7 +7561,7 @@ function placeCardsHtml(list, from, refName, siteCounts){
       '<div class="site-other-img">'+(img ? '<img src="'+esc(img)+'" alt="" loading="lazy">' : '')+'</div>'+
       '<b>'+esc(refName ? siteShortName(o.name, refName) : (o.name||""))+'</b>'+
       '<span>'+(cap ? cap+' voyageur'+(cap>1?'s':'')+' · ' : '')+(displayPriceOf(o)!=null ? displayPriceOf(o)+' € / nuit' : '')+'</span>'+
-      (more>0 ? '<span class="site-other-km">+ '+more+' autre'+(more>1?'s':'')+' logement'+(more>1?'s':'')+' sur place</span>' : '')+
+      (more>0 ? '<span class="site-other-km">+ '+more+' autre'+(more>1?'s':'')+' hébergement'+(more>1?'s':'')+' sur place</span>' : '')+
       (kmLabel ? '<span class="site-other-km">'+kmLabel+'</span>' : '')+
     '</button>';
   }).join("")+'</div>';
@@ -7575,7 +7575,7 @@ function fillSiteOthers(l, id){
     var slot = document.getElementById("site-others-slot");
     if(!slot || state.detailListingId!==id) return;
     slot.innerHTML =
-      (same.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">'+(l.place && l.place.name ? 'Les autres logements de '+esc(l.place.name) : 'Dans le même établissement')+'</div>'+
+      (same.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">'+(l.place && l.place.name ? 'Les autres hébergements de '+esc(l.place.name) : 'Dans le même établissement')+'</div>'+
         '<p class="site-sub">Chez '+esc(host)+', à la même adresse : pour choisir celui qui vous convient ou venir à plusieurs.</p>'+
         placeCardsHtml(same, null, l.name)+'</div>' : '')+
       (elsewhere.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Ailleurs chez '+esc(host)+'</div>'+
@@ -7637,7 +7637,7 @@ function placeBannerHtml(l, listingOverride){
   return '<button type="button" class="place-banner" id="place-banner">'+
     '<span class="pb-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg></span>'+
     '<span class="pb-text"><small>Fait partie de l’établissement</small><b>'+esc((l.place && l.place.name) || "Voir l’établissement")+'</b>'+
-      '<span>'+(kind ? esc(kind)+' · ' : '')+members.length+' logements</span></span>'+
+      '<span>'+(kind ? esc(kind)+' · ' : '')+members.length+' hébergements</span></span>'+
     '<svg class="pb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
   '</button>';
 }
@@ -7703,26 +7703,26 @@ function openPlace(id, override, loaded){
       '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
         '<h1>'+esc(title)+'</h1>'+
         '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
-          '<span>'+(kind ? '<b>'+esc(kind)+'</b> · ' : '')+members.length+' logements</span></div>'+
+          '<span>'+(kind ? '<b>'+esc(kind)+'</b> · ' : '')+members.length+' hébergements</span></div>'+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card"><div class="meta-row">'+
           (minPrice!=null ? metaItemHtml(META_ICON_PRICE, "dès "+minPrice+"€", "par nuit") : "")+
-          metaItemHtml(PLACE_ICON, members.length, "logements")+
+          metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           (cap ? metaItemHtml(META_ICON_GUESTS, cap, "voyageurs en tout") : "")+
         '</div></div>'+
         (place.desc ? '<div class="detail-card"><div class="section-title" style="margin-top:0">L’établissement</div><p class="desc">'+esc(place.desc)+'</p></div>' : '')+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre logement</div>'+
-          '<p class="site-sub">Chaque logement a sa fiche, ses photos et son calendrier.</p>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
+          '<p class="site-sub">Chaque hébergement a sa fiche, ses photos et son calendrier.</p>'+
           '<div class="place-units">'+members.map(function(m){ return placeUnitRowHtml(m, l); }).join("")+'</div>'+
         '</div>'+
-        (common.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les logements</div>'+detailAmenitiesHtml({amen:common})+'</div>' : '')+
+        (common.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les hébergements</div>'+detailAmenitiesHtml({amen:common})+'</div>' : '')+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
           (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p>' : '')+
         '</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Demander à l’hôte</div>'+
-          '<p class="site-sub">Vos dates et le nombre de voyageurs : '+esc(l.host.name)+' vous dit quel logement est libre.</p>'+
+          '<p class="site-sub">Vos dates et le nombre de voyageurs : '+esc(l.host.name)+' vous dit quel hébergement est libre.</p>'+
           '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qid+'">'+placeReqHtml(l, members, qid)+'</div>'+
         '</div>'+
       '</div>'+
@@ -9532,7 +9532,7 @@ function crRender(){
       progress+
       '<div class="detail-card" data-cr-sec="name">'+
         '<button type="button" class="region cr-region" data-cr-open="address">'+(d.city || d.deptName || d.regionName ? esc(locationLineFor(d)) : d.region ? esc(d.region) : '<span class="cr-ph">Lieu · ajoutez l’adresse</span>')+'</button>'+
-        '<textarea class="cr-h1" id="cr-name" rows="1" placeholder="Titre de votre logement">'+esc(d.name||"")+'</textarea>'+
+        '<textarea class="cr-h1" id="cr-name" rows="1" placeholder="Titre de votre hébergement">'+esc(d.name||"")+'</textarea>'+
         '<div class="cr-tagline"><button type="button" class="type-label cr-type'+(type?'':' cr-ph')+'" data-cr-open="type">'+(type ? esc(type) : 'Type')+'</button><span class="type-sep" aria-hidden="true"></span>'+
           '<textarea class="cr-claim" id="cr-claim" rows="1" placeholder="Une phrase d’accroche qui donne envie">'+esc(d.claim||"")+'</textarea></div>'+
         '<p class="cr-count" id="cr-claim-count"></p>'+
@@ -9544,7 +9544,7 @@ function crRender(){
           '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_GUESTS,
             u.linkedRoomId && cr.planning ? cr.planning.capacity : (Number(u.maxPersons)>0 ? u.maxPersons : '<span class="cr-ph">—</span>'), "voyageurs max")+'</button>'+
         '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Prix et capacité gérés dans Fiftin Planning'+(cr.planning ? '' : (cr.status==="draft" ? ' · prix calculé à la mise en ligne' : ' · calcul en cours'))+'</p>' : '')+'</div>'+
-        '<div class="detail-card" data-cr-sec="desc"><textarea class="desc cr-desc" id="cr-desc" rows="3" placeholder="Décrivez votre logement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
+        '<div class="detail-card" data-cr-sec="desc"><textarea class="desc cr-desc" id="cr-desc" rows="3" placeholder="Décrivez votre hébergement : l’ambiance, les espaces, ce que vos voyageurs vont aimer…">'+esc(d.desc||"")+'</textarea><p class="cr-count" id="cr-desc-count"></p></div>'+
         '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
           (amenChosen ? '<button type="button" class="cr-block" data-cr-open="amen">'+detailAmenitiesHtml(d)+'<span class="cr-edit-link">Modifier les prestations</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-cr-open="amen"><span class="cr-ph">Couchage, équipements, ambiance… Touchez pour compléter.</span></button>')+'</div>'+
@@ -9553,7 +9553,7 @@ function crRender(){
             : '<button type="button" class="cr-block cr-empty" data-cr-open="spaces"><span class="cr-ph">Chambres, salle de bain, jardin, terrasse…</span></button>')+'</div>'+
         crSiteCardHtml()+
         '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
-          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse du logement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>'+
+          (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button></div>'+
         '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
           '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
           '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
@@ -9639,12 +9639,12 @@ function crWire(){
 function crSiteCardHtml(){
   var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement <small class="cr-opt">facultatif</small></div>';
   if(cr.siteJoin) return head+'<p class="cr-note">Cet hébergement fait partie de l’établissement'+(cr.siteJoin.place && cr.siteJoin.place.name ? ' « '+esc(cr.siteJoin.place.name)+' »' : '')+'.</p></div>';
-  if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos logements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
+  if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos hébergements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
   var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
   if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
   var others = siteOthersOf(me, hostListingsCache);
   return head+'<button type="button" class="cr-block" id="cr-site">'+
-    (others.length ? '<span>'+(me.place && me.place.name ? esc(me.place.name)+' · ' : '')+others.length+' autre'+(others.length>1?'s':'')+' logement'+(others.length>1?'s':'')+'</span>' : '<span class="cr-ph">Regrouper avec vos autres logements à la même adresse</span>')+
+    (others.length ? '<span>'+(me.place && me.place.name ? esc(me.place.name)+' · ' : '')+others.length+' autre'+(others.length>1?'s':'')+' hébergement'+(others.length>1?'s':'')+'</span>' : '<span class="cr-ph">Regrouper avec vos autres hébergements à la même adresse</span>')+
     '<span class="cr-edit-link">'+(others.length ? 'Gérer l’établissement' : 'Ajouter')+'</span></button></div>';
 }
 /* Prix calculé par le serveur depuis Fiftin Planning (publicAvail/{unitId}.
@@ -9778,9 +9778,9 @@ function crSheet(kind, arg){
     inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
   } else if(kind==="address"){
-    inner = '<h3>Adresse du logement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
+    inner = '<h3>Adresse de l’hébergement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
       '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
-      '<p class="field-hint">Sert à placer votre logement sur la carte et à calculer les distances ; jamais montrée telle quelle aux voyageurs.</p><div class="auth-err" id="crs-err"></div>';
+      '<p class="field-hint">Sert à placer votre hébergement sur la carte et à calculer les distances ; jamais montrée telle quelle aux voyageurs.</p><div class="auth-err" id="crs-err"></div>';
   } else if(kind==="host"){
     inner = '<h3>Votre présentation</h3><p class="sheet-sub">Partagée par toutes vos annonces (modifiable aussi dans votre profil).</p>'+
       '<div class="field-block"><label>Prénom</label><input class="text-input" id="crs-hname" value="'+esc(cr.profile.name||"")+'"></div>'+
@@ -10042,7 +10042,7 @@ function crPublish(){
     var root = document.getElementById("sheet-root");
     root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
       '<div class="sheet-handle"></div><h3>Votre annonce est en ligne</h3><p class="sheet-sub">Les voyageurs peuvent la découvrir dès maintenant. Nous la vérifions sous 48 h.'+
-      (n ? '<br>Elle est à la même adresse que '+(n>1 ? n+' de vos logements' : 'un de vos logements')+' : les voyageurs les découvriront ensemble.' : '')+'</p>'+
+      (n ? '<br>Elle est à la même adresse que '+(n>1 ? n+' de vos hébergements' : 'un de vos hébergements')+' : les voyageurs les découvriront ensemble.' : '')+'</p>'+
       '<div class="sheet-apply"><button class="btn-apply" id="sheet-ok">Voir mes annonces</button></div></div></div></div>';
     document.getElementById("sheet-ok").addEventListener("click", function(){ root.innerHTML = ""; crClose(); });
   }).catch(function(err){
@@ -10195,7 +10195,7 @@ function peRender(){
     : missing.length
       ? '<div class="cr-progress"><b>'+(missing.length<=2 ? "Votre vitrine est presque prête" : "Votre établissement prend forme")+'</b><p>Pour bien le présenter aux voyageurs, ajoutez :</p><div class="cr-chips">'+
           missing.map(function(m){ return '<button type="button" class="cr-chip" data-pe-go="'+m[0]+'">'+m[1]+'</button>'; }).join("")+'</div></div>'
-      : '<div class="cr-progress ready"><b>Votre vitrine est complète</b><p>Les voyageurs découvrent l’établissement, puis choisissent leur logement.</p></div>';
+      : '<div class="cr-progress ready"><b>Votre vitrine est complète</b><p>Les voyageurs découvrent l’établissement, puis choisissent leur hébergement.</p></div>';
   root.innerHTML = '<div class="detail creator place-detail" id="creator-panel">'+
     '<div class="cr-bar">'+
       '<button type="button" class="cr-close" id="pe-close" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
@@ -10212,23 +10212,23 @@ function peRender(){
         '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : first.region ? esc(first.region) : '<span class="cr-ph">Lieu · celui de vos hébergements</span>')+'</div>'+
         '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
         '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
-          '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' logement'+(members.length>1?'s':'')+'</span></div>'+
+          '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' hébergement'+(members.length>1?'s':'')+'</span></div>'+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card"><div class="meta-row">'+
           metaItemHtml(META_ICON_PRICE, minPrice!=null ? "dès "+minPrice+"€" : '<span class="cr-ph">— €</span>', "par nuit")+
-          metaItemHtml(PLACE_ICON, members.length, "logements")+
+          metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           metaItemHtml(META_ICON_GUESTS, cap || '<span class="cr-ph">—</span>', "voyageurs en tout")+
-        '</div><p class="cr-linked">Calculés à partir de chaque logement</p></div>'+
+        '</div><p class="cr-linked">Calculés à partir de chaque hébergement</p></div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">L’établissement</div>'+
-          '<textarea class="desc cr-desc" id="pe-desc" rows="3" maxlength="1200" placeholder="Le lieu, son histoire, ce qui est commun à tous les logements : jardin, piscine, petit-déjeuner…">'+esc(p.desc)+'</textarea></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre logement</div>'+
-          '<p class="site-sub">Ce que voient les voyageurs. Touchez un logement pour le modifier ou le retirer.</p>'+
+          '<textarea class="desc cr-desc" id="pe-desc" rows="3" maxlength="1200" placeholder="Le lieu, son histoire, ce qui est commun à tous les hébergements : jardin, piscine, petit-déjeuner…">'+esc(p.desc)+'</textarea></div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
+          '<p class="site-sub">Ce que voient les voyageurs. Touchez un hébergement pour le modifier ou le retirer.</p>'+
           '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
           (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les logements</div>'+
-          (common.length ? detailAmenitiesHtml({amen:common}) : '<p class="cr-note">Les prestations cochées sur tous vos logements apparaîtront ici.</p>')+'</div>'+
+        '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les hébergements</div>'+
+          (common.length ? detailAmenitiesHtml({amen:common}) : '<p class="cr-note">Les prestations cochées sur tous vos hébergements apparaîtront ici.</p>')+'</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+esc((first.host && first.host.name) || "")+'</b></div></div>'+
           '<p class="cr-note">Votre présentation, commune à toutes vos annonces.</p></div>'+
@@ -10328,12 +10328,12 @@ function peSheet(kind, arg){
     inner = '<h3>'+esc(m.name || "(sans nom)")+'</h3><div class="sort-row">'+
       '<button type="button" class="radio-row" data-act="edit">Modifier l’annonce</button>'+
       (pe.memberIds.length>1 ? '<button type="button" class="radio-row cr-danger" data-act="remove">Retirer de l’établissement</button>' : '')+'</div>'+
-      '<p class="field-hint">Retirer un logement ne supprime pas son annonce : elle redevient une annonce seule.</p>';
+      '<p class="field-hint">Retirer un hébergement ne supprime pas son annonce : elle redevient une annonce seule.</p>';
   } else if(kind==="add"){
     apply = "Ajouter";
     var cands = pe.listings.filter(function(x){ return pe.memberIds.indexOf(x.id)===-1 && x.status!=="removed"; });
-    inner = '<h3>Ajouter un logement</h3>'+
-      (cands.length ? '<p class="sheet-sub">Vos autres annonces. Un logement à une autre adresse reste en général une annonce à part.</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>'
+    inner = '<h3>Ajouter un hébergement</h3>'+
+      (cands.length ? '<p class="sheet-sub">Vos autres annonces. Un hébergement à une autre adresse reste en général une annonce à part.</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>'
         : '<p class="sheet-sub">Vous n’avez pas d’autre annonce à ajouter.</p>')+
       '<button type="button" class="link-btn" id="pe-new-listing">+ Créer un nouvel hébergement dans l’établissement</button>';
     if(!cands.length) apply = null;
@@ -12215,7 +12215,7 @@ function hostListingCardHtml(l, listings, inSite){
     // son en-tête s'en charge déjà.
     (inSite ? '' : '<button type="button" class="cal-disclose site-disclose" data-site-link="'+esc(l.id)+'">'+
       '<span>Établissement</span>'+
-      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'En faire un établissement')+'</span>'+
+      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' hébergement'+(siteCount>1?'s':'') : 'En faire un établissement')+'</span>'+
       '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>')+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
