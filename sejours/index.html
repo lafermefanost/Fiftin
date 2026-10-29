@@ -997,10 +997,10 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    propriétaire, texte blanc ; à cocher = fond crème, texte vert ; absente
    sur une fiche (.off) = gris très léger, pour comparer ce qu'il y a et
    ce qu'il n'y a pas. Mêmes pastilles pour les pièces (.xchip). */
-.amenity-chip{display:inline-flex; align-items:center; gap:6px; border:none; border-radius:999px; padding:6px 11px;
-  background:var(--cream-deep); color:var(--sauge); font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; line-height:1.2; cursor:pointer;}
-.amenity-chip.active{background:var(--sauge); color:#fff;}
-.amenity-chip.off{background:#F4F3EF; color:#C9C6BC; cursor:default;}
+.amenity-chip{display:inline-flex; align-items:center; gap:6px; border:1px solid #E6E3DC; border-radius:999px; padding:5px 10px;
+  background:#fff; color:#A29E94; font-family:'Jost',sans-serif; font-size:12.5px; font-weight:500; line-height:1.2; cursor:pointer;}
+.amenity-chip.active{background:var(--sauge); border-color:var(--sauge); color:#fff; font-weight:600;}
+.amenity-chip.off{border-color:#EEECE7; color:#C6C2B9; cursor:default;}
 .amenity-chip svg{width:14px; height:14px; flex-shrink:0;}
 .detail-amen-group .amenity-chip, .cr-block .amenity-chip{cursor:inherit;}
 /* Pièces & annexes (retour utilisateur : "un groupe clair qui permette de
@@ -1017,11 +1017,11 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    Pièces & annexes du reste de la section Prestations. */
 .hf-spaces-box{background:var(--cream-deep); border-radius:16px; padding:14px;}
 .hf-spaces-grid{display:flex; flex-wrap:wrap; gap:8px;}
-.xchip{display:inline-flex; align-items:center; gap:6px; padding:6px 11px;
-  border:none; border-radius:999px; cursor:pointer;
-  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:600; line-height:1.2; color:var(--sauge); background:var(--cream-deep);}
+.xchip{display:inline-flex; align-items:center; gap:6px; padding:5px 10px;
+  border:1px solid #E6E3DC; border-radius:999px; cursor:pointer;
+  font-family:'Jost',sans-serif; font-size:12.5px; font-weight:500; line-height:1.2; color:#A29E94; background:#fff;}
 .xchip svg{width:14px; height:14px; flex-shrink:0;}
-.xchip.on{background:var(--sauge); color:#fff;}
+.xchip.on{background:var(--sauge); border-color:var(--sauge); color:#fff; font-weight:600;}
 .xchip-qty{background:#fff; color:var(--sauge); border-radius:10px; padding:1px 7px; font-size:11px; font-weight:700;}
 /* Retour utilisateur : "pas dans le même style que les autres boutons"
    (Pièces & annexes comparé aux puces Prestations du même modal) — même
@@ -1029,7 +1029,6 @@ input[type=range]{width:100%; accent-color:var(--sauge-deep);}
    blanche une fois sélectionné), appliqué ici à .xchip pour que les deux
    groupes de puces du formulaire se ressemblent. La pastille ×N passe en
    blanc/vert pour rester lisible sur le fond vert plein. */
-.hf-spaces-grid .xchip{color:var(--sauge);}
 .hf-spaces-grid .xchip.on{background:var(--sauge); color:#fff;}
 .hf-spaces-grid .xchip-qty{background:#fff; color:var(--sauge);}
 .region-chip-row{display:flex; flex-wrap:wrap; gap:8px;}
