@@ -1075,6 +1075,16 @@ Un logement = une annonce. Les annonces d'un même hôte à la même adresse peu
 - Associer / dissocier : un seul lot d'écritures (`planSiteAssociation()`, `applySiteAssociation()`) ; décocher un logement le sépare sans défaire le reste du lieu ; un lieu réduit à un logement perd son `siteId`.
 - **Déploiement** : `functions/index.js` modifié → workflow « Déploiement des fonctions Firebase » à la fusion. Tant que l'index n'est pas republié pour une annonce (toute écriture de l'annonce le republie), elle n'est pas regroupée dans le fil.
 
+## Prix Séjours calculés depuis Fiftin Planning (phase 3)
+
+Pour une annonce dont la location est reliée à Fiftin Planning (`unit.linkedRoomId`), Planning est la source du prix et de la capacité ; Séjours ne fait que lire (aucune écriture dans `accounts/`).
+
+- **Calcul** (`functions/pricing.js`, mêmes règles que l'outil : version de tarif en vigueur chaque jour, palier de personnes, saisons et week-ends ; remise long séjour exclue) : minimum par nuit sur les 12 prochains mois pour 1 personne (« dès X € ») et pour chaque nombre de voyageurs jusqu'à la capacité. Parité vérifiée par `functions/pricing.test.js` (fonctions de `app/index.html` exécutées telles quelles, comparaison jour par jour), lancé avant chaque déploiement des fonctions.
+- **Publication** : `republishAccountAvail()` écrit `listings/{id}/publicAvail/{unitId}.planningPrice` {roomId, from, byPax, capacity, computedOn} à chaque modification du compte Planning, à chaque relecture iCal, quand une annonce est reliée ou mise en ligne (`syncPublicListingIndex`), et chaque nuit à 4 h 10 (`refreshPlanningPrices`, la fenêtre de 12 mois avance). L'index public (`listingIndex`) reçoit `price`, `priceByPax` et `maxPersons` en conséquence (écrit seulement si changé).
+- **Affichage** (`displayPriceOf()`) : fil, carte de lieu, fiche, filtre et tri par prix utilisent le prix de l'index ; avec un nombre de voyageurs filtré, le minimum pour ce nombre. « dès » devant un prix issu de Planning.
+- **Créateur** : prix et capacité en lecture seule pour une annonce reliée (« Gérés dans Fiftin Planning », bouton « Modifier dans Fiftin Planning » → outil, « Ne plus relier »). Relier une location préremplit le prix saisi (`roomFromPrice()`), gardé comme repli si la location n'a pas de tarif.
+- Annonce non reliée : prix saisi par l'hôte, comme avant.
+
 ## Modération des annonces (Fiftin Séjours)
 
 Après publication : une annonce est en ligne dès l'envoi (`status:"published"`, `reviewed:false`, `publishedAt`). Profil → « Annonces à vérifier » (comptes admin) liste les annonces pas encore vérifiées (`reviewed == false`, hors brouillons et retirées) et les anciens dépôts `pending` : « Voir » (fiche comme un voyageur), « C'est bon » (`reviewed:true`, `reviewedAt`), « Retirer » (`status:"removed"` : hors du site, l'hôte garde l'annonce, peut la modifier ou la supprimer, mais ne peut plus la remettre en ligne — règle Firestore). `reviewed` n'est jamais écrit par l'hôte (obligatoirement `false` à la création, inchangé ensuite). Brouillons (`draft`, créateur d'annonce à venir) : lisibles par le seul propriétaire, mis en ligne à sens unique. Tests : `tests/firestore-rules.test.mjs` (émulateur).

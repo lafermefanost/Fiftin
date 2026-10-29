@@ -28,6 +28,7 @@ const {onDocumentWritten} = require("firebase-functions/v2/firestore");
 const {onCall, onRequest, HttpsError} = require("firebase-functions/v2/https");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
 const crypto = require("crypto");
+const pricing = require("./pricing");
 const ical = require("./ical");
 const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
@@ -112,6 +113,41 @@ function listingIndexPrice(listing) {
   }
   return listing.price;
 }
+/* Prix public d'une annonce (phase 3) : pour une location reliée à Fiftin
+ * Planning, le prix calculé depuis ses tarifs (planningByUnit[unitId],
+ * voir functions/pricing.js, publié dans publicAvail/{unitId}.planningPrice) ;
+ * sinon le prix saisi par l'hôte. price = « à partir de » pour 1 personne ;
+ * priceByPax[N] = minimum pour N voyageurs parmi les locations qui les
+ * accueillent (filtre Voyageurs). */
+function listingPublicPricing(listing, planningByUnit) {
+  const units = (listing.units && listing.units.length) ? listing.units : [{id: "", price: listing.price, maxPersons: listing.maxPersons}];
+  const byPax = {};
+  let from = null, maxPersons = 0;
+  units.forEach(function (u) {
+    const pl = u.linkedRoomId && planningByUnit && planningByUnit[u.id];
+    const cap = pl ? pl.capacity : (+u.maxPersons || 0);
+    if (cap > maxPersons) maxPersons = cap;
+    const base = pl ? pl.from : +u.price;
+    if (base > 0 && (from == null || base < from)) from = base;
+    for (let p = 1; p <= Math.min(cap, 30); p++) {
+      const v = pl ? pl.byPax[p] : +u.price;
+      if (v > 0 && (byPax[p] == null || v < byPax[p])) byPax[p] = v;
+    }
+  });
+  return {price: from != null ? from : listingIndexPrice(listing), priceByPax: byPax, maxPersons: maxPersons || listingIndexMaxPersons(listing)};
+}
+async function planningPricesOf(listingId, listing) {
+  const out = {};
+  const linked = (listing.units || []).filter(function (u) { return u.linkedRoomId; });
+  await Promise.all(linked.map(function (u) {
+    return db.collection("listings").doc(listingId).collection("publicAvail").doc(u.id).get().then(function (d) {
+      const pp = d.exists && d.data().planningPrice;
+      if (pp && pp.roomId === u.linkedRoomId) out[u.id] = pp;
+    }).catch(function () {});
+  }));
+  return out;
+}
+function parisToday() { return new Date().toLocaleDateString("sv-SE", {timeZone: "Europe/Paris"}); }
 // LOT 2.3 (filtre Voyageurs, sejours/index.html) : capacité MAX parmi les
 // locations de l'annonce — une annonce passe le filtre si AU MOINS une de
 // ses locations suffit seule, même principe que listingIndexPrice()
@@ -146,10 +182,21 @@ exports.syncPublicListingIndex = onDocumentWritten({document: "listings/{listing
     return;
   }
 
+  // Location Planning reliée ou changée depuis Séjours : disponibilités et
+  // prix publiés tout de suite (sans attendre une modification dans l'outil).
+  const linkKey = function (l) { return ((l && l.units) || []).map(function (u) { return u.id + ":" + (u.linkedRoomId || ""); }).sort().join("|"); };
+  const before = event.data && event.data.before && event.data.before.exists ? event.data.before.data() : null;
+  const justPublished = !before || before.status !== "published";
+  if (after.ownerUid && (justPublished || linkKey(before) !== linkKey(after)) && (after.units || []).some(function (u) { return u.linkedRoomId; })) {
+    const acc = await db.collection("accounts").doc(after.ownerUid).get().catch(function () { return null; });
+    if (acc && acc.exists) await republishAccountAvail(after.ownerUid, acc.data().bookings || [], ((acc.data().settings || {}).rooms) || []);
+  }
+  const pub = listingPublicPricing(after, await planningPricesOf(listingId, after));
   await indexRef.set({
     name: after.name || "",
-    price: listingIndexPrice(after),
-    maxPersons: listingIndexMaxPersons(after),
+    price: pub.price,
+    priceByPax: pub.priceByPax,
+    maxPersons: pub.maxPersons,
     ownerUid: after.ownerUid || "",
     accomType: after.accomType || "",
     lat: (typeof after.lat === "number") ? after.lat : null,
@@ -185,9 +232,12 @@ function toPublicRanges(bookings) {
     .map(function (b) { return {checkIn: b.checkIn, checkOut: b.checkOut}; });
 }
 
-function writePublicAvail(listingId, unitId, ranges) {
-  return db.collection("listings").doc(listingId).collection("publicAvail").doc(unitId)
-    .set({ranges: ranges, updatedAt: new Date().toISOString()});
+// planningPrice : undefined = ne pas y toucher (calendrier hôte simple),
+// null = retirer, objet = prix calculé depuis Planning (phase 3).
+function writePublicAvail(listingId, unitId, ranges, planningPrice) {
+  const data = {ranges: ranges, updatedAt: new Date().toISOString()};
+  if (planningPrice !== undefined) data.planningPrice = planningPrice || FieldValue.delete();
+  return db.collection("listings").doc(listingId).collection("publicAvail").doc(unitId).set(data, {merge: true});
 }
 
 /* Compte gestion : à chaque écriture sur accounts/{uid} (nouvelle
@@ -199,7 +249,7 @@ function writePublicAvail(listingId, unitId, ranges) {
 exports.syncPublicAvailFromAccount = onDocumentWritten({document: "accounts/{uid}", region: FIRESTORE_TRIGGER_REGION}, async (event) => {
   const uid = event.params.uid;
   const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
-  await republishAccountAvail(uid, (after && after.bookings) || []);
+  await republishAccountAvail(uid, (after && after.bookings) || [], after && after.settings ? (after.settings.rooms || []) : undefined);
 });
 
 /* Republie la disponibilité publique de toutes les chambres liées d'un
@@ -210,21 +260,50 @@ exports.syncPublicAvailFromAccount = onDocumentWritten({document: "accounts/{uid
  * voyageur). Les réservations annulées (status "no") ne bloquent plus
  * aucune date — elles le faisaient jusqu'ici, toPublicRanges ne
  * regardant pas le statut. */
-async function republishAccountAvail(uid, bookings) {
+/* rooms (settings.rooms du compte) : si fourni, republie aussi le prix
+ * calculé depuis les tarifs Planning de chaque location reliée
+ * (planningPrice, functions/pricing.js) et met à jour le prix de l'index
+ * public des annonces concernées. Lecture seule côté Planning. */
+async function republishAccountAvail(uid, bookings, rooms) {
   const listingsSnap = await db.collection("listings").where("ownerUid", "==", uid).get();
   if (listingsSnap.empty) return;
   const feedRangesByRoom = await icalRangesByRoom(uid);
+  const roomById = {};
+  (rooms || []).forEach(function (r) { if (r && r.id) roomById[r.id] = r; });
+  const today = parisToday();
   const writes = [];
+  const indexUpdates = [];
   listingsSnap.forEach(function (doc) {
     const listing = doc.data();
+    const planningByUnit = {};
+    let linked = 0;
     (listing.units || []).forEach(function (unit) {
       if (!unit.linkedRoomId) return;
+      linked++;
       const roomBookings = (bookings || []).filter(function (b) { return b && b.roomId === unit.linkedRoomId && b.status !== "no"; });
       const ranges = toPublicRanges(roomBookings).concat(feedRangesByRoom[unit.linkedRoomId] || []);
-      writes.push(writePublicAvail(doc.id, unit.id, ranges));
+      let pp;
+      if (rooms !== undefined) {
+        const room = roomById[unit.linkedRoomId];
+        const calc = room ? pricing.roomPricing(room, today, 365) : null;
+        pp = calc ? {roomId: unit.linkedRoomId, from: calc.from, byPax: calc.byPax, capacity: calc.capacity, computedOn: today} : null;
+        if (pp) planningByUnit[unit.id] = pp;
+      }
+      writes.push(writePublicAvail(doc.id, unit.id, ranges, pp));
     });
+    if (linked && rooms !== undefined && listing.status === "published") indexUpdates.push({id: doc.id, pub: listingPublicPricing(listing, planningByUnit)});
   });
   await Promise.all(writes);
+  // Index public : prix mis à jour seulement s'il a changé.
+  await Promise.all(indexUpdates.map(function (u) {
+    const ref = db.collection("listingIndex").doc(u.id);
+    return ref.get().then(function (d) {
+      if (!d.exists) return;
+      const cur = d.data();
+      if (cur.price === u.pub.price && cur.maxPersons === u.pub.maxPersons && JSON.stringify(cur.priceByPax || {}) === JSON.stringify(u.pub.priceByPax)) return;
+      return ref.update({price: u.pub.price, priceByPax: u.pub.priceByPax, maxPersons: u.pub.maxPersons});
+    }).catch(function () {});
+  }));
 }
 
 /* Compte simple annonce : à chaque écriture dans
@@ -742,7 +821,7 @@ exports.icalSetImportUrl = onCall(async (request) => {
     lastSyncAt: now, lastOkAt: now, error: null, createdAt: now};
   await ref.set(feed);
   const acc = await db.collection("accounts").doc(uid).get();
-  await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+  await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : [], acc.exists ? (((acc.data().settings || {}).rooms) || []) : undefined);
   return {ok: true, feed: feedForClient(feed)};
 });
 
@@ -767,7 +846,7 @@ exports.icalGetImports = onCall(async (request) => {
   }));
   if (anyChanged) {
     const acc = await db.collection("accounts").doc(uid).get();
-    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : [], acc.exists ? (((acc.data().settings || {}).rooms) || []) : undefined);
   }
   return {feeds: feeds};
 });
@@ -821,6 +900,23 @@ exports.icalExport = onRequest(async (req, res) => {
   res.status(200).send(ical.buildIcal(ranges));
 });
 
+/* Recalcul quotidien des prix Séjours issus de Planning (phase 3) : la
+ * fenêtre de 12 mois avance chaque jour (fin d'une saison, nouvelle version
+ * de tarif qui commence), même sans aucune modification dans l'outil.
+ * Seulement les comptes qui ont au moins une annonce publiée reliée. */
+exports.refreshPlanningPrices = onSchedule({schedule: "every day 04:10", timeZone: "Europe/Paris", timeoutSeconds: 300}, async () => {
+  const snap = await db.collection("listings").where("status", "==", "published").get();
+  const owners = {};
+  snap.forEach(function (doc) {
+    const l = doc.data();
+    if (l.ownerUid && (l.units || []).some(function (u) { return u.linkedRoomId; })) owners[l.ownerUid] = true;
+  });
+  for (const uid of Object.keys(owners)) {
+    const acc = await db.collection("accounts").doc(uid).get();
+    if (acc.exists) await republishAccountAvail(uid, acc.data().bookings || [], ((acc.data().settings || {}).rooms) || []);
+  }
+});
+
 /* Relecture planifiée de tous les flux importés : garde la disponibilité
  * publique à jour même quand l'hôte n'ouvre pas l'app. */
 exports.icalScheduledSync = onSchedule({schedule: "every 30 minutes", timeoutSeconds: 300}, async () => {
@@ -832,6 +928,6 @@ exports.icalScheduledSync = onSchedule({schedule: "every 30 minutes", timeoutSec
   }
   for (const uid of Object.keys(changedUids)) {
     const acc = await db.collection("accounts").doc(uid).get();
-    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : []);
+    await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : [], acc.exists ? (((acc.data().settings || {}).rooms) || []) : undefined);
   }
 });
