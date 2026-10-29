@@ -3959,6 +3959,7 @@ function normalizeHostListing(doc){
     createdAtMs: listingCreatedMs(l), // « Nouveau sur Fiftin » (voir trustBadgeHtml())
     place: l.place || null, // « Le lieu » : nom + photos communes des logements associés (voir applySiteAssociation())
     siteId: l.siteId || "", // logements associés au même endroit (voir siteOf())
+    parking: l.parking || null, // stationnement d'une annonce seule (établissement : place.parking)
     stats: l.stats || null, // {demandeCount, confirmedCount} — écrit uniquement par la Cloud Function syncListingContactStats (functions/index.js), jamais par un client (voir la règle Firestore listings/{listingId}).
     name: l.name, region: l.region, claim: l.claim,
     price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
@@ -7407,7 +7408,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
-      (l.siteId ? parkingCardHtml(l.place) : '')+
+      parkingCardHtml({parking:listingParkingOf(l)})+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -9448,6 +9449,8 @@ function openCreator(listing, siteFrom, siteJoin){
     PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ var v = siteJoin.shared[k]; if(v!=null && v!=="") data[k] = v; });
   }
   if(site) data.amen = mergeSharedAmen(data.amen, [], placeSharedAmen(site.place));
+  // Ancienne case « Parking privé » d'une annonce seule : reprise en stationnement.
+  if(!site && !data.parking && (data.amen || []).indexOf("Parking privé")!==-1) data.parking = {kind:"private"};
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
     timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, site: site, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
@@ -9563,6 +9566,7 @@ function crRender(){
         '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Pièces & annexes <small class="cr-opt">facultatif</small></div>'+
           (detailSpacesHtml(d) ? '<button type="button" class="cr-block" data-cr-open="spaces">'+detailSpacesHtml(d)+'<span class="cr-edit-link">Modifier</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-cr-open="spaces"><span class="cr-ph">Chambres, salle de bain, jardin, terrasse…</span></button>')+'</div>'+
+        crParkingCardHtml()+
         crSiteCardHtml()+
         '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
           (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+
@@ -9769,7 +9773,7 @@ function enableRowDrag(container, arr, rerender){
 /* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
 function crSheet(kind, arg){
   var d = cr.data, u = crUnit(), inner = "", apply = "Valider";
-  if(cr.site && (kind==="address" || kind==="contact")){ crSiteInfoSheet(kind); return; }
+  if(cr.site && (kind==="address" || kind==="contact" || kind==="parking")){ crSiteInfoSheet(kind); return; }
   if(kind==="type"){
     apply = null;
     inner = '<h3>Type d’hébergement</h3><div class="sort-row">'+Object.keys(ACCOM_TYPES).map(function(k){
@@ -9799,6 +9803,12 @@ function crSheet(kind, arg){
     inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.'+
       (siteAmen.length ? ' Les prestations grisées sont celles de l’établissement : elles se modifient dans l’établissement.' : '')+'</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
+  } else if(kind==="parking"){
+    var cpk = d.parking || {};
+    inner = '<h3>Stationnement</h3><div class="sort-row">'+PARKING_KINDS.map(function(k){
+      return '<button type="button" class="radio-row'+(cpk.kind===k[0]?' active':'')+'" data-pk="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+'</div>'+
+      '<div class="field-block" style="margin-top:12px;"><label>Précision (facultatif)</label><input class="text-input" id="pk-note" maxlength="120" placeholder="Ex. 2 places, borne de recharge, garage à vélos" value="'+esc(cpk.note||"")+'"></div>'+
+      (cpk.kind ? '<button type="button" class="link-btn" id="pk-clear">Ne pas préciser</button>' : '');
   } else if(kind==="address"){
     inner = '<h3>Adresse de l’hébergement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
       '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
@@ -9883,6 +9893,8 @@ function crSheet(kind, arg){
     });
   } else if(kind==="amen"){
     var lockedAmen = cr.site ? placeSharedAmen(cr.site.place) : [];
+    // « Parking privé » : réglé par la carte Stationnement, pas ici.
+    Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-a="Parking privé"]'), function(c){ c.remove(); });
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
       var la = chip.getAttribute("data-a"), lg = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
       // Prestation de l'établissement (ou groupe à choix unique déjà fixé par lui) : non modifiable ici.
@@ -9896,7 +9908,25 @@ function crSheet(kind, arg){
       });
     });
     applyBtn.addEventListener("click", function(){
+      var hadParking = d.amen.indexOf("Parking privé")!==-1; // géré par la carte Stationnement, absent du volet
       d.amen = Array.prototype.map.call(root.querySelectorAll(".amenity-chip.active"), function(c){ return c.getAttribute("data-a"); });
+      if(hadParking) d.amen.push("Parking privé");
+      done();
+    });
+  } else if(kind==="parking"){
+    var cpkSel = (d.parking && d.parking.kind) || "";
+    Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(b){
+      b.addEventListener("click", function(){
+        cpkSel = b.getAttribute("data-pk");
+        Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(o){ o.classList.toggle("active", o===b); });
+      });
+    });
+    var cclr = document.getElementById("pk-clear");
+    if(cclr) cclr.addEventListener("click", function(){ d.parking = null; d.amen = syncParkingAmen(d.amen, null); done(); });
+    applyBtn.addEventListener("click", function(){
+      var note = document.getElementById("pk-note").value.trim();
+      d.parking = cpkSel ? (note ? {kind:cpkSel, note:note} : {kind:cpkSel}) : null;
+      d.amen = syncParkingAmen(d.amen, d.parking);
       done();
     });
   } else if(kind==="address"){
@@ -9997,11 +10027,14 @@ function crSheet(kind, arg){
    dans l'établissement (un seul endroit, recopiés sur tous). */
 function crSiteInfoSheet(kind){
   var d = cr.data, name = (cr.site.place && cr.site.place.name) || "l’établissement";
-  var val = kind==="address" ? esc(d.address || "Pas encore d’adresse") : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
+  var pk = kind==="parking" ? crParkingOf() : null;
+  var val = kind==="address" ? esc(d.address || "Pas encore d’adresse")
+    : kind==="parking" ? (pk && pk.kind ? esc(parkingLabel(pk))+(pk.note ? '<br>'+esc(pk.note) : '') : "Pas encore renseigné")
+    : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    '<h3>'+(kind==="address" ? "Adresse" : "Contact")+'</h3>'+
+    '<h3>'+(kind==="address" ? "Adresse" : kind==="parking" ? "Stationnement" : "Contact")+'</h3>'+
     '<p class="sheet-sub">'+(kind==="address" ? 'Commune' : 'Commun')+' à tous les hébergements de « '+esc(name)+' » : '+(kind==="address" ? 'elle se modifie' : 'il se modifie')+' une seule fois, dans l’établissement.</p>'+
     '<div class="cr-planning-box"><b>'+val+'</b></div>'+
     (cr.id ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">Modifier dans l’établissement</button></div>' : '')+
@@ -10021,10 +10054,28 @@ function crOpenSite(){
     });
   });
 }
+/* Stationnement : même carte pour une annonce seule (cr.data.parking) et un
+   hébergement d'établissement (celui de l'établissement, en lecture). */
+function crParkingOf(){ return cr.site ? (cr.site.place.parking || null) : (cr.data.parking || null); }
+function crParkingCardHtml(){
+  var pk = crParkingOf();
+  return '<div class="detail-card" data-cr-sec="parking"><div class="section-title">Stationnement <small class="cr-opt">facultatif</small></div>'+
+    '<button type="button" class="cr-block'+(pk && pk.kind ? '' : ' cr-empty')+'" data-cr-open="parking">'+
+    (pk && pk.kind ? '<span>'+esc(parkingLabel(pk))+'</span>'+(pk.note ? '<span class="cr-sub">'+esc(pk.note)+'</span>' : '')
+      : '<span class="cr-ph">'+(cr.site ? 'Non renseigné dans l’établissement' : 'Parking sur place, dans la rue, à proximité…')+'</span>')+
+    (cr.site ? '<span class="cr-sub">Celui de l’établissement</span>' : '')+'</button></div>';
+}
+// « Parking privé » (filtre des voyageurs) suit le stationnement choisi.
+function syncParkingAmen(amen, parking){
+  var out = (amen || []).filter(function(a){ return a!=="Parking privé"; });
+  if(parking && parking.kind==="private") out.push("Parking privé");
+  return out;
+}
 /* ---------- enregistrement automatique ---------- */
 function crPayload(){
   var d = cr.data, p = {};
-  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","parking"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  if(p.parking===undefined) p.parking = null;
   p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
   p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
   p.hostName = cr.profile.name || "";
@@ -10169,6 +10220,9 @@ function placeSharedAmen(place){
   if(place && place.parking && place.parking.kind==="private" && out.indexOf("Parking privé")===-1) out.push("Parking privé");
   return out;
 }
+// Stationnement affiché pour une annonce : celui de son établissement s'il
+// en a un, sinon le sien — même carte dans les deux cas.
+function listingParkingOf(l){ return (l && l.siteId && l.place) ? (l.place.parking || null) : ((l && l.parking) || null); }
 function parkingCardHtml(place){
   var lab = parkingLabel(place && place.parking);
   if(!lab) return "";
