@@ -2275,6 +2275,7 @@ body.map-fullscreen{overflow:hidden;}
 .hlc-acts .save-btn{position:relative; top:auto; right:auto;}
 .hlc-acts .save-btn svg{width:17px; height:17px; stroke:#fff; fill:none; stroke-width:1.9;}
 .hlc-acts .hlc-del svg{stroke:#FFD9CF;}
+.hlc-cover .top-badges .pill-badge{white-space:nowrap;}
 .top-badges .hlc-status{padding-left:20px;}
 .top-badges .hlc-status::after{content:""; position:absolute; left:9px; top:50%; width:6px; height:6px; margin-top:-3px; border-radius:50%; background:rgba(255,255,255,.55);}
 .top-badges .hlc-status.on::after{background:var(--yellow);}
@@ -12439,7 +12440,12 @@ function renderHostListings(){
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-pause]"), function(btn){
       btn.addEventListener("click", function(e){
         e.stopPropagation();
-        toggleListingPause(btn.getAttribute("data-host-pause"), btn.getAttribute("data-pause-to"));
+        var id = btn.getAttribute("data-host-pause"), to = btn.getAttribute("data-pause-to");
+        var l = listings.filter(function(x){ return x.id===id; })[0];
+        var name = (l && l.name) || "cette annonce";
+        // Confirmation, comme pour la suppression (retour de César).
+        if(to==="paused") openConfirmSheet('Mettre "'+name+'" en pause ? Elle n’apparaîtra plus aux voyageurs jusqu’à ce que vous la remettiez en ligne.', "Oui, mettre en pause", "Non, la garder en ligne", function(){ toggleListingPause(id, to); });
+        else openConfirmSheet('Remettre "'+name+'" en ligne ? Les voyageurs la verront de nouveau.', "Oui, remettre en ligne", "Non, la laisser en pause", function(){ toggleListingPause(id, to); });
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-delete]"), function(btn){
