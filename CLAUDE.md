@@ -16,6 +16,8 @@ Outil de planning pour hébergeurs (calendrier de réservations, fichier client,
 
 ## `sejours/` — Fiftin Séjours, l'annuaire de réservation directe (nouveau projet)
 
+Prix (Séjours) : toujours « dès 100 € / nuit » (`priceNightLabel()`) ; dans les blocs chiffrés (picto + valeur + libellé), « dès 100 € » puis « par nuit ». Seules exceptions : les points de la carte (montant seul, place réduite) et le filtre Prix (« jusqu'à »).
+
 Vocabulaire (textes visibles, Séjours et page Planning) : « hébergement » (jamais « logement ») et « établissement » (un lieu qui comprend plusieurs hébergements). L'outil `app/` garde son propre vocabulaire (« location »).
 
 Annuaire mobile-first de location courte durée en réservation directe pour les voyageurs : recherche filtrée (distance, lieu, prix, prestations), fiches détaillées, contact hôte pré-rempli (WhatsApp / SMS / appel).
