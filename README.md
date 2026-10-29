@@ -1201,3 +1201,13 @@ Vocabulaire au passage : carte de Mes annonces « 1 location · 180 €/nuit » 
 
 Retour de César (capture à l'appui) : dans Mes annonces → Calendrier, en formule gestion, « Lecture seule ici — ajoutez ou modifiez vos réservations depuis l'app de gestion », « Planning associé · Relié à Jardin » et le bouton jaune « Ajouter/modifier réservation depuis fiftin.app » disaient la même chose en trois encarts. Fusionnés en une carte verte `.cal-planning` : picto calendrier de l’entrée « Mon planning » du menu, contenu centré, « Fiftin Planning », « ✓ Relié à <location> » (ou « Pas encore relié à une location »), « Calendrier en lecture seule ici : vos réservations s’ajoutent et se modifient dans Fiftin Planning », bouton jaune « Modifier le calendrier dans Fiftin Planning ↗ » (vers `app/`) et lien « Changer la location reliée » / « Relier une location » (même volet « Planning associé » qu'avant). Formule hôte (calendrier rempli dans Séjours) inchangée. Vérifié sur émulateurs : carte seule (anciens encarts absents), volet de liaison qui s'ouvre, aucune erreur.
 
+### Fiche plus lisible : description, hôte, prestations en pastilles
+
+Retours de César (captures à l'appui) :
+- **Description** sous le titre et l'accroche, dans la même carte (fiche d'un hébergement, page établissement, et pareil dans les deux éditeurs) — elle n'est plus isolée dans sa propre carte.
+- **Hôte** : « Votre hôte » et « À propos de votre hôte » réunis en une carte (photo, nom, présentation, « Voir plus »).
+- **Page établissement** : « Dans tous les hébergements » devient « Prestations de l’établissement » et montre les prestations cochées par l'hôte pour l'établissement (`place.amen`), parmi celles qui peuvent l'être (`PE_SHARED_AMEN`). L'ancienne carte calculait l'intersection des prestations des chambres et affichait donc le couchage (« Lit 160 cm »).
+- **Pastilles** de prestations et de pièces, partout (fiches, éditeurs, volet de filtre) : plus compactes (pilules à la largeur du texte, plus de grille à 2 colonnes) ; cochée = pleine vert propriétaire, texte blanc (au lieu d'un simple contour, qui donnait l'impression d'une case vide) ; à cocher = fond crème. Sur les fiches, toutes les prestations et pièces possibles sont affichées, celles qui manquent en gris très léger, pour qu'on voie ce qu'il y a et ce qu'il n'y a pas.
+
+Vérifié sur émulateurs (téléphone 390 px) : fiche (description sous l'accroche, une seule carte hôte, 72 prestations dont 5 pleines, pièces), page établissement (présentation sous le titre, prestations de l'établissement), volet de filtre ; aucune erreur.
+
