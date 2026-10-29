@@ -2413,6 +2413,17 @@ body.map-fullscreen{overflow:hidden;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
 .pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
 .pe-add{margin-top:10px;}
+.pe-undo{display:block; margin:6px auto 0; color:var(--muted);}
+/* « Créer » : hébergement ou établissement (openCreateChoice()). */
+.create-choice{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
+.cc-opt{display:flex; align-items:flex-start; gap:14px; width:100%; padding:16px; border:1.5px solid var(--line); border-radius:20px; background:#fff; text-align:left; font-family:'Jost',sans-serif; color:var(--ink); cursor:pointer;}
+.cc-opt:active{border-color:var(--sauge);}
+.cc-ico{flex:0 0 46px; width:46px; height:46px; border-radius:14px; background:var(--sauge); color:#fff; display:flex; align-items:center; justify-content:center;}
+.cc-ico.yellow{background:var(--yellow); color:var(--sauge-deep);}
+.cc-ico svg{width:24px; height:24px;}
+.cc-txt{display:flex; flex-direction:column; gap:3px;}
+.cc-txt b{font-size:17px; font-weight:700;}
+.cc-txt span{font-size:13.5px; color:var(--muted); line-height:1.4;}
 .site-kind-chips{display:flex; flex-wrap:wrap; gap:8px;}
 .site-kind-chip{border:1.5px solid var(--line); background:#fff; border-radius:999px; padding:8px 13px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:600; color:var(--sauge); cursor:pointer;}
 .site-kind-chip.on{background:var(--sauge); border-color:var(--sauge); color:#fff;}
@@ -9413,7 +9424,8 @@ function listingReadiness(d, profile){
 function openListingEditor(listing, siteFrom){
   openCreator(listing || null, siteFrom || null);
 }
-function openCreator(listing, siteFrom){
+// siteJoin {siteId, place} : hébergement créé dans un établissement (peNewListing()).
+function openCreator(listing, siteFrom, siteJoin){
   var data = crBlank();
   if(listing){
     data = JSON.parse(JSON.stringify(listing));
@@ -9425,7 +9437,7 @@ function openCreator(listing, siteFrom){
     ["lat","lng","region","inseeCode"].forEach(function(k){ if(siteFrom[k]!=null) data[k] = siteFrom[k]; });
   }
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
-    timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, profile:null, notice:""};
+    timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
   try{
     var local = JSON.parse(localStorage.getItem(CR_LOCAL_KEY+(cr.id||"new")) || "null");
@@ -9445,14 +9457,21 @@ function openCreator(listing, siteFrom){
 }
 function crClose(after){
   if(!cr) return;
+  if(typeof after!=="function") after = null; // appelée aussi directement par un clic (événement)
   if(cr.uploads){ alert("Une photo est encore en cours d’envoi : patientez quelques secondes."); return; }
   var finish = function(){
     document.getElementById("creator-root").innerHTML = "";
     document.body.classList.remove("creator-open");
+    var join = cr.siteJoin, myId = cr.id;
     cr = null;
     hostListingsCache = [];
     if(state.hostMode && state.hostTab==="listings") renderHostListings();
     if(after) after();
+    // Hébergement créé dans un établissement : retour à l'établissement.
+    else if(join && myId) ensureHostListingsLoaded(function(listings){
+      var me = listings.filter(function(x){ return x.id===myId; })[0];
+      if(me && !cr && !pe) openPlaceEditor(me, listings);
+    });
   };
   if(cr.timer){ clearTimeout(cr.timer); cr.timer = null; crSave(); }
   cr.chain.then(finish, finish);
@@ -9619,6 +9638,7 @@ function crWire(){
    Brouillon : association automatique à la mise en ligne (< 50 m). */
 function crSiteCardHtml(){
   var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement <small class="cr-opt">facultatif</small></div>';
+  if(cr.siteJoin) return head+'<p class="cr-note">Cet hébergement fait partie de l’établissement'+(cr.siteJoin.place && cr.siteJoin.place.name ? ' « '+esc(cr.siteJoin.place.name)+' »' : '')+'.</p></div>';
   if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos logements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
   var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
   if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
@@ -9979,7 +9999,8 @@ function crSave(){
     var payload = crPayload();
     var db = firebase.firestore();
     var write = c.id ? db.collection("listings").doc(c.id).update(payload)
-      : db.collection("listings").add(Object.assign(payload, {ownerUid:authState.uid, ownerEmail:authState.email||"", status:"draft", reviewed:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()}))
+      : db.collection("listings").add(Object.assign(payload, {ownerUid:authState.uid, ownerEmail:authState.email||"", status:"draft", reviewed:false, createdAt:firebase.firestore.FieldValue.serverTimestamp()},
+          c.siteJoin ? (c.siteJoin.place ? {siteId:c.siteJoin.siteId, place:c.siteJoin.place} : {siteId:c.siteJoin.siteId}) : {}))
           .then(function(ref){ try{ localStorage.removeItem(CR_LOCAL_KEY+"new"); }catch(e){} c.id = ref.id; });
     var timeout = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error("timeout")); }, 12000); });
     return Promise.race([write, timeout]).then(function(){
@@ -10010,6 +10031,8 @@ function crPublish(){
     // Logements du même hôte à moins de 50 m : associés d'office (comme au dépôt).
     hostListingsCache = [];
     return new Promise(function(res){ ensureHostListingsLoaded(res); }).then(function(listings){
+      // Créée dans un établissement : elle en fait déjà partie.
+      if(c.siteJoin) return 0;
       var own = listings.filter(function(x){ return x.id!==c.id; }), sel = c.siteFrom ? [c.siteFrom.id] : [];
       own.forEach(function(x){ if(sel.indexOf(x.id)===-1 && typeof x.lat==="number" && typeof c.data.lat==="number" && haversineKm(c.data.lat, c.data.lng, x.lat, x.lng) <= SITE_AUTO_KM) sel.push(x.id); });
       if(!sel.length) return 0;
@@ -10054,15 +10077,29 @@ function crPreview(){
    applySiteAssociation(). Un établissement n'existe qu'à partir de deux
    logements : avant, rien n'est enregistré. Aperçu = la vraie page
    établissement (openPlace() avec override). */
-var pe = null; // {listings, memberIds, place, uploads, timer, chain, saveState}
+var pe = null; // {listings, memberIds, place, uploads, timer, chain, saveState, siteId}
 var PE_MAX_PHOTOS = 6;
+var PE_LOCAL_NEW = "fiftin_pe_new"; // établissement en création, avant son premier hébergement
+/* listing null : nouvel établissement (« Créer » → « Un établissement ») —
+   rien n'existe côté serveur avant son premier hébergement : présentation
+   gardée sur l'appareil, puis recopiée sur ce premier hébergement. */
 function openPlaceEditor(listing, listings, preselect){
+  if(!listing){
+    var draft = null;
+    try{ draft = JSON.parse(localStorage.getItem(PE_LOCAL_NEW) || "null"); }catch(e){}
+    var dp = (draft && draft.place) || {};
+    pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
+      place:{name:dp.name || "", kind:dp.kind || "", desc:dp.desc || "", gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+    document.body.classList.add("creator-open");
+    peRender();
+    return;
+  }
   var ids = [listing.id].concat(siteOthersOf(listing, listings).map(function(x){ return x.id; }));
   (preselect || []).forEach(function(id){ if(ids.indexOf(id)===-1) ids.push(id); });
   var byId = function(id){ return listings.filter(function(x){ return x.id===id; })[0]; };
   var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
   var pl = (withPlace && withPlace.place) || {};
-  pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:ids.length>1 ? "saved" : "solo",
+  pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
@@ -10072,9 +10109,10 @@ function openPlaceEditor(listing, listings, preselect){
 function peMembers(){
   return pe.memberIds.map(function(id){ return pe.listings.filter(function(x){ return x.id===id; })[0]; }).filter(Boolean);
 }
-function pePlaceObj(){
-  var p = pe.place, name = (p.name || "").trim(), desc = (p.desc || "").trim();
-  if(!name && !desc && !p.kind && !p.gallery.length) return null;
+function pePlaceObj(ctx){
+  // Toujours un objet, même vide : il marque un établissement voulu par
+  // l'hôte (gardé avec un seul hébergement, voir hostSiteGroups()).
+  var p = (ctx || pe).place, name = (p.name || "").trim(), desc = (p.desc || "").trim();
   var out = {name:name, gallery:p.gallery.slice(), galleryThumb:p.galleryThumb.slice(), galleryMid:p.galleryMid.slice()};
   if(p.kind) out.kind = p.kind;
   if(desc) out.desc = desc;
@@ -10082,7 +10120,7 @@ function pePlaceObj(){
 }
 function peSaveLabel(){
   var s = pe.saveState;
-  return s==="saving" ? "Enregistrement…" : s==="saved" ? "Enregistré" : s==="solo" ? "Ajoutez un 2e logement pour l’enregistrer"
+  return s==="saving" ? "Enregistrement…" : s==="saved" ? "Enregistré" : s==="new" ? "Gardé sur cet appareil jusqu’au premier hébergement"
     : s==="error" ? "Erreur d’enregistrement · réessayez" : s==="dirty" ? "Modifications en attente" : "";
 }
 function peSetSaveLabel(){ var el = document.getElementById("pe-save"); if(el && pe) el.textContent = peSaveLabel(); }
@@ -10096,10 +10134,13 @@ function peSave(){
   if(!pe) return pe;
   var c = pe;
   c.timer = null;
-  if(c.memberIds.length<2){ c.saveState = "solo"; peSetSaveLabel(); return; }
+  if(!c.memberIds.length){
+    try{ localStorage.setItem(PE_LOCAL_NEW, JSON.stringify({siteId:c.siteId, place:c.place})); }catch(e){}
+    c.saveState = "new"; peSetSaveLabel(); return;
+  }
   c.saveState = "saving"; peSetSaveLabel();
   c.chain = c.chain.then(function(){
-    return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj()).then(function(){
+    return applySiteAssociation(c.listings, c.memberIds[0], c.memberIds.slice(1), pePlaceObj(), true).then(function(){
       // Données à jour (siteId attribué, lieu recopié) pour la suite.
       return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(function(ls){ c.listings = ls; res(); }); });
     }).then(function(){
@@ -10149,8 +10190,8 @@ function peRender(){
   var common = placeCommonAmen(views);
   var first = views[0] || {};
   var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"]].filter(Boolean);
-  var progress = members.length<2
-    ? '<div class="cr-progress"><b>Ajoutez un autre logement</b><p>Un établissement regroupe au moins deux de vos logements à la même adresse. Rien n’est enregistré avant.</p><button type="button" class="btn-apply" data-pe-open="add">Ajouter un logement</button></div>'
+  var progress = !members.length
+    ? '<div class="cr-progress"><b>Présentez votre établissement, puis créez ses hébergements</b><p>Un établissement est un lieu qui comprend plusieurs hébergements (chambres, gîtes…). Nom, type, photos et présentation sont communs à tous ; chaque hébergement a ensuite sa propre annonce, son prix et son calendrier.</p><button type="button" class="btn-apply" id="pe-first">Créer le premier hébergement</button></div>'
     : missing.length
       ? '<div class="cr-progress"><b>'+(missing.length<=2 ? "Votre vitrine est presque prête" : "Votre établissement prend forme")+'</b><p>Pour bien le présenter aux voyageurs, ajoutez :</p><div class="cr-chips">'+
           missing.map(function(m){ return '<button type="button" class="cr-chip" data-pe-go="'+m[0]+'">'+m[1]+'</button>'; }).join("")+'</div></div>'
@@ -10168,7 +10209,7 @@ function peRender(){
     '<div class="detail-body">'+
       progress+
       '<div class="detail-card">'+
-        '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : esc(first.region || ""))+'</div>'+
+        '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : first.region ? esc(first.region) : '<span class="cr-ph">Lieu · celui de vos hébergements</span>')+'</div>'+
         '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
         '<div class="place-kind-line"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+
           '<span><button type="button" class="pe-kind'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type d’établissement")+'</button> · '+members.length+' logement'+(members.length>1?'s':'')+'</span></div>'+
@@ -10184,13 +10225,14 @@ function peRender(){
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre logement</div>'+
           '<p class="site-sub">Ce que voient les voyageurs. Touchez un logement pour le modifier ou le retirer.</p>'+
           '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
-          '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un logement à l’établissement</span></button>'+
+          (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Dans tous les logements</div>'+
           (common.length ? detailAmenitiesHtml({amen:common}) : '<p class="cr-note">Les prestations cochées sur tous vos logements apparaîtront ici.</p>')+'</div>'+
         '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+esc((first.host && first.host.name) || "")+'</b></div></div>'+
           '<p class="cr-note">Votre présentation, commune à toutes vos annonces.</p></div>'+
+        (members.length ? '<button type="button" class="link-btn pe-undo" id="pe-undo">Défaire l’établissement</button>' : '')+
       '</div>'+
     '</div>'+
     '<input type="file" id="pe-file" accept="image/*" multiple style="display:none">'+
@@ -10202,6 +10244,10 @@ function peWire(){
   var p = pe.place;
   document.getElementById("pe-close").addEventListener("click", peClose);
   document.getElementById("pe-preview").addEventListener("click", pePreview);
+  var firstBtn = document.getElementById("pe-first");
+  if(firstBtn) firstBtn.addEventListener("click", peNewListing);
+  var undo = document.getElementById("pe-undo");
+  if(undo) undo.addEventListener("click", peUndo);
   [["pe-name","name"],["pe-desc","desc"]].forEach(function(f){
     var el = document.getElementById(f[0]);
     crAutosize(el);
@@ -10289,7 +10335,7 @@ function peSheet(kind, arg){
     inner = '<h3>Ajouter un logement</h3>'+
       (cands.length ? '<p class="sheet-sub">Vos autres annonces. Un logement à une autre adresse reste en général une annonce à part.</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>'
         : '<p class="sheet-sub">Vous n’avez pas d’autre annonce à ajouter.</p>')+
-      '<button type="button" class="link-btn" id="pe-new-listing">+ Créer un nouveau logement à cette adresse</button>';
+      '<button type="button" class="link-btn" id="pe-new-listing">+ Créer un nouvel hébergement dans l’établissement</button>';
     if(!cands.length) apply = null;
   }
   var root = document.getElementById("sheet-root");
@@ -10323,35 +10369,14 @@ function peSheet(kind, arg){
         return;
       }
       if(act==="remove"){
-        var dissolve = pe.memberIds.length<=2;
-        if(!confirm(dissolve
-          ? "Retirer ce logement ? Il ne resterait qu’un logement : l’établissement serait défait (son nom, son type, sa présentation et ses photos effacés). Les annonces restent en ligne."
-          : "Retirer ce logement de l’établissement ? Son annonce reste en ligne, seule.")) return;
+        if(!confirm("Retirer cet hébergement de l’établissement ? Son annonce reste telle quelle, seule.")) return;
         pe.memberIds = pe.memberIds.filter(function(id){ return id!==arg; });
-        close();
-        if(!dissolve){ peRender(); peScheduleSave(0); return; }
-        // Un seul logement restant : plus d'établissement (association et
-        // copies du lieu retirées des deux annonces).
-        var c2 = pe;
-        clearTimeout(c2.timer); c2.timer = null;
-        c2.saveState = "saving"; peSetSaveLabel();
-        c2.chain = c2.chain.then(function(){
-          return applySiteAssociation(c2.listings, c2.memberIds[0], [], null);
-        }).then(function(){ return new Promise(function(res){ hostListingsCache = []; ensureHostListingsLoaded(function(ls){ c2.listings = ls; res(); }); }); })
-          .then(function(){ if(pe!==c2) return; c2.place = {name:"", kind:"", desc:"", gallery:[], galleryThumb:[], galleryMid:[]}; c2.saveState = "solo"; peRender(); },
-                function(e){ console.warn("[établissement]", e); if(pe===c2){ c2.saveState = "error"; peSetSaveLabel(); } });
-        peRender();
+        close(); peRender(); peScheduleSave(0);
       }
     });
   } else if(kind==="add"){
     wireSitePickRows(root, sel);
-    document.getElementById("pe-new-listing").addEventListener("click", function(){
-      var from = peMembers()[0];
-      close();
-      if(pe.timer){ clearTimeout(pe.timer); peSave(); }
-      var c = pe;
-      c.chain.then(function(){ if(pe!==c) return; document.getElementById("creator-root").innerHTML = ""; pe = null; openListingEditor(null, from); });
-    });
+    document.getElementById("pe-new-listing").addEventListener("click", function(){ close(); peNewListing(); });
     var ab = document.getElementById("sheet-apply");
     if(ab) ab.addEventListener("click", function(){
       sel.forEach(function(id){ if(pe.memberIds.indexOf(id)===-1) pe.memberIds.push(id); });
@@ -10359,6 +10384,33 @@ function peSheet(kind, arg){
       if(sel.length) peScheduleSave(0);
     });
   }
+}
+/* Nouvel hébergement créé DANS l'établissement : le créateur d'annonce
+   reçoit l'établissement (siteJoin) — l'annonce y appartient dès son
+   premier enregistrement (brouillon compris), adresse et contact repris
+   d'un hébergement existant ; à la fermeture, retour à l'établissement. */
+function peNewListing(){
+  var c = pe;
+  if(c.uploads){ alert("Une photo est encore en cours d’envoi : patientez quelques secondes."); return; }
+  // Hébergement seul pas encore devenu établissement : on l'enregistre d'abord.
+  if(c.timer || (c.memberIds.length && !(peMembers()[0] || {}).siteId)){ clearTimeout(c.timer); c.timer = null; peSave(); }
+  c.chain.then(function(){
+    if(pe!==c) return;
+    var members = peMembers();
+    var siteId = (members[0] && members[0].siteId) || c.siteId;
+    document.getElementById("creator-root").innerHTML = "";
+    pe = null;
+    if(!members.length){ try{ localStorage.removeItem(PE_LOCAL_NEW); }catch(e){} }
+    openCreator(null, members[0] || null, {siteId:siteId, place:pePlaceObj(c)});
+  });
+}
+function peUndo(){
+  if(!confirm("Défaire l’établissement ? Ses hébergements redeviennent des annonces seules (elles restent en ligne) ; son nom, son type, sa présentation et ses photos sont effacés.")) return;
+  var c = pe, db = firebase.firestore(), batch = db.batch();
+  peMembers().forEach(function(m){ batch.update(db.collection("listings").doc(m.id), {siteId:firebase.firestore.FieldValue.delete(), place:firebase.firestore.FieldValue.delete()}); });
+  clearTimeout(c.timer); c.timer = null;
+  c.chain = c.chain.then(function(){ return batch.commit(); }).then(function(){ hostListingsCache = []; }, function(e){ alert("Échec : "+(e.message||e.code||"réessayez.")); });
+  peClose();
 }
 function pePreview(){
   var place = pePlaceObj();
@@ -11754,12 +11806,14 @@ function hostGuestName(guestId){
    seul lot (batch) : tout ou rien. */
 var SITE_AUTO_KM = 0.05; // association automatique à la création : même hôte, moins de 50 m
 function newSiteId(){ return "site_"+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-function planSiteAssociation(listings, listingId, otherIds){
+function planSiteAssociation(listings, listingId, otherIds, keepSingle){
   var byId = {}; listings.forEach(function(l){ byId[l.id] = l; });
   var cur = byId[listingId];
   var group = [listingId].concat(otherIds);
   var target = "";
-  if(otherIds.length){
+  // keepSingle : établissement voulu par l'hôte (éditeur d'établissement),
+  // gardé même avec un seul logement ; sinon un lieu seul disparaît.
+  if(otherIds.length || keepSingle){
     target = (cur && cur.siteId) || otherIds.map(function(id){ return byId[id] && byId[id].siteId; }).filter(Boolean)[0] || newSiteId();
   }
   var next = {};
@@ -11772,10 +11826,18 @@ function planSiteAssociation(listings, listingId, otherIds){
     var rid = target===cur.siteId ? newSiteId() : cur.siteId;
     removed.forEach(function(l){ next[l.id] = rid; });
   }
+  // Lieux touchés par l'opération (destination, anciens lieux des logements
+  // déplacés, lieu des logements retirés) : seuls eux peuvent disparaître
+  // faute de deux logements — un établissement à un seul hébergement d'un
+  // autre lieu (voulu par l'hôte) n'est jamais touché.
+  var involved = {};
+  group.forEach(function(id){ if(byId[id] && byId[id].siteId) involved[byId[id].siteId] = true; });
   group.forEach(function(id){ next[id] = target; });
+  if(target) involved[target] = true;
+  Object.keys(next).forEach(function(id){ if(next[id] && !(byId[id] && byId[id].siteId===next[id])) involved[next[id]] = true; });
   var count = {};
   Object.keys(next).forEach(function(id){ if(next[id]) count[next[id]] = (count[next[id]]||0)+1; });
-  Object.keys(next).forEach(function(id){ if(next[id] && count[next[id]]<2) next[id] = ""; });
+  Object.keys(next).forEach(function(id){ if(next[id] && involved[next[id]] && count[next[id]]<2 && !(keepSingle && next[id]===target)) next[id] = ""; });
   var changes = {};
   listings.forEach(function(l){ if((l.siteId||"")!==next[l.id]) changes[l.id] = next[l.id]; });
   return changes;
@@ -11787,8 +11849,8 @@ function planSiteAssociation(listings, listingId, otherIds){
    annonces du lieu (association automatique, retrait d'un logement). Une
    annonce qui n'appartient plus à aucun lieu perd sa copie. */
 function samePlace(a, b){ return JSON.stringify(a||null)===JSON.stringify(b||null); }
-function applySiteAssociation(listings, listingId, otherIds, newPlace){
-  var changes = planSiteAssociation(listings, listingId, otherIds);
+function applySiteAssociation(listings, listingId, otherIds, newPlace, keepSingle){
+  var changes = planSiteAssociation(listings, listingId, otherIds, keepSingle);
   var finalSite = {};
   listings.forEach(function(l){ finalSite[l.id] = (l.id in changes) ? changes[l.id] : (l.siteId || ""); });
   var placeOf = {}, target = finalSite[listingId];
@@ -11880,11 +11942,11 @@ function renderHostListings(){
       state.hostListingId = null; state.hostUnitId = null;
     }
     feed.innerHTML = '<div class="host-view">'+
-      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Nouvelle annonce</button>'+
+      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Créer</button>'+
       siteHintHtml(listings)+
       hostSiteGroups(listings).map(function(g){ return g.members ? hostSiteHtml(g, listings) : hostListingCardHtml(g.listing, listings); }).join("")+
     '</div>';
-    document.getElementById("host-new-listing").addEventListener("click", function(){ openListingEditor(null); });
+    document.getElementById("host-new-listing").addEventListener("click", openCreateChoice);
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-preview]"), function(btn){
       btn.addEventListener("click", function(){
         var g = hostSiteGroups(listings).filter(function(x){ return x.members && x.siteId===btn.getAttribute("data-site-preview"); })[0];
@@ -12047,7 +12109,7 @@ function hostSiteGroups(listings){
   var out = [], bySite = {};
   listings.forEach(function(l){
     var others = siteOthersOf(l, listings);
-    if(!l.siteId || !others.length){ out.push({listing:l}); return; }
+    if(!l.siteId || (!others.length && !l.place)){ out.push({listing:l}); return; }
     if(!bySite[l.siteId]){ bySite[l.siteId] = {siteId:l.siteId, members:[]}; out.push(bySite[l.siteId]); }
     bySite[l.siteId].members.push(l);
   });
@@ -12060,7 +12122,7 @@ function hostSiteHtml(g, listings){
   registerPhotoVariants(place);
   var photo = place.gallery && place.gallery[0] ? photoMid(place.gallery[0]) : memberCoverUrl(first);
   var kind = placeKindLabel(place);
-  var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation"].filter(Boolean);
+  var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation", g.members.length<2 && "un deuxième hébergement (l’établissement apparaît aux voyageurs à partir de deux hébergements en ligne)"].filter(Boolean);
   // Une seule carte : en-tête vert propriétaire (l'établissement), puis
   // ses logements en sous-cartes.
   return '<section class="host-site">'+
@@ -12070,7 +12132,7 @@ function hostSiteHtml(g, listings){
         '<div class="hsh-body">'+
           '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
           '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
-          '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' logements</span>'+
+          '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' hébergement'+(g.members.length>1?'s':'')+'</span>'+
         '</div>'+
       '</div>'+
       (todo.length ? '<p class="hsh-todo">À compléter pour les voyageurs : '+todo.join(", ")+'.</p>' : '')+
@@ -12080,9 +12142,9 @@ function hostSiteHtml(g, listings){
       '</div>'+
     '</div>'+
     '<div class="host-site-members">'+
-      '<div class="hsm-label">Les '+g.members.length+' logements</div>'+
+      '<div class="hsm-label">'+(g.members.length>1 ? 'Les '+g.members.length+' hébergements' : 'Son hébergement')+'</div>'+
       g.members.map(function(l){ return hostListingCardHtml(l, listings, true); }).join("")+
-      '<button type="button" class="hsm-add" data-site-add="'+esc(first.id)+'">+ Ajouter un logement à l’établissement</button>'+
+      '<button type="button" class="hsm-add" data-site-add="'+esc(first.id)+'">+ Ajouter un hébergement à l’établissement</button>'+
     '</div>'+
   '</section>';
 }
@@ -12153,7 +12215,7 @@ function hostListingCardHtml(l, listings, inSite){
     // son en-tête s'en charge déjà.
     (inSite ? '' : '<button type="button" class="cal-disclose site-disclose" data-site-link="'+esc(l.id)+'">'+
       '<span>Établissement</span>'+
-      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'Regrouper avec un autre logement')+'</span>'+
+      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' logement'+(siteCount>1?'s':'') : 'En faire un établissement')+'</span>'+
       '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
     '</button>')+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
@@ -12169,15 +12231,41 @@ function siteHintHtml(listings){
   return '<div class="site-hint"><p>« '+esc(h.a.name||"")+' » et « '+esc(h.b.name||"")+' » semblent être au même endroit. Les présenter ensemble aux voyageurs ?</p>'+
     '<div class="site-hint-actions"><button type="button" class="site-hint-go" id="site-hint-go">Les associer</button><button type="button" class="site-hint-off" id="site-hint-off">Non merci</button></div></div>';
 }
+/* « Créer » : un hébergement seul, ou un établissement (un lieu qui
+   comprend plusieurs hébergements, présenté une fois, puis ses
+   hébergements créés dedans). */
+function openCreateChoice(){
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+    '<h3>Que voulez-vous créer ?</h3>'+
+    '<div class="create-choice">'+
+      '<button type="button" class="cc-opt" data-create="listing"><span class="cc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></span>'+
+        '<span class="cc-txt"><b>Un hébergement</b><span>Une chambre, un gîte, une maison… Une annonce, avec son prix et son calendrier. Vous pourrez le rattacher à un établissement plus tard.</span></span></button>'+
+      '<button type="button" class="cc-opt" data-create="place"><span class="cc-ico yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg></span>'+
+        '<span class="cc-txt"><b>Un établissement</b><span>Un lieu qui comprend plusieurs hébergements : maison d’hôtes, petit hôtel, domaine de gîtes… Vous le présentez une fois, puis vous y créez chaque hébergement.</span></span></button>'+
+    '</div>'+
+  '</div></div></div>';
+  var close = function(){ root.innerHTML = ""; };
+  document.getElementById("sheet-close").addEventListener("click", close);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") close(); });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-create]"), function(b){
+    b.addEventListener("click", function(){
+      close();
+      if(b.getAttribute("data-create")==="listing"){ openListingEditor(null); return; }
+      ensureHostListingsLoaded(function(listings){ openPlaceEditor(null, listings); });
+    });
+  });
+}
 function hostEmptyHtml(){
   return '<div class="host-view">'+
     '<div class="empty-state"><p>Vous n\'avez pas encore d\'annonce sur Fiftin Séjours.</p></div>'+
-    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Déposer une annonce</button>'+
+    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Créer</button>'+
   '</div>';
 }
 function wireHostEmpty(){
   var btn = document.getElementById("host-new-listing-empty");
-  if(btn) btn.addEventListener("click", function(){ openListingEditor(null); });
+  if(btn) btn.addEventListener("click", openCreateChoice);
 }
 
 /* ---------------- calendrier simplifié (année, mini-mois) ---------------- */
