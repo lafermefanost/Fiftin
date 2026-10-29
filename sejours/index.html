@@ -2415,6 +2415,8 @@ body.map-fullscreen{overflow:hidden;}
 .parking-line{display:flex; align-items:flex-start; gap:12px; font-size:14.5px; line-height:1.4;}
 .parking-line svg{flex:0 0 34px; width:34px; height:34px; padding:7px; border-radius:11px; background:var(--sauge-mid); color:var(--cream);}
 .amenity-chip.cr-locked{opacity:.45; cursor:default;}
+.site-bridge{margin-top:10px; text-align:center;}
+.site-bridge small{display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px;}
 .pe-undo{display:block; margin:6px auto 0; color:var(--muted);}
 /* « Créer » : hébergement ou établissement (openCreateChoice()). */
 .create-choice{display:flex; flex-direction:column; gap:12px; margin-top:6px;}
@@ -3368,10 +3370,10 @@ var HOST_FORMULAS = [
     bullets:["Listez votre hébergement, calendrier simplifié inclus."]},
   {value:"essentiel", name:"Formule Gestion simplifiée", price:"24 €/mois", desc:"Planning complet Fiftin app : réservations, fichier client, compta.",
     planName:"Essentiel", planPrice:"24 €", planPer:"par mois",
-    bullets:["Tous les outils : planning, réservations, fichier client, comptabilité","Une seule structure juridique","Jusqu'à 4 locations","Gestion par une seule personne"]},
+    bullets:["Tous les outils : planning, réservations, fichier client, comptabilité","Une seule structure juridique","Jusqu'à 4 hébergements","Gestion par une seule personne"]},
   {value:"pro", name:"Formule Gestion avancée", price:"47 €/mois", desc:"Tout l'Essentiel + plusieurs structures juridiques, accès équipe.",
     planName:"Avancé", planPrice:"47 €", planPer:"par mois",
-    bullets:["Tout l'Essentiel","Jusqu'à 8 locations","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par hébergement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
+    bullets:["Tout l'Essentiel","Jusqu'à 8 hébergements","Plusieurs structures juridiques (SASU, LMNP, EI, SARL…)","1 sous-compte Staff, lecture ou écriture au choix","Scalable : +5 € par hébergement supplémentaire, +5 € par sous-compte staff supplémentaire"]}
 ];
 /* LOT 5.2 : contenu FAQ écrit à partir du fonctionnement réel de l'app
    (lu dans ce fichier même — filtres, formules HOST_FORMULAS ci-dessus,
@@ -3398,8 +3400,8 @@ var FAQ_DATA = [
     {q:"Comment déposer une annonce sur Fiftin Séjours ?", a:"Depuis votre Profil, Espace hôtes, puis « Déposer une annonce » : photos, type d'hébergement, capacité et tarif, prestations, adresse et coordonnées de contact."},
     {q:"Combien coûte la présence sur Fiftin Séjours ?", a:"Être listé sur l'annuaire (Formule Hôte) est gratuit et inclut un calendrier simplifié. Des formules payantes (Essentiel, 24 €/mois, Avancé, 47 €/mois) donnent accès en plus à l'outil de gestion complet (planning, réservations, fichier client, comptabilité)."},
     {q:"Fiftin prend-il une commission sur mes réservations ?", a:"Non, aucune commission sur les réservations — seulement, si vous le choisissez, un abonnement pour l'outil de gestion."},
-    {q:"Mon annonce est-elle publiée immédiatement ?", a:"Non, chaque annonce est vérifiée avant de devenir visible sur Fiftin Séjours."},
-    {q:"Puis-je proposer plusieurs locations sous une seule annonce ?", a:"Oui — ajoutez autant de locations que nécessaire dans le formulaire, chacune avec son propre prix, sa capacité et ses photos."},
+    {q:"Mon annonce est-elle publiée immédiatement ?", a:"Oui : elle est visible dès que vous la mettez en ligne. Nous la vérifions ensuite, sous 48 h."},
+    {q:"Puis-je proposer plusieurs hébergements au même endroit ?", a:"Oui — créez un établissement (une maison d’hôtes, un domaine de gîtes…) : vous le présentez une fois, puis chaque hébergement a sa propre annonce, avec son prix, sa capacité, ses photos et son calendrier. Une annonce seule peut devenir un établissement à tout moment (« + Ajouter un hébergement au même endroit »)."},
     {q:"Le numéro d'enregistrement meublé de tourisme est-il obligatoire ?", a:"[à compléter — dépend de votre commune ; voir art. L. 324-1-1 du Code du tourisme et votre mairie]"},
     {q:"Comment gérer mon calendrier de réservations ?", a:"Avec une formule payante, via votre espace de gestion dédié (lien « Vous gérez déjà des réservations ? » dans le formulaire d'annonce)."},
     {q:"Comment fonctionne ma présentation d'hôte ?", a:"Vous la renseignez une seule fois dans votre Profil hôte — elle est reprise automatiquement sur toutes vos annonces, sauf si vous cochez une présentation spécifique pour l'une d'elles."},
@@ -3959,6 +3961,7 @@ function normalizeHostListing(doc){
     createdAtMs: listingCreatedMs(l), // « Nouveau sur Fiftin » (voir trustBadgeHtml())
     place: l.place || null, // « Le lieu » : nom + photos communes des logements associés (voir applySiteAssociation())
     siteId: l.siteId || "", // logements associés au même endroit (voir siteOf())
+    parking: l.parking || null, // stationnement d'une annonce seule (établissement : place.parking)
     stats: l.stats || null, // {demandeCount, confirmedCount} — écrit uniquement par la Cloud Function syncListingContactStats (functions/index.js), jamais par un client (voir la règle Firestore listings/{listingId}).
     name: l.name, region: l.region, claim: l.claim,
     price: price, distance: (typeof l.distance==="number") ? l.distance : 0,
@@ -7407,7 +7410,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       '<div class="detail-card"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
-      (l.siteId ? parkingCardHtml(l.place) : '')+
+      parkingCardHtml({parking:listingParkingOf(l)})+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -9448,6 +9451,8 @@ function openCreator(listing, siteFrom, siteJoin){
     PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ var v = siteJoin.shared[k]; if(v!=null && v!=="") data[k] = v; });
   }
   if(site) data.amen = mergeSharedAmen(data.amen, [], placeSharedAmen(site.place));
+  // Ancienne case « Parking privé » d'une annonce seule : reprise en stationnement.
+  if(!site && !data.parking && (data.amen || []).indexOf("Parking privé")!==-1) data.parking = {kind:"private"};
   cr = {id: listing ? listing.id : null, data: data, status: listing ? listing.status : "draft", hostBioCustom: !!(listing && listing.hostBioCustom),
     timer:null, chain:Promise.resolve(), uploads:0, saveState: listing ? "saved" : "idle", siteFrom: siteFrom || null, siteJoin: siteJoin || null, site: site, profile:null, notice:""};
   // Copie de secours restée sur l'appareil (enregistrement interrompu).
@@ -9563,6 +9568,7 @@ function crRender(){
         '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Pièces & annexes <small class="cr-opt">facultatif</small></div>'+
           (detailSpacesHtml(d) ? '<button type="button" class="cr-block" data-cr-open="spaces">'+detailSpacesHtml(d)+'<span class="cr-edit-link">Modifier</span></button>'
             : '<button type="button" class="cr-block cr-empty" data-cr-open="spaces"><span class="cr-ph">Chambres, salle de bain, jardin, terrasse…</span></button>')+'</div>'+
+        crParkingCardHtml()+
         crSiteCardHtml()+
         '<div class="detail-card" data-cr-sec="address"><div class="section-title">Adresse</div><button type="button" class="cr-block" data-cr-open="address">'+
           (d.address ? '<span>'+esc(d.address)+'</span>'+(typeof d.lat!=="number" ? '<span class="cr-warn">Adresse introuvable, à préciser</span>' : '') : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+
@@ -9644,7 +9650,10 @@ function crWire(){
     crClose(function(){
       ensureHostListingsLoaded(function(listings){
         var me = listings.filter(function(x){ return x.id===myId; })[0];
-        if(me) openSiteLink(me, listings);
+        if(!me) return;
+        var alone = !siteOthersOf(me, listings).length && !me.place;
+        openSiteLink(me, listings);
+        if(alone) peSheet("add");
       });
     });
   });
@@ -9663,7 +9672,7 @@ function crSiteCardHtml(){
   if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
   var others = siteOthersOf(me, hostListingsCache);
   return head+'<button type="button" class="cr-block" id="cr-site">'+
-    (others.length ? '<span>'+(me.place && me.place.name ? esc(me.place.name)+' · ' : '')+others.length+' autre'+(others.length>1?'s':'')+' hébergement'+(others.length>1?'s':'')+'</span>' : '<span class="cr-ph">Regrouper avec vos autres hébergements à la même adresse</span>')+
+    (others.length ? '<span>'+(me.place && me.place.name ? esc(me.place.name)+' · ' : '')+others.length+' autre'+(others.length>1?'s':'')+' hébergement'+(others.length>1?'s':'')+'</span>' : '<span>+ Ajouter un hébergement au même endroit</span><span class="cr-sub">Votre annonce devient alors un établissement.</span>')+
     '<span class="cr-edit-link">'+(others.length ? 'Gérer l’établissement' : 'Ajouter')+'</span></button></div>';
 }
 /* Prix calculé par le serveur depuis Fiftin Planning (publicAvail/{unitId}.
@@ -9769,7 +9778,7 @@ function enableRowDrag(container, arr, rerender){
 /* ---------- volets (réglages qui ne s'éditent pas sur place) ---------- */
 function crSheet(kind, arg){
   var d = cr.data, u = crUnit(), inner = "", apply = "Valider";
-  if(cr.site && (kind==="address" || kind==="contact")){ crSiteInfoSheet(kind); return; }
+  if(cr.site && (kind==="address" || kind==="contact" || kind==="parking")){ crSiteInfoSheet(kind); return; }
   if(kind==="type"){
     apply = null;
     inner = '<h3>Type d’hébergement</h3><div class="sort-row">'+Object.keys(ACCOM_TYPES).map(function(k){
@@ -9799,6 +9808,12 @@ function crSheet(kind, arg){
     inner = '<h3>Prestations</h3><p class="sheet-sub">Le couchage est indispensable ; le reste rend votre annonce plus complète.'+
       (siteAmen.length ? ' Les prestations grisées sont celles de l’établissement : elles se modifient dans l’établissement.' : '')+'</p>'+
       '<div class="cr-amen">'+amenityGroupsHtml(function(a){ return d.amen.indexOf(a)!==-1; }, true)+'</div>';
+  } else if(kind==="parking"){
+    var cpk = d.parking || {};
+    inner = '<h3>Stationnement</h3><div class="sort-row">'+PARKING_KINDS.map(function(k){
+      return '<button type="button" class="radio-row'+(cpk.kind===k[0]?' active':'')+'" data-pk="'+k[0]+'">'+esc(k[1])+'</button>'; }).join("")+'</div>'+
+      '<div class="field-block" style="margin-top:12px;"><label>Précision (facultatif)</label><input class="text-input" id="pk-note" maxlength="120" placeholder="Ex. 2 places, borne de recharge, garage à vélos" value="'+esc(cpk.note||"")+'"></div>'+
+      (cpk.kind ? '<button type="button" class="link-btn" id="pk-clear">Ne pas préciser</button>' : '');
   } else if(kind==="address"){
     inner = '<h3>Adresse de l’hébergement</h3><div class="field-block" style="position:relative;"><input class="text-input" id="crs-address" autocomplete="off" placeholder="Commencez à taper : numéro, rue, ville…" value="'+esc(d.address||"")+'">'+
       '<div class="hf-address-suggestions" id="crs-suggest" hidden></div></div>'+
@@ -9883,6 +9898,8 @@ function crSheet(kind, arg){
     });
   } else if(kind==="amen"){
     var lockedAmen = cr.site ? placeSharedAmen(cr.site.place) : [];
+    // « Parking privé » : réglé par la carte Stationnement, pas ici.
+    Array.prototype.forEach.call(root.querySelectorAll('.amenity-chip[data-a="Parking privé"]'), function(c){ c.remove(); });
     Array.prototype.forEach.call(root.querySelectorAll(".amenity-chip"), function(chip){
       var la = chip.getAttribute("data-a"), lg = AMEN_GROUPS[Number(chip.getAttribute("data-group"))];
       // Prestation de l'établissement (ou groupe à choix unique déjà fixé par lui) : non modifiable ici.
@@ -9896,7 +9913,25 @@ function crSheet(kind, arg){
       });
     });
     applyBtn.addEventListener("click", function(){
+      var hadParking = d.amen.indexOf("Parking privé")!==-1; // géré par la carte Stationnement, absent du volet
       d.amen = Array.prototype.map.call(root.querySelectorAll(".amenity-chip.active"), function(c){ return c.getAttribute("data-a"); });
+      if(hadParking) d.amen.push("Parking privé");
+      done();
+    });
+  } else if(kind==="parking"){
+    var cpkSel = (d.parking && d.parking.kind) || "";
+    Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(b){
+      b.addEventListener("click", function(){
+        cpkSel = b.getAttribute("data-pk");
+        Array.prototype.forEach.call(root.querySelectorAll("[data-pk]"), function(o){ o.classList.toggle("active", o===b); });
+      });
+    });
+    var cclr = document.getElementById("pk-clear");
+    if(cclr) cclr.addEventListener("click", function(){ d.parking = null; d.amen = syncParkingAmen(d.amen, null); done(); });
+    applyBtn.addEventListener("click", function(){
+      var note = document.getElementById("pk-note").value.trim();
+      d.parking = cpkSel ? (note ? {kind:cpkSel, note:note} : {kind:cpkSel}) : null;
+      d.amen = syncParkingAmen(d.amen, d.parking);
       done();
     });
   } else if(kind==="address"){
@@ -9997,11 +10032,14 @@ function crSheet(kind, arg){
    dans l'établissement (un seul endroit, recopiés sur tous). */
 function crSiteInfoSheet(kind){
   var d = cr.data, name = (cr.site.place && cr.site.place.name) || "l’établissement";
-  var val = kind==="address" ? esc(d.address || "Pas encore d’adresse") : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
+  var pk = kind==="parking" ? crParkingOf() : null;
+  var val = kind==="address" ? esc(d.address || "Pas encore d’adresse")
+    : kind==="parking" ? (pk && pk.kind ? esc(parkingLabel(pk))+(pk.note ? '<br>'+esc(pk.note) : '') : "Pas encore renseigné")
+    : esc(d.phone || "Pas encore de téléphone")+(d.email ? '<br>'+esc(d.email) : '');
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    '<h3>'+(kind==="address" ? "Adresse" : "Contact")+'</h3>'+
+    '<h3>'+(kind==="address" ? "Adresse" : kind==="parking" ? "Stationnement" : "Contact")+'</h3>'+
     '<p class="sheet-sub">'+(kind==="address" ? 'Commune' : 'Commun')+' à tous les hébergements de « '+esc(name)+' » : '+(kind==="address" ? 'elle se modifie' : 'il se modifie')+' une seule fois, dans l’établissement.</p>'+
     '<div class="cr-planning-box"><b>'+val+'</b></div>'+
     (cr.id ? '<div class="sheet-apply"><button class="btn-apply" id="sheet-apply">Modifier dans l’établissement</button></div>' : '')+
@@ -10021,10 +10059,28 @@ function crOpenSite(){
     });
   });
 }
+/* Stationnement : même carte pour une annonce seule (cr.data.parking) et un
+   hébergement d'établissement (celui de l'établissement, en lecture). */
+function crParkingOf(){ return cr.site ? (cr.site.place.parking || null) : (cr.data.parking || null); }
+function crParkingCardHtml(){
+  var pk = crParkingOf();
+  return '<div class="detail-card" data-cr-sec="parking"><div class="section-title">Stationnement <small class="cr-opt">facultatif</small></div>'+
+    '<button type="button" class="cr-block'+(pk && pk.kind ? '' : ' cr-empty')+'" data-cr-open="parking">'+
+    (pk && pk.kind ? '<span>'+esc(parkingLabel(pk))+'</span>'+(pk.note ? '<span class="cr-sub">'+esc(pk.note)+'</span>' : '')
+      : '<span class="cr-ph">'+(cr.site ? 'Non renseigné dans l’établissement' : 'Parking sur place, dans la rue, à proximité…')+'</span>')+
+    (cr.site ? '<span class="cr-sub">Celui de l’établissement</span>' : '')+'</button></div>';
+}
+// « Parking privé » (filtre des voyageurs) suit le stationnement choisi.
+function syncParkingAmen(amen, parking){
+  var out = (amen || []).filter(function(a){ return a!=="Parking privé"; });
+  if(parking && parking.kind==="private") out.push("Parking privé");
+  return out;
+}
 /* ---------- enregistrement automatique ---------- */
 function crPayload(){
   var d = cr.data, p = {};
-  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","parking"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  if(p.parking===undefined) p.parking = null;
   p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
   p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
   p.hostName = cr.profile.name || "";
@@ -10169,6 +10225,9 @@ function placeSharedAmen(place){
   if(place && place.parking && place.parking.kind==="private" && out.indexOf("Parking privé")===-1) out.push("Parking privé");
   return out;
 }
+// Stationnement affiché pour une annonce : celui de son établissement s'il
+// en a un, sinon le sien — même carte dans les deux cas.
+function listingParkingOf(l){ return (l && l.siteId && l.place) ? (l.place.parking || null) : ((l && l.parking) || null); }
 function parkingCardHtml(place){
   var lab = parkingLabel(place && place.parking);
   if(!lab) return "";
@@ -10213,6 +10272,7 @@ function openPlaceEditor(listing, listings, preselect){
   var byId = function(id){ return listings.filter(function(x){ return x.id===id; })[0]; };
   var withPlace = ids.map(byId).filter(function(x){ return x && x.place; })[0];
   var pl = (withPlace && withPlace.place) || {};
+  if(!withPlace && listing.parking) pl = {parking:listing.parking};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     shared:peSharedFrom(byId(ids[0])), savedAmen:placeSharedAmen(pl), dirty:{},
     place:{name:pl.name || "", kind:pl.kind || "", desc:pl.desc || "", parking:pl.parking || null, amen:(pl.amen || []).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
@@ -10510,12 +10570,14 @@ function peSheet(kind, arg){
       (pe.memberIds.length>1 ? '<button type="button" class="radio-row cr-danger" data-act="remove">Retirer de l’établissement</button>' : '')+'</div>'+
       '<p class="field-hint">Retirer un hébergement ne supprime pas son annonce : elle redevient une annonce seule.</p>';
   } else if(kind==="add"){
-    apply = "Ajouter";
-    var cands = pe.listings.filter(function(x){ return pe.memberIds.indexOf(x.id)===-1 && x.status!=="removed"; });
-    inner = '<h3>Ajouter un hébergement</h3>'+
-      (cands.length ? '<p class="sheet-sub">Vos autres annonces. Un hébergement à une autre adresse reste en général une annonce à part.</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>'
-        : '<p class="sheet-sub">Vous n’avez pas d’autre annonce à ajouter.</p>')+
-      '<button type="button" class="link-btn" id="pe-new-listing">+ Créer un nouvel hébergement dans l’établissement</button>';
+    apply = "Rattacher";
+    // Annonces seules seulement : un hébergement d'un autre établissement ne s'y prend pas.
+    var cands = pe.listings.filter(function(x){ return pe.memberIds.indexOf(x.id)===-1 && x.status!=="removed" && !(x.siteId && (x.place || siteOthersOf(x, pe.listings).length)); });
+    var becoming = pe.memberIds.length===1 && !((peMembers()[0] || {}).place);
+    inner = '<h3>'+(becoming ? 'Ajouter un hébergement au même endroit' : 'Ajouter un hébergement')+'</h3>'+
+      (becoming ? '<p class="sheet-sub">Votre annonce devient un établissement : son adresse, son contact et son stationnement deviennent ceux de l’établissement, et vous pourrez lui donner un nom, des photos des espaces communs et une présentation.</p>' : '')+
+      '<button type="button" class="btn-apply pe-new-first" id="pe-new-listing">+ Créer un nouvel hébergement</button>'+
+      (cands.length ? '<p class="sheet-sub" style="margin-top:18px;">Ou rattacher une de vos annonces seules (un hébergement à une autre adresse reste en général à part) :</p><div class="field-block sort-row">'+sitePickRowsHtml(cands, null, sel, peMembers()[0])+'</div>' : '');
     if(!cands.length) apply = null;
   }
   var root = document.getElementById("sheet-root");
@@ -12195,6 +12257,12 @@ function renderHostListings(){
       hostSiteGroups(listings).map(function(g){ return g.members ? hostSiteHtml(g, listings) : hostListingCardHtml(g.listing, listings); }).join("")+
     '</div>';
     document.getElementById("host-new-listing").addEventListener("click", openCreateChoice);
+    Array.prototype.forEach.call(document.querySelectorAll("[data-site-bridge]"), function(btn){
+      btn.addEventListener("click", function(){
+        var l = listings.filter(function(x){ return x.id===btn.getAttribute("data-site-bridge"); })[0];
+        if(l){ openSiteLink(l, listings); peSheet("add"); }
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-preview]"), function(btn){
       btn.addEventListener("click", function(){
         var g = hostSiteGroups(listings).filter(function(x){ return x.members && x.siteId===btn.getAttribute("data-site-preview"); })[0];
@@ -12434,7 +12502,7 @@ function hostListingCardHtml(l, listings, inSite){
       '<div class="admin-card-body">'+
         '<b>'+esc(l.name||"(sans nom)")+'</b>'+
         (isPending ? '<div class="host-status-line"><span class="host-status-badge pending">'+(l.status==="removed" ? 'Retirée par Fiftin — contactez-nous' : l.status==="draft" ? 'Brouillon — à terminer' : 'En attente de validation')+'</span></div>' : '')+
-        (l.units && l.units.length ? '<span>'+l.units.length+' location'+(l.units.length>1?'s':'')+' · '+listingPriceLabel(l)+'</span>' : '<span>Aucune location — à compléter</span>')+
+        (l.units && l.units.length ? '<span>'+listingPriceLabel(l)+'</span>' : '<span>Prix à compléter</span>')+
         // Retour utilisateur : "mets aussi la description courte" —
         // l'accroche (taglineHtml(), même fonction que le fil), pas la
         // vraie description : c'est elle qui apparaît sur la carte du fil
@@ -12461,11 +12529,9 @@ function hostListingCardHtml(l, listings, inSite){
     '</div>'+
     // Établissement (voir openSiteLink()) : dans un bloc d'établissement,
     // son en-tête s'en charge déjà.
-    (inSite ? '' : '<button type="button" class="cal-disclose site-disclose" data-site-link="'+esc(l.id)+'">'+
-      '<span>Établissement</span>'+
-      '<span class="site-disclose-val">'+(siteCount ? (l.place && l.place.name ? esc(l.place.name)+' · ' : '')+siteCount+' autre'+(siteCount>1?'s':'')+' hébergement'+(siteCount>1?'s':'') : 'En faire un établissement')+'</span>'+
-      '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
-    '</button>')+
+    // Annonce seule : passerelle vers un établissement (2e hébergement au même endroit).
+    (inSite ? '' : '<button type="button" class="hsm-add site-bridge" data-site-bridge="'+esc(l.id)+'">+ Ajouter un hébergement au même endroit'+
+      '<small>Votre annonce devient alors un établissement</small></button>')+
     '<button type="button" class="cal-disclose'+(expanded?' expanded':'')+'" data-cal-expand="'+esc(l.id)+'">'+
       '<span>Calendrier</span>'+
       '<svg class="cal-disclose-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>'+
@@ -12658,7 +12724,7 @@ function loadHostListingCalendar(listing){
   if(!panel) return; /* volet fermé entre-temps */
   var units = listing.units || [];
   if(!units.length){
-    panel.innerHTML = '<p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de location.</p>'+
+    panel.innerHTML = '<p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de calendrier.</p>'+
       '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button>';
     document.getElementById("cal-edit-listing").addEventListener("click", function(){ openListingEditor(listing); });
     return;
