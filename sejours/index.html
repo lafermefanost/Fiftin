@@ -1190,6 +1190,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
    ça se voie avant même le clic. */
 .detail-save-disabled{opacity:.45;}
 .detail-share{position:absolute; top:calc(14px + env(safe-area-inset-top,0px) + 46px); right:14px; z-index:10;}
+.place-detail .place-share{top:calc(14px + env(safe-area-inset-top,0px));} /* pas de cœur sur la page établissement */
 .dots{position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:5px; z-index:5;}
 .dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .dots span.on{background:#fff; width:16px; border-radius:3px;}
@@ -3200,10 +3201,24 @@ var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
    chargement si ce paramètre est présent et correspond à une annonce
    chargée. */
 function shareListing(l){
-  var url = location.origin + "/sejours/?listing=" + l.id;
-  var text = l.name + (l.claim ? " — " + l.claim : "");
+  shareUrl(location.origin + "/sejours/?listing=" + l.id, l.name, l.name + (l.claim ? " — " + l.claim : ""));
+}
+
+/* Lien profond vers un établissement (?etablissement=<n>, voir
+   maybeOpenDeepLink()) : n = idFromString(siteOf(l)), propriétaire + siteId
+   — le même pour toutes les annonces de l'établissement, sans rien exposer
+   de plus que l'index public. */
+function placeShareId(l){ var s = siteOf(l); return s ? idFromString(s) : null; }
+function sharePlace(l, members){
+  var pid = placeShareId(l);
+  if(!pid){ shareListing(l); return; }
+  var name = (l.place && l.place.name) || l.name;
+  var kind = placeKindLabel(l.place);
+  shareUrl(location.origin + "/sejours/?etablissement=" + pid, name, name + " — " + (kind ? kind + ", " : "") + members.length + " logements");
+}
+function shareUrl(url, title, text){
   if(navigator.share){
-    navigator.share({title:l.name, text:text, url:url}).catch(function(){});
+    navigator.share({title:title, text:text, url:url}).catch(function(){});
     return;
   }
   if(navigator.clipboard && navigator.clipboard.writeText){
@@ -5445,7 +5460,7 @@ function placeCoverHtml(l, members){
     '<div class="top-badges"><span class="pill-badge place-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>'+members.length+' logements</span>'+(listingDistanceKm(l)!=null ? '<span class="pill-badge">'+listingDistanceKm(l)+' km</span>' : '')+(isFinite(minPrice) ? '<span class="pill-badge">dès '+minPrice+'€ / nuit</span>' : '')+'</div>'+
     '<button class="save-btn'+(isListingSaved(l)?' liked':'')+'" data-like="'+l.id+'" aria-label="Ajouter à une collection">'+
       '<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
-    '<button class="share-btn" data-share="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
+    '<button class="share-btn" data-shareplace="'+l.id+'" aria-label="Partager">'+SHARE_ICON_SVG+'</button>'+
     '<div class="cover-info">'+
       '<div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h2>'+esc(placeName || l.name)+'</h2>'+
@@ -5583,6 +5598,13 @@ function wireFeedEvents(){
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-open]"), function(el){
     el.addEventListener("click", function(){ openDetail(Number(el.getAttribute("data-open"))); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-shareplace]"), function(el){
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      var l = LISTINGS.filter(function(x){ return x.id===Number(el.getAttribute("data-shareplace")); })[0];
+      if(l) sharePlace(l, placeMembersOf(l));
+    });
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-openplace]"), function(el){
     el.addEventListener("click", function(){ openPlace(Number(el.getAttribute("data-openplace"))); });
@@ -7658,6 +7680,7 @@ function openPlace(id, override, loaded){
     '<div class="detail-gallery" id="detail-gallery">'+
       '<div class="detail-gallery-scroll" id="detail-gallery-scroll">'+slides+'</div>'+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
+      '<button class="share-btn detail-share place-share" id="place-share" aria-label="Partager l’établissement">'+SHARE_ICON_SVG+'</button>'+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
     '<div class="detail-body">'+
@@ -7690,6 +7713,7 @@ function openPlace(id, override, loaded){
     '</div>'+
   '</div>';
   document.getElementById("detail-back").addEventListener("click", closeDetail);
+  document.getElementById("place-share").addEventListener("click", function(){ sharePlace(l, members); });
   var openMember = function(mid){
     var back = {id:id, override:override || null};
     if(override){
@@ -12293,8 +12317,34 @@ document.getElementById("map-back-btn").addEventListener("click", function(){
    annonce réelle (Firestore, qui répond après le fichier statique) —
    deepLinkHandled empêche de rouvrir la fiche une fois trouvée. */
 var deepLinkHandled = false;
+var placeLinkTries = 0;
 function maybeOpenDeepLink(){
   if(deepLinkHandled) return;
+  var placeParam = new URLSearchParams(location.search).get("etablissement");
+  if(placeParam){
+    // Établissement partagé (sharePlace()) : un logement publié du lieu,
+    // le moins cher, ouvre la page de l'établissement (ou sa fiche s'il
+    // est le seul restant). Index pas encore arrivé : nouvel essai.
+    if(!listingIndexCache.length){
+      if(placeLinkTries++<20) setTimeout(maybeOpenDeepLink, 500);
+      return;
+    }
+    var pid = Number(placeParam);
+    var reps = listingIndexCache.filter(function(x){ return placeShareId(x)===pid; })
+      .sort(function(a, b){ return (displayPriceOf(a)||0)-(displayPriceOf(b)||0); });
+    deepLinkHandled = true;
+    if(!reps.length) return; // établissement disparu : le fil, simplement
+    resolveListingById(reps[0].id, function(l){
+      if(!l || state.hostMode) return;
+      if(!heroDismissed){
+        heroDismissed = true;
+        var heroEl = document.getElementById("hero");
+        if(heroEl) heroEl.hidden = true;
+      }
+      openPlace(l.id);
+    });
+    return;
+  }
   var idParam = new URLSearchParams(location.search).get("listing");
   if(!idParam) return;
   var id = Number(idParam);
