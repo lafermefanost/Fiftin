@@ -10138,17 +10138,17 @@ var PE_LOCAL_NEW = "fiftin_pe_new"; // établissement en création, avant son pr
 var PE_ADDR_KEYS = ["address","lat","lng","region","regionName","deptName","city","inseeCode"];
 var PE_CONTACT_KEYS = ["phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl"];
 /* Prestations proposées au niveau de l'établissement : celles qui tiennent
-   au lieu (environnement, accueil, wifi, parking, piscine, barbecue,
-   règles de la maison…). Tout ce qui peut différer d'un hébergement à
-   l'autre (couchage, cuisine, climatisation, télévision, cheminée, jacuzzi
-   privatif, vis-à-vis, vue, accès PMR…) se coche dans chaque hébergement. */
+   au lieu (environnement, accueil, loisirs communs, barbecue, accès sans
+   voiture, privatisation). Tout ce qui peut différer d'un hébergement à
+   l'autre (équipements, couchage, confort, jacuzzi privatif, ambiance de
+   la chambre, au calme, enfants, animaux, vis-à-vis, vue…) se coche dans
+   chaque hébergement (choix de César). */
 var PE_SHARED_AMEN = [
   "Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert",
-  "Wifi","Parking privé","Lave-linge","Sèche-linge",
   "Accueil en personne","Installation autonome",
   "Piscine","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition",
   "Barbecue","Plancha","Brasero",
-  "Au calme","Enfants bienvenus","Animaux acceptés","Accessible sans voiture","Privatisation / événements possibles"
+  "Accessible sans voiture","Privatisation / événements possibles"
 ];
 function peSharedFrom(l){
   var out = {};
@@ -10431,7 +10431,7 @@ function peSheet(kind, arg){
   var p = pe.place, inner = "", apply = null, sel = [];
   if(kind==="amen"){
     apply = "Valider";
-    inner = '<h3>Prestations de l’établissement</h3><p class="sheet-sub">Ce qui vaut pour tous ses hébergements. Le reste (couchage, cuisine, climatisation, télévision, vue…) se coche dans chaque hébergement.</p>'+
+    inner = '<h3>Prestations de l’établissement</h3><p class="sheet-sub">Ce qui vaut pour tous ses hébergements. Le reste (équipements, couchage, confort, vue, enfants, animaux…) se coche dans chaque hébergement.</p>'+
       '<div class="cr-amen">'+AMEN_GROUPS.map(function(g, gi){
         var items = g.items.filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; });
         if(!items.length) return "";
