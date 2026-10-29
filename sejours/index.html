@@ -3951,6 +3951,34 @@ function renderTopAccount(){
   }, {passive:true});
 })();
 
+/* Carrousels de photos des cartes (fil, Mes annonces) : même principe que
+   le bandeau de filtres (retour de César) — une carte dont on a fait
+   défiler les photos revient à sa première photo dès que l'on reprend le
+   défilement du fil (24 px de défilement vertical après le dernier geste
+   sur un carrousel ; jamais pendant qu'on le manipule). */
+(function(){
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var anchorY = window.scrollY, touching = 0, shifted = false;
+  var isCc = function(el){ return el && el.classList && el.classList.contains("cover-carousel"); };
+  document.addEventListener("touchstart", function(e){ if(e.target.closest && e.target.closest(".cover-carousel")) touching++; }, {passive:true, capture:true});
+  document.addEventListener("touchend", function(e){ if(e.target.closest && e.target.closest(".cover-carousel")){ touching = Math.max(0, touching-1); anchorY = window.scrollY; } }, {passive:true, capture:true});
+  // « scroll » ne remonte pas : écouté en phase de capture.
+  document.addEventListener("scroll", function(e){
+    if(!isCc(e.target)) return;
+    if(e.target.scrollLeft > 2){ shifted = true; if(!e.target.dataset.ccReturning) anchorY = window.scrollY; }
+    else delete e.target.dataset.ccReturning;
+  }, {passive:true, capture:true});
+  window.addEventListener("scroll", function(){
+    if(!shifted) return;
+    if(touching){ anchorY = window.scrollY; return; }
+    if(Math.abs(window.scrollY - anchorY) < 24) return;
+    shifted = false;
+    Array.prototype.forEach.call(document.querySelectorAll(".cover-carousel"), function(cc){
+      if(cc.scrollLeft > 2){ cc.dataset.ccReturning = "1"; cc.scrollTo({left:0, behavior: reduce ? "auto" : "smooth"}); }
+    });
+  }, {passive:true});
+})();
+
 /* Fusionne dans LISTINGS les annonces d'hôtes publiées (Firestore,
    listings/{id} status=="published") avec le fil statique (listings.json).
    Lecture publique déjà autorisée par les règles Firestore pour les
