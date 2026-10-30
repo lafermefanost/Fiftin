@@ -547,10 +547,9 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 /* Les deux encarts sont des onglets (retour de César) : ils n'emmènent
    nulle part, ils affichent les entrées de l'espace choisi. */
 .hl-menu-group[data-group]:not(.on){display:none;}
+/* Plus de titre « Côté voyageur / hôte » : l'onglet choisi juste au-dessus le dit déjà. */
 .hl-menu-group{background:#F5F4F1; border-radius:14px; padding:4px; margin-bottom:8px;}
 .hl-menu-group a:hover,.hl-menu-group button:hover{background:#fff;}
-.hl-menu-gtitle{display:flex; align-items:center; gap:7px; padding:8px 12px 2px; font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
-.hl-menu .hl-menu-gtitle svg{width:14px; height:14px; margin:0; color:var(--muted);}
 .hl-menu-foot{border-top:1px solid #E7E4DC; padding-top:4px;}
 
 </style>
@@ -577,13 +576,11 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
         <button type="button" class="hl-space" data-space="hote" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><b>Espace hôte</b><em><span class="m-user">Gérez vos annonces</span><span class="m-guest">Déposez une annonce</span></em></button>
       </div>
       <div class="hl-menu-group" data-group="voyageur">
-        <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Côté voyageur</div>
         <a href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg><span>Explorer<small>Trouver un hébergement en direct</small></span></a>
         <a href="sejours/?espace=voyageur&amp;onglet=sejours" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><span>Mes séjours<small>Favoris, demandes et carnet de voyage</small></span></a>
         <a class="m-user" href="sejours/?espace=voyageur&amp;onglet=profil" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Mon profil<small>Vos informations de voyageur</small></span></a>
       </div>
       <div class="hl-menu-group" data-group="hote">
-        <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Côté hôte</div>
         <a href="sejours/?espace=hote" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><span><span class="m-user">Mes annonces</span><span class="m-guest">Déposer une annonce</span><small>Fiftin Séjours, espace hôte</small></span></a>
         <a href="app/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span><span class="m-user">Mon planning</span><span class="m-guest">Fiftin Planning</span><small><span class="m-user">Ouvrir l'outil de gestion</span><span class="m-guest">Se connecter ou créer un compte</span></small></span></a>
         <a class="m-user" href="sejours/?espace=hote&amp;onglet=profil" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg><span>Mon profil<small>Présentation, coordonnées et formule</small></span></a>
