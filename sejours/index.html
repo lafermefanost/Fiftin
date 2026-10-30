@@ -4691,6 +4691,8 @@ var AMEN_GROUPS = [
   // Stationnement : une rubrique de prestations comme les autres (César) — plusieurs choix possibles.
   {title:"Stationnement", items:["Parking privé","Stationnement gratuit dans la rue","Parking public à proximité","Garage fermé","Borne de recharge","Local à vélos"]},
   {title:"Accueil", items:["Accueil en personne","Installation autonome"]},
+  // Services proposés par l'hôte (demande de César).
+  {title:"Services", items:["Petit-déjeuner","Table d'hôtes","Panier pique-nique","Ménage en cours de séjour","Laverie","Bagagerie","Navette / transfert","Vente de produits locaux","Massages & soins"]},
   {title:"Confort — Literie", items:["Lit 180 cm","Lit 160 cm","Lit 140 cm","Lit 90 cm","Lits jumeaux 2×80 cm","Lits jumeaux 2×90 cm","Canapé-lit","Lit superposé","Lit bébé disponible"], required:true},
   {title:"Confort — Autres", items:["WC privatifs","Douche à l'italienne","Baignoire","Linge de lit fourni","Serviettes fournies","Chambre de plain-pied"]},
   {title:"Loisirs & bien-être", items:["Piscine","Jacuzzi","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition"]},
@@ -4976,6 +4978,16 @@ var AMEN_ICONS = {
   // Accueil
   "Accueil en personne":"<path d='M4 21V3h10v18'/><circle cx='17' cy='9' r='2'/><path d='M17 13v8'/>",
   "Installation autonome":"<rect x='5' y='10' width='14' height='9' rx='2'/><circle cx='12' cy='14' r='2'/><path d='M9 10V7a3 3 0 016 0v3'/>",
+  // Services
+  "Petit-déjeuner":"<path d='M4 9h12v5a5 5 0 01-5 5H9a5 5 0 01-5-5z'/><path d='M16 11h2a2 2 0 010 4h-2'/><path d='M8 3v3M12 3v3'/>",
+  "Table d'hôtes":"<circle cx='12' cy='13' r='5'/><path d='M3 4v5a2 2 0 002 2v10M5 4v5M21 4c-1.5 0-2.5 2-2.5 5s1 4 2.5 4v8'/>",
+  "Panier pique-nique":"<path d='M3 10h18l-2 10H5z'/><path d='M7 10l3-6M17 10l-3-6M9 14v3M15 14v3'/>",
+  "Ménage en cours de séjour":"<path d='M14 3l-4 9'/><path d='M6 12h8l2 9H4z'/><path d='M8 16v5M12 16v5'/>",
+  "Laverie":"<path d='M8 3l-5 3 2 5 3-1v11h8V10l3 1 2-5-5-3a4 4 0 01-8 0z'/>",
+  "Bagagerie":"<rect x='5' y='7' width='14' height='13' rx='2'/><path d='M9 7V4h6v3M9 11v5M15 11v5'/>",
+  "Navette / transfert":"<path d='M5 16v-5l2-5h10l2 5v5'/><path d='M3 16h18v3H3z'/><circle cx='7.5' cy='19' r='1.5'/><circle cx='16.5' cy='19' r='1.5'/>",
+  "Vente de produits locaux":"<path d='M12 7c-3-2-7 0-7 5s3 9 5 9c1 0 1.5-.5 2-.5s1 .5 2 .5c2 0 5-4 5-9s-4-7-7-5z'/><path d='M12 7c0-2 1-3 3-4'/>",
+  "Massages & soins":"<path d='M12 20c-4 0-8-3-8-7 3 0 6 1 8 4 2-3 5-4 8-4 0 4-4 7-8 7z'/><path d='M12 17c-2-3-2-7 0-11 2 4 2 8 0 11z'/>",
   /* Même tracé qu'ailleurs dans le fichier (cœur du bouton favori/onglet
      Mes séjours) pour Animaux acceptés — cohérence visuelle plutôt qu'une
      icône réinventée, comme les trois de Séjours plus haut. Déplacée
@@ -11136,6 +11148,8 @@ var PE_CONTACT_KEYS = ["phone","email","websiteUrl","googleUrl","instagramUrl","
 var PE_SHARED_AMEN = [
   "Mer","Montagne","Champêtre","Urbain","Lac","Forêt","Village","Désert",
   "Accueil en personne","Installation autonome",
+  // Services : en général proposés pour tout l'établissement.
+  "Petit-déjeuner","Table d'hôtes","Panier pique-nique","Ménage en cours de séjour","Laverie","Bagagerie","Navette / transfert","Vente de produits locaux","Massages & soins",
   "Piscine","Sauna","Hammam","Spa","Salle de sport","Vélos à disposition","Ping-pong","Billard","Pétanque","Baby-foot","Jeux de plage à disposition",
   "Barbecue","Plancha","Brasero",
   "Accessible sans voiture","Privatisation / événements possibles",
