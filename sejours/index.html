@@ -2598,7 +2598,13 @@ body.map-fullscreen{overflow:hidden;}
 .cal-acc .cal-disclose{margin:0; border-radius:0; flex-direction:row; justify-content:flex-start; gap:10px; padding:14px 16px; font-size:14px; font-weight:700;}
 .cal-acc .cal-disclose span{flex:1; text-align:left;}
 .cal-disclose-ico{width:18px; height:18px; color:var(--yellow); flex:none;}
-.cal-acc .host-cal-panel{margin:0 5px 5px; padding:12px 10px; background:#fff; border-radius:12px; animation:calOpen .28s ease-out;}
+.cal-acc .host-cal-panel{margin:0; padding:0; background:none; animation:calOpen .28s ease-out;}
+.cal-acc .host-cal-panel > p.sheet-sub{color:rgba(255,255,255,.85); padding:0 16px 14px;}
+.cal-acc .cal-body{margin:0 5px 5px; padding:12px 10px; background:#fff; border-radius:12px;}
+.cal-acc .cal-body .cal-card{padding:4px 2px 4px;}
+/* Carte « Fiftin Planning » fondue dans l'en-tête vert, juste au-dessus du calendrier. */
+.cal-acc .cal-planning{background:none; border-radius:0; margin:0; padding:2px 16px 16px;}
+.cal-acc .cal-planning .cpl-ico{display:none;}
 @keyframes calOpen{from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:none;}}
 @media (prefers-reduced-motion:reduce){ .cal-acc .host-cal-panel{animation:none;} }
 /* Choix de la chambre en onglets (retour utilisateur, remplace l'ancien
@@ -13530,8 +13536,8 @@ function loadHostListingCalendar(listing){
   if(!panel) return; /* volet fermé entre-temps */
   var units = listing.units || [];
   if(!units.length){
-    panel.innerHTML = '<p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de calendrier.</p>'+
-      '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button>';
+    panel.innerHTML = '<div class="cal-body"><p class="sheet-sub" style="margin:0 0 12px;">Cette annonce n\'a pas encore de calendrier.</p>'+
+      '<button type="button" class="btn-apply" id="cal-edit-listing">Modifier l\'annonce pour en ajouter une</button></div>';
     document.getElementById("cal-edit-listing").addEventListener("click", function(){ openListingEditor(listing); });
     return;
   }
@@ -13667,8 +13673,13 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
       '</div></div>';
     roomLinkHtml = "";
   }
+  // Formule gestion : la carte « Fiftin Planning » prolonge l'en-tête vert
+  // du volet (retour de César : pas de carte en plus) ; le calendrier
+  // lui-même sur fond blanc dessous (.cal-body).
   panel.innerHTML =
-    calAccessNoteHtml+
+    (isGestion ? calAccessNoteHtml : '')+
+    '<div class="cal-body">'+
+    (isGestion ? '' : calAccessNoteHtml)+
     roomLinkHtml+
     unitPagerHtml+
     // Cartouche + bouton Ajouter/modifier DANS la carte blanche du
@@ -13684,6 +13695,7 @@ function renderHostCalendarPanel(listing, unit, rooms, linkedRoomId, isGestion, 
         '</div>'+
       '</div>')+
       '<div class="cal-year-grid">'+months+'</div>'+
+    '</div>'+
     '</div>';
 
   if(units.length>1){
