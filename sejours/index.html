@@ -12646,8 +12646,9 @@ function profileIdentityCardHtml(variant, connected){
         '<p class="field-hint" style="margin:0 0 8px;">Vos annonces parlent en votre nom : « Qui suis-je ? », « Écrivez-moi » si vous êtes seul, « Qui sommes-nous ? », « Écrivez-nous » à plusieurs.</p>'+
         '<div class="amenity-grid pv-row" data-pv="voice"><button type="button" class="amenity-chip" data-v="je">Seul(e)</button><button type="button" class="amenity-chip" data-v="nous">À plusieurs</button></div>'+
       '</div>'+
-      '<div class="field-block" id="profile-age-block" style="margin-top:14px;"><label>Votre âge <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>'+
-        '<input class="text-input" type="number" inputmode="numeric" min="18" max="110" id="profile-age-input" placeholder="Ex. 42" style="max-width:120px;">'+
+      '<div class="field-block" id="profile-age-block" style="margin-top:14px;"><label>Votre année de naissance <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>'+
+        '<p class="field-hint" style="margin:0 0 8px;">Seul votre âge est affiché aux voyageurs, calculé automatiquement chaque année.</p>'+
+        '<input class="text-input" type="number" inputmode="numeric" min="1910" max="'+(new Date().getFullYear()-18)+'" id="profile-age-input" placeholder="Ex. 1984" style="max-width:140px;">'+
       '</div>'+
       '<div class="field-block" style="margin-top:14px;"><label>Vous êtes <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>'+
         '<div class="amenity-grid pv-row" data-pv="kind"><button type="button" class="amenity-chip" data-v="particulier">Particulier</button><button type="button" class="amenity-chip" data-v="pro">Professionnel</button></div>'+
@@ -12674,8 +12675,8 @@ function profileIdentityCardHtml(variant, connected){
    compte (sauf hostBioCustom pour la présentation, aucune exception
    équivalente pour le nom — jamais de surcharge par annonce demandée). */
 /* « Vous accueillez vos voyageurs… » : seul / à plusieurs (hostVoice),
-   âge (gardé en année de naissance, hostBirthYear, pour qu'il vieillisse
-   tout seul ; demandé seulement pour un hôte seul) et particulier /
+   année de naissance (hostBirthYear ; seul l'âge est affiché, recalculé
+   chaque année par hostAgeOf() ; demandée seulement pour un hôte seul) et particulier /
    professionnel (hostKind). Recopiés sur toutes les annonces du compte,
    comme le nom. Un second toucher sur une pastille de statut la retire. */
 function wireProfileVoice(){
@@ -12701,17 +12702,16 @@ function wireProfileVoice(){
   firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
     var d = doc.exists ? doc.data() : {};
     val.voice = d.hostVoice || ""; val.kind = d.hostKind || "";
-    var a = hostAgeOf(d.hostBirthYear);
-    if(document.activeElement!==ageInput) ageInput.value = a ? a : "";
+    if(document.activeElement!==ageInput) ageInput.value = d.hostBirthYear || "";
     paint();
   }).catch(function(){});
   saveBtn.addEventListener("click", function(){
     var msg = document.getElementById("profile-voice-msg"), btn = this;
     msg.textContent = "";
-    var age = Number(ageInput.value), by = null;
+    var by = null;
     if(val.voice!=="nous" && ageInput.value.trim()){
-      if(!(age>=18 && age<=110)){ msg.textContent = "Indiquez un âge entre 18 et 110 ans, ou laissez vide."; return; }
-      by = new Date().getFullYear() - Math.round(age);
+      by = Math.round(Number(ageInput.value));
+      if(!hostAgeOf(by)){ msg.textContent = "Indiquez une année de naissance sur 4 chiffres (18 ans au moins), ou laissez vide."; return; }
     }
     var u = {hostVoice:val.voice || "nous", hostBirthYear:by, hostKind:val.kind};
     btn.disabled = true;
