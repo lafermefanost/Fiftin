@@ -679,14 +679,6 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 /* Fiche : « Au même endroit » — petites cartes des autres logements
    associés, défilement horizontal (siteOthersHtml()). */
 .site-sub{font-size:13.5px; color:var(--muted); margin:-4px 0 12px; line-height:1.4;}
-.site-others{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; scroll-padding:0 14px; margin:0 -14px; padding:0 14px 4px; scrollbar-width:none;}
-.site-others::-webkit-scrollbar{display:none;}
-.site-other{flex:0 0 150px; width:150px; min-width:0; scroll-snap-align:start; border:none; padding:0; background:none; text-align:left; font-family:'Jost',sans-serif; cursor:pointer; color:var(--ink);}
-.site-other-img{width:150px; height:112px; border-radius:16px; overflow:hidden; background:var(--line);}
-.site-other-img img{width:100%; height:100%; object-fit:cover; display:block;}
-.site-other b{display:block; font-size:14px; font-weight:600; margin:7px 0 1px; line-height:1.2; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
-.site-other span{display:block; font-size:12.5px; color:var(--sauge); font-weight:600;}
-.site-other .site-other-km{color:var(--muted); font-weight:500;}
 /* Page établissement (openPlace()) : type + nombre de logements sous le
    nom, liste des logements en lignes (photo, nom, type · capacité, accroche,
    prix), chacune ouvrant la fiche du logement. */
@@ -696,7 +688,7 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 .place-rail{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; margin:0 -14px; padding:2px 14px 4px; scroll-padding:0 14px;
   -webkit-overflow-scrolling:touch; scrollbar-width:none;}
 .place-rail::-webkit-scrollbar{display:none;}
-.place-rail-card{flex:0 0 62%; scroll-snap-align:start; cursor:pointer;}
+.place-rail-card{flex:0 0 62%; min-width:0; scroll-snap-align:start; cursor:pointer;}
 /* Vignettes réduites (retour de César) : textes, pastilles et boutons
    ramenés dans les mêmes proportions que la carte. */
 .place-rail .cover-info{padding:12px 12px 12px;}
@@ -903,7 +895,7 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 button.send-btn{display:flex; align-items:center; border:none; cursor:pointer; font-family:'Jost',sans-serif;}
 .ct-lines{display:flex; flex-direction:column; gap:3px; margin:12px 0 0; font-size:12.5px; line-height:1.4; color:var(--muted);}
 .ct-lines b{color:var(--ink); font-weight:600;}
-.ct-sub{margin:18px 0 10px; font-size:11.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge);}
+.ct-sub{margin:22px 0 10px; font-size:17px; font-weight:700;} /* comme les titres de rubrique (.detail-amen-group-title) */
 .ct-profile{display:block; margin:-4px 0 12px; text-align:left;}
 .ct-remove{display:block; margin:12px auto 0; color:#B4432E;}
 
@@ -1500,6 +1492,11 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .hw-bio::before{content:""; position:absolute; top:-6px; left:38px; width:16px; height:16px; background:inherit; transform:rotate(45deg); border-radius:3px;}
 .hw-bio .host-bio-text{position:relative; font-size:14px; line-height:1.5; color:#3d3a2e;}
 .hw-bio .host-bio-more{position:relative;}
+.cr-block .hw-bio{margin-bottom:10px;}
+/* Distance d'une autre adresse (rail « Nos autres adresses » de la fiche). */
+.place-rail-card{position:relative;}
+.rail-km{position:absolute; left:10px; top:44px; z-index:3; padding:4px 9px; border-radius:999px; background:rgba(255,255,255,.88);
+  color:var(--sauge-deep); font-size:11px; font-weight:600;}
 .hw-bio.full .host-bio-text{display:block; -webkit-line-clamp:unset; white-space:pre-line;}
 .pv-row{display:flex; gap:8px; flex-wrap:wrap;}
 .pv-row .amenity-chip{cursor:pointer; padding:8px 14px; font-size:14px;}
@@ -3449,25 +3446,40 @@ function hostAgeOf(by){
    puis la présentation dans une bulle qui part de la photo, comme si
    l'hôte prenait la parole. withMore : bouton « Voir plus » (fiche). */
 function hostCardHtml(l, withMore, where){
-  var h = l.host || {}, je = hostVoiceOf(l)==="je";
+  var je = hostVoiceOf(l)==="je";
+  return '<div class="detail-card host-warm" data-sync="host">'+
+    '<div class="section-title" style="margin-top:0">'+(je ? "Qui suis-je ?" : "Qui sommes-nous ?")+'</div>'+
+    hostCardBodyHtml(l.host || {}, je, where, {withMore:withMore})+
+  '</div>';
+}
+/* Corps commun de la carte hôte (photo, nom, âge et statut, rôle, bulle de
+   présentation), repris tel quel dans le créateur et l'éditeur
+   d'établissement (opts.edit : contenus manquants en gris). */
+function hostCardBodyHtml(h, je, where, opts){
+  opts = opts || {};
   var meta = [], age = je ? hostAgeOf(h.birthYear) : 0;
   if(age) meta.push(age+" ans");
   if(h.kind==="particulier") meta.push(je ? "Particulier" : "Particuliers");
   else if(h.kind==="pro") meta.push(je ? "Professionnel" : "Professionnels");
   var role = (je ? "Votre hôte" : "Vos hôtes")+(where ? " · "+where : "");
-  return '<div class="detail-card host-warm" data-sync="host">'+
-    '<div class="section-title" style="margin-top:0">'+(je ? "Qui suis-je ?" : "Qui sommes-nous ?")+'</div>'+
-    '<div class="hw-row">'+
+  var name = opts.edit ? crPh(h.name, esc(h.name||""), "Votre prénom") : esc(h.name||"");
+  var bio = opts.edit ? crPh(h.bio, esc(h.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.") : esc(h.bio||"");
+  return '<div class="hw-row">'+
       '<div class="hw-photo">'+(h.photo ? '<img src="'+esc(h.photo)+'" alt="">' : '<span>'+esc(h.initial||"?")+'</span>')+'</div>'+
       '<div class="hw-id">'+
-        '<b>'+esc(h.name||"")+'</b>'+
+        '<b>'+name+'</b>'+
         (meta.length ? '<span class="hw-meta">'+meta.map(esc).join('<i class="type-sep"></i>')+'</span>' : '')+
         '<span class="hw-role">'+esc(role)+'</span>'+
       '</div>'+
     '</div>'+
-    (h.bio ? '<div class="hw-bio'+(withMore ? '' : ' full')+'"><p class="host-bio-text">'+esc(h.bio)+'</p>'+
-      (withMore ? '<button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>' : '')+'</div>' : '')+
-  '</div>';
+    (h.bio || opts.edit ? '<div class="hw-bio'+(opts.withMore || opts.edit ? '' : ' full')+'"><p class="host-bio-text">'+bio+'</p>'+
+      (opts.withMore ? '<button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>' : '')+'</div>' : '');
+}
+// Carte hôte des éditeurs : même rendu, toute la carte ouvre le réglage.
+function hostCardEditHtml(h, je, where, secAttr, openAttr){
+  return '<div class="detail-card host-warm" '+secAttr+'><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div>'+
+    '<button type="button" class="cr-block" '+openAttr+'>'+hostCardBodyHtml(h, je, where, {edit:true})+
+    '<span class="cr-edit-link">Modifier</span></button></div>';
 }
 function hostExtLinksHtml(l){
   var label = {
@@ -7835,6 +7847,7 @@ function openDetail(id, listingOverride, forceVisitorView){
     var dKmOverview = listingDistanceKm(l);
     metaRowHtml = '<div class="detail-card" data-sync="meta"><div class="meta-row">'+
       metaItemHtml(META_ICON_PRICE, "dès "+displayPriceOf(l)+" €", "par nuit")+
+      (listingMaxCapacity(l) ? metaItemHtml(META_ICON_GUESTS, listingMaxCapacity(l), "voyageurs max") : "")+
       (dKmOverview!=null ? metaItemHtml(META_ICON_DISTANCE, dKmOverview+" km", "de vous") : "")+
     '</div></div>';
     bodyExtraHtml =
@@ -7904,6 +7917,8 @@ function openDetail(id, listingOverride, forceVisitorView){
         bodyExtraHtml+
         // Une seule carte hôte : photo, nom, présentation et « Voir plus »
         // (volet hostBio : présentation complète et autres annonces de l'hôte).
+        // Autres hébergements avant l'hôte, comme le rail de la page établissement.
+        '<div id="site-others-slot"></div>'+
         hostCardHtml(l, true, (l.place && l.place.name) || l.city || "")+
         // "À propos de votre hôte" : encart séparé, juste après "Votre hôte"
         // (point 3.3, retour utilisateur — voir le grand commentaire CSS de
@@ -7915,8 +7930,9 @@ function openDetail(id, listingOverride, forceVisitorView){
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
-        (!hasTabs || activeUnit ? '<div class="qr-panel" data-sync="contact" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
-        '<div id="site-others-slot"></div>'+
+        (!hasTabs || activeUnit ? '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">'+hv(l, 'Écrivez-moi', 'Écrivez-nous')+'</div>'+
+          '<p class="site-sub">'+hv(l, 'Regardez mes disponibilités, puis dites-moi vos dates et combien vous êtes.', 'Regardez nos disponibilités, puis dites-nous vos dates et combien vous êtes.')+'</p>'+
+          '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div></div>' : '')+
       '</div>'+
     '</div>'+
   '</div>';
@@ -7988,45 +8004,37 @@ function siteShortName(name, refName){
   var m = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(name || ""), r = /^(.*\S)\s+[—–-]\s+(.+)$/.exec(refName || "");
   return (m && r && m[2].trim().toLowerCase()===r[2].trim().toLowerCase()) ? m[1] : (name || "");
 }
-function placeCardsHtml(list, from, refName, siteCounts){
-  return '<div class="site-others">'+list.map(function(o){
-    var more = siteCounts && o.siteId ? (siteCounts[o.siteId]||1)-1 : 0;
-    var img = o.thumbUrl || listingThumbUrl(o);
-    var cap = o.maxPersons!=null ? o.maxPersons : listingMaxCapacity(o);
-    var km = (from && typeof from.lat==="number" && typeof o.lat==="number") ? haversineKm(from.lat, from.lng, o.lat, o.lng) : null;
-    var kmLabel = km==null ? "" : (km<1 ? "à moins d’1 km" : "à "+(km<10 ? km.toFixed(1).replace(".", ",") : Math.round(km))+" km");
-    return '<button type="button" class="site-other" data-site-open="'+o.id+'">'+
-      '<div class="site-other-img">'+(img ? '<img src="'+esc(img)+'" alt="" loading="lazy">' : '')+'</div>'+
-      '<b>'+esc(refName ? siteShortName(o.name, refName) : (o.name||""))+'</b>'+
-      '<span>'+(cap ? cap+' voyageur'+(cap>1?'s':'')+' · ' : '')+(displayPriceOf(o)!=null ? priceNightLabel(displayPriceOf(o)) : '')+'</span>'+
-      (more>0 ? '<span class="site-other-km">+ '+more+' autre'+(more>1?'s':'')+' hébergement'+(more>1?'s':'')+' sur place</span>' : '')+
-      (kmLabel ? '<span class="site-other-km">'+kmLabel+'</span>' : '')+
-    '</button>';
-  }).join("")+'</div>';
+// Annonce de l'index → objet du fil (photos, prix) pour sa carte.
+function siteOtherView(o){ return LISTINGS.filter(function(x){ return x.id===o.id; })[0] || o; }
+function siteKmLabel(from, o){
+  var km = (from && typeof from.lat==="number" && typeof o.lat==="number") ? haversineKm(from.lat, from.lng, o.lat, o.lng) : null;
+  return km==null ? "" : (km<1 ? "à moins d’1 km" : "à "+(km<10 ? km.toFixed(1).replace(".", ",") : Math.round(km))+" km");
 }
 function fillSiteOthers(l, id){
   var siteId = l.siteId || "";
   var selfId = l.docId || l.id;
-  var siteCounts = {};
   var render = function(same, elsewhere){
     var slot = document.getElementById("site-others-slot");
     if(!slot || state.detailListingId!==id) return;
     slot.innerHTML =
+      // Mêmes cartes du fil, en rail, que la page établissement (retour de César).
       (same.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">'+hv(l, 'Mes autres hébergements ici', 'Nos autres hébergements ici')+'</div>'+
         '<p class="site-sub">À la même adresse : choisissez celui qui vous convient, ou venez à plusieurs.</p>'+
-        placeCardsHtml(same, null, l.name)+'</div>' : '')+
+        '<div class="place-rail">'+same.map(function(o){ return placeRailCardHtml(siteOtherView(o)); }).join("")+'</div></div>' : '')+
       (elsewhere.length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">'+hv(l, 'Mes autres adresses', 'Nos autres adresses')+'</div>'+
-        placeCardsHtml(elsewhere, l, null, siteCounts)+'</div>' : '');
-    Array.prototype.forEach.call(slot.querySelectorAll("[data-site-open]"), function(btn){
-      btn.addEventListener("click", function(){
-        var oid = Number(btn.getAttribute("data-site-open"));
+        '<p class="site-sub">'+hv(l, 'Ailleurs, chez moi aussi.', 'Ailleurs, chez nous aussi.')+'</p>'+
+        '<div class="place-rail">'+elsewhere.map(function(o){ return placeRailCardHtml(siteOtherView(o), "data-rail-open", siteKmLabel(l, o)); }).join("")+'</div></div>' : '');
+    Array.prototype.forEach.call(slot.querySelectorAll("[data-rail-open]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var oid = Number(btn.getAttribute("data-rail-open"));
         resolveListingById(oid, function(found){ if(found) openDetail(oid); });
       });
     });
+    wirePlaceRail(slot, same.concat(elsewhere).map(siteOtherView), false);
   };
   var split = function(list){
     var same = [], elsewhere = [], seenSite = {};
-    list.forEach(function(x){ if(x.siteId) siteCounts[x.siteId] = (siteCounts[x.siteId]||0)+1; });
     list.forEach(function(x){
       if((x.docId||x.id)===selfId) return;
       if(siteId && x.siteId===siteId){ same.push(x); return; }
@@ -8070,18 +8078,23 @@ function placeBannerHtml(l, listingOverride){
   if(listingOverride || !l.siteId) return "";
   var members = placeMembersOf(l);
   if(members.length<2) return "";
-  var kind = placeKindLabel(l.place);
-  return '<button type="button" class="place-banner" id="place-banner">'+
+  return placeBannerBtnHtml("place-banner", hv(l, 'Fait partie de mon établissement', 'Fait partie de notre établissement'), l.place, members.length);
+}
+// Bandeau vert d'un hébergement d'établissement (fiche et créateur).
+function placeBannerBtnHtml(id, label, place, count){
+  var kind = placeKindLabel(place);
+  var sub = [kind, count ? count+' hébergement'+(count>1?'s':'') : ''].filter(Boolean).join(' · ');
+  return '<button type="button" class="place-banner" id="'+id+'">'+
     '<span class="pb-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg></span>'+
-    '<span class="pb-text"><small>'+hv(l, 'Fait partie de mon établissement', 'Fait partie de notre établissement')+'</small><b>'+esc((l.place && l.place.name) || "Voir l’établissement")+'</b>'+
-      '<span>'+(kind ? esc(kind)+' · ' : '')+members.length+' hébergements</span></span>'+
+    '<span class="pb-text"><small>'+label+'</small><b>'+esc((place && place.name) || "Voir l’établissement")+'</b>'+
+      (sub ? '<span>'+esc(sub)+'</span>' : '')+'</span>'+
     '<svg class="pb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
   '</button>';
 }
 /* Carte du fil (coverHtml) d'un hébergement, pour la page établissement :
    attributs renommés pour n'être câblés que par wirePlaceRail(), jamais
    par wireFeedEvents() (qui parcourt tout le document). */
-function placeRailCardHtml(m, openAttr){
+function placeRailCardHtml(m, openAttr, km){
   var first = (m.gallery && m.gallery[0]) || memberCoverUrl(m);
   var one = first ? Object.assign({}, m, {gallery:[first], galleryMid:(m.gallery && m.gallery[0]) ? (m.galleryMid||[]).slice(0,1) : []}) : m;
   var h = coverHtml(one)
@@ -8091,7 +8104,8 @@ function placeRailCardHtml(m, openAttr){
   h = h.replace(/<div class="cover-cta">[\s\S]*?<\/div>/, "")
     // « + N autres hébergements au même endroit » : redondant dans l'établissement.
     .replace(/<div class="site-note">[\s\S]*?<\/span><\/div>/, "");
-  return '<article class="card place-rail-card" role="button" tabindex="0" '+(openAttr || "data-rail-open")+'="'+esc(String(m.id))+'">'+h+'</article>';
+  return '<article class="card place-rail-card" role="button" tabindex="0" '+(openAttr || "data-rail-open")+'="'+esc(String(m.id))+'">'+h+
+    (km ? '<span class="rail-km">'+esc(km)+'</span>' : '')+'</article>';
 }
 function wirePlaceRail(root, members, preview){
   var byId = function(id){ return members.filter(function(m){ return String(m.id)===String(id); })[0]; };
@@ -10297,6 +10311,7 @@ function crRender(){
         (cr.site ? '' : '<button type="button" class="cr-addr" data-cr-sec="address" data-cr-open="address">'+PIN_ICON_SVG+
           (d.address ? '<span>'+esc(d.address)+(typeof d.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>')+
       '</div>'+
+      crSiteBannerHtml()+
       '<div class="detail-cards">'+
         '<div class="detail-card" data-cr-sec="price"><div class="meta-row">'+
           '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_PRICE,
@@ -10325,13 +10340,13 @@ function crRender(){
         '<div class="detail-card" data-cr-sec="amen">'+
           '<p class="cr-note cr-card-lead">Touchez les prestations de votre hébergement pour les cocher.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
           crAmenEditHtml()+'</div>'+
-        // Hébergement d'un établissement : adresse et contact se remplissent
-        // dans l'établissement — pas de cartes en doublon ici (retour de
-        // César), la carte Établissement y renvoie.
+        // Établissement : ses autres hébergements avant l'hôte, comme sur la
+        // fiche (« Nos autres hébergements ici ») ; annonce seule : la carte
+        // pour regrouper ses hébergements.
         crSiteCardHtml()+
-        '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div><button type="button" class="cr-block" data-cr-open="host">'+
-          '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
-          '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
+        hostCardEditHtml({name:host.name, bio:host.bio, photo:host.photoUrl ? avatarPhotoUrl(host.photoUrl, host.photoThumbUrl) : "",
+            initial:(host.name||"?").charAt(0).toUpperCase(), birthYear:host.birthYear, kind:host.kind},
+          host.voice==="je", (cr.site && cr.site.place && cr.site.place.name) || d.city || "", 'data-cr-sec="host"', 'data-cr-open="host"')+
         (cr.site ? '' : '<div class="detail-card" data-cr-sec="contact"><div class="section-title" style="margin-top:0">Indiquez comment vous joindre</div>'+
           contactEditHtml(d, cr.contactProfile, "cr")+'</div>')+
       '</div>'+
@@ -10439,7 +10454,19 @@ function crWire(){
     });
   });
   var siteOpen = document.getElementById("cr-site-open");
-  if(siteOpen) siteOpen.addEventListener("click", crOpenSite);
+  if(siteOpen && cr.id) siteOpen.addEventListener("click", crOpenSite);
+  Array.prototype.forEach.call(document.querySelectorAll("#creator-panel [data-cr-sibling]"), function(b){
+    b.addEventListener("click", function(e){
+      e.preventDefault(); e.stopPropagation();
+      var sid = b.getAttribute("data-cr-sibling");
+      crClose(function(){
+        ensureHostListingsLoaded(function(listings){
+          var m = listings.filter(function(x){ return String(x.id)===sid; })[0];
+          if(m) openListingEditor(m);
+        });
+      });
+    });
+  });
   var site = document.getElementById("cr-site");
   if(site) site.addEventListener("click", function(){
     var myId = cr.id;
@@ -10477,12 +10504,25 @@ function crAmenEditHtml(){
 /* « Établissement » : regroupement avec les autres logements de l'hôte et
    présentation commune (éditeur d'établissement, openPlaceEditor()).
    Brouillon : association automatique à la mise en ligne (< 50 m). */
+function crSiteSiblings(){
+  var me = cr.id && (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
+  return me ? siteOthersOf(me, hostListingsCache) : [];
+}
+// Hébergement d'un établissement : le bandeau vert de la fiche voyageur.
+function crSiteBannerHtml(){
+  if(!cr.site) return "";
+  return placeBannerBtnHtml("cr-site-open", hv({hostVoice:(cr.profile||{}).voice}, "Fait partie de mon établissement", "Fait partie de notre établissement"),
+    cr.site.place, cr.id ? crSiteSiblings().length+1 : 0);
+}
 function crSiteCardHtml(){
-  var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">'+(cr.site ? 'Votre établissement' : 'Regroupez vos hébergements <small class="cr-opt">facultatif</small>')+'</div>';
-  if(cr.site) return head+(cr.id ? '<button type="button" class="cr-block" id="cr-site-open">' : '<div class="cr-block">')+
-    '<span>Fait partie de l’établissement'+(cr.site.place && cr.site.place.name ? ' « '+esc(cr.site.place.name)+' »' : '')+'</span>'+
-    '<span class="cr-sub">Adresse, contact et prestations communes se règlent dans l’établissement.</span>'+
-    (cr.id ? '<span class="cr-edit-link">Ouvrir l’établissement</span></button>' : '</div>')+'</div>';
+  var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">'+(cr.site ? 'Les autres hébergements de votre établissement' : 'Regroupez vos hébergements <small class="cr-opt">facultatif</small>')+'</div>';
+  if(cr.site){
+    // Comme « Nos autres hébergements ici » sur la fiche : les cartes du fil, en rail.
+    var sib = crSiteSiblings();
+    if(!sib.length) return "";
+    return head+'<p class="site-sub">Comme les voyageurs les voient. Touchez un hébergement pour le modifier ; adresse, contact et prestations communes se règlent dans l’établissement.</p>'+
+      '<div class="place-rail">'+sib.map(function(m){ return placeRailCardHtml(Object.assign(visitorViewOf(m), {id:m.id}), "data-cr-sibling"); }).join("")+'</div></div>';
+  }
   if(!cr.id || cr.status==="draft") return head+'<p class="cr-note">Vos hébergements à la même adresse seront regroupés automatiquement en un établissement à la mise en ligne. Vous pourrez ensuite le présenter : nom, type, présentation et photos des espaces communs.</p></div>';
   var me = (hostListingsCache || []).filter(function(x){ return x.id===cr.id; })[0];
   if(!me) return head+'<p class="cr-note">Chargement…</p></div>';
@@ -10858,6 +10898,7 @@ function loadHostProfileFull(cb){
       firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
         var d = doc.exists ? doc.data() : {};
         out.photoUrl = d.photoUrl || ""; out.photoThumbUrl = d.photoThumbUrl || "";
+        out.voice = d.hostVoice || ""; out.birthYear = d.hostBirthYear || null; out.kind = d.hostKind || "";
         out.phone = d.contactPhone || ""; if(d.contactEmail) out.email = d.contactEmail;
         if(out.phone){ cb(out); return; }
         ensureHostListingsLoaded(function(list){
@@ -11263,7 +11304,8 @@ function peRender(){
   var fhost = first.host || {}, pp = pe.profile;
   var hostV = {name: (pp && pp.name) || (fhost.name && fhost.name!=="Hôte Fiftin" ? fhost.name : ""),
     bio: (pp && pp.bio) || fhost.bio || "",
-    photo: (pp && pp.photoUrl) ? avatarPhotoUrl(pp.photoUrl, pp.photoThumbUrl) : (fhost.photo || "")};
+    photo: (pp && pp.photoUrl) ? avatarPhotoUrl(pp.photoUrl, pp.photoThumbUrl) : (fhost.photo || ""),
+    voice: (pp && pp.voice) || fhost.voice || "", birthYear: (pp && pp.birthYear) || fhost.birthYear || null, kind: (pp && pp.kind) || fhost.kind || ""};
   hostV.initial = (hostV.name || authState.email || "?").charAt(0).toUpperCase();
   var sh = pe.shared;
   var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !(p.claim||"").trim() && ["claim","Accroche"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"],
@@ -11324,10 +11366,7 @@ function peRender(){
             }).join("")+'</div></div>';
           }).join("")+'</div>'+
         // Hôte (modifiable ici aussi) puis contact en dernier, comme sur une annonce.
-        '<div class="detail-card" data-sync="host"><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div><button type="button" class="cr-block" data-pe-open="host">'+
-          '<div class="host-card"><div class="host-avatar">'+(hostV.photo ? '<img src="'+esc(hostV.photo)+'" alt="">' : esc(hostV.initial || "?"))+'</div><div class="host-info"><b>'+crPh(hostV.name, esc(hostV.name), "Votre prénom")+'</b></div></div>'+
-          '<p class="host-bio-text" style="margin-top:8px">'+crPh(hostV.bio, esc(hostV.bio), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p>'+
-          '<span class="cr-edit-link">Modifier</span></button></div>'+
+        hostCardEditHtml(hostV, hostV.voice==="je", (p.name||"").trim(), 'data-sync="host"', 'data-pe-open="host"')+
         '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">Indiquez comment vous joindre</div>'+
           contactEditHtml(sh, pe.profile, "pe", "Commun à tous ses hébergements.")+'</div>'+
         (members.length ? '<button type="button" class="link-btn pe-undo" id="pe-undo">Défaire l’établissement</button>' : '')+
