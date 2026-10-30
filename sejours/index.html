@@ -713,7 +713,11 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 .place-rail .cover-info .type-label{color:var(--cream);}
 .place-pick .place-rail{margin:0 -16px; padding:2px 16px 4px; scroll-padding:0 16px; text-align:left;}
 #feed .place-rail .place-rail-card{border-radius:26px;}
-.place-rail + .pe-add{margin-top:12px;}
+.place-rail-add{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; aspect-ratio:4/5; border:2px dashed #CFCBC0; border-radius:26px;
+  background:#FAF9F6; color:var(--sauge); font-family:'Jost',sans-serif; text-align:center; padding:12px;}
+.place-rail-add .pra-plus{display:flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:15px; background:var(--sauge); color:#fff; font-size:28px; font-weight:400; line-height:1; margin-bottom:6px;}
+.place-rail-add b{font-size:15px; color:var(--ink);}
+.place-rail-add small{font-size:12.5px; color:var(--muted);}
 .place-rail-card:only-child{flex-basis:100%;}
 /* Fiche d'un logement d'un établissement : bandeau qui y ramène. */
 .place-banner{display:flex; align-items:center; gap:12px; width:100%; margin:0 0 10px; padding:12px 14px; border:none; border-radius:16px;
@@ -2563,7 +2567,6 @@ body.map-fullscreen{overflow:hidden;}
 .hsm-add{display:block; width:100%; border:1.5px dashed var(--sauge-light); background:transparent; border-radius:16px; padding:13px; font-family:'Jost',sans-serif; font-size:14px; font-weight:600; color:var(--sauge); cursor:pointer;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
 .pe-kind{border:none; background:none; padding:0; font:inherit; font-weight:700; color:var(--sauge); text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;}
-.pe-add{margin-top:10px;}
 .amenity-chip.cr-locked{opacity:.45; cursor:default;}
 .site-bridge{margin-top:10px; text-align:center;}
 .site-bridge small{display:block; font-size:12px; font-weight:500; color:var(--muted); margin-top:2px;}
@@ -3367,9 +3370,20 @@ function metaItemHtml(iconPath, value, label){
 // universe (facultatif) : prestations possibles à montrer (établissement :
 // PE_SHARED_AMEN) ; sinon toutes. Présentes = pastille pleine, absentes =
 // gris très léger — on voit ce qu'il y a ET ce qu'il n'y a pas (César).
+/* Literie : chaque taille de lit peut compter plusieurs lits (l.beds,
+   {"Lit 160 cm": 2}) ; la prestation reste aussi cochée dans l.amen pour
+   les filtres et le minimum de mise en ligne. Ancienne annonce sans
+   l.beds : un lit par taille cochée. */
+function bedQty(l, name){
+  var b = l.beds && l.beds[name];
+  return b ? b : ((l.amen || []).indexOf(name)!==-1 ? 1 : 0);
+}
+function bedGroup(){ return AMEN_GROUPS.filter(function(g){ return g.required; })[0]; }
 function detailAmenitiesHtml(l, universe){
   var have = l.amen || [];
   var groupsHtml = AMEN_GROUPS.map(function(g){
+    // La literie est avec les pièces (carte « Literie, pièces & annexes »).
+    if(!universe && g.required) return "";
     var items = universe ? g.items.filter(function(a){ return universe.indexOf(a)!==-1; }) : g.items;
     if(!items.length) return "";
     return '<div class="detail-amen-group"><div class="detail-amen-group-title">'+esc(g.title)+'</div>'+
@@ -3391,13 +3405,16 @@ function detailAmenitiesHtml(l, universe){
    pas du tout la carte "Pièces & annexes" dans ce cas (section
    optionnelle, contrairement aux Prestations). */
 function detailSpacesHtml(l){
-  var sp = l.spaces || {};
-  if(!HOUSE_SPACES.some(function(name){ return sp[name]>0; })) return "";
-  // Toutes les pièces possibles : présentes pleines (×N au-delà de 1), absentes en gris léger.
-  return '<div class="amenity-grid">'+HOUSE_SPACES.map(function(name){
-    var qty = sp[name] || 0;
-    return '<span class="amenity-chip '+(qty>0?'active':'off')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg>'+esc(name)+(qty>1?' ×'+qty:'')+'</span>';
-  }).join("")+'</div>';
+  var sp = l.spaces || {}, bg = bedGroup();
+  var hasBeds = bg && bg.items.some(function(n){ return bedQty(l, n)>0; });
+  var hasSpaces = HOUSE_SPACES.some(function(name){ return sp[name]>0; });
+  if(!hasBeds && !hasSpaces) return "";
+  // Toutes les tailles de lit et pièces possibles : présentes pleines (×N au-delà de 1), absentes en gris léger.
+  var chip = function(icon, name, qty){ return '<span class="amenity-chip '+(qty>0?'active':'off')+'"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+icon+'</svg>'+esc(name)+(qty>1?' ×'+qty:'')+'</span>'; };
+  return (hasBeds ? '<div class="detail-amen-group"><div class="detail-amen-group-title">Literie</div><div class="amenity-grid">'+
+      bg.items.map(function(n){ return chip(AMEN_ICONS[n], n, bedQty(l, n)); }).join("")+'</div></div>' : '')+
+    (hasSpaces ? '<div class="detail-amen-group"><div class="detail-amen-group-title">Pièces & annexes</div><div class="amenity-grid">'+
+      HOUSE_SPACES.map(function(name){ return chip(HOUSE_SPACE_ICONS[name], name, sp[name] || 0); }).join("")+'</div></div>' : '');
 }
 
 var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+
@@ -4227,6 +4244,7 @@ function normalizeHostListing(doc){
     // jamais pour personne d'autre que l'hôte prévisualisant sa propre
     // annonce (listingOverride, qui lit le doc brut, lui, intact).
     spaces: l.spaces || {},
+    beds: l.beds || null,
     desc: l.desc,
     websiteUrl: l.websiteUrl || "", googleUrl: l.googleUrl || "",
     instagramUrl: l.instagramUrl || "", facebookUrl: l.facebookUrl || "",
@@ -5711,12 +5729,13 @@ function placeCoverHtml(l, members){
   members.forEach(registerPhotoVariants);
   var place = l.place || null;
   var placeName = (place && place.name) || "";
-  var placeShots = ((place && place.gallery) || []).slice(0, 4);
+  // Toutes les photos du lieu, puis la couverture de chaque hébergement.
+  var placeShots = ((place && place.gallery) || []).slice();
   var slides = placeShots.map(function(src){
     return '<div class="cc-slide"><img src="'+photoMid(src)+'" alt="'+esc(placeName||l.name)+'" loading="lazy"></div>';
-  }).concat(members.map(function(m){
+  }).concat(members.filter(function(m){ return memberCoverUrl(m); }).map(function(m){
     var img = memberCoverUrl(m);
-    return '<div class="cc-slide">'+(img ? '<img src="'+img+'" alt="'+esc(m.name||"")+'" loading="lazy">' : '')+
+    return '<div class="cc-slide"><img src="'+img+'" alt="'+esc(m.name||"")+'" loading="lazy">'+
       // Plus de légende par hébergement (retour de César) : on regarde
       // dans le fil, on choisit sur la page de l'établissement.
       '</div>';
@@ -7668,7 +7687,7 @@ function openDetail(id, listingOverride, forceVisitorView){
   // vue chambre : ce sont les pièces du logement entier, pas de la
   // chambre sélectionnée.
   var spacesHtml = detailSpacesHtml(l);
-  var spacesCardHtml = spacesHtml ? '<div class="detail-card" data-sync="spaces"><div class="section-title">Pièces & annexes</div>'+spacesHtml+'</div>' : "";
+  var spacesCardHtml = spacesHtml ? '<div class="detail-card" data-sync="spaces"><div class="section-title">Literie, pièces & annexes</div>'+spacesHtml+'</div>' : "";
   if(!activeUnit){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
@@ -7679,9 +7698,9 @@ function openDetail(id, listingOverride, forceVisitorView){
       (dKmOverview!=null ? metaItemHtml(META_ICON_DISTANCE, dKmOverview+" km", "de vous") : "")+
     '</div></div>';
     bodyExtraHtml =
+      spacesCardHtml+
       '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
-      spacesCardHtml+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
          jamais qu'une, voir renderHostUnits()/isGite), cette carte ne
@@ -7703,9 +7722,9 @@ function openDetail(id, listingOverride, forceVisitorView){
       (dKmUnit!=null ? metaItemHtml(META_ICON_DISTANCE, dKmUnit+" km", "de vous") : "")+
       '</div></div>';
     bodyExtraHtml =
+      spacesCardHtml+
       '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
-      detailAmenitiesHtml(l)+'</div>'+
-      spacesCardHtml;
+      detailAmenitiesHtml(l)+'</div>';
   }
 
   var qrUid = "qrd"+l.id+(activeUnit ? "-"+activeUnit.id : "");
@@ -7974,9 +7993,11 @@ function openPlace(id, override, loaded){
   registerPhotoVariants(l);
   registerPhotoVariants(place);
   var title = place.name || l.name;
-  var shots = (place.gallery || []).slice();
-  if(!shots.length) members.forEach(function(m){ var c = m.gallery && m.gallery[0]; if(c) shots.push(c); });
-  var slides = shots.map(function(src){ return '<div class="slide"><img src="'+photoMid(src)+'" alt="'+esc(title)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>'; }).join("");
+  // Photos du lieu, puis la couverture de chacun de ses hébergements (vue
+  // d'ensemble de l'établissement et de ses logements, comme dans le fil).
+  var shots = (place.gallery || []).map(function(src){ return {src:photoMid(src), alt:title}; });
+  members.forEach(function(m){ registerPhotoVariants(m); var c = memberCoverUrl(m); if(c) shots.push({src:c, alt:m.name || title}); });
+  var slides = shots.map(function(sh){ return '<div class="slide"><img src="'+esc(sh.src)+'" alt="'+esc(sh.alt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>'; }).join("");
   var dots = shots.length>1 ? shots.map(function(_, i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("") : "";
   var prices = members.map(displayPriceOf).filter(function(v){ return v!=null; });
   var minPrice = prices.length ? Math.min.apply(null, prices) : null;
@@ -10143,19 +10164,25 @@ function crRender(){
           '<button type="button" class="cr-meta" data-cr-open="price">'+metaItemHtml(META_ICON_GUESTS,
             u.linkedRoomId && cr.planning ? cr.planning.capacity : (Number(u.maxPersons)>0 ? u.maxPersons : '<span class="cr-ph">—</span>'), "voyageurs max")+'</button>'+
         '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Prix et capacité gérés dans Fiftin Planning'+(cr.planning ? '' : (cr.status==="draft" ? ' · prix calculé à la mise en ligne' : ' · calcul en cours'))+'</p>' : '')+'</div>'+
-        // Prestations et pièces cochées directement sur la carte (retour de
-        // César : plus de volet à ouvrir).
-        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Sélectionnez les prestations de votre hébergement</div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher. Le couchage est indispensable.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
-          crAmenEditHtml()+'</div>'+
-        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Ajoutez les pièces et annexes <small class="cr-opt">facultatif</small></div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour ajouter, touchez le nombre pour retirer.</p>'+
-          '<div class="hf-spaces-grid">'+HOUSE_SPACES.map(function(name){
+        // Literie (avec un compteur par taille de lit), pièces et annexes,
+        // puis les prestations — cochées directement sur la carte.
+        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Ajoutez la literie, les pièces et annexes</div>'+
+          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour ajouter, touchez le nombre pour retirer. La literie est indispensable.</p>'+
+          '<div class="amen-group"><div class="amen-group-title">Literie *</div><div class="hf-spaces-grid">'+(bedGroup() ? bedGroup().items : []).map(function(name){
+            var qty = bedQty(d, name);
+            return '<button type="button" class="xchip'+(qty>0?' on':'')+'" data-cr-bed="'+esc(name)+'">'+
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+AMEN_ICONS[name]+'</svg> '+esc(name)+
+              (qty>0 ? '<span class="xchip-qty" data-cr-bed-minus="'+esc(name)+'">×'+qty+'</span>' : '')+'</button>';
+          }).join("")+'</div></div>'+
+          '<div class="amen-group"><div class="amen-group-title">Pièces & annexes <small class="cr-opt">facultatif</small></div><div class="hf-spaces-grid">'+HOUSE_SPACES.map(function(name){
             var qty = (d.spaces || {})[name] || 0;
             return '<button type="button" class="xchip'+(qty>0?' on':'')+'" data-cr-space="'+esc(name)+'">'+
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg> '+esc(name)+
               (qty>0 ? '<span class="xchip-qty" data-cr-space-minus="'+esc(name)+'">×'+qty+'</span>' : '')+'</button>';
-          }).join("")+'</div></div>'+
+          }).join("")+'</div></div></div>'+
+        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Sélectionnez les prestations de votre hébergement</div>'+
+          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
+          crAmenEditHtml()+'</div>'+
         // Hébergement d'un établissement : adresse et contact se remplissent
         // dans l'établissement — pas de cartes en doublon ici (retour de
         // César), la carte Établissement y renvoie.
@@ -10248,6 +10275,19 @@ function crWire(){
       crScheduleSave(); crRender();
     });
   });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-cr-bed]"), function(chip){
+    chip.addEventListener("click", function(e){
+      var name = chip.getAttribute("data-cr-bed"), beds = {};
+      (bedGroup() ? bedGroup().items : []).forEach(function(n){ var q = bedQty(d, n); if(q) beds[n] = q; });
+      if(e.target.closest("[data-cr-bed-minus]")){ beds[name] = (beds[name]||0) - 1; if(beds[name]<=0) delete beds[name]; }
+      else beds[name] = (beds[name]||0) + 1;
+      d.beds = beds;
+      // La prestation suit : cochée dès un lit de cette taille.
+      d.amen = d.amen.filter(function(x){ return x!==name; });
+      if(beds[name]) d.amen.push(name);
+      crScheduleSave(); crRender();
+    });
+  });
   Array.prototype.forEach.call(document.querySelectorAll("[data-cr-space]"), function(chip){
     chip.addEventListener("click", function(e){
       var name = chip.getAttribute("data-cr-space"), sp = d.spaces = Object.assign({}, d.spaces || {});
@@ -10279,6 +10319,7 @@ function crWire(){
 function crAmenEditHtml(){
   var d = cr.data, locked = cr.site ? placeSharedAmen(cr.site.place) : [];
   return AMEN_GROUPS.map(function(g, gi){
+    if(g.required) return ""; // la literie est dans la carte des pièces
     // Hébergement d'un établissement : les prestations qui se règlent dans
     // l'établissement (PE_SHARED_AMEN) ne sont pas répétées ici.
     var items = g.items.filter(function(a){ return !(cr.site && PE_SHARED_AMEN.indexOf(a)!==-1); });
@@ -10329,7 +10370,7 @@ function crGo(key){
   var panel = document.getElementById("creator-panel");
   if(key==="photos"){ panel.scrollTo({top:0, behavior:"smooth"}); var g = document.getElementById("cr-gallery-scroll"); g.scrollTo({left:g.scrollWidth, behavior:"smooth"}); return; }
   if(key==="name" || key==="claim" || key==="desc"){ var el = document.getElementById("cr-"+key); el.scrollIntoView({behavior:"smooth", block:"center"}); el.focus(); return; }
-  if(key==="beds" || key==="amen" || key==="spaces"){ var sec = document.querySelector('[data-cr-sec="'+(key==="spaces" ? "spaces" : "amen")+'"]'); if(sec) sec.scrollIntoView({behavior:"smooth", block:"start"}); return; }
+  if(key==="beds" || key==="amen" || key==="spaces"){ var sec = document.querySelector('[data-cr-sec="'+(key==="amen" ? "amen" : "spaces")+'"]'); if(sec) sec.scrollIntoView({behavior:"smooth", block:"start"}); return; }
   crSheet({type:"type", price:"price", capacity:"price", address:"address", contact:"contact", host:"host"}[key] || key);
 }
 /* ---------- photos : envoi immédiat (mêmes trois tailles que partout) ---------- */
@@ -10691,7 +10732,7 @@ function saveHostProfile(name, bio){
 /* ---------- enregistrement automatique ---------- */
 function crPayload(){
   var d = cr.data, p = {};
-  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","contactChannels"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","contactChannels","beds"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
   p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
   p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
   p.hostName = cr.profile.name || "";
@@ -10800,7 +10841,7 @@ function applyPreviewBar(){
    la carte en haut de l'écran (data-sync ; data-cr-sec dans le créateur)
    et sa position, puis on la replace au même endroit dans l'autre vue. */
 var SYNC_CR_SEC = {name:"title", price:"meta", amen:"amen", spaces:"spaces", host:"host", contact:"contact"};
-var SYNC_ORDER = ["title","meta","units","amen","spaces","host","contact"];
+var SYNC_ORDER = ["title","meta","units","spaces","amen","host","contact"];
 function syncKeyOf(el){ return el.getAttribute("data-sync") || SYNC_CR_SEC[el.getAttribute("data-cr-sec")] || null; }
 function syncTopLine(panel){ var bar = panel.querySelector(".cr-bar"); return panel.getBoundingClientRect().top + (bar ? bar.offsetHeight : 0); }
 function syncCapture(panel){
@@ -11111,8 +11152,10 @@ function peRender(){
         '</div><p class="cr-linked">Calculés à partir de chaque hébergement</p></div>'+
         '<div class="detail-card" data-sync="units"><div class="section-title" style="margin-top:0">Gérez les hébergements de votre établissement</div>'+
           '<p class="site-sub">Comme les voyageurs les voient. Touchez un hébergement pour le modifier ou le retirer.</p>'+
-          (views.length ? '<div class="place-rail">'+views.map(function(m){ return placeRailCardHtml(m, "data-place-unit"); }).join("")+'</div>' : '')+
-          (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
+          // « Ajouter » = une carte de plus au bout du rail, de la même taille (retour de César).
+          (views.length ? '<div class="place-rail">'+views.map(function(m){ return placeRailCardHtml(m, "data-place-unit"); }).join("")+
+            '<button type="button" class="place-rail-card place-rail-add" data-pe-open="add"><span class="pra-plus">+</span><b>Ajouter un hébergement</b><small>à l’établissement</small></button>'+
+          '</div>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
         '<div class="detail-card" data-sync="amen"><div class="section-title" style="margin-top:0">Sélectionnez les prestations de votre établissement</div>'+
           '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher : elles valent pour tous les hébergements.</p>'+
