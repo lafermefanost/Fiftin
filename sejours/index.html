@@ -1259,7 +1259,6 @@ textarea.text-input{resize:vertical; min-height:80px;}
    ça se voie avant même le clic. */
 .detail-save-disabled{opacity:.45;}
 .detail-share{position:absolute; top:calc(14px + env(safe-area-inset-top,0px) + 46px); right:14px; z-index:10;}
-.place-detail .place-share{top:calc(14px + env(safe-area-inset-top,0px));} /* pas de cœur sur la page établissement */
 .dots{position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:5px; z-index:5;}
 .dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .dots span.on{background:#fff; width:16px; border-radius:3px;}
@@ -8194,6 +8193,8 @@ function openPlace(id, override, loaded){
     '<div class="detail-gallery" id="detail-gallery">'+
       '<div class="detail-gallery-scroll" id="detail-gallery-scroll">'+slides+'</div>'+
       '<button class="detail-back" id="detail-back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>'+
+      // Cœur : comme sur la carte de l'établissement dans le fil (enregistre son hébergement de référence).
+      '<button class="save-btn detail-save'+(isListingSaved(l)?' liked':'')+(override?' detail-save-disabled':'')+'" id="place-like" aria-label="'+(override?"Indisponible en aperçu":"Ajouter à une collection")+'"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg></button>'+
       '<button class="share-btn detail-share place-share" id="place-share" aria-label="Partager l’établissement">'+SHARE_ICON_SVG+'</button>'+
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
@@ -8230,6 +8231,11 @@ function openPlace(id, override, loaded){
   '</div>';
   document.getElementById("detail-back").addEventListener("click", closeDetail);
   document.getElementById("place-share").addEventListener("click", function(){ sharePlace(l, members); });
+  var placeLike = document.getElementById("place-like");
+  placeLike.addEventListener("click", function(){
+    if(override){ alert("Aperçu uniquement : vous ne pouvez pas ajouter votre propre établissement à vos favoris."); return; }
+    openCollectionPicker(l, function(){ placeLike.classList.toggle("liked", isListingSaved(l)); renderLikeBadge(); });
+  });
   var openMember = function(mid){
     var back = {id:id, override:override || null};
     if(override){
