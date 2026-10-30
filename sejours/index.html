@@ -11793,7 +11793,9 @@ function enterHostMode(tab){
   var mapBackBtnHost = document.getElementById("map-back-btn");
   if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
-  state.hostTab = tab || "profile";
+  // Changer d'espace mène toujours à l'onglet central (Mes annonces),
+  // jamais au Profil (demande de César).
+  state.hostTab = tab || "listings";
   state.hostListingId = null;
   state.hostUnitId = null;
   hostListingsCache = [];
@@ -11808,7 +11810,8 @@ function exitHostMode(){
   state.hostMode = false;
   persist();
   renderTabbar();
-  switchTab("profile");
+  // Retour à l'onglet central de l'espace voyageur (Explorer).
+  switchTab("explore");
 }
 function switchHostTab(tab){
   // Même correctif que switchTab() : repartir du haut à chaque changement
@@ -13255,7 +13258,7 @@ if(state.hostMode){
 updateHeroMenu();
 
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
-   racine) : ?espace=voyageur → Profil voyageur
+   racine) : ?espace=voyageur → Explorer (&onglet=sejours : Mes séjours, &onglet=profil : Profil)
    (&onglet=explore : Explorer, depuis le menu du site) ; ?espace=hote →
    Mes annonces de l'espace hôtes (connexion demandée si besoin) ;
    ?login=1 → volet de connexion.
@@ -13278,7 +13281,7 @@ function routeEspaceParams(q){
   if(espace==="voyageur"){
     if(state.hostMode){ state.hostMode = false; persist(); renderTabbar(); }
     var onglet = q.get("onglet");
-    switchTab(onglet==="explore" ? "explore" : onglet==="sejours" ? "likes" : "profile");
+    switchTab(onglet==="sejours" ? "likes" : onglet==="profil" ? "profile" : "explore");
   }
   else if(espace==="hote") whenAuthReady(function(){
     authHostTab = "listings";
