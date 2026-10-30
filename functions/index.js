@@ -388,6 +388,34 @@ exports.syncListingContactStats = onDocumentWritten(
   }
 );
 
+/* Touchers des voyageurs vers l'hôte, depuis Fiftin Séjours (voir
+ * logListingClick() dans sejours/index.html) : moyens de contact (Mail,
+ * WhatsApp, SMS, appel) et liens (site, avis Google, Instagram, Facebook),
+ * y compris des visiteurs non connectés. Simples compteurs par annonce et
+ * par mois, rangés dans hostProfiles/{ownerUid}.clickStats, que seul
+ * l'hôte peut lire (règle existante) : aucune donnée sur le voyageur. Ne
+ * compte que les annonces en ligne, jamais l'hôte sur ses propres annonces
+ * (aperçu). Écrit avec le SDK Admin : aucune règle Firestore à modifier. */
+const CLICK_KEYS = ["mail", "wa", "sms", "call", "websiteUrl", "googleUrl", "instagramUrl", "facebookUrl"];
+exports.logListingClick = onCall(async (request) => {
+  const data = request.data || {};
+  const listingId = String(data.listingId || "");
+  const key = String(data.key || "");
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(listingId) || CLICK_KEYS.indexOf(key) === -1) {
+    throw new HttpsError("invalid-argument", "Clic inconnu.");
+  }
+  const snap = await db.collection("listings").doc(listingId).get();
+  if (!snap.exists) return {ok: false};
+  const l = snap.data();
+  if (l.status !== "published" || !l.ownerUid) return {ok: false};
+  if (request.auth && request.auth.uid === l.ownerUid) return {ok: false, own: true};
+  // Mois à l'heure de Paris, « 2026-10 ».
+  const month = new Intl.DateTimeFormat("fr-CA", {timeZone: "Europe/Paris", year: "numeric", month: "2-digit"}).format(new Date());
+  await db.collection("hostProfiles").doc(l.ownerUid).set(
+    {clickStats: {[listingId]: {[month]: {[key]: FieldValue.increment(1)}}}}, {merge: true});
+  return {ok: true};
+});
+
 /* ---------------- Facturation Stripe (formules Essentiel/Avancé) ----------------
  *
  * accounts/{uid}.settings.plan reste la seule source de vérité lue par
