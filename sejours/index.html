@@ -9762,6 +9762,14 @@ function openCreator(listing, siteFrom, siteJoin){
   if(authState.uid && typeof firebase!=="undefined") firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
     if(!cr || !doc.exists) return; cr.profile.photoUrl = doc.data().photoUrl || ""; cr.profile.photoThumbUrl = doc.data().photoThumbUrl || ""; crRender();
   }).catch(function(){});
+  // Nouvelle annonce seule : contact prérempli depuis le Profil.
+  if(!listing && !site) loadHostProfileFull(function(hp){
+    if(!cr || cr.id) return;
+    var changed = false;
+    if(!cr.data.phone && hp.phone){ cr.data.phone = hp.phone; changed = true; }
+    if(hp.email && (!cr.data.email || cr.data.email===authState.email) && cr.data.email!==hp.email){ cr.data.email = hp.email; changed = true; }
+    if(changed) crRender();
+  });
   document.body.classList.add("creator-open");
   crRender();
   crRefreshSite();
@@ -10423,6 +10431,29 @@ function crOpenSite(){
 /* Présentation de l'hôte (prénom + quelques mots) : profil du compte, puis
    recopiée sur toutes ses annonces (présentation : sauf celles qui ont la
    leur, hostBioCustom) — comme depuis le Profil. */
+/* Profil complet de l'hôte, pour préremplir un nouvel établissement ou une
+   nouvelle annonce : nom, présentation, photo, et coordonnées de contact
+   saisies dans le Profil (hostProfiles contactPhone / contactEmail) — à
+   défaut, le téléphone de l'une de ses annonces, et l'e-mail du compte. */
+function loadHostProfileFull(cb){
+  var out = {name:"", bio:"", photoUrl:"", photoThumbUrl:"", phone:"", email:authState.email || ""};
+  if(!authState.uid || typeof firebase==="undefined"){ cb(out); return; }
+  resolveHostProfileName(function(n){ out.name = n;
+    resolveHostProfileBio(function(b){ out.bio = b;
+      firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+        var d = doc.exists ? doc.data() : {};
+        out.photoUrl = d.photoUrl || ""; out.photoThumbUrl = d.photoThumbUrl || "";
+        out.phone = d.contactPhone || ""; if(d.contactEmail) out.email = d.contactEmail;
+        if(out.phone){ cb(out); return; }
+        ensureHostListingsLoaded(function(list){
+          var f = list.filter(function(l){ return l.phone; })[0];
+          if(f){ out.phone = f.phone; if(!d.contactEmail && f.email) out.email = f.email; }
+          cb(out);
+        });
+      }).catch(function(){ cb(out); });
+    });
+  });
+}
 function saveHostProfile(name, bio){
   return firebase.firestore().collection("hostProfiles").doc(authState.uid).set({name:name, bio:bio, updated:new Date().toISOString()}, {merge:true}).then(function(){
     hostProfileNameCache = name; hostProfileBioCache = bio;
@@ -10670,6 +10701,15 @@ function openPlaceEditor(listing, listings, preselect){
       place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
     document.body.classList.add("creator-open");
     peRender();
+    // Hôte et contact repris du Profil, comme pour une nouvelle annonce.
+    var cNew = pe;
+    loadHostProfileFull(function(hp){
+      if(pe!==cNew) return;
+      pe.profile = hp;
+      if(!pe.shared.phone && hp.phone) pe.shared.phone = hp.phone;
+      if(hp.email && (!pe.shared.email || pe.shared.email===authState.email)) pe.shared.email = hp.email;
+      peRender();
+    });
     return;
   }
   var ids = [listing.id].concat(siteOthersOf(listing, listings).map(function(x){ return x.id; }));
@@ -10683,6 +10723,8 @@ function openPlaceEditor(listing, listings, preselect){
     place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", amen:placeSharedAmen(pl).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
   document.body.classList.add("creator-open");
   peRender();
+  var cOld = pe;
+  loadHostProfileFull(function(hp){ if(pe!==cOld) return; pe.profile = hp; peRender(); });
   // Association demandée (suggestion « Les associer ») : enregistrée tout de suite.
   if(preselect && preselect.length) peScheduleSave(0);
 }
@@ -10791,6 +10833,13 @@ function peRender(){
   var minPrice = prices.length ? Math.min.apply(null, prices) : null;
   var cap = siteAvailableCapacity(views, {});
   var first = views[0] || {};
+  // Hôte : le Profil (pe.profile, chargé à l'ouverture), sinon ce que
+  // portent les hébergements.
+  var fhost = first.host || {}, pp = pe.profile;
+  var hostV = {name: (pp && pp.name) || (fhost.name && fhost.name!=="Hôte Fiftin" ? fhost.name : ""),
+    bio: (pp && pp.bio) || fhost.bio || "",
+    photo: (pp && pp.photoUrl) ? avatarPhotoUrl(pp.photoUrl, pp.photoThumbUrl) : (fhost.photo || "")};
+  hostV.initial = (hostV.name || authState.email || "?").charAt(0).toUpperCase();
   var sh = pe.shared;
   var missing = [!(p.name||"").trim() && ["name","Nom"], !p.kind && ["kind","Type"], !(p.claim||"").trim() && ["claim","Accroche"], !p.gallery.length && ["photos","Photos"], !(p.desc||"").trim() && ["desc","Présentation"],
     typeof sh.lat!=="number" && ["address","Adresse"], !(sh.phone||"").trim() && ["contact","Téléphone"]].filter(Boolean);
@@ -10849,8 +10898,8 @@ function peRender(){
           }).join("")+'</div>'+
         // Hôte (modifiable ici aussi) puis contact en dernier, comme sur une annonce.
         '<div class="detail-card" data-sync="host"><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div><button type="button" class="cr-block" data-pe-open="host">'+
-          '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+crPh(first.host && first.host.name && first.host.name!=="Hôte Fiftin", esc((first.host && first.host.name) || ""), "Votre prénom")+'</b></div></div>'+
-          '<p class="host-bio-text" style="margin-top:8px">'+crPh(first.host && first.host.bio, esc((first.host && first.host.bio) || ""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p>'+
+          '<div class="host-card"><div class="host-avatar">'+(hostV.photo ? '<img src="'+esc(hostV.photo)+'" alt="">' : esc(hostV.initial || "?"))+'</div><div class="host-info"><b>'+crPh(hostV.name, esc(hostV.name), "Votre prénom")+'</b></div></div>'+
+          '<p class="host-bio-text" style="margin-top:8px">'+crPh(hostV.bio, esc(hostV.bio), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p>'+
           '<span class="cr-edit-link">Modifier</span></button></div>'+
         '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">Indiquez comment vous joindre</div><button type="button" class="cr-block" data-pe-open="contact">'+
           crPh(sh.phone, '<span>'+esc(sh.phone||"")+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(sh.email ? '<span class="cr-sub">'+esc(sh.email)+'</span>' : '')+
@@ -10962,6 +11011,7 @@ function peSheet(kind, arg){
   } else if(kind==="host"){
     apply = "Enregistrer";
     var fh = (peMembers()[0] && visitorViewOf(peMembers()[0]).host) || {};
+    if(pe.profile) fh = {name: pe.profile.name || fh.name, bio: pe.profile.bio || fh.bio};
     inner = '<h3>Votre présentation</h3><p class="sheet-sub">Partagée par toutes vos annonces (modifiable aussi dans votre profil).</p>'+
       '<div class="field-block"><label>Prénom</label><input class="text-input" id="crs-hname" value="'+esc(fh.name && fh.name!=="Hôte Fiftin" ? fh.name : "")+'"></div>'+
       '<div class="field-block"><label>Quelques mots sur vous</label><textarea class="text-input" id="crs-hbio" rows="4">'+esc(fh.bio||"")+'</textarea></div><div class="auth-err" id="crs-err"></div>';
@@ -11034,6 +11084,7 @@ function peSheet(kind, arg){
       if(!n || !b){ document.getElementById("crs-err").textContent = "Le prénom et la présentation sont indispensables."; return; }
       applyBtn.disabled = true;
       saveHostProfile(n, b).then(function(){
+        if(pe.profile){ pe.profile.name = n; pe.profile.bio = b; }
         hostListingsCache = [];
         ensureHostListingsLoaded(function(ls){ pe.listings = ls; close(); peRender(); });
       }).catch(function(e){ document.getElementById("crs-err").textContent = "Erreur : "+(e.message||e.code); applyBtn.disabled = false; });
@@ -12258,7 +12309,15 @@ function profileIdentityCardHtml(variant, connected){
         '<textarea class="text-input" id="profile-bio-input" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea>'+
       '</div>'+
       '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save">Enregistrer</button>'+
-      '<p class="field-hint" id="profile-bio-msg"></p>'
+      '<p class="field-hint" id="profile-bio-msg"></p>'+
+      // Coordonnées reprises à la création d'une annonce ou d'un établissement.
+      '<div class="field-block" style="margin-top:18px;"><label>Vos coordonnées de contact</label>'+
+        '<p class="field-hint" style="margin:0 0 8px;">Préremplies dans chaque nouvelle annonce et chaque nouvel établissement — plus besoin de les ressaisir. Vos annonces existantes ne changent pas.</p>'+
+        '<input class="text-input" type="tel" id="profile-phone-input" placeholder="Téléphone (WhatsApp, SMS, appel)" style="margin-bottom:8px;">'+
+        '<input class="text-input" type="email" id="profile-email-input" placeholder="E-mail de contact (facultatif)">'+
+      '</div>'+
+      '<button type="button" class="btn-apply profile-identity-btn" id="profile-contact-save">Enregistrer</button>'+
+      '<p class="field-hint" id="profile-contact-msg"></p>'
     : "")+
   '</div>';
 }
@@ -12307,6 +12366,22 @@ function wireProfileIdentityCard(){
         msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
       });
   });
+  var phoneInput = document.getElementById("profile-phone-input"), emailInput = document.getElementById("profile-email-input");
+  if(phoneInput && authState.uid && typeof firebase!=="undefined"){
+    firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
+      var d = doc.exists ? doc.data() : {};
+      if(document.activeElement!==phoneInput) phoneInput.value = d.contactPhone || "";
+      if(document.activeElement!==emailInput) emailInput.value = d.contactEmail || authState.email || "";
+    }).catch(function(){});
+    document.getElementById("profile-contact-save").addEventListener("click", function(){
+      var btn = this, msg = document.getElementById("profile-contact-msg");
+      msg.textContent = ""; btn.disabled = true;
+      firebase.firestore().collection("hostProfiles").doc(authState.uid)
+        .set({contactPhone:phoneInput.value.trim(), contactEmail:emailInput.value.trim(), updated:new Date().toISOString()}, {merge:true})
+        .then(function(){ btn.disabled = false; msg.textContent = "Coordonnées enregistrées."; })
+        .catch(function(err){ btn.disabled = false; msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez."); });
+    });
+  }
   var bioSaveBtn = document.getElementById("profile-bio-save");
   if(bioSaveBtn) bioSaveBtn.addEventListener("click", function(){
     var btn = this;
@@ -12669,7 +12744,7 @@ function renderHostListings(){
       state.hostListingId = null; state.hostUnitId = null;
     }
     feed.innerHTML = '<div class="host-view">'+
-      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Créer</button>'+
+      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Ajouter</button>'+
       siteHintHtml(listings)+
       hostSiteGroups(listings).map(function(g){ return g.members ? hostSiteHtml(g, listings) : hostListingCardHtml(g.listing, listings); }).join("")+
     '</div>';
@@ -12957,7 +13032,7 @@ function openCreateChoice(){
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    '<h3>Que voulez-vous créer ?</h3>'+
+    '<h3>Que voulez-vous ajouter ?</h3>'+
     '<div class="create-choice">'+
       '<button type="button" class="cc-opt" data-create="listing"><span class="cc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg></span>'+
         '<span class="cc-txt"><b>Un hébergement</b><span>Une chambre, un gîte, une maison… Une annonce, avec son prix et son calendrier. Vous pourrez le rattacher à un établissement plus tard.</span></span></button>'+
@@ -12979,7 +13054,7 @@ function openCreateChoice(){
 function hostEmptyHtml(){
   return '<div class="host-view">'+
     '<div class="empty-state"><p>Vous n\'avez pas encore d\'annonce sur Fiftin Séjours.</p></div>'+
-    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Créer</button>'+
+    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Ajouter</button>'+
   '</div>';
 }
 function wireHostEmpty(){
