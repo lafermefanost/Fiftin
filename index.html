@@ -421,6 +421,26 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-menu .m-login:hover{background:var(--yellow); filter:brightness(.96);}
 .hl-menu .m-login svg{color:currentColor; margin-top:0;}
 
+/* Menu en deux espaces (retour de César : « on ne comprend pas si c'est un
+   sous-menu pour un hôte ou pour un voyageur ») : en tête, les deux encarts
+   de la carte « Votre profil » (Espace voyageur / Espace hôte, l'espace
+   ouvert en vert plein sur Séjours), puis les entrées rangées sous « Côté
+   voyageur » et « Côté hôte », enfin Fiftin et la déconnexion. */
+.hl-menu{width:min(320px, calc(100vw - 24px)); min-width:0 !important;}
+.hl-menu-spaces{display:flex; gap:8px; margin:6px 0 10px;}
+.hl-menu .hl-space{flex:1; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:14px 8px 12px; border-radius:16px;
+  background:#E5E9E4; color:var(--sauge); text-align:center;}
+.hl-menu .hl-space:hover{background:#DCE2DA;}
+.hl-menu .hl-space svg{width:24px; height:24px; margin:0 0 4px; color:currentColor;}
+.hl-menu .hl-space b{font-size:15px; font-weight:700; line-height:1.2;}
+.hl-menu .hl-space em{font-style:normal; font-size:11.5px; font-weight:500; opacity:.8; line-height:1.2;}
+.hl-menu .hl-space.current{background:var(--sauge); color:#fff; cursor:default;}
+.hl-menu-group{background:#F5F4F1; border-radius:14px; padding:4px; margin-bottom:8px;}
+.hl-menu-group a:hover,.hl-menu-group button:hover{background:#fff;}
+.hl-menu-gtitle{display:flex; align-items:center; gap:7px; padding:8px 12px 2px; font-size:11.5px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+.hl-menu .hl-menu-gtitle svg{width:14px; height:14px; margin:0; color:var(--muted);}
+.hl-menu-foot{border-top:1px solid #E7E4DC; padding-top:4px;}
+
 </style>
 </head>
 <body>
@@ -441,35 +461,23 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
         <span>Se connecter ou créer un compte</span>
       </button>
-      <a class="m-guest" href="sejours/" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-        <span>Fiftin Séjours<small>Trouver un séjour en direct</small></span>
-      </a>
-      <a class="m-guest" href="sejours/?espace=hote" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 8v8M8 12h8"/></svg>
-        <span>Déposer une annonce<small>Espace hôte de Fiftin Séjours</small></span>
-      </a>
       <div class="hl-menu-mail m-user" id="hlMenuMail"></div>
-      <a class="m-user" href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6"/><path d="M3 18h18"/><path d="M5 10V7a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3"/></svg>
-        <span>Espace voyageur<small>Explorer les annonces</small></span>
-      </a>
-      <a class="m-user" href="sejours/?espace=hote" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
-        <span>Espace hôte<small>Mes annonces sur Fiftin Séjours</small></span>
-      </a>
-      <a href="app/" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-        <span><span class="m-user">Mon planning</span><span class="m-guest">Fiftin Planning</span><small><span class="m-user">Ouvrir l'outil de gestion</span><span class="m-guest">Se connecter ou créer un compte</span></small></span>
-      </a>
-      <a href="planning/" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg>
-        <span>Découvrir Fiftin Planning<small>Fonctionnalités et formules</small></span>
-      </a>
-      <button type="button" class="m-user" id="hlSignOut" role="menuitem">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
-        <span>Se déconnecter</span>
-      </button>
+      <div class="hl-menu-spaces">
+        <a class="hl-space" data-space="voyageur" href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg><b>Espace voyageur</b><em>Réservez vos séjours</em></a>
+        <a class="hl-space" data-space="hote" href="sejours/?espace=hote" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg><b>Espace hôte</b><em><span class="m-user">Gérez vos annonces</span><span class="m-guest">Déposez une annonce</span></em></a>
+      </div>
+      <div class="hl-menu-group">
+        <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Côté voyageur</div>
+        <a href="sejours/?espace=voyageur&amp;onglet=sejours" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><span>Mes séjours<small>Favoris, demandes et carnet de voyage</small></span></a>
+      </div>
+      <div class="hl-menu-group">
+        <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Côté hôte</div>
+        <a href="app/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span><span class="m-user">Mon planning</span><span class="m-guest">Fiftin Planning</span><small><span class="m-user">Ouvrir l'outil de gestion</span><span class="m-guest">Se connecter ou créer un compte</span></small></span></a>
+        <a href="planning/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg><span>Découvrir Fiftin Planning<small>Fonctionnalités et formules</small></span></a>
+      </div>
+      <div class="hl-menu-foot m-user">
+        <button type="button" class="m-user" id="hlSignOut" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Se déconnecter</span></button>
+      </div>
     </div>
   </div>
 </header>
