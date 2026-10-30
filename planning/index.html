@@ -436,7 +436,7 @@ section[id]{scroll-margin-top:72px;}
 /* Formules */
 .pl-plans{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:16px; margin-top:30px;}
 .pl-plans .plan{background:#fff; border-radius:28px; padding:26px; position:relative; box-shadow:var(--shadow);}
-.pl-plans .plan.mkt-plan-current{box-shadow:0 0 0 2px var(--sauge) inset, var(--shadow);}
+.pl-plans .plan.mkt-plan-current{background:var(--sauge); box-shadow:0 10px 26px rgba(29,40,32,.18);}
 .pl-plans .plan .name{font-size:12.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase; color:var(--sauge-deep); margin-bottom:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
 .pl-plans .plan .mkt-plan-tag{background:var(--sauge); color:#fff; font-size:10.5px; font-weight:600; letter-spacing:.02em; text-transform:none; padding:3px 9px; border-radius:20px;}
 .pl-plans .plan .price{font-weight:700; font-size:38px; letter-spacing:-0.03em; line-height:1; margin-bottom:4px; color:var(--sauge-deep);}
@@ -448,6 +448,12 @@ section[id]{scroll-margin-top:72px;}
 .pl-plans .plan .mkt-plan-cta{display:flex; justify-content:center; align-items:center; width:100%; margin-top:18px; padding:15px; border:none; border-radius:999px;
   background:var(--yellow); color:var(--sauge-deep); font:600 15.5px 'Jost',sans-serif;}
 .pl-plans .plan .mkt-plan-cta::before,.pl-plans .plan .mkt-plan-cta::after{content:none;}
+/* Formule actuelle : même carte que dans le Profil hôte de Séjours
+   (.plan-card.active) — vert plein, textes blancs, pastille jaune, bouton blanc. */
+.pl-plans .plan.mkt-plan-current .name, .pl-plans .plan.mkt-plan-current .price, .pl-plans .plan.mkt-plan-current li{color:#fff;}
+.pl-plans .plan.mkt-plan-current .per{color:rgba(255,255,255,.72);}
+.pl-plans .plan.mkt-plan-current .mkt-plan-tag{background:var(--yellow); color:var(--sauge-deep);}
+.pl-plans .plan.mkt-plan-current .mkt-plan-cta{background:#fff; color:var(--sauge-deep);}
 .pl-plans .plan .mkt-plan-cta{box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;}
 .pl-plans .plan .mkt-plan-link{display:block; width:100%; margin-top:18px; padding:14px; border-radius:999px; text-align:center;
   font-weight:600; font-size:15.5px; background:var(--sauge); color:#fff;}
@@ -1070,8 +1076,9 @@ function planCardHtml(f){
   var action = "";
   if(paid){
     if(current) action = '<a class="btn primary mkt-plan-cta" href="app/"><span>Ouvrir Fiftin Planning</span></a>';
-    else if(plUser && PAID[plPlan]) action = '<a class="btn primary mkt-plan-cta" href="app/?openSettings=1"><span>Changer de formule</span></a>';
-    else action = '<button type="button" class="btn primary mkt-plan-cta" data-plan="'+esc(f.value)+'"><span>'+(plUser?'Passer à cette formule':'Choisir cette formule')+'</span></button>';
+    // Mêmes libellés que les cartes du Profil hôte de Séjours.
+    else if(plUser && PAID[plPlan]) action = '<a class="btn primary mkt-plan-cta" href="app/?openSettings=1"><span>Changer pour cette formule</span></a>';
+    else action = '<button type="button" class="btn primary mkt-plan-cta" data-plan="'+esc(f.value)+'"><span>'+(plUser?'Changer pour cette formule':'Choisir cette formule')+'</span></button>';
   } else if(!plUser){
     action = '<a class="mkt-plan-link" href="sejours/?espace=hote">Commencer gratuitement</a>';
   }
