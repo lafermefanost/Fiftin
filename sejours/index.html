@@ -2973,15 +2973,16 @@ function fiftinSetBrandVideoSrc(id){
       </div>
       <div class="hl-menu-group">
         <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Côté voyageur</div>
+        <a href="sejours/?espace=voyageur&amp;onglet=explore" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg><span>Explorer<small>Trouver un hébergement en direct</small></span></a>
         <a href="sejours/?espace=voyageur&amp;onglet=sejours" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.6l-1-1a5.5 5.5 0 10-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/></svg><span>Mes séjours<small>Favoris, demandes et carnet de voyage</small></span></a>
       </div>
       <div class="hl-menu-group">
         <div class="hl-menu-gtitle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Côté hôte</div>
         <a href="app/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span><span class="m-user">Mon planning</span><span class="m-guest">Fiftin Planning</span><small><span class="m-user">Ouvrir l'outil de gestion</span><span class="m-guest">Se connecter ou créer un compte</span></small></span></a>
-        <a href="planning/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5C12.7 8.6 15.4 11.3 21.5 12C15.4 12.7 12.7 15.4 12 21.5C11.3 15.4 8.6 12.7 2.5 12C8.6 11.3 11.3 8.6 12 2.5Z"/></svg><span>Découvrir Fiftin Planning<small>Fonctionnalités et formules</small></span></a>
+        <a href="planning/" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5C4.5 4.3 7.5 4.3 12 6.5v13c-4.5-2.2-7.5-2.2-10-1z"/><path d="M22 5.5c-2.5-1.2-5.5-1.2-10 1v13c4.5-2.2 7.5-2.2 10-1z"/></svg><span>Découvrir Fiftin Planning<small>Fonctionnalités et formules</small></span></a>
       </div>
       <div class="hl-menu-foot">
-        <a href="./" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M9 21v-6h6v6"/><path d="M5 10v11h14V10"/></svg><span>Découvrir Fiftin<small>Fiftin Séjours et Fiftin Planning</small></span></a>
+        <a href="./" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg><span>Découvrir Fiftin<small>Fiftin Séjours et Fiftin Planning</small></span></a>
         <button type="button" class="m-user" id="sejSignOut" role="menuitem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>Se déconnecter</span></button>
       </div>
     </div>
@@ -11793,7 +11794,9 @@ function enterHostMode(tab){
   var mapBackBtnHost = document.getElementById("map-back-btn");
   if(mapBackBtnHost) mapBackBtnHost.hidden = true;
   state.hostMode = true;
-  state.hostTab = tab || "profile";
+  // Changer d'espace mène toujours à l'onglet central (Mes annonces),
+  // jamais au Profil (demande de César).
+  state.hostTab = tab || "listings";
   state.hostListingId = null;
   state.hostUnitId = null;
   hostListingsCache = [];
@@ -11808,7 +11811,8 @@ function exitHostMode(){
   state.hostMode = false;
   persist();
   renderTabbar();
-  switchTab("profile");
+  // Retour à l'onglet central de l'espace voyageur (Explorer).
+  switchTab("explore");
 }
 function switchHostTab(tab){
   // Même correctif que switchTab() : repartir du haut à chaque changement
@@ -13255,7 +13259,7 @@ if(state.hostMode){
 updateHeroMenu();
 
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
-   racine) : ?espace=voyageur → Profil voyageur
+   racine) : ?espace=voyageur → Explorer (&onglet=sejours : Mes séjours, &onglet=profil : Profil)
    (&onglet=explore : Explorer, depuis le menu du site) ; ?espace=hote →
    Mes annonces de l'espace hôtes (connexion demandée si besoin) ;
    ?login=1 → volet de connexion.
@@ -13278,7 +13282,7 @@ function routeEspaceParams(q){
   if(espace==="voyageur"){
     if(state.hostMode){ state.hostMode = false; persist(); renderTabbar(); }
     var onglet = q.get("onglet");
-    switchTab(onglet==="explore" ? "explore" : onglet==="sejours" ? "likes" : "profile");
+    switchTab(onglet==="sejours" ? "likes" : onglet==="profil" ? "profile" : "explore");
   }
   else if(espace==="hote") whenAuthReady(function(){
     authHostTab = "listings";
