@@ -547,6 +547,18 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 /* Les deux encarts sont des onglets (retour de César) : ils n'emmènent
    nulle part, ils affichent les entrées de l'espace choisi. */
 .hl-menu-group[data-group]:not(.on){display:none;}
+/* L'onglet choisi se prolonge dans la carte de ses entrées, en vert plein
+   (retour de César : relier les deux) ; l'autre onglet reste détaché. */
+.hl-menu-spaces{align-items:flex-start; margin-bottom:0;}
+.hl-menu .hl-space{margin-bottom:8px;}
+.hl-menu .hl-space.current{margin-bottom:0; padding-bottom:20px; border-radius:16px 16px 0 0;}
+.hl-menu-group.on{background:var(--sauge); color:#fff; border-radius:16px; margin-top:0;}
+.hl-menu-group.on[data-group="voyageur"]{border-top-left-radius:0;}
+.hl-menu-group.on[data-group="hote"]{border-top-right-radius:0;}
+.hl-menu .hl-menu-group.on a{color:#fff;}
+.hl-menu .hl-menu-group.on a:hover{background:rgba(255,255,255,.1);}
+.hl-menu .hl-menu-group.on svg{color:#fff;}
+.hl-menu .hl-menu-group.on small{color:rgba(255,255,255,.75);}
 /* Plus de titre « Côté voyageur / hôte » : l'onglet choisi juste au-dessus le dit déjà. */
 .hl-menu-group{background:#F5F4F1; border-radius:14px; padding:4px; margin-bottom:8px;}
 .hl-menu-group a:hover,.hl-menu-group button:hover{background:#fff;}
