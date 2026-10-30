@@ -1156,17 +1156,15 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .hf-photo-row-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;}
 .hf-photo-row-main .hf-photo-row-actions{margin-left:0;}
 .hf-photo-cap{padding:9px 12px; font-size:14px;}
-/* Bulle du titre d'une photo (fiche, page établissement) : pointe vers le
-   doigt, même dessin que la bulle de présentation de l'hôte (.hw-bio). */
-.photo-cap{position:absolute; z-index:5; max-width:66%; padding:7px 12px; border-radius:12px; background:rgba(255,255,255,.78);
-  border:1px solid rgba(255,255,255,.9); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
-  color:var(--sauge-deep); font-size:12.5px; font-weight:600; line-height:1.3; box-shadow:0 4px 14px rgba(0,0,0,.14);
+/* Bulle du titre d'une photo (fiche, page établissement) : une seule forme
+   (bulle + pointe vers le doigt dessinées d'un seul tracé, clip-path calculé
+   par photoCapPath()), fond blanc translucide, sans contour ni ombre
+   (retour de César : pas de double forme qui se superpose). */
+.photo-cap{position:absolute; z-index:5; max-width:66%; padding:7px 12px; background:rgba(255,255,255,.78);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px);
+  color:var(--sauge-deep); font-size:12.5px; font-weight:600; line-height:1.3;
   pointer-events:none; opacity:0; transform:translateY(4px) scale(.96); transition:opacity .18s ease, transform .18s ease;}
 .photo-cap.on{opacity:1; transform:none;}
-.photo-cap::after{content:""; position:absolute; left:var(--tip, 50%); bottom:-5px; width:10px; height:10px; margin-left:-6px;
-  background:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.9); border-top:none; border-left:none;
-  transform:rotate(45deg); border-radius:0 0 2px 0;}
-.photo-cap.below::after{bottom:auto; top:-5px; transform:rotate(-135deg);}
 .hf-photo-row-actions button{width:32px; height:32px; border-radius:50%; border:none; background:var(--cream-deep);
   color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .hf-photo-row-actions button svg{width:14px; height:14px;}
@@ -3376,6 +3374,16 @@ function wirePhotoCapField(save){
   el.addEventListener("blur", flush);
   el.addEventListener("change", flush);
 }
+// Contour d'une bulle w×h (coins de 12) et de sa pointe (hauteur P, bout
+// arrondi) en x=tip : en bas, ou en haut si below. Un seul tracé fermé.
+function photoCapPath(w, h, tip, P, below){
+  var r = 12, s = 7, t = below ? P : 0, bt = t + h;
+  var tipUp = " H "+(tip-s)+" L "+(tip-1.2)+" "+(t-P+1)+" Q "+tip+" "+(t-P)+" "+(tip+1.2)+" "+(t-P+1)+" L "+(tip+s)+" "+t;
+  var tipDown = " H "+(tip+s)+" L "+(tip+1.2)+" "+(bt+P-1)+" Q "+tip+" "+(bt+P)+" "+(tip-1.2)+" "+(bt+P-1)+" L "+(tip-s)+" "+bt;
+  return "M "+r+" "+t+(below ? tipUp : "")+" H "+(w-r)+" Q "+w+" "+t+" "+w+" "+(t+r)+
+    " V "+(bt-r)+" Q "+w+" "+bt+" "+(w-r)+" "+bt+(below ? "" : tipDown)+
+    " H "+r+" Q 0 "+bt+" 0 "+(bt-r)+" V "+(t+r)+" Q 0 "+t+" "+r+" "+t+" Z";
+}
 function wirePhotoCaps(scroller){
   var box = scroller.parentNode, bubble = null, timer = null;
   var hide = function(){ clearTimeout(timer); if(bubble){ var b = bubble; bubble = null; b.classList.remove("on"); setTimeout(function(){ b.remove(); }, 200); } };
@@ -3391,12 +3399,14 @@ function wirePhotoCaps(scroller){
     b.className = "photo-cap";
     b.textContent = cap;
     box.appendChild(b);
-    var w = b.offsetWidth, h = b.offsetHeight, below = y < h + 28;
+    var w = b.offsetWidth, h = b.offsetHeight, P = 7, below = y < h + P + 24;
     var left = Math.max(12, Math.min(r.width - w - 12, x - w/2));
+    var tip = Math.max(20, Math.min(w - 20, x - left));
+    b.style[below ? "paddingTop" : "paddingBottom"] = (7 + P)+"px";
     b.style.left = left+"px";
-    b.style.top = (below ? y + 16 : y - h - 16)+"px";
-    b.classList.toggle("below", below);
-    b.style.setProperty("--tip", Math.max(14, Math.min(w - 14, x - left))+"px");
+    b.style.top = (below ? y + 8 : y - h - P - 8)+"px";
+    var path = 'path("'+photoCapPath(w, h, tip, P, below)+'")';
+    b.style.webkitClipPath = path; b.style.clipPath = path;
     bubble = b;
     requestAnimationFrame(function(){ b.classList.add("on"); });
     timer = setTimeout(hide, 3000);
