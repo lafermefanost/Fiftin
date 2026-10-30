@@ -1152,6 +1152,19 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .hf-photo-cover-badge{position:absolute; left:0; right:0; bottom:0; background:rgba(53,75,56,.85); color:#fff;
   font-size:8px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; text-align:center; padding:2px 0;}
 .hf-photo-row-actions{display:flex; gap:5px; margin-left:auto; flex-shrink:0;}
+/* Titre de la vue : champ au-dessus des boutons, à droite de la vignette. */
+.hf-photo-row-main{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;}
+.hf-photo-row-main .hf-photo-row-actions{margin-left:0;}
+.hf-photo-cap{padding:9px 12px; font-size:14px;}
+/* Bulle du titre d'une photo (fiche, page établissement) : pointe vers le
+   doigt, même dessin que la bulle de présentation de l'hôte (.hw-bio). */
+.photo-cap{position:absolute; z-index:5; max-width:70%; padding:9px 14px; border-radius:14px; background:rgba(255,255,255,.96);
+  color:var(--sauge-deep); font-size:14px; font-weight:600; line-height:1.3; box-shadow:0 6px 20px rgba(0,0,0,.18);
+  pointer-events:none; opacity:0; transform:translateY(4px) scale(.96); transition:opacity .18s ease, transform .18s ease;}
+.photo-cap.on{opacity:1; transform:none;}
+.photo-cap::after{content:""; position:absolute; left:var(--tip, 50%); bottom:-6px; width:14px; height:14px; margin-left:-7px;
+  background:inherit; transform:rotate(45deg); border-radius:3px;}
+.photo-cap.below::after{bottom:auto; top:-6px;}
 .hf-photo-row-actions button{width:32px; height:32px; border-radius:50%; border:none; background:var(--cream-deep);
   color:var(--ink); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .hf-photo-row-actions button svg{width:14px; height:14px;}
@@ -3330,6 +3343,63 @@ function extUrl(u){
    vertes picto + texte (hostExtLinksHtml()), pour les distinguer des
    tuiles de contact. Plus de liens dans les volets de contact ni dans la
    carte hôte. */
+/* Titres des photos (retour de César) : saisis par l'hôte dans « Organiser
+   les photos » ou dans le volet d'une photo, gardés par adresse de photo
+   (photoCaps {url: titre}, sur l'annonce et sur place pour l'établissement :
+   insensible à l'ordre). Sur la fiche et la page établissement, toucher une
+   photo titrée fait apparaître une petite bulle à l'endroit touché,
+   pointe vers le doigt (même dessin que la bulle de présentation de
+   l'hôte) ; elle disparaît après 3 s, au défilement ou au toucher suivant. */
+function photoCapOf(l, url){
+  if(!l || !url) return "";
+  return ((l.photoCaps || {})[url]) || ((l.place && l.place.photoCaps) || {})[url] || "";
+}
+function photoCapAttr(cap){ return cap ? ' data-cap="'+esc(cap)+'"' : ''; }
+function capsFor(urls, caps){
+  var out = {}, n = 0;
+  (urls || []).forEach(function(u){ var c = ((caps || {})[u] || "").trim(); if(c){ out[u] = c; n++; } });
+  return n ? out : null;
+}
+function photoCapFieldHtml(cap){
+  return '<div class="field-block"><label>Titre de la vue <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>'+
+    '<input class="text-input" id="photo-cap-input" maxlength="40" placeholder="Ex. Salle de bain, Vue du jardin" value="'+esc(cap || "")+'">'+
+    '<p class="field-hint">Affiché dans une bulle quand le voyageur touche la photo.</p></div>';
+}
+function wirePhotoCapField(save){
+  var el = document.getElementById("photo-cap-input");
+  if(!el) return;
+  var last = el.value.trim(), t = null;
+  var flush = function(){ clearTimeout(t); var v = el.value.trim(); if(v===last) return; last = v; save(v); };
+  el.addEventListener("input", function(){ clearTimeout(t); t = setTimeout(flush, 800); });
+  el.addEventListener("blur", flush);
+  el.addEventListener("change", flush);
+}
+function wirePhotoCaps(scroller){
+  var box = scroller.parentNode, bubble = null, timer = null;
+  var hide = function(){ clearTimeout(timer); if(bubble){ var b = bubble; bubble = null; b.classList.remove("on"); setTimeout(function(){ b.remove(); }, 200); } };
+  scroller.addEventListener("scroll", hide, {passive:true});
+  scroller.addEventListener("click", function(e){
+    var slide = e.target.closest(".slide");
+    var cap = slide && slide.getAttribute("data-cap");
+    hide();
+    if(!cap) return;
+    var r = box.getBoundingClientRect();
+    var x = e.clientX - r.left, y = e.clientY - r.top;
+    var b = document.createElement("div");
+    b.className = "photo-cap";
+    b.textContent = cap;
+    box.appendChild(b);
+    var w = b.offsetWidth, h = b.offsetHeight, below = y < h + 28;
+    var left = Math.max(12, Math.min(r.width - w - 12, x - w/2));
+    b.style.left = left+"px";
+    b.style.top = (below ? y + 16 : y - h - 16)+"px";
+    b.classList.toggle("below", below);
+    b.style.setProperty("--tip", Math.max(14, Math.min(w - 14, x - left))+"px");
+    bubble = b;
+    requestAnimationFrame(function(){ b.classList.add("on"); });
+    timer = setTimeout(hide, 3000);
+  });
+}
 function hostDisplayName(l){
   var n = l.host ? l.host.name : l.hostName;
   return n && n!=="Hôte Fiftin" ? n : "";
@@ -4284,6 +4354,7 @@ function normalizeHostListing(doc){
     grad: "clay", motif: "roof",
     gallery: gallery,
     galleryMid: l.galleryMid || null, // version d'affichage 1280 px (voir registerPhotoVariants())
+    photoCaps: l.photoCaps || null, // titres des photos {url: titre} (photoCapOf())
     galleryThumb: l.galleryThumb || null, // vignette légère de gallery[0] (voir listingThumbUrl()) — absente sur une annonce créée avant ce chantier, repli automatique sur gallery[0]
     units: units, // chaque chambre porte déjà son propre galleryThumb tel quel (même mécanisme, pas besoin de le remapper ici)
     amen: listingAmenWithParking(l),
@@ -7713,7 +7784,7 @@ function openDetail(id, listingOverride, forceVisitorView){
   var slides = "";
   for(var i=0;i<total;i++){
     if(gallery[i]){
-      slides += '<div class="slide"><img src="'+photoMid(gallery[i])+'" alt="'+esc(galleryAlt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
+      slides += '<div class="slide"'+photoCapAttr(photoCapOf(l, gallery[i]))+'><img src="'+photoMid(gallery[i])+'" alt="'+esc(galleryAlt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>';
       continue;
     }
     slides += '<div class="slide"><div class="grad" style="position:absolute;inset:0;background:'+GRADIENTS[l.grad]+';filter:hue-rotate('+(i*6)+'deg) brightness('+(0.85+i*0.05)+')"></div>'+
@@ -7872,6 +7943,7 @@ function openDetail(id, listingOverride, forceVisitorView){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(s,i){ s.classList.toggle("on", i===idx); });
   });
+  wirePhotoCaps(gal);
   if(!hasTabs || activeUnit) wireQuickReq(l.id, qrUid, activeUnit || soleUnitOf(l), listingOverride ? l : null);
   fillSiteOthers(l, id);
   document.body.style.overflow = "hidden";
@@ -8038,9 +8110,10 @@ function openPlace(id, override, loaded){
   var title = place.name || l.name;
   // Photos du lieu, puis la couverture de chacun de ses hébergements (vue
   // d'ensemble de l'établissement et de ses logements, comme dans le fil).
-  var shots = (place.gallery || []).map(function(src){ return {src:photoMid(src), alt:title}; });
-  members.forEach(function(m){ registerPhotoVariants(m); var c = memberCoverUrl(m); if(c) shots.push({src:c, alt:m.name || title}); });
-  var slides = shots.map(function(sh){ return '<div class="slide"><img src="'+esc(sh.src)+'" alt="'+esc(sh.alt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>'; }).join("");
+  var shots = (place.gallery || []).map(function(src){ return {src:photoMid(src), alt:title, cap:photoCapOf({place:place}, src)}; });
+  // Couverture d'un hébergement : son titre de photo, sinon son nom.
+  members.forEach(function(m){ registerPhotoVariants(m); var c = memberCoverUrl(m); if(c) shots.push({src:c, alt:m.name || title, cap:photoCapOf(m, (m.gallery || [])[0]) || stripPlaceName(m.name, place.name)}); });
+  var slides = shots.map(function(sh){ return '<div class="slide"'+photoCapAttr(sh.cap)+'><img src="'+esc(sh.src)+'" alt="'+esc(sh.alt)+'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;"></div>'; }).join("");
   var dots = shots.length>1 ? shots.map(function(_, i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("") : "";
   var prices = members.map(displayPriceOf).filter(function(v){ return v!=null; });
   var minPrice = prices.length ? Math.min.apply(null, prices) : null;
@@ -8109,6 +8182,7 @@ function openPlace(id, override, loaded){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
     Array.prototype.forEach.call(root.querySelectorAll(".dots span"), function(sp, i){ sp.classList.toggle("on", i===idx); });
   });
+  wirePhotoCaps(gal);
   if(!override) wirePlaceReq(l.id, qid);
   document.body.style.overflow = "hidden";
   document.body.classList.add("detail-open");
@@ -8913,12 +8987,14 @@ function photoListRowHtml(entry, i, total){
     '<div class="hf-photo-row-thumb"><img src="'+photoEntryUrl(entry)+'" alt="">'+
       (i===0 ? '<span class="hf-photo-cover-badge">Couverture</span>' : '')+
     '</div>'+
+    (entry.cap!==undefined ? '<div class="hf-photo-row-main"><input class="text-input hf-photo-cap" data-i="'+i+'" maxlength="40" placeholder="Titre (ex. Salle de bain)" value="'+esc(entry.cap||"")+'">' : '')+
     '<div class="hf-photo-row-actions">'+
       '<button type="button" class="hf-photo-move" data-dir="-1" data-i="'+i+'" aria-label="Monter"'+(i===0?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>'+
       '<button type="button" class="hf-photo-move" data-dir="1" data-i="'+i+'" aria-label="Descendre"'+(i===total-1?' disabled':'')+'><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg></button>'+
       (canEnhance ? '<button type="button" class="hf-photo-enhance'+(isEnhanced?' active':'')+'" data-i="'+i+'" aria-label="Ajuster l’amélioration"'+(entry.busy?' disabled':'')+'><svg viewBox="0 0 24 24" fill="'+(isEnhanced?'currentColor':'none')+'" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/></svg></button>' : '')+
       '<button type="button" class="hf-photo-remove" data-i="'+i+'" aria-label="Supprimer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>'+
     '</div>'+
+    (entry.cap!==undefined ? '</div>' : '')+
   '</div>';
 }
 /* Calcule (si besoin) et applique un niveau d'amélioration donné à une
@@ -9100,6 +9176,9 @@ function openEnhancePreview(entry, rerenderList){
    liste maison (hfSelectedFiles) et chaque liste de location
    (unit.photos) : arr et rerender() changent, le reste est identique. */
 function wirePhotoListRows(container, arr, rerender){
+  Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-cap"), function(el){
+    el.addEventListener("input", function(){ var e = arr[Number(el.getAttribute("data-i"))]; if(e) e.cap = el.value; });
+  });
   Array.prototype.forEach.call(container.querySelectorAll(".hf-photo-move"), function(el){
     el.addEventListener("click", function(){
       var i = Number(el.getAttribute("data-i")), j = i+Number(el.getAttribute("data-dir"));
@@ -10441,13 +10520,16 @@ function crAddFiles(fileList){
 }
 function crPhotoArrays(){ // liste à plat des photos (annonce puis anciennes photos de location)
   var d = cr.data, out = [];
-  d.gallery.forEach(function(u, i){ out.push({u:u, t:d.galleryThumb[i]||null, m:d.galleryMid[i]||null}); });
-  d.units.forEach(function(x){ (x.gallery||[]).forEach(function(u, i){ out.push({u:u, t:(x.galleryThumb||[])[i]||null, m:(x.galleryMid||[])[i]||null}); }); });
+  var caps = d.photoCaps || {};
+  d.gallery.forEach(function(u, i){ out.push({u:u, t:d.galleryThumb[i]||null, m:d.galleryMid[i]||null, c:caps[u]||""}); });
+  d.units.forEach(function(x){ (x.gallery||[]).forEach(function(u, i){ out.push({u:u, t:(x.galleryThumb||[])[i]||null, m:(x.galleryMid||[])[i]||null, c:caps[u]||""}); }); });
   return out;
 }
 function crSetPhotos(list){ // tout est ramené au niveau de l'annonce (un logement, un seul jeu de photos)
   var d = cr.data;
   d.gallery = list.map(function(p){ return p.u; }); d.galleryThumb = list.map(function(p){ return p.t; }); d.galleryMid = list.map(function(p){ return p.m; });
+  var caps = {}; list.forEach(function(p){ var c = (p.c || "").trim(); if(c) caps[p.u] = c; });
+  d.photoCaps = caps;
   d.units.forEach(function(x){ x.gallery = []; x.galleryThumb = []; x.galleryMid = []; });
   crRender(); crScheduleSave();
 }
@@ -10542,7 +10624,7 @@ function crSheet(kind, arg){
     apply = null;
     var list = crPhotoArrays(), p = list[arg];
     if(!p) return;
-    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(p.u)+'" alt=""></div><div class="sort-row">'+
+    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(p.u)+'" alt=""></div>'+photoCapFieldHtml(p.c)+'<div class="sort-row">'+
       (arg>0 ? '<button type="button" class="radio-row" data-act="cover">Choisir comme couverture</button>' : '')+
       '<button type="button" class="radio-row" data-act="replace">Remplacer</button>'+
       '<button type="button" class="radio-row cr-danger" data-act="delete">Supprimer</button></div>';
@@ -10551,7 +10633,7 @@ function crSheet(kind, arg){
     inner = '<h3>Pièces & annexes</h3><p class="sheet-sub">Touchez pour ajouter, touchez le nombre pour retirer.</p><div class="hf-spaces-grid" id="hf-spaces-grid">'+hfSpaceChipsHtml()+'</div>';
   } else if(kind==="organize"){
     apply = "Terminé";
-    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture.</p><div class="hf-photo-list" id="crs-org"></div>';
+    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture. Donnez un titre à chaque vue : il s’affiche quand le voyageur touche la photo.</p><div class="hf-photo-list" id="crs-org"></div>';
   }
   var root = document.getElementById("sheet-root");
   root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
@@ -10655,6 +10737,12 @@ function crSheet(kind, arg){
       done();
     });
   } else if(kind==="photo"){
+    wirePhotoCapField(function(v){
+      var caps = Object.assign({}, d.photoCaps || {}), u = (crPhotoArrays()[arg] || {}).u;
+      if(!u) return;
+      if(v) caps[u] = v; else delete caps[u];
+      d.photoCaps = caps; crScheduleSave();
+    });
     Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){
       b.addEventListener("click", function(){
         var act = b.getAttribute("data-act"), list = crPhotoArrays();
@@ -10693,13 +10781,13 @@ function crSheet(kind, arg){
     });
     applyBtn.addEventListener("click", function(){ d.spaces = Object.assign({}, hfSpaces); done(); });
   } else if(kind==="organize"){
-    var list = crPhotoArrays().map(function(p){ return {type:"existing", url:p.u, thumbUrl:p.t, midUrl:p.m}; });
+    var list = crPhotoArrays().map(function(p){ return {type:"existing", url:p.u, thumbUrl:p.t, midUrl:p.m, cap:p.c}; });
     var grid = document.getElementById("crs-org");
     var rr = function(){ grid.innerHTML = list.map(function(e, i){ return photoListRowHtml(e, i, list.length); }).join(""); wirePhotoListRows(grid, list, rr); enableRowDrag(grid, list, rr); };
     rr();
     applyBtn.addEventListener("click", function(){
       if(cr.status!=="draft" && list.length < LISTING_MIN_PHOTOS){ alert("Votre annonce est en ligne : elle doit garder au moins "+LISTING_MIN_PHOTOS+" photos."); return; }
-      close(); crSetPhotos(list.map(function(e){ return {u:e.url, t:e.thumbUrl||null, m:e.midUrl||null}; }));
+      close(); crSetPhotos(list.map(function(e){ return {u:e.url, t:e.thumbUrl||null, m:e.midUrl||null, c:e.cap||""}; }));
     });
   }
 }
@@ -10773,6 +10861,7 @@ function saveHostProfile(name, bio){
 function crPayload(){
   var d = cr.data, p = {};
   ["name","accomType","claim","desc","amen","spaces","gallery","galleryThumb","galleryMid","address","lat","lng","region","regionName","deptName","city","inseeCode","phone","email","websiteUrl","googleUrl","instagramUrl","facebookUrl","contactChannels","beds"].forEach(function(k){ if(d[k]!==undefined) p[k] = d[k]; });
+  p.photoCaps = capsFor(crPhotoArrays().map(function(x){ return x.u; }), d.photoCaps) || {};
   p.name = (p.name||"").trim(); p.claim = (p.claim||"").trim(); p.desc = (p.desc||"").trim();
   p.units = d.units.map(function(x){ return {id:x.id, name:x.name||"", price:Number(x.price)||0, maxPersons:Number(x.maxPersons)||0, gallery:x.gallery||[], galleryThumb:x.galleryThumb||[], galleryMid:x.galleryMid||[], linkedRoomId:x.linkedRoomId||""}; });
   p.hostName = cr.profile.name || "";
@@ -11009,7 +11098,7 @@ function openPlaceEditor(listing, listings, preselect){
     var dp = (draft && draft.place) || {};
     pe = {listings:listings, memberIds:[], uploads:0, timer:null, chain:Promise.resolve(), saveState:"new", siteId:(draft && draft.siteId) || newSiteId(),
       shared:(draft && draft.shared) || peSharedFrom({email:authState.email || ""}), savedAmen:[], dirty:{},
-      place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || []}};
+      place:{name:dp.name || "", kind:dp.kind || "", claim:dp.claim || "", desc:dp.desc || "", amen:dp.amen || [], gallery:dp.gallery || [], galleryThumb:dp.galleryThumb || [], galleryMid:dp.galleryMid || [], photoCaps:Object.assign({}, dp.photoCaps || {})}};
     document.body.classList.add("creator-open");
     peRender();
     // Hôte et contact repris du Profil, comme pour une nouvelle annonce.
@@ -11031,7 +11120,7 @@ function openPlaceEditor(listing, listings, preselect){
   if(!withPlace && listing.parking) pl = {amen:parkingToAmen(listing.parking)};
   pe = {listings:listings, memberIds:ids, uploads:0, timer:null, chain:Promise.resolve(), saveState:"saved", siteId:listing.siteId || "",
     shared:peSharedFrom(byId(ids[0])), savedAmen:placeSharedAmen(pl), dirty:{},
-    place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", amen:placeSharedAmen(pl).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice()}};
+    place:{name:pl.name || "", kind:pl.kind || "", claim:pl.claim || "", desc:pl.desc || "", amen:placeSharedAmen(pl).filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; }), gallery:(pl.gallery || []).slice(), galleryThumb:(pl.galleryThumb || []).slice(), galleryMid:(pl.galleryMid || []).slice(), photoCaps:Object.assign({}, pl.photoCaps || {})}};
   document.body.classList.add("creator-open");
   peRender();
   var cOld = pe;
@@ -11047,6 +11136,8 @@ function pePlaceObj(ctx){
   // l'hôte (gardé avec un seul hébergement, voir hostSiteGroups()).
   var p = (ctx || pe).place, name = (p.name || "").trim(), desc = (p.desc || "").trim();
   var out = {name:name, gallery:p.gallery.slice(), galleryThumb:p.galleryThumb.slice(), galleryMid:p.galleryMid.slice()};
+  var caps = capsFor(p.gallery, p.photoCaps);
+  if(caps) out.photoCaps = caps;
   if(p.kind) out.kind = p.kind;
   var claim = (p.claim || "").trim();
   if(claim) out.claim = claim;
@@ -11320,7 +11411,7 @@ function peSheet(kind, arg){
       }).join("")+'</div>';
   } else if(kind==="organize"){
     apply = "Terminé";
-    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture.</p><div class="hf-photo-list" id="pe-org"></div>';
+    inner = '<h3>Organiser les photos</h3><p class="sheet-sub">Faites glisser une photo par sa vignette, ou utilisez les flèches. La première est la couverture. Donnez un titre à chaque vue : il s’affiche quand le voyageur touche la photo.</p><div class="hf-photo-list" id="pe-org"></div>';
   } else if(kind==="host"){
     apply = "Enregistrer";
     var fh = (peMembers()[0] && visitorViewOf(peMembers()[0]).host) || {};
@@ -11349,7 +11440,7 @@ function peSheet(kind, arg){
   } else if(kind==="photo"){
     var src = p.gallery[arg];
     if(!src) return;
-    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(src)+'" alt=""></div><div class="sort-row">'+
+    inner = '<h3>Cette photo</h3><div class="cr-photo-preview"><img src="'+photoThumb(src)+'" alt=""></div>'+photoCapFieldHtml((p.photoCaps||{})[src])+'<div class="sort-row">'+
       (arg>0 ? '<button type="button" class="radio-row" data-act="cover">Choisir comme couverture</button>' : '')+
       (arg>0 ? '<button type="button" class="radio-row" data-act="left">Avancer d’un cran</button>' : '')+
       '<button type="button" class="radio-row cr-danger" data-act="delete">Supprimer</button></div>';
@@ -11383,12 +11474,13 @@ function peSheet(kind, arg){
   var acts = function(fn){ Array.prototype.forEach.call(root.querySelectorAll("[data-act]"), function(b){ b.addEventListener("click", function(){ fn(b.getAttribute("data-act")); }); }); };
   var applyBtn = document.getElementById("sheet-apply");
   if(kind==="organize"){
-    var olist = p.gallery.map(function(u, i){ return {type:"existing", url:u, thumbUrl:p.galleryThumb[i]||null, midUrl:p.galleryMid[i]||null}; });
+    var olist = p.gallery.map(function(u, i){ return {type:"existing", url:u, thumbUrl:p.galleryThumb[i]||null, midUrl:p.galleryMid[i]||null, cap:(p.photoCaps||{})[u]||""}; });
     var ogrid = document.getElementById("pe-org");
     var orr = function(){ ogrid.innerHTML = olist.map(function(e, i){ return photoListRowHtml(e, i, olist.length); }).join(""); wirePhotoListRows(ogrid, olist, orr); enableRowDrag(ogrid, olist, orr); };
     orr();
     applyBtn.addEventListener("click", function(){
       p.gallery = olist.map(function(e){ return e.url; }); p.galleryThumb = olist.map(function(e){ return e.thumbUrl||null; }); p.galleryMid = olist.map(function(e){ return e.midUrl||null; });
+      p.photoCaps = {}; olist.forEach(function(e){ var c = (e.cap || "").trim(); if(c) p.photoCaps[e.url] = c; });
       done();
     });
   } else if(kind==="host"){
@@ -11443,6 +11535,12 @@ function peSheet(kind, arg){
   } else if(kind==="kind"){
     Array.prototype.forEach.call(root.querySelectorAll("[data-v]"), function(b){ b.addEventListener("click", function(){ p.kind = b.getAttribute("data-v"); done(); }); });
   } else if(kind==="photo"){
+    var capUrl = p.gallery[arg];
+    wirePhotoCapField(function(v){
+      p.photoCaps = Object.assign({}, p.photoCaps || {});
+      if(v) p.photoCaps[capUrl] = v; else delete p.photoCaps[capUrl];
+      peScheduleSave();
+    });
     acts(function(act){
       var move = function(from, to){ ["gallery","galleryThumb","galleryMid"].forEach(function(k){ var it = p[k].splice(from, 1)[0]; if(to!=null) p[k].splice(to, 0, it); }); };
       if(act==="cover") move(arg, 0);
