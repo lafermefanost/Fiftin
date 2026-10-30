@@ -1329,31 +1329,59 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .google-link.icon-only svg{width:14px; height:14px;}
 .host-links{margin-top:12px;}
 /* Mes annonces : ce que Fiftin a apporté ce mois-ci (fillHostClickStats()). */
-.hlc-clicks{display:flex; align-items:flex-start; gap:8px; margin:10px 0 10px; padding:9px 12px; border-radius:12px; background:var(--sauge-bg);
-  font-size:13px; line-height:1.35; color:var(--sauge-deep);}
-.hlc-clicks svg{width:16px; height:16px; flex:none; margin-top:1px; color:var(--sauge);}
-.hlc-clicks b{font-weight:600;}
-button.hlc-clicks{width:100%; border:none; text-align:left; font-family:'Jost',sans-serif; cursor:pointer;}
-.hlc-clicks em{display:block; font-style:normal; font-size:12px; font-weight:600; color:var(--sauge); margin-top:2px;}
-.hlc-clicks.on-dark em{color:var(--yellow);}
-.ch-totals{display:flex; gap:10px; margin:4px 0 14px;}
-.ch-totals div{flex:1; background:var(--sauge-bg); border-radius:14px; padding:12px 14px;}
-.ch-totals b{display:block; font-size:26px; line-height:1; color:var(--sauge-deep);}
-.ch-totals span{font-size:12.5px; color:var(--muted);}
-.ch-legend{display:flex; align-items:center; gap:6px; flex-wrap:wrap; font-size:11.5px; color:var(--muted); margin-bottom:8px;}
-.ch-legend span{display:inline-block; width:10px; height:10px; border-radius:3px;}
-.ch-legend span.l{margin-left:8px;}
-.ch-legend .c, .ch-bar .c{background:var(--sauge);}
-.ch-legend .l, .ch-bar .l{background:var(--lavender);}
-.ch-rows{display:flex; flex-direction:column; gap:6px;}
-.ch-row{display:grid; grid-template-columns:56px 1fr 52px; align-items:center; gap:8px; font-size:12.5px;}
-.ch-m{color:var(--muted);}
-.ch-bar{display:flex; height:12px; border-radius:6px; background:#F1EFEA; overflow:hidden;}
-.ch-bar i{display:block; height:100%;}
-.ch-n{text-align:right; font-weight:600; color:var(--ink);}
-.ch-sub{margin:16px 0 8px; font-size:11.5px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge);}
-.ch-detail{display:flex; flex-wrap:wrap; gap:6px;}
-.ch-detail span{padding:5px 10px; border-radius:999px; background:var(--sauge-bg); font-size:12.5px; color:var(--sauge-deep);}
+.hlc-clicks{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:10px 0 10px; padding:10px 12px; border-radius:14px; background:var(--sauge-bg);
+  font-size:13px; color:var(--sauge-deep); width:100%; border:none; text-align:left; font-family:'Jost',sans-serif; cursor:pointer;}
+.hlc-clicks .hc-title{flex-basis:100%; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge);}
+.hlc-clicks .hc-stat{display:inline-flex; align-items:center; gap:6px;}
+.hlc-clicks .hc-stat svg{width:16px; height:16px; color:var(--sauge);}
+.hlc-clicks .hc-stat b{font-size:16px; font-weight:700;}
+.hlc-clicks .hc-more{margin-left:auto; font-size:12.5px; font-weight:600; color:var(--sauge);}
+.hlc-clicks.on-dark{background:rgba(255,255,255,.12); color:#fff; margin:12px 0 0;}
+.hlc-clicks.on-dark .hc-title, .hlc-clicks.on-dark .hc-more, .hlc-clicks.on-dark .hc-stat svg{color:var(--yellow);}
+/* Historique « Via Fiftin » : récap en deux vignettes vert propriétaire,
+   puis une carte par catégorie (contacts / redirections), comme les
+   cartes de Fiftin Planning. */
+.ch-recap{display:flex; gap:10px; margin:6px 0 14px;}
+.ch-recap > div{flex:1; background:var(--sauge); color:#fff; border-radius:18px; padding:14px; display:flex; flex-direction:column; gap:2px;}
+.ch-recap .ch-ico{width:30px; height:30px; border-radius:10px; background:rgba(255,255,255,.14); display:flex; align-items:center; justify-content:center; margin-bottom:6px;}
+.ch-recap .ch-ico svg{width:17px; height:17px; color:var(--yellow);}
+.ch-recap b{font-size:32px; line-height:1; font-weight:700;}
+.ch-recap > div > span:not(.ch-ico){font-size:14px; font-weight:600;}
+.ch-recap em{font-style:normal; font-size:12px; color:rgba(255,255,255,.75);}
+.ch-card{background:#fff; border-radius:18px; padding:14px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.ch-card-head{display:flex; align-items:center; gap:10px; margin-bottom:12px;}
+.ch-card-head .ch-ico{width:34px; height:34px; border-radius:11px; display:flex; align-items:center; justify-content:center; flex:none;}
+.ch-card-head .ch-ico svg{width:18px; height:18px; color:#fff;}
+.ch-card.contacts .ch-ico{background:var(--sauge);}
+.ch-card.redirects .ch-ico{background:var(--lavender-deep);}
+.ch-card-head b{display:block; font-size:16px; color:var(--ink);}
+.ch-card-head span{font-size:12.5px; color:var(--muted);}
+.ch-hist{display:grid; grid-template-columns:repeat(12, 1fr); gap:4px; align-items:end; height:120px; margin-bottom:12px;}
+.ch-col{display:flex; flex-direction:column; align-items:center; height:100%;}
+.ch-v{font-size:10.5px; font-weight:700; color:var(--ink); height:14px;}
+.ch-track{flex:1; width:100%; max-width:18px; display:flex; align-items:flex-end; border-radius:6px; background:#F1EFEA; overflow:hidden;}
+.ch-track i{display:block; width:100%; border-radius:6px;}
+.ch-card.contacts .ch-track i{background:var(--sauge);}
+.ch-card.redirects .ch-track i{background:var(--lavender);}
+.ch-ml{font-size:10.5px; color:var(--muted); margin-top:4px; text-transform:uppercase;}
+.ch-col.now .ch-ml{color:var(--ink); font-weight:700;}
+.ch-empty{font-size:13px; color:var(--muted); margin:0 0 12px;}
+.ch-tiles{display:grid; grid-template-columns:repeat(4, 1fr); gap:8px;}
+.ch-tile{display:flex; flex-direction:column; align-items:center; gap:3px; text-align:center;}
+.ch-tile .send-icon{width:44px; height:44px; border-radius:13px; display:flex; align-items:center; justify-content:center; color:#fff;}
+.ch-tile .send-icon svg{width:19px; height:19px;}
+.ch-tile b{font-size:17px; color:var(--ink); line-height:1.1;}
+.ch-tile span:last-child{font-size:11px; color:var(--muted);}
+.ch-card.contacts .ch-tile:nth-child(1) .send-icon{background:var(--sauge);}
+.ch-card.contacts .ch-tile:nth-child(2) .send-icon{background:var(--sauge-mid);}
+.ch-card.contacts .ch-tile:nth-child(3) .send-icon{background:var(--lavender);}
+.ch-card.contacts .ch-tile:nth-child(4) .send-icon{background:var(--sauge-deep);}
+.ch-card.redirects .ch-tile:nth-child(1) .send-icon{background:var(--sauge);}
+.ch-card.redirects .ch-tile:nth-child(2) .send-icon{background:var(--lavender);}
+.ch-card.redirects .ch-tile:nth-child(3) .send-icon{background:var(--lavender-deep);}
+.ch-card.redirects .ch-tile:nth-child(4) .send-icon{background:var(--sauge-deep);}
+.ch-tile.off .send-icon{background:#E6E4DE !important; color:#A9A69C;}
+.ch-tile.off b{color:#A9A69C;}
 .hlc-clicks.on-dark{background:rgba(255,255,255,.12); color:#fff; margin:12px 0 0;}
 .hlc-clicks.on-dark svg{color:var(--yellow);}
 .qr-links{margin-top:6px; padding-top:14px; border-top:1px solid var(--line);}
@@ -13125,15 +13153,6 @@ function hostSiteGroups(listings){
    (hostProfiles/{uid}.clickStats, tenu par la fonction logListingClick) —
    contacts (Mail, WhatsApp, SMS, appel) et liens ouverts ; total pour un
    établissement. Ligne absente tant qu'il n'y a rien. */
-function clickSummaryText(c){
-  var contacts = (c.mail||0)+(c.wa||0)+(c.sms||0)+(c.call||0), parts = [];
-  if(contacts) parts.push(contacts+" contact"+(contacts>1?"s":""));
-  if(c.instagramUrl) parts.push(c.instagramUrl+" Instagram");
-  if(c.websiteUrl) parts.push(c.websiteUrl+" site web");
-  if(c.googleUrl) parts.push(c.googleUrl+" avis Google");
-  if(c.facebookUrl) parts.push(c.facebookUrl+" Facebook");
-  return parts.join(" · ");
-}
 var hostClickAll = null; // hostProfiles/{uid}.clickStats, lu à chaque affichage de Mes annonces
 function clickMonthKey(d){ return new Intl.DateTimeFormat("fr-CA", {timeZone:"Europe/Paris", year:"numeric", month:"2-digit"}).format(d || new Date()); }
 function clickStatsFor(ids, month){
@@ -13147,6 +13166,17 @@ function clickStatsFor(ids, month){
   });
   return sum;
 }
+/* Deux catégories, toujours séparées (retour de César) : les contacts
+   (Mail, WhatsApp, SMS, appel) et les redirections (site, avis Google,
+   Instagram, Facebook). */
+var CLICK_CONTACT_KEYS = ["mail","wa","sms","call"];
+var CLICK_REDIRECT_KEYS = ["websiteUrl","googleUrl","instagramUrl","facebookUrl"];
+var CLICK_ICON_CONTACT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+var CLICK_ICON_REDIRECT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>';
+function clickSplit(c){
+  var n = function(keys){ return keys.reduce(function(t, k){ return t + (c[k]||0); }, 0); };
+  return {contacts:n(CLICK_CONTACT_KEYS), redirects:n(CLICK_REDIRECT_KEYS)};
+}
 function fillHostClickStats(){
   if(!authState.uid || typeof firebase==="undefined") return;
   firebase.firestore().collection("hostProfiles").doc(authState.uid).get().then(function(doc){
@@ -13154,45 +13184,58 @@ function fillHostClickStats(){
     var month = clickMonthKey();
     Array.prototype.forEach.call(document.querySelectorAll("[data-clicks]"), function(el){
       var ids = el.getAttribute("data-clicks").split(",");
-      var ever = clickSummaryText(clickStatsFor(ids));
-      el.hidden = !ever; // rien depuis le début : pas de ligne
-      if(!ever) return;
-      var t = clickSummaryText(clickStatsFor(ids, month));
-      el.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>'+
-        '<span>Ce mois-ci via Fiftin : <b>'+esc(t || "rien pour l’instant")+'</b><em>Voir l’historique ›</em></span>';
+      var ever = clickSplit(clickStatsFor(ids));
+      el.hidden = !(ever.contacts + ever.redirects); // rien depuis le début : pas de ligne
+      if(el.hidden) return;
+      var m = clickSplit(clickStatsFor(ids, month));
+      el.innerHTML = '<span class="hc-title">Ce mois-ci via Fiftin</span>'+
+        '<span class="hc-stat">'+CLICK_ICON_CONTACT+'<b>'+m.contacts+'</b> contact'+(m.contacts>1?'s':'')+'</span>'+
+        '<span class="hc-stat">'+CLICK_ICON_REDIRECT+'<b>'+m.redirects+'</b> redirection'+(m.redirects>1?'s':'')+'</span>'+
+        '<span class="hc-more">Historique ›</span>';
     });
   }).catch(function(){});
 }
 /* Historique (retour de César : un vrai suivi) : les 12 derniers mois,
    contacts et liens ouverts par mois, et le détail par moyen. */
-var CLICK_LABELS = {mail:"Mail", wa:"WhatsApp", sms:"SMS", call:"Appels", instagramUrl:"Instagram", websiteUrl:"Site web", googleUrl:"Avis Google", facebookUrl:"Facebook"};
-var CLICK_CONTACT_KEYS = ["mail","wa","sms","call"];
+var CLICK_LABELS = {mail:"Mail", wa:"WhatsApp", sms:"SMS", call:"Appel", instagramUrl:"Instagram", websiteUrl:"Site web", googleUrl:"Avis Google", facebookUrl:"Facebook"};
+/* Historique (retour de César : un vrai suivi, clair) : en tête, deux
+   vignettes vert propriétaire (contacts / redirections sur 12 mois) ;
+   puis une partie par catégorie : histogramme des 12 derniers mois et
+   détail par moyen, avec les pictos des tuiles de la fiche. */
 function openClickHistory(title, ids){
   var months = [], d = new Date();
-  for(var i=0; i<12; i++){ months.push(clickMonthKey(new Date(d.getFullYear(), d.getMonth()-i, 15))); }
-  var rows = months.map(function(m){
-    var c = clickStatsFor(ids, m), contacts = 0, links = 0;
-    Object.keys(c).forEach(function(k){ if(CLICK_CONTACT_KEYS.indexOf(k)!==-1) contacts += c[k]; else links += c[k]; });
-    return {m:m, contacts:contacts, links:links};
-  });
-  var max = Math.max.apply(null, rows.map(function(r){ return r.contacts + r.links; }).concat([1]));
-  var total = {}; rows.forEach(function(r){ Object.keys(clickStatsFor(ids, r.m)).forEach(function(k){ total[k] = (total[k]||0) + clickStatsFor(ids, r.m)[k]; }); });
-  var tc = 0, tl = 0; Object.keys(total).forEach(function(k){ if(CLICK_CONTACT_KEYS.indexOf(k)!==-1) tc += total[k]; else tl += total[k]; });
-  var label = function(m){ var p = m.split("-"); return new Date(Number(p[0]), Number(p[1])-1, 1).toLocaleDateString("fr-FR", {month:"short", year:"2-digit"}); };
-  var detail = Object.keys(CLICK_LABELS).filter(function(k){ return total[k]; }).map(function(k){ return '<span><b>'+total[k]+'</b> '+CLICK_LABELS[k]+'</span>'; }).join("");
+  for(var i=11; i>=0; i--) months.push(clickMonthKey(new Date(d.getFullYear(), d.getMonth()-i, 15)));
+  var per = months.map(function(m){ return clickStatsFor(ids, m); });
+  var total = {}; per.forEach(function(c){ Object.keys(c).forEach(function(k){ total[k] = (total[k]||0) + c[k]; }); });
+  var cur = clickSplit(per[11]), all = clickSplit(total);
+  var mLabel = function(m){ var p = m.split("-"); return new Date(Number(p[0]), Number(p[1])-1, 1).toLocaleDateString("fr-FR", {month:"narrow"}); };
+  var mLong = function(m){ var p = m.split("-"); return new Date(Number(p[0]), Number(p[1])-1, 1).toLocaleDateString("fr-FR", {month:"long", year:"numeric"}); };
+  var section = function(cls, icon, name, sub, keys, icons){
+    var vals = per.map(function(c){ return keys.reduce(function(t, k){ return t + (c[k]||0); }, 0); });
+    var max = Math.max.apply(null, vals.concat([1])), sum = vals.reduce(function(a, b){ return a + b; }, 0);
+    return '<div class="ch-card '+cls+'">'+
+      '<div class="ch-card-head"><span class="ch-ico">'+icon+'</span><div><b>'+name+'</b><span>'+sub+'</span></div></div>'+
+      (sum ? '<div class="ch-hist">'+vals.map(function(v, i){
+          return '<div class="ch-col'+(i===11?' now':'')+'" title="'+esc(mLong(months[i]))+'"><span class="ch-v">'+(v||'')+'</span>'+
+            '<span class="ch-track"><i style="height:'+(v ? Math.max(6, v/max*100) : 0)+'%"></i></span><span class="ch-ml">'+esc(mLabel(months[i]))+'</span></div>';
+        }).join("")+'</div>'
+        : '<p class="ch-empty">Rien sur les 12 derniers mois.</p>')+
+      '<div class="ch-tiles">'+keys.map(function(k){
+        return '<div class="ch-tile'+(total[k] ? '' : ' off')+'"><span class="send-icon">'+icons[k]+'</span><b>'+(total[k]||0)+'</b><span>'+CLICK_LABELS[k]+'</span></div>';
+      }).join("")+'</div>'+
+    '</div>';
+  };
   var root = document.getElementById("sheet-root");
-  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet ch-sheet" style="position:relative;">'+
     '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
-    '<h3>Via Fiftin</h3><p class="sheet-sub">'+esc(title)+' — ce que les voyageurs ont ouvert depuis Fiftin Séjours, sur les 12 derniers mois.</p>'+
-    '<div class="ch-totals"><div><b>'+tc+'</b><span>contact'+(tc>1?'s':'')+'</span></div><div><b>'+tl+'</b><span>lien'+(tl>1?'s':'')+' ouvert'+(tl>1?'s':'')+'</span></div></div>'+
-    '<div class="ch-legend"><span class="c"></span>Contacts (Mail, WhatsApp, SMS, appel)<span class="l"></span>Liens</div>'+
-    '<div class="ch-rows">'+rows.map(function(r){
-      return '<div class="ch-row"><span class="ch-m">'+esc(label(r.m))+'</span><span class="ch-bar">'+
-        (r.contacts ? '<i class="c" style="width:'+(r.contacts/max*100)+'%"></i>' : '')+(r.links ? '<i class="l" style="width:'+(r.links/max*100)+'%"></i>' : '')+
-        '</span><span class="ch-n">'+(r.contacts || r.links ? r.contacts+' · '+r.links : '—')+'</span></div>';
-    }).join("")+'</div>'+
-    (detail ? '<div class="ch-sub">Détail sur 12 mois</div><div class="ch-detail">'+detail+'</div>' : '')+
-    '<p class="field-hint" style="margin-top:14px;">Un toucher sur un bouton, pas un message réellement envoyé ; compté une fois par appareil et par jour. Vos propres visites ne comptent pas.</p>'+
+    '<h3>Via Fiftin</h3><p class="sheet-sub">'+esc(title)+' · 12 derniers mois</p>'+
+    '<div class="ch-recap">'+
+      '<div><span class="ch-ico">'+CLICK_ICON_CONTACT+'</span><b>'+all.contacts+'</b><span>contact'+(all.contacts>1?'s':'')+'</span><em>dont '+cur.contacts+' ce mois-ci</em></div>'+
+      '<div><span class="ch-ico">'+CLICK_ICON_REDIRECT+'</span><b>'+all.redirects+'</b><span>redirection'+(all.redirects>1?'s':'')+'</span><em>dont '+cur.redirects+' ce mois-ci</em></div>'+
+    '</div>'+
+    section("contacts", CLICK_ICON_CONTACT, "Contacts", "Voyageurs qui vous ont écrit ou appelé", CLICK_CONTACT_KEYS, SEND_ICONS)+
+    section("redirects", CLICK_ICON_REDIRECT, "Redirections", "Vers votre site, vos avis Google, vos réseaux", CLICK_REDIRECT_KEYS, LINK_ICONS)+
+    '<p class="field-hint" style="margin-top:12px;">Un toucher sur un bouton depuis Fiftin Séjours, compté une fois par appareil et par jour ; vos propres visites ne comptent pas.</p>'+
   '</div></div></div>';
   var close = function(){ root.innerHTML = ""; };
   document.getElementById("sheet-close").addEventListener("click", close);
