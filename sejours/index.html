@@ -1427,9 +1427,18 @@ textarea.text-input{resize:vertical; min-height:80px;}
    fiche détail. Ancienne mise en page (.amenity-list à plat, .amen-badge
    en pastille sauge) abandonnée à cette occasion, remplacée par les
    mêmes chips lavande que le filtre. */
-.detail-amen-group{margin-bottom:16px;}
+/* Fiche voyageur : plus de titre de carte (« Prestations », « Literie,
+   pièces & annexes ») ; les titres de rubrique (Séjours, Environnement,
+   Literie…) en bas de casse, au style des titres de carte, un peu plus
+   grands (retour de César : moins de petits titres, hiérarchie plus nette). */
+.detail-amen-group{margin-bottom:22px;}
 .detail-amen-group:last-child{margin-bottom:0;}
-.detail-amen-group-title{font-size:11px; font-weight:800; color:var(--sauge); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px;}
+.detail-amen-group-title{font-size:17px; font-weight:700; margin-bottom:10px;}
+/* Mêmes titres de rubrique dans le créateur et l'éditeur d'établissement. */
+#creator-root .amen-group{margin-bottom:22px;}
+#creator-root .amen-group:last-child{margin-bottom:0;}
+#creator-root .amen-group-title{font-size:17px; font-weight:700; color:inherit; text-transform:none; letter-spacing:0; margin-bottom:10px;}
+.cr-card-lead{margin:0 0 16px;}
 .detail-amen-group .amenity-grid{margin-bottom:0;}
 /* Description sous le titre et l'accroche (fiche, établissement, éditeurs). */
 .detail-body p.desc.desc-under{margin:10px 0 4px;}
@@ -7818,7 +7827,7 @@ function openDetail(id, listingOverride, forceVisitorView){
   // vue chambre : ce sont les pièces du logement entier, pas de la
   // chambre sélectionnée.
   var spacesHtml = detailSpacesHtml(l);
-  var spacesCardHtml = spacesHtml ? '<div class="detail-card" data-sync="spaces"><div class="section-title">Literie, pièces & annexes</div>'+spacesHtml+'</div>' : "";
+  var spacesCardHtml = spacesHtml ? '<div class="detail-card" data-sync="spaces">'+spacesHtml+'</div>' : "";
   if(!activeUnit){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
@@ -7830,7 +7839,7 @@ function openDetail(id, listingOverride, forceVisitorView){
     '</div></div>';
     bodyExtraHtml =
       spacesCardHtml+
-      '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
+      '<div class="detail-card" data-sync="amen">'+
       detailAmenitiesHtml(l)+'</div>'+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
          seule unité (typiquement un gîte, où le formulaire n'en pousse
@@ -7854,7 +7863,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       '</div></div>';
     bodyExtraHtml =
       spacesCardHtml+
-      '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
+      '<div class="detail-card" data-sync="amen">'+
       detailAmenitiesHtml(l)+'</div>';
   }
 
@@ -8161,7 +8170,7 @@ function openPlace(id, override, loaded){
         // Prestations de l'établissement : celles que l'hôte a cochées pour
         // tout le lieu (place.amen), jamais une intersection des chambres
         // (qui faisait apparaître le couchage).
-        ((place.amen || []).length ? '<div class="detail-card" data-sync="amen"><div class="section-title" style="margin-top:0">'+hv(l, 'Ce que je propose à tous mes voyageurs', 'Ce que nous proposons à tous nos voyageurs')+'</div>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
+        ((place.amen || []).length ? '<div class="detail-card" data-sync="amen"><p class="site-sub" style="margin-top:0">'+hv(l, 'Ce que je propose à tous mes voyageurs :', 'Ce que nous proposons à tous nos voyageurs :')+'</p>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
         hostCardHtml(l, false, place.name || l.city || "")+
         '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">'+hv(l, 'Écrivez-moi', 'Écrivez-nous')+'</div>'+
           '<p class="site-sub">'+hv(l, 'Dites-moi vos dates et combien vous êtes : je vous dirai quel hébergement est libre.', 'Dites-nous vos dates et combien vous êtes : nous vous dirons quel hébergement est libre.')+'</p>'+
@@ -10297,8 +10306,10 @@ function crRender(){
         '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Prix et capacité gérés dans Fiftin Planning'+(cr.planning ? '' : (cr.status==="draft" ? ' · prix calculé à la mise en ligne' : ' · calcul en cours'))+'</p>' : '')+'</div>'+
         // Literie (avec un compteur par taille de lit), pièces et annexes,
         // puis les prestations — cochées directement sur la carte.
-        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Ajoutez la literie, les pièces et annexes</div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour ajouter, touchez le nombre pour retirer. La literie est indispensable.</p>'+
+        // Comme sur la fiche : pas de titre de carte, les titres de rubrique
+        // seulement, précédés d'une phrase d'aide (retour de César).
+        '<div class="detail-card" data-cr-sec="spaces">'+
+          '<p class="cr-note cr-card-lead">Touchez pour ajouter la literie, les pièces et annexes, touchez le nombre pour retirer. La literie est indispensable.</p>'+
           '<div class="amen-group"><div class="amen-group-title">Literie *</div><div class="hf-spaces-grid">'+(bedGroup() ? bedGroup().items : []).map(function(name){
             var qty = bedQty(d, name);
             return '<button type="button" class="xchip'+(qty>0?' on':'')+'" data-cr-bed="'+esc(name)+'">'+
@@ -10311,8 +10322,8 @@ function crRender(){
               '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+HOUSE_SPACE_ICONS[name]+'</svg> '+esc(name)+
               (qty>0 ? '<span class="xchip-qty" data-cr-space-minus="'+esc(name)+'">×'+qty+'</span>' : '')+'</button>';
           }).join("")+'</div></div></div>'+
-        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Sélectionnez les prestations de votre hébergement</div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
+        '<div class="detail-card" data-cr-sec="amen">'+
+          '<p class="cr-note cr-card-lead">Touchez les prestations de votre hébergement pour les cocher.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
           crAmenEditHtml()+'</div>'+
         // Hébergement d'un établissement : adresse et contact se remplissent
         // dans l'établissement — pas de cartes en doublon ici (retour de
@@ -11303,8 +11314,8 @@ function peRender(){
             '<button type="button" class="place-rail-card place-rail-add" data-pe-open="add"><span class="pra-plus">+</span><b>Ajouter un hébergement</b><small>à l’établissement</small></button>'+
           '</div>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
-        '<div class="detail-card" data-sync="amen"><div class="section-title" style="margin-top:0">Sélectionnez les prestations de votre établissement</div>'+
-          '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher : elles valent pour tous les hébergements.</p>'+
+        '<div class="detail-card" data-sync="amen">'+
+          '<p class="cr-note cr-card-lead">Touchez les prestations de votre établissement pour les cocher : elles valent pour tous ses hébergements.</p>'+
           AMEN_GROUPS.map(function(g, gi){
             var items = g.items.filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; });
             if(!items.length) return "";
