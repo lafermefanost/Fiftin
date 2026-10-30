@@ -2264,6 +2264,7 @@ body.map-fullscreen{overflow:hidden;}
 .profile-identity-static{font-size:14px; font-weight:600; color:#fff; margin:0;}
 .profile-identity-static a{color:#fff; text-decoration:underline;}
 .profile-identity-btn{width:auto; padding:10px 22px; margin-top:4px; background:#fff;}
+.profile-identity-btn[hidden]{display:none;}
 .profile-identity--voyageur .profile-identity-btn{color:var(--sauge-deep);}
 .profile-identity--hotes .profile-identity-btn{color:var(--lavender-deep);}
 /* Bascule voyageur/hôtes intégrée en tête de carte (retour utilisateur).
@@ -12631,13 +12632,13 @@ function profileIdentityCardHtml(variant, connected){
       '<p class="field-hint" style="margin:0 0 8px;">Celui avec lequel vous souhaitez être contacté — repris automatiquement sur toutes vos annonces, plus besoin de le ressaisir à chaque dépôt.</p>'+
       '<input class="text-input" id="profile-name-input" placeholder="Ex. Karim, ou « La famille Dupont »">'+
     '</div>'+
-    '<button type="button" class="btn-apply profile-identity-btn" id="profile-name-save">Enregistrer</button>'+
+    '<button type="button" class="btn-apply profile-identity-btn" id="profile-name-save" hidden>Enregistrer</button>'+
     '<p class="field-hint" id="profile-name-msg"></p>'+
     (isHost ?
       '<div class="field-block" style="margin-top:18px;"><label>Votre présentation</label>'+
         '<textarea class="text-input" id="profile-bio-input" rows="4" placeholder="Quelques mots sur vous, en quelques phrases"></textarea>'+
       '</div>'+
-      '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save">Enregistrer</button>'+
+      '<button type="button" class="btn-apply profile-identity-btn" id="profile-bio-save" hidden>Enregistrer</button>'+
       '<p class="field-hint" id="profile-bio-msg"></p>'+
       // Voix de l'hôte dans ses annonces (« je » / « nous », hostVoiceOf())
       // et carte « Qui suis-je ? » : âge et statut facultatifs.
@@ -12651,7 +12652,7 @@ function profileIdentityCardHtml(variant, connected){
       '<div class="field-block" style="margin-top:14px;"><label>Vous êtes <span style="font-weight:400;color:var(--muted)">(facultatif)</span></label>'+
         '<div class="amenity-grid pv-row" data-pv="kind"><button type="button" class="amenity-chip" data-v="particulier">Particulier</button><button type="button" class="amenity-chip" data-v="pro">Professionnel</button></div>'+
       '</div>'+
-      '<button type="button" class="btn-apply profile-identity-btn" id="profile-voice-save">Enregistrer</button>'+
+      '<button type="button" class="btn-apply profile-identity-btn" id="profile-voice-save" hidden>Enregistrer</button>'+
       '<p class="field-hint" id="profile-voice-msg"></p>'+
       // Coordonnées reprises à la création d'une annonce ou d'un établissement.
       '<div class="field-block" style="margin-top:18px;"><label>Vos coordonnées de contact</label>'+
@@ -12659,7 +12660,7 @@ function profileIdentityCardHtml(variant, connected){
         '<input class="text-input" type="tel" id="profile-phone-input" placeholder="Téléphone (WhatsApp, SMS, appel)" style="margin-bottom:8px;">'+
         '<input class="text-input" type="email" id="profile-email-input" placeholder="E-mail de contact (facultatif)">'+
       '</div>'+
-      '<button type="button" class="btn-apply profile-identity-btn" id="profile-contact-save">Enregistrer</button>'+
+      '<button type="button" class="btn-apply profile-identity-btn" id="profile-contact-save" hidden>Enregistrer</button>'+
       '<p class="field-hint" id="profile-contact-msg"></p>'
     : "")+
   '</div>';
@@ -12693,6 +12694,7 @@ function wireProfileVoice(){
       var k = b.parentNode.getAttribute("data-pv"), v = b.getAttribute("data-v");
       val[k] = (k==="kind" && val[k]===v) ? "" : v;
       paint();
+      profileAutosaveNow("profile-voice-save");
     });
   });
   paint();
@@ -12723,11 +12725,43 @@ function wireProfileVoice(){
           batch.commit().then(function(){ hostListingsCache = []; }).catch(function(err){ console.error("[profil] recopie de la présentation", err); });
         });
         btn.disabled = false;
-        msg.textContent = "Enregistré — vos annonces parlent désormais "+(u.hostVoice==="je" ? "à la première personne (« je »)." : "au pluriel (« nous »).");
+        msg.textContent = "Enregistré ✓ — vos annonces disent « "+u.hostVoice+" »";
       }).catch(function(err){
         btn.disabled = false;
         msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez.");
       });
+  });
+}
+/* Profil : plus aucun bouton Enregistrer (retour de César : « évitons de
+   créer 50 clics pour rien »). Chaque bloc s'enregistre tout seul — à la
+   sortie du champ, ou 1,5 s après la dernière frappe ; pastilles au
+   toucher — en réutilisant son bouton (caché) et ses contrôles (nom ou
+   présentation vides refusés, recopie sur les annonces). « Enregistré ✓ »
+   s'efface au bout de 4 s. */
+function profileAutosaveNow(btnId){
+  var btn = document.getElementById(btnId);
+  if(!btn) return;
+  if(btn.disabled){ setTimeout(function(){ profileAutosaveNow(btnId); }, 600); return; }
+  btn.click();
+  var msg = document.getElementById(btnId.replace("-save", "-msg"));
+  if(msg){
+    clearTimeout(msg._t);
+    msg._t = setTimeout(function(){ if(/✓/.test(msg.textContent)) msg.textContent = ""; }, 4000);
+  }
+}
+function wireProfileAutosave(){
+  [["profile-name-save", ["profile-name-input"]],
+   ["profile-bio-save", ["profile-bio-input"]],
+   ["profile-voice-save", ["profile-age-input"]],
+   ["profile-contact-save", ["profile-phone-input", "profile-email-input"]]].forEach(function(g){
+    var dirty = false, timer = null;
+    var flush = function(){ clearTimeout(timer); if(!dirty) return; dirty = false; profileAutosaveNow(g[0]); };
+    g[1].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener("input", function(){ dirty = true; clearTimeout(timer); timer = setTimeout(flush, 1500); });
+      el.addEventListener("blur", flush);
+    });
   });
 }
 function wireProfileIdentityCard(){
@@ -12760,7 +12794,7 @@ function wireProfileIdentityCard(){
           }
         });
         btn.disabled = false;
-        msg.textContent = "Nom enregistré.";
+        msg.textContent = "Enregistré ✓";
       }).catch(function(err){
         console.error("[profil] échec de l'enregistrement du nom", err);
         btn.disabled = false;
@@ -12779,11 +12813,12 @@ function wireProfileIdentityCard(){
       msg.textContent = ""; btn.disabled = true;
       firebase.firestore().collection("hostProfiles").doc(authState.uid)
         .set({contactPhone:phoneInput.value.trim(), contactEmail:emailInput.value.trim(), updated:new Date().toISOString()}, {merge:true})
-        .then(function(){ btn.disabled = false; msg.textContent = "Coordonnées enregistrées."; })
+        .then(function(){ btn.disabled = false; msg.textContent = "Enregistré ✓"; })
         .catch(function(err){ btn.disabled = false; msg.textContent = "Erreur : "+((err && (err.message||err.code)) || "réessayez."); });
     });
   }
   wireProfileVoice();
+  wireProfileAutosave();
   var bioSaveBtn = document.getElementById("profile-bio-save");
   if(bioSaveBtn) bioSaveBtn.addEventListener("click", function(){
     var btn = this;
@@ -12806,7 +12841,7 @@ function wireProfileIdentityCard(){
           }
         });
         btn.disabled = false;
-        msg.textContent = "Présentation enregistrée.";
+        msg.textContent = "Enregistré ✓";
       }).catch(function(err){
         console.error("[profil] échec de l'enregistrement de la présentation", err);
         btn.disabled = false;
