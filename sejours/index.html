@@ -693,6 +693,16 @@ body.creator-open.detail-open nav.tabbar{display:none;}
    nom, liste des logements en lignes (photo, nom, type · capacité, accroche,
    prix), chacune ouvrant la fiche du logement. */
 .place-units{display:flex; flex-direction:column; gap:10px;}
+/* Page établissement : ses hébergements en cartes du fil, en grand,
+   qu'on fait défiler à l'horizontale (une photo par carte : le geste
+   horizontal sert au défilement des cartes). */
+.place-rail-sec{margin:4px 0 14px;}
+.place-rail-sec > .section-title, .place-rail-sec > .site-sub{padding:0 6px;}
+.place-rail{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; margin:0 -11px; padding:2px 11px 6px; scroll-padding:0 11px;
+  -webkit-overflow-scrolling:touch; scrollbar-width:none;}
+.place-rail::-webkit-scrollbar{display:none;}
+.place-rail-card{flex:0 0 86%; scroll-snap-align:start;}
+.place-rail-card:only-child{flex-basis:100%;}
 .place-unit-row{display:flex; align-items:center; gap:12px; width:100%; padding:8px; border:1.5px solid var(--line); border-radius:18px; background:#fff;
   text-align:left; font-family:'Jost',sans-serif; color:var(--ink); cursor:pointer;}
 .place-unit-row:active{background:var(--cream);}
@@ -7502,18 +7512,18 @@ function openDetail(id, listingOverride, forceVisitorView){
   // vue chambre : ce sont les pièces du logement entier, pas de la
   // chambre sélectionnée.
   var spacesHtml = detailSpacesHtml(l);
-  var spacesCardHtml = spacesHtml ? '<div class="detail-card"><div class="section-title">Pièces & annexes</div>'+spacesHtml+'</div>' : "";
+  var spacesCardHtml = spacesHtml ? '<div class="detail-card" data-sync="spaces"><div class="section-title">Pièces & annexes</div>'+spacesHtml+'</div>' : "";
   if(!activeUnit){
     // vue d'ensemble (ou annonce sans plusieurs chambres) : comportement identique à avant, sauf que
     // le planning ne s'affiche jamais ici quand il y a plusieurs chambres (voir plus bas) — chaque
     // chambre a le sien, propre à elle, un établissement entier n'a pas UN planning unique.
     var dKmOverview = listingDistanceKm(l);
-    metaRowHtml = '<div class="detail-card"><div class="meta-row">'+
+    metaRowHtml = '<div class="detail-card" data-sync="meta"><div class="meta-row">'+
       metaItemHtml(META_ICON_PRICE, "dès "+displayPriceOf(l)+" €", "par nuit")+
       (dKmOverview!=null ? metaItemHtml(META_ICON_DISTANCE, dKmOverview+" km", "de vous") : "")+
     '</div></div>';
     bodyExtraHtml =
-      '<div class="detail-card"><div class="section-title">Prestations</div>'+
+      '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml+
       /* hasTabs (units.length>1), pas juste "une unité existe" : avec une
@@ -7537,7 +7547,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       (dKmUnit!=null ? metaItemHtml(META_ICON_DISTANCE, dKmUnit+" km", "de vous") : "")+
       '</div></div>';
     bodyExtraHtml =
-      '<div class="detail-card"><div class="section-title">Prestations</div>'+
+      '<div class="detail-card" data-sync="amen"><div class="section-title">Prestations</div>'+
       detailAmenitiesHtml(l)+'</div>'+
       spacesCardHtml;
   }
@@ -7564,7 +7574,7 @@ function openDetail(id, listingOverride, forceVisitorView){
       // Nom de l'annonce dans sa propre carte (retour utilisateur : "une
       // carte pour quasiment tout") — auparavant du texte nu, posé à même
       // le fond --cream, seule section sans carte de toute la fiche.
-      '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
+      '<div class="detail-card" data-sync="title"><div class="region">'+esc(locationLineFor(l))+'</div>'+
       '<h1>'+esc(l.name)+'</h1>'+
       taglineHtml(l)+
       // Description sous le titre et l'accroche (retour de César), plus dans sa propre carte.
@@ -7579,7 +7589,7 @@ function openDetail(id, listingOverride, forceVisitorView){
         bodyExtraHtml+
         // Une seule carte hôte : photo, nom, présentation et « Voir plus »
         // (volet hostBio : présentation complète et autres annonces de l'hôte).
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
+        '<div class="detail-card" data-sync="host"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
         '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
         (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p><button type="button" class="host-bio-more" id="host-bio-more">Voir plus</button>' : '')+
         '</div>'+
@@ -7593,7 +7603,7 @@ function openDetail(id, listingOverride, forceVisitorView){
         // Vue d'ensemble d'une annonce à plusieurs chambres : pas de calendrier
         // ici, il n'y a pas de planning général — seulement dans l'onglet de
         // chaque chambre (voir plus bas, activeUnit).
-        (!hasTabs || activeUnit ? '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
+        (!hasTabs || activeUnit ? '<div class="qr-panel" data-sync="contact" style="border-radius:16px;" id="qr-'+qrUid+'">'+quickReqHtml(l, qrUid, activeUnit ? {avail: activeUnit.avail||[]} : null)+'</div>' : '')+
         '<div id="site-others-slot"></div>'+
       '</div>'+
     '</div>'+
@@ -7756,6 +7766,32 @@ function placeBannerHtml(l, listingOverride){
     '<svg class="pb-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>'+
   '</button>';
 }
+/* Carte du fil (coverHtml) d'un hébergement, pour la page établissement :
+   attributs renommés pour n'être câblés que par wirePlaceRail(), jamais
+   par wireFeedEvents() (qui parcourt tout le document). */
+function placeRailCardHtml(m){
+  var first = (m.gallery && m.gallery[0]) || memberCoverUrl(m);
+  var one = first ? Object.assign({}, m, {gallery:[first], galleryMid:(m.gallery && m.gallery[0]) ? (m.galleryMid||[]).slice(0,1) : []}) : m;
+  var h = coverHtml(one)
+    .replace(/data-quickreq="/g, 'data-rail-open="').replace(/data-open="/g, 'data-rail-open="')
+    .replace(/data-like="/g, 'data-rail-like="').replace(/data-share="/g, 'data-rail-share="');
+  return '<article class="card place-rail-card">'+h+'</article>';
+}
+function wirePlaceRail(root, members, preview){
+  var byId = function(id){ return members.filter(function(m){ return String(m.id)===String(id); })[0]; };
+  Array.prototype.forEach.call(root.querySelectorAll("[data-rail-like]"), function(el){
+    if(preview) el.classList.add("detail-save-disabled");
+    el.addEventListener("click", function(e){
+      e.stopPropagation();
+      var m = byId(el.getAttribute("data-rail-like"));
+      if(!m || preview) return;
+      openCollectionPicker(m, function(){ el.classList.toggle("liked", isListingSaved(m)); renderLikeBadge(); });
+    });
+  });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-rail-share]"), function(el){
+    el.addEventListener("click", function(e){ e.stopPropagation(); var m = byId(el.getAttribute("data-rail-share")); if(m) shareListing(m); });
+  });
+}
 function placeUnitRowHtml(m, l){
   registerPhotoVariants(m);
   var img = memberCoverUrl(m);
@@ -7813,30 +7849,32 @@ function openPlace(id, override, loaded){
       '<div class="dots">'+dots+'</div>'+
     '</div>'+
     '<div class="detail-body">'+
-      '<div class="detail-card"><div class="region">'+esc(locationLineFor(l))+'</div>'+
+      '<div class="detail-card" data-sync="title"><div class="region">'+esc(locationLineFor(l))+'</div>'+
         '<h1>'+esc(title)+'</h1>'+
         placeTaglineHtml(place)+
         (place.desc ? '<p class="desc desc-under">'+esc(place.desc)+'</p>' : '')+
       '</div>'+
       '<div class="detail-cards">'+
-        '<div class="detail-card"><div class="meta-row">'+
+        '<div class="detail-card" data-sync="meta"><div class="meta-row">'+
           (minPrice!=null ? metaItemHtml(META_ICON_PRICE, "dès "+minPrice+" €", "par nuit") : "")+
           metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           (cap ? metaItemHtml(META_ICON_GUESTS, cap, "voyageurs en tout") : "")+
         '</div></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
-          '<p class="site-sub">Chaque hébergement a sa fiche, ses photos et son calendrier.</p>'+
-          '<div class="place-units">'+members.map(function(m){ return placeUnitRowHtml(m, l); }).join("")+'</div>'+
+        // Hébergements présentés comme dans le fil (retour de César) : les
+        // mêmes cartes, en grand, qu'on fait défiler à l'horizontale.
+        '<div class="place-rail-sec" data-sync="units"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
+          '<p class="site-sub">Faites défiler, puis touchez « Voir plus » pour la fiche, les photos et le calendrier.</p>'+
+          '<div class="place-rail">'+members.map(placeRailCardHtml).join("")+'</div>'+
         '</div>'+
         // Prestations de l'établissement : celles que l'hôte a cochées pour
         // tout le lieu (place.amen), jamais une intersection des chambres
         // (qui faisait apparaître le couchage).
-        ((place.amen || []).length ? '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
+        ((place.amen || []).length ? '<div class="detail-card" data-sync="amen"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+detailAmenitiesHtml({amen:place.amen}, PE_SHARED_AMEN)+'</div>' : '')+
+        '<div class="detail-card" data-sync="host"><div class="section-title" style="margin-top:0">Votre hôte</div>'+
           '<div class="host-card"><div class="host-avatar">'+(l.host.photo ? '<img src="'+esc(l.host.photo)+'" alt="">' : l.host.initial)+'</div><div class="host-info"><b>'+esc(l.host.name)+'</b></div></div>'+
           (l.host.bio ? '<p class="host-bio-text" style="margin-top:10px;">'+esc(l.host.bio)+'</p>' : '')+
         '</div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Demander à l’hôte</div>'+
+        '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">Demander à l’hôte</div>'+
           '<p class="site-sub">Vos dates et le nombre de voyageurs : '+esc(l.host.name)+' vous dit quel hébergement est libre.</p>'+
           '<div class="qr-panel" style="border-radius:16px;" id="qr-'+qid+'">'+placeReqHtml(l, members, qid)+'</div>'+
         '</div>'+
@@ -7858,9 +7896,10 @@ function openPlace(id, override, loaded){
     }
     resolveListingById(Number(mid), function(found){ if(found){ openDetail(found.id); detailBackToPlace = back; } });
   };
-  Array.prototype.forEach.call(root.querySelectorAll("[data-place-unit],.place-pick-chip[data-open]"), function(btn){
-    btn.addEventListener("click", function(){ openMember(btn.getAttribute("data-place-unit") || btn.getAttribute("data-open")); });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-place-unit],.place-pick-chip[data-open],[data-rail-open]"), function(btn){
+    btn.addEventListener("click", function(e){ e.stopPropagation(); openMember(btn.getAttribute("data-place-unit") || btn.getAttribute("data-open") || btn.getAttribute("data-rail-open")); });
   });
+  wirePlaceRail(root, members, !!override);
   var gal = document.getElementById("detail-gallery-scroll");
   gal.addEventListener("scroll", function(){
     var idx = Math.round(gal.scrollLeft / gal.clientWidth);
@@ -9733,10 +9772,10 @@ function crRender(){
         '</div>'+(u.linkedRoomId ? '<p class="cr-linked">Prix et capacité gérés dans Fiftin Planning'+(cr.planning ? '' : (cr.status==="draft" ? ' · prix calculé à la mise en ligne' : ' · calcul en cours'))+'</p>' : '')+'</div>'+
         // Prestations et pièces cochées directement sur la carte (retour de
         // César : plus de volet à ouvrir).
-        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Prestations</div>'+
+        '<div class="detail-card" data-cr-sec="amen"><div class="section-title">Sélectionnez les prestations de votre hébergement</div>'+
           '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher. Le couchage est indispensable.'+(cr.site ? ' Environnement, accueil, loisirs et atouts communs se règlent dans l’établissement.' : '')+'</p>'+
           crAmenEditHtml()+'</div>'+
-        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Pièces & annexes <small class="cr-opt">facultatif</small></div>'+
+        '<div class="detail-card" data-cr-sec="spaces"><div class="section-title">Ajoutez les pièces et annexes <small class="cr-opt">facultatif</small></div>'+
           '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour ajouter, touchez le nombre pour retirer.</p>'+
           '<div class="hf-spaces-grid">'+HOUSE_SPACES.map(function(name){
             var qty = (d.spaces || {})[name] || 0;
@@ -9748,10 +9787,10 @@ function crRender(){
         // dans l'établissement — pas de cartes en doublon ici (retour de
         // César), la carte Établissement y renvoie.
         crSiteCardHtml()+
-        '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-cr-open="host">'+
+        '<div class="detail-card" data-cr-sec="host"><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div><button type="button" class="cr-block" data-cr-open="host">'+
           '<div class="host-card"><div class="host-avatar">'+(host.photoUrl ? '<img src="'+esc(avatarPhotoUrl(host.photoUrl, host.photoThumbUrl))+'" alt="">' : esc((host.name||"?").charAt(0).toUpperCase()))+'</div><div class="host-info"><b>'+crPh(host.name, esc(host.name||""), "Votre prénom")+'</b></div></div>'+
           '<p class="host-bio-text" style="margin-top:8px">'+crPh(host.bio, esc(host.bio||""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p></button></div>'+
-        (cr.site ? '' : '<div class="detail-card" data-cr-sec="contact"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-cr-open="contact">'+
+        (cr.site ? '' : '<div class="detail-card" data-cr-sec="contact"><div class="section-title" style="margin-top:0">Indiquez comment vous joindre</div><button type="button" class="cr-block" data-cr-open="contact">'+
           crPh(d.phone, '<span>'+esc(d.phone)+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(d.email ? '<span class="cr-sub">'+esc(d.email)+'</span>' : '')+
           ((d.websiteUrl||d.googleUrl||d.instagramUrl||d.facebookUrl) ? '<span class="cr-sub">Liens : '+[d.websiteUrl&&"site",d.googleUrl&&"Google",d.instagramUrl&&"Instagram",d.facebookUrl&&"Facebook"].filter(Boolean).join(", ")+'</span>' : '')+'</button></div>')+
       '</div>'+
@@ -9883,7 +9922,7 @@ function crAmenEditHtml(){
    présentation commune (éditeur d'établissement, openPlaceEditor()).
    Brouillon : association automatique à la mise en ligne (< 50 m). */
 function crSiteCardHtml(){
-  var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">Établissement'+(cr.site ? '' : ' <small class="cr-opt">facultatif</small>')+'</div>';
+  var head = '<div class="detail-card" data-cr-sec="site"><div class="section-title">'+(cr.site ? 'Votre établissement' : 'Regroupez vos hébergements <small class="cr-opt">facultatif</small>')+'</div>';
   if(cr.site) return head+(cr.id ? '<button type="button" class="cr-block" id="cr-site-open">' : '<div class="cr-block">')+
     '<span>Fait partie de l’établissement'+(cr.site.place && cr.site.place.name ? ' « '+esc(cr.site.place.name)+' »' : '')+'</span>'+
     '<span class="cr-sub">Adresse, contact et prestations communes se règlent dans l’établissement.</span>'+
@@ -10368,15 +10407,58 @@ function applyPreviewBar(){
     '<div class="cr-bar-mid"><b>'+esc(previewBarCtx.status)+'</b><span>'+esc(previewBarCtx.save)+'</span></div>'+
     '<div class="cr-mode"><button type="button" id="pv-edit">Modifier</button><button type="button" class="on">Aperçu</button></div></div>');
   var ctx = previewBarCtx;
-  document.getElementById("pv-edit").addEventListener("click", function(){ closeDetail(); });
+  document.getElementById("pv-edit").addEventListener("click", function(){
+    var anchor = syncCapture(panel);
+    closeDetail();
+    syncApply(document.getElementById("creator-panel"), anchor);
+  });
   document.getElementById("pv-close").addEventListener("click", function(){ closeDetail(); ctx.onClose(); });
+}
+/* Bascule Modifier ↔ Aperçu à la même hauteur (retour de César) : on note
+   la carte en haut de l'écran (data-sync ; data-cr-sec dans le créateur)
+   et sa position, puis on la replace au même endroit dans l'autre vue. */
+var SYNC_CR_SEC = {name:"title", price:"meta", amen:"amen", spaces:"spaces", host:"host", contact:"contact"};
+var SYNC_ORDER = ["title","meta","units","amen","spaces","host","contact"];
+function syncKeyOf(el){ return el.getAttribute("data-sync") || SYNC_CR_SEC[el.getAttribute("data-cr-sec")] || null; }
+function syncTopLine(panel){ var bar = panel.querySelector(".cr-bar"); return panel.getBoundingClientRect().top + (bar ? bar.offsetHeight : 0); }
+function syncCapture(panel){
+  if(!panel || panel.scrollTop < 8) return null;
+  if(panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 4) return {key:"end"};
+  var line = syncTopLine(panel);
+  var els = Array.prototype.filter.call(panel.querySelectorAll("[data-sync],[data-cr-sec]"), syncKeyOf);
+  for(var i=0; i<els.length; i++){
+    var r = els[i].getBoundingClientRect();
+    if(r.bottom <= line+4) continue;
+    // Fin d'une carte qui dépasse à peine en haut : on prend la suivante,
+    // celle que l'on regarde vraiment.
+    if(r.top<line && r.bottom-line < panel.clientHeight*0.35 && els[i+1]){
+      var n = els[i+1].getBoundingClientRect();
+      return {key:syncKeyOf(els[i+1]), offset:n.top-line, frac:0};
+    }
+    return {key:syncKeyOf(els[i]), offset:r.top-line, frac: r.top<line ? (line-r.top)/r.height : 0};
+  }
+  return {key:"end"};
+}
+function syncApply(panel, a){
+  if(!panel || !a) return;
+  if(a.key==="end"){ panel.scrollTop = panel.scrollHeight; return; }
+  var all = panel.querySelectorAll("[data-sync],[data-cr-sec]"), el = null;
+  for(var i=SYNC_ORDER.indexOf(a.key); i>=0 && i<SYNC_ORDER.length && !el; i++){
+    el = Array.prototype.filter.call(all, function(x){ return syncKeyOf(x)===SYNC_ORDER[i]; })[0] || null;
+    if(el && SYNC_ORDER[i]!==a.key) a = {key:SYNC_ORDER[i], offset:0, frac:0};
+  }
+  if(!el) return;
+  var line = syncTopLine(panel), r = el.getBoundingClientRect();
+  panel.scrollTop += a.frac>0 ? r.top + a.frac*r.height - line : r.top - line - a.offset;
 }
 function crPreview(){
   var d = cr.data, p = crPayload();
   var l = Object.assign({}, p, {id: cr.id || "apercu", docId: cr.id || "apercu", ownerUid: authState.uid, status: cr.status, likeCount: 0});
   var statusTxt = cr.status==="published" ? "En ligne" : cr.status==="paused" ? "En pause" : cr.status==="removed" ? "Retirée" : "Brouillon";
   previewBarCtx = {status: statusTxt, save: crSaveLabel(), onClose: crClose};
+  var anchor = syncCapture(document.getElementById("creator-panel"));
   try{ openDetail(l.id, l, true); }catch(e){ console.warn("[aperçu]", e); }
+  syncApply(document.getElementById("detail-panel"), anchor);
 }
 
 /* ================= ÉDITEUR D'ÉTABLISSEMENT (« créer comme on explore ») =================
@@ -10606,7 +10688,7 @@ function peRender(){
     '</div>'+
     '<div class="detail-body">'+
       progress+
-      '<div class="detail-card">'+
+      '<div class="detail-card" data-sync="title">'+
         '<div class="region">'+(first.city || first.deptName || first.regionName ? esc(locationLineFor(first)) : first.region ? esc(first.region) : '<span class="cr-ph">Lieu · celui de vos hébergements</span>')+'</div>'+
         '<textarea class="cr-h1" id="pe-name" rows="1" placeholder="Nom de l’établissement">'+esc(p.name)+'</textarea>'+
         '<div class="cr-tagline"><span class="cr-tag-head"><button type="button" class="type-label cr-type'+(kind?'':' cr-ph')+'" data-pe-open="kind">'+(kind ? esc(kind) : "Type")+'</button><span class="type-sep" aria-hidden="true"></span></span>'+
@@ -10618,17 +10700,17 @@ function peRender(){
           (sh.address ? '<span>'+esc(sh.address)+(typeof sh.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>'+
       '</div>'+
       '<div class="detail-cards">'+
-        '<div class="detail-card"><div class="meta-row">'+
+        '<div class="detail-card" data-sync="meta"><div class="meta-row">'+
           metaItemHtml(META_ICON_PRICE, minPrice!=null ? "dès "+minPrice+" €" : '<span class="cr-ph">— €</span>', "par nuit")+
           metaItemHtml(PLACE_ICON, members.length, "hébergements")+
           metaItemHtml(META_ICON_GUESTS, cap || '<span class="cr-ph">—</span>', "voyageurs en tout")+
         '</div><p class="cr-linked">Calculés à partir de chaque hébergement</p></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Choisissez votre hébergement</div>'+
-          '<p class="site-sub">Ce que voient les voyageurs. Touchez un hébergement pour le modifier ou le retirer.</p>'+
+        '<div class="detail-card" data-sync="units"><div class="section-title" style="margin-top:0">Gérez les hébergements de votre établissement</div>'+
+          '<p class="site-sub">Touchez un hébergement pour le modifier ou le retirer.</p>'+
           '<div class="place-units">'+views.map(function(m){ return placeUnitRowHtml(m, {name:p.name || first.name, place:{name:p.name}}); }).join("")+'</div>'+
           (members.length ? '<button type="button" class="cr-block cr-empty pe-add" data-pe-open="add"><span class="cr-ph">+ Ajouter un hébergement à l’établissement</span></button>' : '<p class="cr-note">Aucun hébergement pour l’instant : créez le premier ci-dessus.</p>')+
         '</div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Prestations de l’établissement</div>'+
+        '<div class="detail-card" data-sync="amen"><div class="section-title" style="margin-top:0">Sélectionnez les prestations de votre établissement</div>'+
           '<p class="cr-note" style="margin:-4px 0 12px;">Touchez pour cocher : elles valent pour tous les hébergements.</p>'+
           AMEN_GROUPS.map(function(g, gi){
             var items = g.items.filter(function(a){ return PE_SHARED_AMEN.indexOf(a)!==-1; });
@@ -10638,11 +10720,11 @@ function peRender(){
             }).join("")+'</div></div>';
           }).join("")+'</div>'+
         // Hôte (modifiable ici aussi) puis contact en dernier, comme sur une annonce.
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Votre hôte</div><button type="button" class="cr-block" data-pe-open="host">'+
+        '<div class="detail-card" data-sync="host"><div class="section-title" style="margin-top:0">Présentez-vous à vos voyageurs</div><button type="button" class="cr-block" data-pe-open="host">'+
           '<div class="host-card"><div class="host-avatar">'+(first.host && first.host.photo ? '<img src="'+esc(first.host.photo)+'" alt="">' : esc((first.host && first.host.initial) || "?"))+'</div><div class="host-info"><b>'+crPh(first.host && first.host.name && first.host.name!=="Hôte Fiftin", esc((first.host && first.host.name) || ""), "Votre prénom")+'</b></div></div>'+
           '<p class="host-bio-text" style="margin-top:8px">'+crPh(first.host && first.host.bio, esc((first.host && first.host.bio) || ""), "Quelques mots sur vous, partagés par toutes vos annonces.")+'</p>'+
           '<span class="cr-edit-link">Modifier</span></button></div>'+
-        '<div class="detail-card"><div class="section-title" style="margin-top:0">Contact</div><button type="button" class="cr-block" data-pe-open="contact">'+
+        '<div class="detail-card" data-sync="contact"><div class="section-title" style="margin-top:0">Indiquez comment vous joindre</div><button type="button" class="cr-block" data-pe-open="contact">'+
           crPh(sh.phone, '<span>'+esc(sh.phone||"")+'</span>', "Téléphone (WhatsApp, SMS, appel)")+(sh.email ? '<span class="cr-sub">'+esc(sh.email)+'</span>' : '')+
           '<span class="cr-sub">Commun à tous ses hébergements</span></button></div>'+
         (members.length ? '<button type="button" class="link-btn pe-undo" id="pe-undo">Défaire l’établissement</button>' : '')+
@@ -10951,7 +11033,9 @@ function pePreview(){
   if(!members.length) return;
   var shown = members.filter(function(x){ return x.status!=="removed"; });
   previewBarCtx = {status: "Établissement", save: peSaveLabel(), onClose: peClose};
+  var anchor = syncCapture(document.getElementById("creator-panel"));
   openPlace(null, {rep:shown.filter(function(x){ return x.status==="published"; })[0] || shown[0], members:shown});
+  syncApply(document.getElementById("detail-panel"), anchor);
 }
 
 /* ---------------- tabs ---------------- */
