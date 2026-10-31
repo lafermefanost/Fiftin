@@ -944,14 +944,51 @@ exports.availShareGetUrl = onCall(async (request) => {
   if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
   const uid = request.auth.uid;
   const data = request.data || {};
-  const structureId = typeof data.structureId === "string" ? data.structureId.slice(0, 80) : "";
-  if (!structureId) throw new HttpsError("invalid-argument", "Structure manquante.");
   const acc = await db.collection("accounts").doc(uid).get();
   const settings = acc.exists ? (acc.data().settings || {}) : {};
   if (settings.plan !== "pro") throw new HttpsError("permission-denied", "Réservé à la formule Avancé.");
   const col = db.collection("availShareTokens");
-  const existing = await col.where("uid", "==", uid).where("structureId", "==", structureId).get();
   const phone = typeof data.phone === "string" ? data.phone.trim().slice(0, 40) : undefined;
+  // Liens personnalisés (demande de César) : plusieurs liens, chacun avec
+  // son nom et ses locations (n'importe lesquelles du compte).
+  if (typeof data.linkId === "string" && data.linkId) {
+    const linkId = data.linkId.slice(0, 60);
+    let existing = await col.where("uid", "==", uid).where("linkId", "==", linkId).get();
+    // Ancien lien d'une structure repris tel quel : même jeton, même URL.
+    if (existing.empty && typeof data.legacyStructureId === "string" && data.legacyStructureId) {
+      existing = await col.where("uid", "==", uid).where("structureId", "==", data.legacyStructureId.slice(0, 80)).get();
+    }
+    if (data.remove) {
+      await Promise.all(existing.docs.map(function (d) { return d.ref.delete(); }));
+      return {removed: true};
+    }
+    const patch = {linkId: linkId};
+    if (Array.isArray(data.roomIds)) {
+      patch.roomIds = availshare.cleanRoomIds(settings, data.roomIds);
+      if (!patch.roomIds.length) throw new HttpsError("invalid-argument", "Un lien doit contenir au moins une location.");
+    }
+    if (typeof data.name === "string") patch.name = data.name.trim().slice(0, 80);
+    if (phone !== undefined) patch.phone = phone;
+    let token = null;
+    if (!existing.empty && !data.regenerate) {
+      token = existing.docs[0].id;
+      // Ancien lien de structure repris : il devient un lien personnalisé.
+      if (existing.docs[0].data().structureId !== undefined) patch.structureId = FieldValue.delete();
+      await existing.docs[0].ref.update(patch);
+    } else {
+      const prev = existing.empty ? {} : existing.docs[0].data();
+      await Promise.all(existing.docs.map(function (d) { return d.ref.delete(); }));
+      token = crypto.randomBytes(24).toString("hex");
+      const doc = Object.assign({uid: uid, linkId: linkId, roomIds: prev.roomIds || [], name: prev.name || "", phone: prev.phone || "", createdAt: new Date().toISOString()}, patch);
+      delete doc.structureId;
+      await col.doc(token).set(doc);
+    }
+    return {url: AVAIL_SHARE_PAGE + token};
+  }
+  // Ancien appel : un lien par structure.
+  const structureId = typeof data.structureId === "string" ? data.structureId.slice(0, 80) : "";
+  if (!structureId) throw new HttpsError("invalid-argument", "Structure manquante.");
+  const existing = await col.where("uid", "==", uid).where("structureId", "==", structureId).get();
   let token = null;
   if (!existing.empty && !data.regenerate) {
     token = existing.docs[0].id;
@@ -992,9 +1029,12 @@ exports.availShare = onRequest(async (req, res) => {
   const data = acc.data();
   const settings = data.settings || {};
   if (settings.plan !== "pro") { res.status(404).json({error: "off"}); return; }
-  const struct = (settings.structures || []).find(function (s) { return s && s.id === tok.structureId; });
-  const rooms = availshare.structureRooms(settings, tok.structureId);
-  if (!struct && !rooms.length) { res.status(404).json({error: "not_found"}); return; }
+  // Lien personnalisé (liste de locations) ou ancien lien de structure.
+  const custom = Array.isArray(tok.roomIds);
+  const rooms = custom ? availshare.linkRooms(settings, tok.roomIds) : availshare.structureRooms(settings, tok.structureId);
+  const struct = custom ? availshare.brandStructure(settings, rooms)
+    : (settings.structures || []).find(function (s) { return s && s.id === tok.structureId; });
+  if (!custom && !struct && !rooms.length) { res.status(404).json({error: "not_found"}); return; }
   const from = parisToday();
   const days = availshare.structureAvailability({
     rooms: rooms,
@@ -1004,7 +1044,7 @@ exports.availShare = onRequest(async (req, res) => {
     days: AVAIL_SHARE_DAYS,
   });
   res.status(200).json({
-    name: (struct && struct.name) || settings.name || "",
+    name: (custom && tok.name) || (struct && struct.name) || settings.name || "",
     from: from,
     days: days,
     phone: await availSharePhone(tok.uid, tok.phone),

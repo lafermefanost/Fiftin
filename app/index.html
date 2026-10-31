@@ -2344,6 +2344,12 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .eff-card h3{margin:0 0 8px;font-size:19px;color:var(--green-deep);}
 .eff-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#4a4a44;}
 /* Réglages → Aide, contact & informations légales (demande de César) */
+.al-group{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0;}
+.al-chip{border:1.5px solid var(--light);background:#fff;color:var(--gray);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
+.al-chip.on{background:var(--green);border-color:var(--green);color:#fff;}
+.al-chip.al-all{border-style:dashed;}
+.al-chip.al-all.on{border-style:solid;}
+.al-card{margin-bottom:12px;}
 .aide-sub{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);margin:4px 0 8px;}
 .aide-sub:not(:first-child){margin-top:18px;}
 .aide-faq{border-bottom:1px solid rgba(0,0,0,.08);}
@@ -3403,7 +3409,7 @@ const STRUCTURE_TYPES=[
   {id:'lmnp_micro',label:'LMNP micro-BIC'},
 ];
 // Échéances effectivement pertinentes compte tenu des structures configurées
-// (Réglages → Structures juridiques) : les échéances générales (types:null)
+// (Réglages → Établissement) : les échéances générales (types:null)
 // sont toujours incluses ; les échéances propres à un statut ne sont
 // filtrées que si au moins une structure a un type assigné — pour ne pas
 // faire disparaître d'échéances utiles chez les comptes existants qui
@@ -3458,6 +3464,7 @@ function categoryIconHTML(id){
 // rester cohérent plutôt que d'inventer un nouveau glyphe pour un concept
 // déjà illustré.
 const SETTINGS_PANEL_ICONS={
+  dispo:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/><path d="M8.5 14.5l2.2 2.2 4.8-4.8"/>',
   aide:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2h.01"/>',
   priceLog:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
   messages:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
@@ -5710,65 +5717,122 @@ function brandPick(ev,sid){
   if(d[3]<40)return; // zone transparente
   brandSet(sid,brandPickTarget[sid]||'bg','#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''));
 }
-// ── Lien de disponibilités d'une structure (demande de César) ──
+// ── Liens de disponibilités (demande de César) ──
 // Page publique fiftin.fr/dispo/?t=… à partager aux habitués : nuit par nuit
-// sur 6 mois, Disponible / Peut-être / Complet pour l'ensemble des locations
-// de la structure — jamais de nom, de nombre de chambres ni de prix (calcul
-// côté serveur, fonctions availShareGetUrl / availShare). Formule Avancé.
-// URL et numéro gardés dans S.settings.availShare[structureId] pour
-// l'affichage ; le jeton et le numéro font foi côté serveur.
-function availShareHTML(s){
+// sur 6 mois, Disponible / Peut-être / Complet pour les locations du lien —
+// jamais de nom, de nombre de chambres ni de prix (calcul côté serveur,
+// fonctions availShareGetUrl / availShare). Formule Avancé.
+// Liens de disponibilités (demande de César) : plusieurs liens, chacun avec
+// son nom (affiché en tête de la page) et ses locations, au choix — par
+// exemple Ch.1 + Ch.2 + Ch.3, ou toute une structure. S.settings.availLinks =
+// [{id, name, roomIds, phone, url, legacySid?}] pour l'affichage ; le jeton
+// côté serveur (availShareTokens) fait foi. Un ancien lien de structure
+// (S.settings.availShare[structureId]) est repris tel quel, même URL.
+function availLinks(){
+  if(Array.isArray(S.settings.availLinks))return S.settings.availLinks;
+  const old=S.settings.availShare||{}, structs=S.settings.structures||[], list=[];
+  Object.keys(old).forEach(sid=>{
+    const o=old[sid];if(!o||!o.url)return;
+    const st=structs.find(x=>x.id===sid);
+    list.push({id:'st_'+sid,legacySid:sid,name:(st&&st.name)||S.settings.name||'',
+      roomIds:(S.settings.rooms||[]).filter(r=>(r.group||(structs[0]||{}).id)===sid).map(r=>r.id),phone:o.phone||'',url:o.url});
+  });
+  return list;
+}
+function availLinksSave(list){S.settings.availLinks=list;saveSettings();renderSettings();}
+function availLinksHTML(){
   if(currentRole==='personnel')return '';
-  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Une page simple à partager à vos habitués : nuit par nuit sur 6 mois, « Disponible » (au moins 2 locations libres), « Peut-être disponible » (une seule libre, ou une option) ou « Complet », pour l'ensemble des locations de cette structure, à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Ils choisissent leurs dates et vous écrivent sur WhatsApp, message prérempli.</div>`;
-  if(S.settings.plan!=='pro')return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<div style="font-size:11px;color:var(--gray)">Réservé à la formule Avancé (Réglages → Compte).</div></div>`;
-  const sh=(S.settings.availShare||{})[s.id];
-  if(!sh||!sh.url)return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<button class="set-add" onclick="availShareGet('${s.id}',false)">Créer le lien</button></div>`;
-  const u=sh.url.replace(/"/g,'&quot;');
-  return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}
-    <div style="display:flex;gap:6px;align-items:center"><input class="set-fi" style="flex:1;font-size:11px;min-width:0" readonly value="${u}" onclick="this.select()">
-      <button class="btn-s" style="padding:4px 10px" onclick="availShareCopy('${s.id}',this)">Copier</button>
-      <button class="btn-s" style="padding:4px 10px" onclick="availShareSend('${s.id}')">Envoyer</button></div>
-    <div class="sc-field" style="margin-top:8px"><label>Numéro WhatsApp affiché</label>
-      <input class="set-fi" style="width:100%;font-size:12px" inputmode="tel" value="${(sh.phone||'').replace(/"/g,'&quot;')}" placeholder="Vide = celui de votre profil Fiftin Séjours" onchange="availSharePhone('${s.id}',this)">
-      <div id="availSt-${s.id}" style="font-size:11px;color:var(--gray);margin-top:3px"></div></div>
-    <div style="display:flex;gap:14px;margin-top:6px;font-size:11px">
-      <a href="${u}" target="_blank" rel="noopener" style="color:var(--green)">Ouvrir la page</a>
-      <a href="#" style="color:var(--gray)" onclick="event.preventDefault();if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner pour tous ceux à qui vous l\\'avez envoyé.'))availShareGet('${s.id}',true)">Changer le lien</a>
-    </div></div>`;
+  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:10px">Des pages simples à partager à vos habitués : nuit par nuit sur 6 mois, « Disponible » (au moins 2 locations libres parmi celles du lien ; 1 suffit pour un lien d'une seule location), « Peut-être disponible » (une seule libre, ou une option) ou « Complet », à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Ils choisissent leurs dates et vous écrivent sur WhatsApp, message prérempli. Créez autant de liens que vous voulez, chacun avec ses locations.</div>`;
+  if(S.settings.plan!=='pro')return intro+`<div style="font-size:11px;color:var(--gray)">Réservé à la formule Avancé (Réglages → Compte).</div>`;
+  const rooms=S.settings.rooms||[], structs=(S.settings.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const esc=v=>String(v||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const cards=availLinks().map((L,i)=>{
+    const sel=new Set(L.roomIds||[]);
+    const groups=structs.map(st=>{
+      const rs=rooms.filter(r=>(r.group||structs[0].id)===st.id);
+      if(!rs.length)return '';
+      const all=rs.every(r=>sel.has(r.id));
+      return `<div class="al-group"><button type="button" class="al-chip al-all${all?' on':''}" onclick="availLinkStruct(${i},'${st.id}')">${esc(st.name)} · tout</button>`
+        +rs.map(r=>`<button type="button" class="al-chip${sel.has(r.id)?' on':''}" onclick="availLinkRoom(${i},'${r.id}')">${esc(r.short||r.name)}</button>`).join('')+`</div>`;
+    }).join('');
+    const u=esc(L.url);
+    return `<div class="set-card al-card">
+      <div class="sc-field"><label>Nom affiché sur la page</label>
+        <input class="set-fi" style="width:100%" value="${esc(L.name)}" placeholder="Ex. La Ferme Fanost" onchange="availLinkName(${i},this.value)"></div>
+      <div class="sc-field" style="margin-top:8px"><label>Locations incluses (${sel.size})</label>${groups}</div>
+      ${L.url?`<div style="display:flex;gap:6px;align-items:center;margin-top:10px"><input class="set-fi" style="flex:1;font-size:11px;min-width:0" readonly value="${u}" onclick="this.select()">
+        <button class="btn-s" style="padding:4px 10px" onclick="availLinkCopy(${i},this)">Copier</button>
+        <button class="btn-s" style="padding:4px 10px" onclick="availLinkSend(${i})">Envoyer</button></div>`
+        :`<div style="font-size:11px;color:var(--gray);margin-top:10px">Lien en cours de création…</div>`}
+      <div class="sc-field" style="margin-top:8px"><label>Numéro WhatsApp affiché</label>
+        <input class="set-fi" style="width:100%;font-size:12px" inputmode="tel" value="${esc(L.phone)}" placeholder="Vide = celui de votre profil Fiftin Séjours" onchange="availLinkPhone(${i},this.value)"></div>
+      <div id="availSt-${i}" style="font-size:11px;color:var(--gray);margin-top:3px"></div>
+      <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;flex-wrap:wrap">
+        ${L.url?`<a href="${u}" target="_blank" rel="noopener" style="color:var(--green)">Ouvrir la page</a>
+        <a href="#" style="color:var(--gray)" onclick="event.preventDefault();if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner pour tous ceux à qui vous l\\'avez envoyé.'))availLinkSync(${i},{regenerate:true})">Changer le lien</a>`:''}
+        <a href="#" style="color:var(--danger)" onclick="event.preventDefault();availLinkRemove(${i})">Supprimer</a>
+      </div></div>`;
+  }).join('');
+  return intro+cards+`<button class="set-add" onclick="availLinkAdd()">+ Nouveau lien de disponibilités</button>`;
 }
-function availShareSet(sid,patch){
-  if(!S.settings.availShare)S.settings.availShare={};
-  S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},patch);
-  saveSettings();renderSettings();
+// Envoi au serveur (création / mise à jour du jeton) puis affichage.
+function availLinkSync(i,extra){
+  if(!icalAvailable()){alert('Connexion requise.');return Promise.resolve();}
+  const list=availLinks().map(x=>Object.assign({},x)), L=list[i];if(!L)return Promise.resolve();
+  const st=byId('availSt-'+i);if(st)st.textContent='Enregistrement…';
+  return icalCall('availShareGetUrl',Object.assign({linkId:L.id,legacyStructureId:L.legacySid||'',name:L.name||'',roomIds:L.roomIds||[],phone:L.phone||''},extra||{}))
+    .then(res=>{
+      L.url=res.url;
+      // Ancien lien repris : ne plus l'afficher par structure.
+      if(L.legacySid&&S.settings.availShare){delete S.settings.availShare[L.legacySid];}
+      availLinksSave(list);
+      const e=byId('availSt-'+i);if(e)e.textContent='Enregistré ✓';
+    }).catch(e=>{const el=byId('availSt-'+i);if(el)el.textContent='Enregistrement impossible : '+((e&&e.message)||e);else alert('Enregistrement impossible : '+((e&&e.message)||e));});
 }
-function availShareGet(sid,regenerate){
-  if(!icalAvailable()){alert('Connexion requise.');return;}
-  icalCall('availShareGetUrl',{structureId:sid,regenerate:!!regenerate}).then(res=>availShareSet(sid,{url:res.url}))
-    .catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
+function availLinkEdit(i,fn){
+  const list=availLinks().map(x=>Object.assign({},x,{roomIds:(x.roomIds||[]).slice()}));
+  if(!list[i])return;fn(list[i]);S.settings.availLinks=list;renderSettings();availLinkSync(i);
 }
-function availShareCopy(sid,btn){
-  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
+function availLinkName(i,v){availLinkEdit(i,L=>{L.name=v.trim();});}
+function availLinkPhone(i,v){availLinkEdit(i,L=>{L.phone=v.trim();});}
+function availLinkRoom(i,rid){
+  const L=availLinks()[i];if(!L)return;
+  if((L.roomIds||[]).length===1&&L.roomIds[0]===rid){alert('Un lien doit contenir au moins une location.');return;}
+  availLinkEdit(i,L=>{const k=L.roomIds.indexOf(rid);if(k>=0)L.roomIds.splice(k,1);else L.roomIds.push(rid);});
+}
+function availLinkStruct(i,sid){
+  const structs=(S.settings.structures&&S.settings.structures.length)?S.settings.structures:DEFAULT_SETTINGS.structures;
+  const ids=(S.settings.rooms||[]).filter(r=>(r.group||structs[0].id)===sid).map(r=>r.id);
+  const L=availLinks()[i];if(!L)return;
+  const all=ids.every(id=>(L.roomIds||[]).includes(id));
+  if(all&&ids.length===(L.roomIds||[]).length){alert('Un lien doit contenir au moins une location.');return;}
+  availLinkEdit(i,L=>{L.roomIds=all?L.roomIds.filter(id=>!ids.includes(id)):Array.from(new Set(L.roomIds.concat(ids)));});
+}
+function availLinkAdd(){
+  const rooms=S.settings.rooms||[];
+  if(!rooms.length){alert('Ajoutez d\'abord une location.');return;}
+  const list=availLinks().map(x=>Object.assign({},x));
+  list.push({id:'al_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:S.settings.name||'',roomIds:rooms.map(r=>r.id),phone:'',url:''});
+  S.settings.availLinks=list;renderSettings();availLinkSync(list.length-1);
+}
+function availLinkRemove(i){
+  const list=availLinks().map(x=>Object.assign({},x)), L=list[i];if(!L)return;
+  if(!confirm('Supprimer ce lien ? La page cessera de fonctionner pour tous ceux à qui vous l\'avez envoyée.'))return;
+  const done=()=>{list.splice(i,1);if(L.legacySid&&S.settings.availShare)delete S.settings.availShare[L.legacySid];availLinksSave(list);};
+  if(!L.url||!icalAvailable()){done();return;}
+  icalCall('availShareGetUrl',{linkId:L.id,legacyStructureId:L.legacySid||'',remove:true}).then(done).catch(e=>alert('Suppression impossible : '+((e&&e.message)||e)));
+}
+function availLinkCopy(i,btn){
+  const L=availLinks()[i];if(!L||!L.url)return;
   const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
-  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sh.url).then(done).catch(()=>{});
-  else{const i=btn.parentNode.querySelector('input');i.select();document.execCommand('copy');done();}
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(L.url).then(done).catch(()=>{});
+  else{const inp=btn.parentNode.querySelector('input');inp.select();document.execCommand('copy');done();}
 }
-function availShareSend(sid){
-  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
-  const st=(S.settings.structures||[]).find(x=>x.id===sid);
-  const text='Nos disponibilités'+(st&&st.name?' ('+st.name+')':'')+', mises à jour en direct :';
-  if(navigator.share)navigator.share({title:'Disponibilités',text,url:sh.url}).catch(()=>{});
-  else window.open('https://wa.me/?text='+encodeURIComponent(text+' '+sh.url),'_blank','noopener');
-}
-function availSharePhone(sid,input){
-  const v=input.value.trim();
-  if(!icalAvailable()){alert('Connexion requise.');return;}
-  const stEl=byId('availSt-'+sid);if(stEl)stEl.textContent='Enregistrement…';
-  icalCall('availShareGetUrl',{structureId:sid,phone:v}).then(res=>{
-    if(!S.settings.availShare)S.settings.availShare={};
-    S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},{url:res.url,phone:v});
-    saveSettings();
-    const e=byId('availSt-'+sid);if(e)e.textContent='Enregistré ✓';
-  }).catch(e=>{const el=byId('availSt-'+sid);if(el)el.textContent='Enregistrement impossible : '+((e&&e.message)||e);});
+function availLinkSend(i){
+  const L=availLinks()[i];if(!L||!L.url)return;
+  const text='Nos disponibilités'+(L.name?' ('+L.name+')':'')+', mises à jour en direct :';
+  if(navigator.share)navigator.share({title:'Disponibilités',text,url:L.url}).catch(()=>{});
+  else window.open('https://wa.me/?text='+encodeURIComponent(text+' '+L.url),'_blank','noopener');
 }
 function copyIcalExport(rid,btn){
   const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r||!r.icalExportUrl)return;
@@ -10325,7 +10389,9 @@ function renderSettings(){
           onblur="S.settings.name=this.value;saveSettings();applySettings()"></div>
       </div>
     </div>`;
-  h+=settingsPanel('etablissement','Établissement',etabBody);
+  // Établissement et structures juridiques dans un seul panneau (demande de
+  // César) : posé ici une fois les structures construites (plus bas).
+  h+='<!--ETAB-->';
 
   // — Compte : identifiants Firebase et déconnexion —
   const accountBody=`<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Vos données sont liées à ce compte et ne sont visibles que par vous, où que vous vous connectiez.</div>
@@ -10399,7 +10465,6 @@ function renderSettings(){
     structBody+=`<button class="set-add" onclick="addStructureThreshold('${s.id}')">+ Ajouter un seuil</button>
       </div>
       ${brandHTML(s)}
-      ${availShareHTML(s)}
     </div>`;
   });
   if(st.plan==='pro'||structsForThr.length<1){
@@ -10407,7 +10472,10 @@ function renderSettings(){
   }else{
     structBody+=`<div style="font-size:11px;color:var(--gray);padding:8px 0;">La formule Essentiel est limitée à une seule structure juridique. Passez à la formule Avancé (Réglages → Compte) pour en ajouter d'autres.</div>`;
   }
-  h+=settingsPanel('structures','Structures juridiques',structBody);
+  h=h.replace('<!--ETAB-->',settingsPanel('etablissement','Établissement',etabBody
+    +`<div class="set-card-sub-title" style="margin:16px 0 8px">Structures juridiques</div>`+structBody)
+    // Liens de disponibilités : leur propre panneau, juste après (demande de César).
+    +settingsPanel('dispo','Liens de disponibilités',availLinksHTML()));
 
   // — Chambres / gîtes, avec tarif nuitée propre à chacun(e) —
   const structs=st.structures&&st.structures.length?st.structures:DEFAULT_SETTINGS.structures;
@@ -13462,6 +13530,7 @@ function cancelSettings(){
       if(c.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
     if(cur.availShare)S.settings.availShare=cur.availShare;
+    if(cur.availLinks)S.settings.availLinks=cur.availLinks;
     applySettings();
   }
   closeM('modalSettings');
@@ -14442,7 +14511,7 @@ function obRender(){
       '<div class="ob-q">Sous quel statut louez-vous ?</div>'+
       '<div class="ob-picks">'+STRUCTURE_TYPES.map(t=>'<button type="button" class="'+(ob.legal===t.id?'on':'')+'" onclick="ob.legal=\''+t.id+'\';obRerender()">'+obEsc(t.label)+'</button>').join('')+
         '<button type="button" class="'+(ob.legal===''?'on':'')+'" onclick="ob.legal=\'\';obRerender()">Je ne sais pas encore</button></div>'+
-      '<p class="ob-hint">Il sert à vos échéances fiscales (Événements) et à vos comptes de l\'année. Modifiable dans Réglages → Structures juridiques.</p>'+
+      '<p class="ob-hint">Il sert à vos échéances fiscales (Événements) et à vos comptes de l\'année. Modifiable dans Réglages → Établissement.</p>'+
       '<div class="ob-q">Taxe de séjour</div>'+
       '<div class="ob-picks">'+
         [['fixed','Montant fixe','Hébergement classé'],['percent','% du prix','Hébergement non classé'],['none','Pas de taxe',''],['later','Je ne sais pas encore','']].map(o=>
@@ -14528,8 +14597,8 @@ function obRender(){
         (ob.result.legal?'<div>'+OB_ICON.check+'<span>'+obEsc((STRUCTURE_TYPES.find(t=>t.id===ob.result.legal)||{}).label||'')+' : échéances fiscales inscrites</span></div>':'')+
         (ob.result.ts==='fixed'||ob.result.ts==='percent'?'<div>'+OB_ICON.check+'<span>Taxe de séjour réglée</span></div>':'')+
       '</div>'+
-      (!ob.result.legal||ob.result.ts==='later'||ob.result.ts==null?'<p class="ob-hint" style="margin-top:12px">À compléter quand vous aurez l\'info : '+[!ob.result.legal?'votre statut (Réglages → Structures juridiques)':'',ob.result.ts==='later'||ob.result.ts==null?'la taxe de séjour, désactivée d\'ici là (Réglages → Taxe de séjour)':''].filter(Boolean).join(' et ')+'.</p>':'')+
-      '<p class="ob-hint" style="margin-top:12px">Un seuil d\'exemple (franchise de TVA) est inscrit dans Réglages → Structures juridiques. '+obEsc(THRESHOLD_NOTE)+'</p>'+
+      (!ob.result.legal||ob.result.ts==='later'||ob.result.ts==null?'<p class="ob-hint" style="margin-top:12px">À compléter quand vous aurez l\'info : '+[!ob.result.legal?'votre statut (Réglages → Établissement)':'',ob.result.ts==='later'||ob.result.ts==null?'la taxe de séjour, désactivée d\'ici là (Réglages → Taxe de séjour)':''].filter(Boolean).join(' et ')+'.</p>':'')+
+      '<p class="ob-hint" style="margin-top:12px">Un seuil d\'exemple (franchise de TVA) est inscrit dans Réglages → Établissement. '+obEsc(THRESHOLD_NOTE)+'</p>'+
       '<p class="ob-hint" style="margin-top:16px">Prenez une minute pour découvrir l\'outil : on vous montre à quoi sert chaque menu.</p>'+
       '<button class="ob-skip" onclick="obClose()">Plus tard, je commence directement</button>';
     foot='<button class="ob-primary" onclick="obClose();obStartTour()">Découvrir l\'outil</button>';

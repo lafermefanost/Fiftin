@@ -1,7 +1,7 @@
 /* Tests du lien de disponibilités (functions/availshare.js) :
  * node functions/availshare.test.js */
 const assert = require("assert");
-const {structureRooms, structureAvailability, waDigits, publicBrand} = require("./availshare");
+const {structureRooms, structureAvailability, waDigits, publicBrand, linkRooms, cleanRoomIds, brandStructure} = require("./availshare");
 
 const settings = {
   structures: [{id: "fanost", name: "La Ferme Fanost"}, {id: "vissou", name: "Vissou"}],
@@ -58,5 +58,13 @@ assert.deepStrictEqual(publicBrand({bg: "#123456", fg: "red", palette: ["#000000
 assert.deepStrictEqual(publicBrand({logo: "data:image/png;base64,iVBORw0KGgo=", bg: "x"}), {bg: null, fg: null, logo: "data:image/png;base64,iVBORw0KGgo="});
 assert.strictEqual(publicBrand({logo: "javascript:alert(1)"}), null);
 assert.strictEqual(publicBrand({logo: "data:image/svg+xml;base64,PHN2Zz4="}), null);
+
+// Liens personnalisés : locations choisies, inexistantes ignorées.
+assert.deepStrictEqual(linkRooms(settings, ["b", "zz", "a"]).map((r) => r.id), ["a", "b"]);
+assert.deepStrictEqual(cleanRoomIds(settings, ["c", "nope"]), ["c"]);
+assert.deepStrictEqual(linkRooms(settings, []), []);
+assert.strictEqual(brandStructure(settings, linkRooms(settings, ["c"])).id, "vissou");
+assert.strictEqual(brandStructure(settings, linkRooms(settings, ["d"])).id, "fanost"); // sans group → 1re structure
+assert.strictEqual(brandStructure(settings, []), null);
 
 console.log("availshare : tous les tests passent");
