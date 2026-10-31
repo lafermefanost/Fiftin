@@ -2610,6 +2610,7 @@ body.map-fullscreen{overflow:hidden;}
 .host-site-members .host-listing-card{background:#fff; color:var(--ink); margin-bottom:12px; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.18);}
 .hsm-label{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--yellow); margin:6px 4px 8px;}
 .hsm-label svg{width:16px; height:16px;}
+.hsm-label.hsh-label{margin:0 0 12px;}
 .hsm-add{display:block; width:100%; border:1.5px dashed var(--sauge-light); background:transparent; border-radius:16px; padding:13px; font-family:'Jost',sans-serif; font-size:14px; font-weight:600; color:var(--sauge); cursor:pointer;}
 .host-site-members > .hsm-add{border-color:rgba(255,255,255,.55); color:#fff;}
 /* Hébergement d'un établissement : construit comme l'en-tête de
@@ -13798,13 +13799,16 @@ function hostSiteHtml(g, listings){
   var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation", g.members.length<2 && "un deuxième hébergement (l’établissement apparaît aux voyageurs à partir de deux hébergements en ligne)"].filter(Boolean);
   // Une seule carte : en-tête vert propriétaire (l'établissement), puis
   // ses logements en sous-cartes.
+  // « Établissement 1 » tout en haut de la carte verte (demande de César),
+  // numéroté comme ses hébergements.
+  var siteNo = hostSiteGroups(listings).filter(function(x){ return x.members; }).map(function(x){ return x.siteId; }).indexOf(g.siteId)+1;
   return '<section class="host-site">'+
     '<div class="host-site-head">'+
+      '<div class="hsm-label hsh-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement '+(siteNo||1)+'</div>'+
       '<div class="hsh-top">'+
         hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots)+
         '<div class="hsh-body">'+
           hsToolsHtml(siteStatus, nOn>0, siteActs)+
-          '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
           '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
           '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' hébergement'+(g.members.length>1?'s':'')+'</span>'+
         '</div>'+
@@ -13818,7 +13822,7 @@ function hostSiteHtml(g, listings){
     '<div class="host-site-members">'+
       // « Hébergement 1 », puis sa carte ; « Hébergement 2 »… (demande de César)
       g.members.map(function(l, i){
-        return '<div class="hsm-label">'+HS_ICON_HOUSE+'Hébergement'+(g.members.length>1 ? ' '+(i+1) : '')+'</div>'+hostListingCardHtml(l, listings, true);
+        return '<div class="hsm-label">'+HS_ICON_HOUSE+'Hébergement '+(i+1)+'</div>'+hostListingCardHtml(l, listings, true);
       }).join("")+
       '<button type="button" class="hsm-add" data-site-add="'+esc(first.id)+'">+ Ajouter un hébergement à l’établissement</button>'+
     '</div>'+
