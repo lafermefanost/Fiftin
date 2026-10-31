@@ -1,0 +1,39 @@
+# Réparation du catalogue des consommations d'un compte
+# (scripts/catalog-repair.js) : rétablit les anciens prix sur les ventes
+# passées après un changement de prix non daté.
+#
+# Se lance à chaque mise à jour de main qui touche le script, sa config,
+# son mode ou ce fichier. Mode lu dans scripts/catalog-repair.mode :
+#   simulation  : rien n'est écrit, rapport dans le journal du job ;
+#   application : réécrit uniquement le catalogue du compte (transaction).
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Réparation du catalogue
+
+on:
+  push:
+    branches: [main]
+    paths: ["scripts/catalog-repair.js", "scripts/catalog-repair-lib.js", "scripts/catalog-repair.mode", "scripts/catalog-repair.config.json", ".github/workflows/catalog-repair.yml"]
+
+concurrency:
+  group: catalog-repair
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Tests
+        run: node scripts/catalog-repair.test.js
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Dépendances
+        run: npm install --no-save --no-package-lock --silent firebase-admin@12
+        working-directory: scripts
+      - name: Réparation
+        run: node scripts/catalog-repair.js
