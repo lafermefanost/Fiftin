@@ -1226,6 +1226,14 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mocc-bar-bg{flex:1;height:11px;background:var(--light);border-radius:3px;overflow:hidden;}
 .mocc-bar-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s;}
 .mocc-pct{font-size:13px;font-weight:500;color:var(--gray);width:30px;text-align:right;flex-shrink:0;}
+.yr-room-hd{display:flex;align-items:center;gap:8px;}
+.yr-room-t{flex:1;min-width:0;}
+.yr-room-btns{display:flex;gap:6px;flex:none;}
+.yr-room-btn{width:32px;height:32px;border-radius:50%;border:none;padding:0;display:inline-flex;align-items:center;justify-content:center;background:var(--light);color:var(--gray);cursor:pointer;}
+.yr-room-btn svg{width:17px;height:17px;}
+.yr-room-sw[data-mode="occ"] .yr-room-btn[data-for="occ"],.yr-room-sw[data-mode="rev"] .yr-room-btn[data-for="rev"]{background:var(--green);color:#fff;}
+.yr-room-sw[data-mode="occ"] [data-for="rev"].yr-room-t,.yr-room-sw[data-mode="rev"] [data-for="occ"].yr-room-t,
+.yr-room-sw[data-mode="occ"] .yr-room-b[data-for="rev"],.yr-room-sw[data-mode="rev"] .yr-room-b[data-for="occ"]{display:none;}
 .mocc-amt{font-size:13px;font-weight:600;color:var(--dark);width:78px;text-align:right;flex-shrink:0;white-space:nowrap;}
 .mocc-taxe{display:flex;justify-content:space-between;align-items:center;
   margin-top:10px;padding-top:10px;border-top:1px solid var(--light);
@@ -13667,6 +13675,13 @@ function irSimHTML(){
     </div>
   </div>`;
 }
+// Vue Année → carte « par location » : occupation ou revenu (choix gardé sur l'appareil).
+let yearRoomMode=(()=>{try{return localStorage.getItem('ff2_yr_room')==='rev'?'rev':'occ';}catch(e){return 'occ';}})();
+function setYearRoomMode(m){
+  yearRoomMode=m==='rev'?'rev':'occ';
+  try{localStorage.setItem('ff2_yr_room',yearRoomMode);}catch(e){}
+  document.querySelectorAll('.yr-room-sw').forEach(el=>el.setAttribute('data-mode',yearRoomMode));
+}
 function renderYear(){
   const year=S.year;
   if(yearOpenGroupsFor!==year){
@@ -13954,6 +13969,19 @@ function renderYear(){
         <div class="mocc-bar-bg"><div class="mocc-bar-fill" style="width:${Math.round(x.rev/maxRoomRev*100)}%"></div></div>
         <div class="mocc-amt"><span class="money">${Math.round(x.rev).toLocaleString('fr-FR')}</span> €</div>
       </div>`).join('');
+    // Une seule carte, deux pictos en haut à droite pour passer de
+    // l'occupation au revenu (demande de César) ; le titre suit. Choix gardé
+    // sur l'appareil (yearRoomMode).
+    const occTitle=`Occupation par location <span class="mocc-title-note">(${yrElapsed>0?'à ce jour':'réservations'})</span>`;
+    const revTitle=`Revenu par location <span class="mocc-title-note">(année, à venir compris)</span>`;
+    const roomSwitchPanel=()=>`<div class="tsec-panel yr-room-sw" data-mode="${yearRoomMode}">
+      <div class="yr-subhd yr-room-hd"><span class="yr-room-t" data-for="occ">${occTitle}</span><span class="yr-room-t" data-for="rev">${revTitle}</span>
+        <span class="yr-room-btns">
+          <button type="button" class="yr-room-btn" data-for="occ" title="Occupation" aria-label="Occupation par location" onclick="event.stopPropagation();setYearRoomMode('occ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18V7"/><path d="M3 14h18v4"/><path d="M21 14v-2a3 3 0 0 0-3-3h-7v5"/><circle cx="7" cy="11" r="1.6"/></svg></button>
+          <button type="button" class="yr-room-btn" data-for="rev" title="Revenu" aria-label="Revenu par location" onclick="event.stopPropagation();setYearRoomMode('rev')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6.5A7 7 0 1 0 18 17.5"/><path d="M4 10.5h9M4 13.5h9"/></svg></button>
+        </span></div>
+      <div class="tsec-body"><div class="yr-room-b" data-for="occ">${roomOccBody}</div><div class="yr-room-b" data-for="rev">${roomRevBody}</div></div>
+    </div>`;
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleYearGroup('${gid}',${structs.length>1})">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
@@ -13991,8 +14019,7 @@ function renderYear(){
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,'var(--green)'))}
-        ${st.rooms.length?subSection(`Occupation par location <span class="mocc-title-note">(${yrElapsed>0?'à ce jour':'réservations'})</span>`,roomOccBody):''}
-        ${st.rooms.length?subSection(`Revenu par location <span class="mocc-title-note">(année, à venir compris)</span>`,roomRevBody):''}
+        ${st.rooms.length?roomSwitchPanel():''}
         ${subSection(topClientRows.length?`Top ${topClientRows.length} client${topClientRows.length>1?'s':''}`:'Top clients',topClientsBody)}
         <span class="money">${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}</span>
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
