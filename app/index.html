@@ -5529,6 +5529,66 @@ function getIcalExport(rid,regenerate){
     rNow.icalExportUrl=res.url;saveSettings();renderSettings();
   }).catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
 }
+// ── Lien de disponibilités d'une structure (demande de César) ──
+// Page publique fiftin.fr/dispo/?t=… à partager aux habitués : nuit par nuit
+// sur 6 mois, Disponible / Peut-être / Complet pour l'ensemble des locations
+// de la structure — jamais de nom, de nombre de chambres ni de prix (calcul
+// côté serveur, fonctions availShareGetUrl / availShare). Formule Avancé.
+// URL et numéro gardés dans S.settings.availShare[structureId] pour
+// l'affichage ; le jeton et le numéro font foi côté serveur.
+function availShareHTML(s){
+  if(currentRole==='personnel')return '';
+  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Une page simple à partager à vos habitués : nuit par nuit sur 6 mois, « Probablement disponible », « Peut-être disponible » (réservation en option) ou « Complet », pour l'ensemble des locations de cette structure, à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Toucher une nuit leur ouvre WhatsApp vers vous.</div>`;
+  if(S.settings.plan!=='pro')return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<div style="font-size:11px;color:var(--gray)">Réservé à la formule Avancé (Réglages → Compte).</div></div>`;
+  const sh=(S.settings.availShare||{})[s.id];
+  if(!sh||!sh.url)return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<button class="set-add" onclick="availShareGet('${s.id}',false)">Créer le lien</button></div>`;
+  const u=sh.url.replace(/"/g,'&quot;');
+  return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}
+    <div style="display:flex;gap:6px;align-items:center"><input class="set-fi" style="flex:1;font-size:11px;min-width:0" readonly value="${u}" onclick="this.select()">
+      <button class="btn-s" style="padding:4px 10px" onclick="availShareCopy('${s.id}',this)">Copier</button>
+      <button class="btn-s" style="padding:4px 10px" onclick="availShareSend('${s.id}')">Envoyer</button></div>
+    <div class="sc-field" style="margin-top:8px"><label>Numéro WhatsApp affiché</label>
+      <input class="set-fi" style="width:100%;font-size:12px" inputmode="tel" value="${(sh.phone||'').replace(/"/g,'&quot;')}" placeholder="Vide = celui de votre profil Fiftin Séjours" onchange="availSharePhone('${s.id}',this)">
+      <div id="availSt-${s.id}" style="font-size:11px;color:var(--gray);margin-top:3px"></div></div>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:11px">
+      <a href="${u}" target="_blank" rel="noopener" style="color:var(--green)">Ouvrir la page</a>
+      <a href="#" style="color:var(--gray)" onclick="event.preventDefault();if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner pour tous ceux à qui vous l\\'avez envoyé.'))availShareGet('${s.id}',true)">Changer le lien</a>
+    </div></div>`;
+}
+function availShareSet(sid,patch){
+  if(!S.settings.availShare)S.settings.availShare={};
+  S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},patch);
+  saveSettings();renderSettings();
+}
+function availShareGet(sid,regenerate){
+  if(!icalAvailable()){alert('Connexion requise.');return;}
+  icalCall('availShareGetUrl',{structureId:sid,regenerate:!!regenerate}).then(res=>availShareSet(sid,{url:res.url}))
+    .catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
+}
+function availShareCopy(sid,btn){
+  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
+  const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sh.url).then(done).catch(()=>{});
+  else{const i=btn.parentNode.querySelector('input');i.select();document.execCommand('copy');done();}
+}
+function availShareSend(sid){
+  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
+  const st=(S.settings.structures||[]).find(x=>x.id===sid);
+  const text='Nos disponibilités'+(st&&st.name?' ('+st.name+')':'')+', mises à jour en direct :';
+  if(navigator.share)navigator.share({title:'Disponibilités',text,url:sh.url}).catch(()=>{});
+  else window.open('https://wa.me/?text='+encodeURIComponent(text+' '+sh.url),'_blank','noopener');
+}
+function availSharePhone(sid,input){
+  const v=input.value.trim();
+  if(!icalAvailable()){alert('Connexion requise.');return;}
+  const stEl=byId('availSt-'+sid);if(stEl)stEl.textContent='Enregistrement…';
+  icalCall('availShareGetUrl',{structureId:sid,phone:v}).then(res=>{
+    if(!S.settings.availShare)S.settings.availShare={};
+    S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},{url:res.url,phone:v});
+    saveSettings();
+    const e=byId('availSt-'+sid);if(e)e.textContent='Enregistré ✓';
+  }).catch(e=>{const el=byId('availSt-'+sid);if(el)el.textContent='Enregistrement impossible : '+((e&&e.message)||e);});
+}
 function copyIcalExport(rid,btn){
   const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r||!r.icalExportUrl)return;
   const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
@@ -9891,6 +9951,7 @@ function renderSettings(){
     });
     structBody+=`<button class="set-add" onclick="addStructureThreshold('${s.id}')">+ Ajouter un seuil</button>
       </div>
+      ${availShareHTML(s)}
     </div>`;
   });
   if(st.plan==='pro'||structsForThr.length<1){
@@ -12839,6 +12900,7 @@ function cancelSettings(){
       if(c.icalImports)r.icalImports=c.icalImports;else delete r.icalImports;
       if(c.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
+    if(cur.availShare)S.settings.availShare=cur.availShare;
     applySettings();
   }
   closeM('modalSettings');

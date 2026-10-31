@@ -30,6 +30,7 @@ const {onSchedule} = require("firebase-functions/v2/scheduler");
 const crypto = require("crypto");
 const pricing = require("./pricing");
 const ical = require("./ical");
+const availshare = require("./availshare");
 const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
@@ -926,6 +927,88 @@ exports.icalExport = onRequest(async (req, res) => {
   res.set("Content-Type", "text/calendar; charset=utf-8");
   res.set("Cache-Control", "no-cache, no-store, max-age=0");
   res.status(200).send(ical.buildIcal(ranges));
+});
+
+/* ---------------- Lien de disponibilités d'une structure ----------------
+ * Demande de César : un lien secret à partager aux habitués, qui affiche
+ * nuit par nuit « Disponible / Peut-être / Complet » pour une structure
+ * (toutes ses locations confondues), sur 6 mois. Formule Avancé (plan
+ * "pro") seulement. Même principe que icalExportTokens : jeton aléatoire
+ * dans availShareTokens/{token} (aucune règle Firestore cliente → aucun
+ * accès direct), calcul côté serveur, rien d'autre que le résultat envoyé
+ * (jamais de nom, de nombre de chambres ni de prix). */
+const AVAIL_SHARE_DAYS = 183;
+const AVAIL_SHARE_PAGE = "https://fiftin.fr/dispo/?t=";
+
+exports.availShareGetUrl = onCall(async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Connexion requise.");
+  const uid = request.auth.uid;
+  const data = request.data || {};
+  const structureId = typeof data.structureId === "string" ? data.structureId.slice(0, 80) : "";
+  if (!structureId) throw new HttpsError("invalid-argument", "Structure manquante.");
+  const acc = await db.collection("accounts").doc(uid).get();
+  const settings = acc.exists ? (acc.data().settings || {}) : {};
+  if (settings.plan !== "pro") throw new HttpsError("permission-denied", "Réservé à la formule Avancé.");
+  const col = db.collection("availShareTokens");
+  const existing = await col.where("uid", "==", uid).where("structureId", "==", structureId).get();
+  const phone = typeof data.phone === "string" ? data.phone.trim().slice(0, 40) : undefined;
+  let token = null;
+  if (!existing.empty && !data.regenerate) {
+    token = existing.docs[0].id;
+    if (phone !== undefined) await existing.docs[0].ref.update({phone: phone});
+  } else {
+    const prevPhone = existing.empty ? "" : (existing.docs[0].data().phone || "");
+    await Promise.all(existing.docs.map(function (d) { return d.ref.delete(); }));
+    token = crypto.randomBytes(24).toString("hex");
+    await col.doc(token).set({uid: uid, structureId: structureId, phone: phone !== undefined ? phone : prevPhone, createdAt: new Date().toISOString()});
+  }
+  return {url: AVAIL_SHARE_PAGE + token};
+});
+
+/* Numéro WhatsApp affiché : celui saisi pour ce lien, sinon celui du
+ * profil hôte Fiftin Séjours, sinon celui d'une de ses annonces. */
+async function availSharePhone(uid, tokPhone) {
+  if (availshare.waDigits(tokPhone)) return availshare.waDigits(tokPhone);
+  const hp = await db.collection("hostProfiles").doc(uid).get();
+  const p1 = hp.exists ? hp.data().contactPhone : "";
+  if (availshare.waDigits(p1)) return availshare.waDigits(p1);
+  const ls = await db.collection("listings").where("ownerUid", "==", uid).get();
+  let found = "";
+  ls.forEach(function (d) { const l = d.data(); if (!found && l.status !== "removed" && availshare.waDigits(l.phone)) found = availshare.waDigits(l.phone); });
+  return found;
+}
+
+exports.availShare = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Cache-Control", "no-cache, no-store, max-age=0");
+  res.set("X-Robots-Tag", "noindex");
+  const token = String(req.query.t || "");
+  if (!/^[a-f0-9]{48}$/.test(token)) { res.status(404).json({error: "not_found"}); return; }
+  const tokSnap = await db.collection("availShareTokens").doc(token).get();
+  if (!tokSnap.exists) { res.status(404).json({error: "not_found"}); return; }
+  const tok = tokSnap.data();
+  const acc = await db.collection("accounts").doc(tok.uid).get();
+  if (!acc.exists) { res.status(404).json({error: "not_found"}); return; }
+  const data = acc.data();
+  const settings = data.settings || {};
+  if (settings.plan !== "pro") { res.status(404).json({error: "off"}); return; }
+  const struct = (settings.structures || []).find(function (s) { return s && s.id === tok.structureId; });
+  const rooms = availshare.structureRooms(settings, tok.structureId);
+  if (!struct && !rooms.length) { res.status(404).json({error: "not_found"}); return; }
+  const from = parisToday();
+  const days = availshare.structureAvailability({
+    rooms: rooms,
+    bookings: data.bookings || [],
+    feedRangesByRoom: await icalRangesByRoom(tok.uid),
+    from: from,
+    days: AVAIL_SHARE_DAYS,
+  });
+  res.status(200).json({
+    name: (struct && struct.name) || settings.name || "",
+    from: from,
+    days: days,
+    phone: await availSharePhone(tok.uid, tok.phone),
+  });
 });
 
 /* Recalcul quotidien des prix Séjours issus de Planning (phase 3) : la
