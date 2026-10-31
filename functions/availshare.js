@@ -36,6 +36,26 @@ function structureRooms(settings, structureId) {
   });
 }
 
+/* Lien personnalisé : les locations choisies (dans l'ordre du compte),
+ * en ignorant celles qui n'existent plus. */
+function linkRooms(settings, roomIds) {
+  const want = new Set((roomIds || []).map(String));
+  return ((settings && settings.rooms) || []).filter(function (r) { return r && r.id && want.has(String(r.id)); });
+}
+/* Identifiants valides seulement (locations existantes du compte). */
+function cleanRoomIds(settings, roomIds) {
+  return linkRooms(settings, roomIds).map(function (r) { return r.id; });
+}
+/* Identité visuelle d'un lien : celle de la structure de sa première
+ * location (toutes les locations d'une même structure dans le cas courant). */
+function brandStructure(settings, rooms) {
+  const s = settings || {};
+  const structs = Array.isArray(s.structures) && s.structures.length ? s.structures : [{id: "struct1"}];
+  if (!rooms || !rooms.length) return null;
+  const gid = rooms[0].group || structs[0].id;
+  return structs.find(function (x) { return x && x.id === gid; }) || null;
+}
+
 /* days : chaîne d'une lettre par nuit à partir de `from` — F (libre),
  * M (peut-être), X (complet). Compacte et sans aucune autre donnée. */
 function structureAvailability(opts) {
@@ -98,4 +118,4 @@ function publicBrand(b) {
   return out.bg || out.logo ? out : null;
 }
 
-module.exports = {structureRooms, structureAvailability, waDigits, addDays, publicBrand};
+module.exports = {structureRooms, structureAvailability, waDigits, addDays, publicBrand, linkRooms, cleanRoomIds, brandStructure};
