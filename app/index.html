@@ -2354,9 +2354,11 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .ob-bubble h4{margin:4px 0 6px;font-size:18px;font-weight:600;color:var(--green-deep);}
 .ob-bubble p{margin:0;font-size:14px;line-height:1.5;color:#4a4a44;}
 .ob-bubble-foot{display:flex;align-items:center;gap:10px;margin-top:14px;}
-.ob-dots{display:flex;gap:4px;flex:1;}
-.ob-dots i{width:6px;height:6px;border-radius:3px;background:var(--light);transition:width .2s;}
-.ob-dots i.on{width:16px;background:var(--green);}
+.ob-prog{flex:1;height:4px;border-radius:2px;background:var(--light);overflow:hidden;margin-right:4px;}
+.ob-prog i{display:block;height:100%;border-radius:2px;background:var(--green);transition:width .3s;}
+.ob-quit{position:absolute;z-index:1;top:12px;right:12px;display:flex;align-items:center;gap:5px;border:none;border-radius:999px;background:var(--cream);color:var(--gray);font:500 12.5px 'Jost',sans-serif;padding:5px 10px;cursor:pointer;}
+.ob-quit span{font-size:11px;}
+.ob-bubble-kicker{padding-right:84px;}
 .ob-bubble .ob-primary{flex:none;padding:10px 18px;font-size:14.5px;}
 .ob-bubble .ob-back{padding:8px 4px;font-size:14px;}
 .ob-replay{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#EDF1E8;border:none;border-radius:14px;padding:12px 14px;margin:0 0 12px;
@@ -12860,7 +12862,7 @@ function ovClose(e,id){if(e.target.classList.contains('overlay'))closeM(id);}
 document.addEventListener('click',e=>{
   // Clear range selection if click is outside the grid (or the Vue
   // Location, qui a la même sélection de plage au clic — voir dayCellHtml)
-  if(rangeSel&&!e.target.closest('#gridWrap')&&!e.target.closest('#todayWrap')&&!e.target.closest('#rangeBar'))clearRangeSel();
+  if(rangeSel&&!e.target.closest('#gridWrap')&&!e.target.closest('#todayWrap')&&!e.target.closest('#rangeBar')&&!(byId('obTour')&&byId('obTour').style.display==='block'))clearRangeSel();
 });
 document.addEventListener('keydown',e=>{
   if(e.key!=='Escape')return;
@@ -13958,56 +13960,152 @@ function obFinish(){
 
 // ── Visite guidée ───────────────────────────────────────────────
 // sel : premier élément VISIBLE de la liste (ordinateur / téléphone n'ont pas
-// les mêmes boutons) ; étape sautée si aucun n'est visible. view : vue
-// affichée pendant la bulle, pour voir ce dont on parle.
+// les mêmes boutons) ; étape sautée si aucun n'est visible. el() : cible
+// calculée à l'affichage (case libre, bloc de la fiche). view : vue affichée
+// pendant la bulle. chap : chapitre affiché au-dessus du titre.
+// Chapitre « Créer une réservation » (demande de César) : démonstration, la
+// visite colore elle-même une plage libre et ouvre la fiche réservation
+// (range / modal) ; le voile de la visite bloque les touchers et la fiche est
+// refermée sans rien enregistrer en quittant ces étapes. « Quitter » en haut
+// de chaque bulle (demande de César) : sortie à tout moment.
+const OB_RESA='Créer une réservation';
 const OB_TOUR=[
-  {sel:['#mn-grid','#vt-grid'],view:'grid',title:'Grille',text:'Toutes vos locations, jour par jour. Touchez une case libre (ou faites glisser sur plusieurs jours) pour réserver ; touchez une réservation pour l\'ouvrir.'},
+  {sel:['#mn-grid','#vt-grid'],view:'grid',title:'Grille',text:'Toutes vos locations, jour par jour, avec vos réservations en couleur. Touchez une réservation pour l\'ouvrir.'},
   {sel:['#mn-today','#vt-today'],view:'today',title:'Location',text:'L\'année d\'un seul logement à la fois : ses périodes occupées et libres d\'un coup d\'œil. Passez d\'une location à l\'autre avec les flèches.'},
+  {chap:OB_RESA,view:'grid',range:true,wait:260,el:()=>obSpotEls(),title:'Choisir les dates dans la Grille',text:'Touchez la case libre du jour d\'arrivée, puis celle de la dernière nuit : la période se colore. Touchez une autre case pour l\'allonger ou la raccourcir.'},
+  {chap:OB_RESA,view:'grid',range:true,sel:['#rangeBar'],title:'Réserver',text:'La location, les dates et le nombre de nuits s\'affichent ici. « Réserver → » ouvre la fiche réservation déjà remplie ; ✕ annule la sélection.'},
+  {chap:OB_RESA,view:'today',wait:160,el:()=>obFreeLocCell(),title:'Ou depuis la vue Location',text:'Même geste dans le calendrier d\'une location : la case d\'arrivée, puis celle de la dernière nuit, puis « Réserver → ».'},
+  {chap:OB_RESA,view:'grid',sel:['#addResaBtn'],title:'+ Résa',text:'Ou partez de zéro : la fiche s\'ouvre à la date du jour et vous choisissez la location et les dates vous-même.'},
+  {chap:OB_RESA,modal:true,el:()=>obMsec(0),title:'Le client',text:'Tapez son nom : vos clients déjà connus s\'affichent, sinon « + Créer » l\'ajoute à votre fichier client.'},
+  {chap:OB_RESA,modal:true,el:()=>byId('bRoom')&&byId('bRoom').closest('.fg'),title:'Location, voyageurs, prix',text:'Le prix de l\'hébergement pour tout le séjour se calcule avec le tarif de la location (en gris) : tapez un montant pour le remplacer. Plusieurs locations au même nom ? « + Ajouter une location ».'},
+  {chap:OB_RESA,modal:true,el:()=>obUnion([byId('bIn')&&byId('bIn').closest('.fg'),byId('bOut')&&byId('bOut').closest('.fg'),byId('bstatus-ok')&&byId('bstatus-ok').closest('.fg')]),title:'Dates et statut',text:'Arrivée et départ, avec l\'heure si vous la connaissez. Confirmé, ou Option tant que le client n\'a pas confirmé.'},
+  {chap:OB_RESA,modal:true,el:()=>obSvcBlock(),title:'Services',text:'Petit-déjeuner et table d\'hôtes, nuit par nuit. Les consommations du séjour s\'ajoutent une fois la réservation enregistrée.'},
+  {chap:OB_RESA,modal:true,el:()=>obMsec(3),title:'Paiement',text:'Taxe de séjour, paiement en attente, acompte ou honoré, et la source (direct, Airbnb, Booking…). Le total du séjour se détaille en bas.'},
+  {chap:OB_RESA,modal:true,sel:['#bSaveTopBtn'],title:'Enregistrer',text:'« ✓ OK » enregistre la réservation ; ✕ ferme sans rien garder. Ici, rien n\'est enregistré : c\'était une démonstration.'},
   {sel:['#mn-week','#vt-week'],view:'week',title:'Semaine',text:'Votre quotidien : arrivées, départs, ménage, table d\'hôtes et extras du jour, jour par jour.'},
   {sel:['#mn-month','#vt-month'],view:'month',title:'Mois',text:'Le bilan du mois : revenus, taux d\'occupation, charges et marge.'},
   {sel:['#mn-year','#vt-year'],view:'year',title:'Année',text:'Vos comptes de l\'année par structure, avec vos seuils fiscaux et un simulateur d\'impôt.'},
-  {sel:['#addResaBtn'],view:'grid',title:'Nouvelle réservation',text:'Ajoutez une réservation en quelques secondes : client, dates, location, prix. Les réservations Airbnb et Booking, elles, arrivent toutes seules.'},
   {sel:['#guestsBtn'],title:'Clients',text:'Votre fichier client : coordonnées, séjours passés, notes. Il se remplit au fil des réservations.'},
   {sel:['button[title="Événements"]'],title:'Événements',text:'Vos rendez-vous pro et perso, et les échéances fiscales de votre structure, déjà inscrites.'},
   {sel:['#settingsBtn'],title:'Réglages',text:'Locations et tarifs, liens Airbnb et Booking, équipe, compte et formule. Vous pourrez y relancer cette visite.'},
   {sel:['#syncPip'],title:'Enregistrement',text:'Ce point indique l\'état de l\'enregistrement : vert, tout est sauvegardé et visible sur vos autres appareils.'},
   {sel:['#backToSejoursBtn'],title:'Fiftin Séjours',text:'Votre annonce en réservation directe : vos disponibilités y sont mises à jour depuis ce planning.'}
 ];
-let obTourIdx=0, obTourSteps=[];
+let obTourIdx=0, obTourSteps=[], obDir=1, obSpot=null, obModalOpen=false, obTimer=0;
+function obIsVis(e){if(!e)return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden';}
 function obVisible(sel){
-  for(const s of sel){const e=document.querySelector(s);if(e){const r=e.getBoundingClientRect();if(r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden')return e;}}
+  for(const s of sel){const e=document.querySelector(s);if(obIsVis(e))return e;}
   return null;
+}
+function obTarget(s){
+  if(!s)return null;
+  if(s.el){const e=s.el();return obIsVis(e)?e:null;}
+  return s.sel?obVisible(s.sel):null;
+}
+// Élément réellement visible à l'écran (pas sous l'en-tête ni hors du cadre
+// défilant) : on interroge son point central, voile de la visite traversé.
+function obOnScreen(e){
+  const r=e.getBoundingClientRect();if(r.width<=0||r.height<=0)return false;
+  const x=r.left+r.width/2, y=r.top+r.height/2;
+  if(x<0||y<0||x>innerWidth||y>innerHeight)return false;
+  const t=byId('obTour');const pe=t?t.style.pointerEvents:'';if(t)t.style.pointerEvents='none';
+  const hit=document.elementFromPoint(x,y);if(t)t.style.pointerEvents=pe;
+  return !!hit&&(hit===e||e.contains(hit));
+}
+// Boîte englobante de plusieurs éléments (deux cases, trois champs…) : un
+// élément fantôme posé dessus sert de cible.
+function obUnion(els){
+  els=els.filter(obIsVis);if(!els.length)return null;
+  let l=1e9,t=1e9,r=-1e9,b=-1e9;
+  els.forEach(e=>{const q=e.getBoundingClientRect();l=Math.min(l,q.left);t=Math.min(t,q.top);r=Math.max(r,q.right);b=Math.max(b,q.bottom);});
+  let g=byId('obGhost');
+  if(!g){g=document.createElement('div');g.id='obGhost';g.style.cssText='position:fixed;pointer-events:none;visibility:visible;';document.body.appendChild(g);}
+  g.style.left=l+'px';g.style.top=t+'px';g.style.width=(r-l)+'px';g.style.height=(b-t)+'px';
+  return g;
+}
+// Deux nuits libres de suite, à partir d'aujourd'hui, visibles dans la Grille
+// (à défaut une seule nuit, à défaut la grille entière).
+function obFindSpot(){
+  const today=todayISO(), cells=[...document.querySelectorAll('#gridWrap td.rc.empty')].filter(c=>c.dataset.date>=today);
+  let one=null;
+  for(const c of cells){
+    if(!obOnScreen(c))continue;
+    const n=document.querySelector('#gridWrap td.rc.empty[data-room="'+c.dataset.room+'"][data-date="'+addDays(c.dataset.date,1)+'"]');
+    if(n&&obOnScreen(n))return{roomId:c.dataset.room,start:c.dataset.date,end:n.dataset.date};
+    if(!one)one={roomId:c.dataset.room,start:c.dataset.date,end:c.dataset.date};
+  }
+  return one;
+}
+function obSpotEls(){
+  if(!obSpot)return byId('gridWrap');
+  const q=d=>document.querySelector('#gridWrap td.rc[data-room="'+obSpot.roomId+'"][data-date="'+d+'"]');
+  return obUnion([q(obSpot.start),q(obSpot.end)]);
+}
+function obFreeLocCell(){
+  const today=todayISO();
+  const c=[...document.querySelectorAll('#todayWrap .rv-day-cell[data-date]')].find(e=>e.dataset.date>=today&&!e.querySelector('.rv-seg')&&obIsVis(e));
+  if(c){if(!obOnScreen(c))c.scrollIntoView({block:'center'});return c;}
+  const m=[...document.querySelectorAll('#todayWrap .rvm-day:not(.blank):not([style])')].find(obOnScreen);
+  return m||byId('todayWrap');
+}
+function obMsec(i){return document.querySelectorAll('#modalBooking .msec')[i]||null;}
+function obSvcBlock(){
+  const f=['breakfastListFg','dinnerListFg'].map(byId).filter(obIsVis);
+  return f.length?obMsec(2):null;
+}
+function obSetRange(on){
+  if(on&&obSpot){
+    if(!rangeSel||rangeSel.roomId!==obSpot.roomId||rangeSel.start!==obSpot.start||rangeSel.end!==obSpot.end){
+      rangeSel={roomId:obSpot.roomId,start:obSpot.start,end:obSpot.end};renderRangeHighlight();showRangeBar();
+    }
+  } else if(!on&&rangeSel&&obSpot&&rangeSel.roomId===obSpot.roomId&&rangeSel.start===obSpot.start)clearRangeSel();
+}
+function obSetModal(on){
+  if(on&&!obModalOpen){
+    obModalOpen=true;
+    if(obSpot)openAddModal(obSpot.roomId,obSpot.start,addDays(obSpot.end,1)); else openAddModal();
+  } else if(!on&&obModalOpen){obModalOpen=false;closeM('modalBooking');}
 }
 function obStartTour(){
   if(currentRole==='personnel')return;
-  obTourSteps=OB_TOUR.filter(s=>obVisible(s.sel));
+  obTourSteps=OB_TOUR.filter(s=>s.el||s.chap||obVisible(s.sel));
   if(!obTourSteps.length)return;
-  obTourIdx=0;
+  obTourIdx=0;obDir=1;obSpot=null;obModalOpen=false;
   let t=byId('obTour');
   if(!t){t=document.createElement('div');t.id='obTour';t.className='ob-tour';
     t.innerHTML='<div class="ob-tour-hole" id="obHole"></div><div class="ob-bubble" id="obBubble" role="dialog" aria-live="polite"></div>';
     document.body.appendChild(t);
     window.addEventListener('resize',obPlace);
     document.addEventListener('keydown',e=>{ if(!byId('obTour')||byId('obTour').style.display==='none')return;
-      if(e.key==='Escape')obEndTour(); else if(e.key==='ArrowRight')obTourGo(1); else if(e.key==='ArrowLeft')obTourGo(-1); });
+      e.stopImmediatePropagation();
+      if(e.key==='Escape')obEndTour(); else if(e.key==='ArrowRight')obTourGo(1); else if(e.key==='ArrowLeft')obTourGo(-1); },true);
   }
   t.style.display='block';
   obTourShow();
 }
 function obTourShow(){
   const s=obTourSteps[obTourIdx];if(!s)return obEndTour();
+  clearTimeout(obTimer);
+  obSetModal(!!s.modal);
+  if(!s.range)obSetRange(false);
   if(s.view&&S.view!==s.view)setView(s.view);
   const n=obTourSteps.length, last=obTourIdx===n-1;
-  byId('obBubble').innerHTML='<div class="ob-bubble-kicker">Visite guidée · '+(obTourIdx+1)+'/'+n+'</div><h4>'+s.title+'</h4><p>'+s.text+'</p>'+
-    '<div class="ob-bubble-foot"><div class="ob-dots">'+obTourSteps.map((_,i)=>'<i class="'+(i===obTourIdx?'on':'')+'"></i>').join('')+'</div>'+
-      (obTourIdx>0?'<button class="ob-back" onclick="obTourGo(-1)">Retour</button>':'<button class="ob-back" onclick="obEndTour()">Passer</button>')+
+  byId('obBubble').innerHTML='<button class="ob-quit" onclick="obEndTour()" aria-label="Quitter la visite guidée">Quitter<span aria-hidden="true">✕</span></button>'+
+    '<div class="ob-bubble-kicker">'+(s.chap||'Visite guidée')+' · '+(obTourIdx+1)+'/'+n+'</div><h4>'+s.title+'</h4><p>'+s.text+'</p>'+
+    '<div class="ob-bubble-foot"><div class="ob-prog"><i style="width:'+Math.round((obTourIdx+1)/n*100)+'%"></i></div>'+
+      (obTourIdx>0?'<button class="ob-back" onclick="obTourGo(-1)">Retour</button>':'')+
       '<button class="ob-primary" onclick="obTourGo(1)">'+(last?'Terminer':'Suivant')+'</button></div>';
-  requestAnimationFrame(obPlace);
+  const go=()=>{
+    if(s.range){if(!obSpot)obSpot=obFindSpot();obSetRange(true);}
+    if(s.modal){const e=obTarget(s);if(e&&e.id!=='obGhost')e.scrollIntoView({block:'center'});}
+    requestAnimationFrame(obPlace);
+  };
+  if(s.wait||s.modal)obTimer=setTimeout(go,s.wait||60); else go();
 }
 function obPlace(){
   const t=byId('obTour');if(!t||t.style.display==='none')return;
-  const s=obTourSteps[obTourIdx];const el=s&&obVisible(s.sel);
-  if(!el){obTourGo(1);return;}
+  const s=obTourSteps[obTourIdx];const el=obTarget(s);
+  if(!el){obTourGo(obDir);return;}
   const r=el.getBoundingClientRect(), pad=6;
   const hole=byId('obHole'), b=byId('obBubble');
   hole.style.left=(r.left-pad)+'px';hole.style.top=(r.top-pad)+'px';hole.style.width=(r.width+pad*2)+'px';hole.style.height=(r.height+pad*2)+'px';
@@ -14021,13 +14119,16 @@ function obPlace(){
   b.style.setProperty('--ax',Math.max(18,Math.min(bw-18,cx-left))+'px');
 }
 function obTourGo(d){
+  obDir=d<0?-1:1;
   obTourIdx+=d;
-  if(obTourIdx<0)obTourIdx=0;
+  if(obTourIdx<0){obTourIdx=0;obDir=1;}
   if(obTourIdx>=obTourSteps.length)return obEndTour();
   obTourShow();
 }
 function obEndTour(){
   const t=byId('obTour');if(t)t.style.display='none';
+  clearTimeout(obTimer);
+  obSetModal(false);obSetRange(false);obSpot=null;
   if(S.view!=='grid')setView('grid');
   if(!(S.settings.onboarding&&S.settings.onboarding.tourDone)){
     S.settings.onboarding=Object.assign({},S.settings.onboarding||{},{tourDone:true});
