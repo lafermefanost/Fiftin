@@ -37,6 +37,8 @@ jobs:
       # l'outil (app/index.html), jour par jour sur 12 mois.
       - name: Tests des prix (parité avec l'outil)
         run: node functions/pricing.test.js
+      - name: Tests du lien de disponibilités
+        run: node functions/availshare.test.js
       # Action officielle Google : écrit la clé dans un fichier temporaire
       # du runner, positionne GOOGLE_APPLICATION_CREDENTIALS, et l'efface en
       # fin de job. La clé n'est jamais affichée dans les journaux (GitHub

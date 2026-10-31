@@ -2228,6 +2228,8 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 
 /* Contrat de location (voir buildContractHTML / openContractPreview) */
 .contract-doc{font-family:'Jost',sans-serif;font-size:13px;line-height:1.65;color:#222;padding:8px 4px 12px;}
+.contract-brand{display:flex;align-items:center;gap:14px;border-radius:10px;padding:14px 18px;margin:0 0 26px;font-weight:700;font-size:16px;}
+.contract-brand img{max-height:52px;max-width:160px;object-fit:contain;}
 .contract-doc h1{font-size:20px;text-align:center;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:var(--dark);}
 .contract-rule{width:64px;height:2px;background:var(--green);margin:0 auto 28px;}
 .contract-meta{background:#F7F5F1;border-radius:8px;padding:16px 18px;margin-bottom:28px;}
@@ -2311,6 +2313,18 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .ob-choice button{flex:1;background:#fff;border:1.5px solid var(--light);border-radius:16px;padding:16px 12px;font:600 14.5px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.3;}
 .ob-choice button small{display:block;font-weight:400;font-size:12px;color:var(--gray);margin-top:3px;}
 .ob-choice button.on{border-color:var(--green);background:#EDF1E8;color:var(--green-deep);}
+.br-prev{display:flex;align-items:center;gap:12px;border-radius:12px;padding:12px 14px;min-height:56px;font-weight:600;font-size:15px;margin-bottom:8px;}
+.br-prev img{max-height:44px;max-width:120px;object-fit:contain;cursor:crosshair;}
+.br-pick{font-size:11px;color:var(--gray);margin:-2px 0 8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.br-pick button{border:1px solid var(--light);background:#fff;border-radius:999px;padding:3px 10px;font:500 11px 'Jost',sans-serif;cursor:pointer;color:var(--gray);}
+.br-pick button.on{background:var(--green);border-color:var(--green);color:#fff;}
+.br-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;}
+.br-row>label:first-child{width:44px;font-size:11px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;}
+.br-row input[type=color]{width:38px;height:30px;padding:0;border:1px solid var(--light);border-radius:8px;background:none;cursor:pointer;}
+.br-sw{width:26px;height:26px;border-radius:8px;border:1px solid rgba(0,0,0,.12);cursor:pointer;padding:0;}
+.br-auto{width:auto;padding:0 8px;background:#fff;font:500 11px 'Jost',sans-serif;color:var(--gray);}
+.br-btn{padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;}
+.br-st{font-size:11px;color:var(--gray);}
 .ob-picks{display:flex;flex-wrap:wrap;gap:8px;}
 .ob-picks button{background:#fff;border:1.5px solid var(--light);border-radius:14px;padding:10px 13px;font:500 14px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.25;text-align:left;}
 .ob-picks button small{display:block;font-size:11.5px;color:var(--gray);font-weight:400;}
@@ -5529,6 +5543,185 @@ function getIcalExport(rid,regenerate){
     rNow.icalExportUrl=res.url;saveSettings();renderSettings();
   }).catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
 }
+// ── Identité visuelle d'une structure (demande de César) ──
+// Logo + couleur de fond + couleur du texte, par structure, pour l'en-tête
+// du contrat de location et de la page de disponibilités partagée aux
+// habitués. structure.brand = {logo (data URL PNG réduite, ~ quelques
+// dizaines de Ko, gardée dans les réglages du compte), bg, fg, palette
+// (couleurs dominantes du logo, proposées en pastilles)}. Pipette : toucher
+// le logo de l'aperçu y prend la couleur du pixel (marche sur téléphone,
+// contrairement à l'API EyeDropper, réservée à Chrome ordinateur).
+const BRAND_DEF_BG='#354B38';
+function brandHex(v){return typeof v==='string'&&/^#[0-9a-f]{6}$/i.test(v)?v.toUpperCase():null;}
+function brandLum(hex){const n=parseInt(hex.slice(1),16),c=[n>>16,(n>>8)&255,n&255].map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4);});return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+function brandAutoFg(bg){return brandLum(bg)>.4?'#1D2820':'#FFFFFF';}
+function brandContrast(a,b){const x=brandLum(a),y=brandLum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);}
+// Identité d'une structure (ou null si rien n'a été réglé).
+function structBrand(sid){
+  const st=(S.settings.structures||[]).find(x=>x.id===sid);
+  const b=st&&st.brand;
+  if(!b||(!b.logo&&!b.bg))return null;
+  const bg=brandHex(b.bg)||BRAND_DEF_BG;
+  return {logo:b.logo||'',bg,fg:brandHex(b.fg)||brandAutoFg(bg),name:st.name||''};
+}
+function roomStructId(roomId){
+  const r=room(roomId);const structs=S.settings.structures||[];
+  return (r&&r.group)||(structs[0]&&structs[0].id)||defaultStructureId();
+}
+let brandPickTarget={};
+function brandHTML(s){
+  if(currentRole==='personnel')return '';
+  const b=s.brand||{};
+  const bg=brandHex(b.bg)||BRAND_DEF_BG, fg=brandHex(b.fg)||brandAutoFg(bg);
+  const tgt=brandPickTarget[s.id]||'bg';
+  const sw=(kind)=>(b.palette||[]).map(c=>`<button type="button" class="br-sw" style="background:${c}" title="${c}" onclick="brandSet('${s.id}','${kind}','${c}')"></button>`).join('');
+  const low=brandContrast(bg,fg)<3;
+  return `<div class="set-card-sub"><div class="set-card-sub-title">Identité visuelle</div>
+    <div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Votre logo et vos couleurs en tête du contrat de location et de la page de disponibilités partagée à vos clients.</div>
+    <div class="br-prev" style="background:${bg};color:${fg}">
+      ${b.logo?`<img src="${b.logo}" alt="" id="brLogo-${s.id}" onclick="brandPick(event,'${s.id}')" title="Touchez pour prendre une couleur">`:''}
+      <span>${escHtml(s.name||'Votre structure')}</span>
+    </div>
+    ${b.logo?`<div class="br-pick">Touchez le logo pour y prendre la couleur du
+      <button type="button" class="${tgt==='bg'?'on':''}" onclick="brandPickTarget['${s.id}']='bg';renderSettings()">fond</button>
+      <button type="button" class="${tgt==='fg'?'on':''}" onclick="brandPickTarget['${s.id}']='fg';renderSettings()">texte</button></div>`:''}
+    <div class="br-row"><label>Logo</label>
+      <label class="btn-s br-btn">${b.logo?'Changer':'Ajouter un logo'}<input type="file" accept="image/*" hidden onchange="brandLogoFile('${s.id}',this)"></label>
+      ${b.logo?`<button class="btn-s br-btn" onclick="brandSet('${s.id}','logo','')">Retirer</button>`:''}
+      <span class="br-st" id="brSt-${s.id}"></span></div>
+    <div class="br-row"><label>Fond</label><input type="color" value="${bg}" onchange="brandSet('${s.id}','bg',this.value)">${sw('bg')}</div>
+    <div class="br-row"><label>Texte</label><input type="color" value="${fg}" onchange="brandSet('${s.id}','fg',this.value)">${sw('fg')}
+      <button type="button" class="br-sw br-auto" onclick="brandSet('${s.id}','fg','')" title="Blanc ou foncé selon le fond">Auto</button></div>
+    ${low?`<div style="font-size:11px;color:var(--danger);margin-top:4px">Texte peu lisible sur ce fond : choisissez une couleur plus contrastée (ou « Auto »).</div>`:''}
+    ${(b.logo||b.bg)?`<button class="set-add" style="margin-top:6px;font-size:11px" onclick="if(confirm('Revenir sans identité visuelle pour cette structure ?'))brandClear('${s.id}')">Revenir sans identité visuelle</button>`:''}
+  </div>`;
+}
+function brandSet(sid,key,val){
+  const st=(S.settings.structures||[]).find(x=>x.id===sid);if(!st)return;
+  st.brand=Object.assign({},st.brand||{});
+  if(key==='logo'){if(val)st.brand.logo=val;else{delete st.brand.logo;delete st.brand.palette;}}
+  else{const h=brandHex(val);if(h)st.brand[key]=h;else delete st.brand[key];}
+  saveSettings();renderSettings();
+}
+function brandClear(sid){
+  const st=(S.settings.structures||[]).find(x=>x.id===sid);if(!st)return;
+  delete st.brand;saveSettings();renderSettings();
+}
+// Logo : réduit (320 × 160 px au plus, puis plus petit si besoin) et gardé en
+// PNG (transparence conservée) ; couleurs dominantes extraites au passage.
+function brandLogoFile(sid,input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const st=byId('brSt-'+sid);if(st)st.textContent='Préparation…';
+  const fr=new FileReader();
+  fr.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let max=[320,160],url='',pal=[];
+      for(const scale of [1,.75,.5]){
+        const k=Math.min(1,max[0]*scale/img.width,max[1]*scale/img.height);
+        const w=Math.max(1,Math.round(img.width*k)),h=Math.max(1,Math.round(img.height*k));
+        const c=document.createElement('canvas');c.width=w;c.height=h;
+        const x=c.getContext('2d');x.drawImage(img,0,0,w,h);
+        url=c.toDataURL('image/png');
+        if(scale===1)pal=brandPalette(x.getImageData(0,0,w,h).data);
+        if(url.length<=110000)break;
+      }
+      if(url.length>110000){if(st)st.textContent='Image trop lourde : essayez un logo plus simple.';return;}
+      const s=(S.settings.structures||[]).find(x=>x.id===sid);if(!s)return;
+      s.brand=Object.assign({},s.brand||{},{logo:url,palette:pal});
+      if(!s.brand.bg&&pal[0]){s.brand.bg=pal[0];}
+      saveSettings();renderSettings();
+    };
+    img.onerror=()=>{if(st)st.textContent='Image illisible.';};
+    img.src=fr.result;
+  };
+  fr.readAsDataURL(f);
+}
+// 6 couleurs dominantes (pixels opaques, regroupés par teintes proches).
+function brandPalette(d){
+  // Regroupe les pixels opaques par teintes proches, puis prend la couleur
+  // MOYENNE réelle de chaque groupe (pas la teinte arrondie du groupe).
+  const g={};
+  for(let i=0;i<d.length;i+=4){if(d[i+3]<160)continue;const k=(d[i]>>4)<<8|(d[i+1]>>4)<<4|(d[i+2]>>4);
+    const e=g[k]||(g[k]=[0,0,0,0]);e[0]+=d[i];e[1]+=d[i+1];e[2]+=d[i+2];e[3]++;}
+  const keys=Object.keys(g).sort((a,b)=>g[b][3]-g[a][3]);
+  const out=[];
+  for(const k of keys){
+    const e=g[k],r=Math.round(e[0]/e[3]),gg=Math.round(e[1]/e[3]),b=Math.round(e[2]/e[3]);
+    if(out.some(o=>Math.abs(o[0]-r)+Math.abs(o[1]-gg)+Math.abs(o[2]-b)<90))continue;
+    out.push([r,gg,b]);if(out.length>=6)break;
+  }
+  return out.map(c=>'#'+c.map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase());
+}
+function brandPick(ev,sid){
+  const im=ev.target,r=im.getBoundingClientRect();
+  const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;
+  const x=c.getContext('2d');x.drawImage(im,0,0);
+  const px=Math.floor((ev.clientX-r.left)/r.width*c.width),py=Math.floor((ev.clientY-r.top)/r.height*c.height);
+  const d=x.getImageData(Math.max(0,Math.min(c.width-1,px)),Math.max(0,Math.min(c.height-1,py)),1,1).data;
+  if(d[3]<40)return; // zone transparente
+  brandSet(sid,brandPickTarget[sid]||'bg','#'+[d[0],d[1],d[2]].map(v=>v.toString(16).padStart(2,'0')).join(''));
+}
+// ── Lien de disponibilités d'une structure (demande de César) ──
+// Page publique fiftin.fr/dispo/?t=… à partager aux habitués : nuit par nuit
+// sur 6 mois, Disponible / Peut-être / Complet pour l'ensemble des locations
+// de la structure — jamais de nom, de nombre de chambres ni de prix (calcul
+// côté serveur, fonctions availShareGetUrl / availShare). Formule Avancé.
+// URL et numéro gardés dans S.settings.availShare[structureId] pour
+// l'affichage ; le jeton et le numéro font foi côté serveur.
+function availShareHTML(s){
+  if(currentRole==='personnel')return '';
+  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Une page simple à partager à vos habitués : nuit par nuit sur 6 mois, « Probablement disponible », « Peut-être disponible » (réservation en option) ou « Complet », pour l'ensemble des locations de cette structure, à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Toucher une nuit leur ouvre WhatsApp vers vous.</div>`;
+  if(S.settings.plan!=='pro')return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<div style="font-size:11px;color:var(--gray)">Réservé à la formule Avancé (Réglages → Compte).</div></div>`;
+  const sh=(S.settings.availShare||{})[s.id];
+  if(!sh||!sh.url)return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<button class="set-add" onclick="availShareGet('${s.id}',false)">Créer le lien</button></div>`;
+  const u=sh.url.replace(/"/g,'&quot;');
+  return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}
+    <div style="display:flex;gap:6px;align-items:center"><input class="set-fi" style="flex:1;font-size:11px;min-width:0" readonly value="${u}" onclick="this.select()">
+      <button class="btn-s" style="padding:4px 10px" onclick="availShareCopy('${s.id}',this)">Copier</button>
+      <button class="btn-s" style="padding:4px 10px" onclick="availShareSend('${s.id}')">Envoyer</button></div>
+    <div class="sc-field" style="margin-top:8px"><label>Numéro WhatsApp affiché</label>
+      <input class="set-fi" style="width:100%;font-size:12px" inputmode="tel" value="${(sh.phone||'').replace(/"/g,'&quot;')}" placeholder="Vide = celui de votre profil Fiftin Séjours" onchange="availSharePhone('${s.id}',this)">
+      <div id="availSt-${s.id}" style="font-size:11px;color:var(--gray);margin-top:3px"></div></div>
+    <div style="display:flex;gap:14px;margin-top:6px;font-size:11px">
+      <a href="${u}" target="_blank" rel="noopener" style="color:var(--green)">Ouvrir la page</a>
+      <a href="#" style="color:var(--gray)" onclick="event.preventDefault();if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner pour tous ceux à qui vous l\\'avez envoyé.'))availShareGet('${s.id}',true)">Changer le lien</a>
+    </div></div>`;
+}
+function availShareSet(sid,patch){
+  if(!S.settings.availShare)S.settings.availShare={};
+  S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},patch);
+  saveSettings();renderSettings();
+}
+function availShareGet(sid,regenerate){
+  if(!icalAvailable()){alert('Connexion requise.');return;}
+  icalCall('availShareGetUrl',{structureId:sid,regenerate:!!regenerate}).then(res=>availShareSet(sid,{url:res.url}))
+    .catch(e=>alert('Création du lien impossible : '+((e&&e.message)||e)));
+}
+function availShareCopy(sid,btn){
+  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
+  const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(sh.url).then(done).catch(()=>{});
+  else{const i=btn.parentNode.querySelector('input');i.select();document.execCommand('copy');done();}
+}
+function availShareSend(sid){
+  const sh=(S.settings.availShare||{})[sid];if(!sh||!sh.url)return;
+  const st=(S.settings.structures||[]).find(x=>x.id===sid);
+  const text='Nos disponibilités'+(st&&st.name?' ('+st.name+')':'')+', mises à jour en direct :';
+  if(navigator.share)navigator.share({title:'Disponibilités',text,url:sh.url}).catch(()=>{});
+  else window.open('https://wa.me/?text='+encodeURIComponent(text+' '+sh.url),'_blank','noopener');
+}
+function availSharePhone(sid,input){
+  const v=input.value.trim();
+  if(!icalAvailable()){alert('Connexion requise.');return;}
+  const stEl=byId('availSt-'+sid);if(stEl)stEl.textContent='Enregistrement…';
+  icalCall('availShareGetUrl',{structureId:sid,phone:v}).then(res=>{
+    if(!S.settings.availShare)S.settings.availShare={};
+    S.settings.availShare[sid]=Object.assign({},S.settings.availShare[sid]||{},{url:res.url,phone:v});
+    saveSettings();
+    const e=byId('availSt-'+sid);if(e)e.textContent='Enregistré ✓';
+  }).catch(e=>{const el=byId('availSt-'+sid);if(el)el.textContent='Enregistrement impossible : '+((e&&e.message)||e);});
+}
 function copyIcalExport(rid,btn){
   const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r||!r.icalExportUrl)return;
   const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
@@ -6347,8 +6540,10 @@ function buildContractBlocks(bk){
   // Adresse du locataire piochée dans sa fiche client (Réglages → Clients),
   // si elle a été renseignée là-bas.
   const locataireLine=[g.name,g.address,g.phone,g.email].filter(Boolean).join(' — ');
-  const prixText=`Le prix du séjour est fixé à <span class="money">${total.toLocaleString('fr-FR')}</span> €.`
-    +(tsAmount>0?`\nS'y ajoute la taxe de séjour, collectée pour le compte de la commune, d'un montant de <span class="money">${tsAmount.toLocaleString('fr-FR')}</span> €.\nTotal à régler : <span class="money">${grandTotal.toLocaleString('fr-FR')}</span> €.`:'');
+  // Texte brut (pas de <span class="money">) : ce texte est échappé dans
+  // l'aperçu et écrit tel quel dans le PDF, les balises y apparaissaient.
+  const prixText=`Le prix du séjour est fixé à ${total.toLocaleString('fr-FR')} €.`
+    +(tsAmount>0?`\nS'y ajoute la taxe de séjour, collectée pour le compte de la commune, d'un montant de ${tsAmount.toLocaleString('fr-FR')} €.\nTotal à régler : ${grandTotal.toLocaleString('fr-FR')} €.`:'');
 
   return{
     title:'Contrat de location saisonnière',
@@ -6372,7 +6567,9 @@ function buildContractBlocks(bk){
 function buildContractHTML(bk){
   const c=buildContractBlocks(bk);
   const p=t=>escHtml(t).replace(/\n/g,'<br>');
+  const br=structBrand(roomStructId(bk.roomId));
   return `<div class="contract-doc">
+    ${br?`<div class="contract-brand" style="background:${br.bg};color:${br.fg}">${br.logo?`<img src="${br.logo}" alt="">`:''}<span>${escHtml(br.name)}</span></div>`:''}
     <h1>${escHtml(c.title)}</h1>
     <div class="contract-rule"></div>
     <div class="contract-meta">${c.intro.map(t=>`<p>${p(t)}</p>`).join('')}</div>
@@ -6398,6 +6595,8 @@ function openContractPreview(bkId){
 const CONTRACT_DOC_CSS=`
   body{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.65;color:#222;margin:0;background:#fff;}
   .contract-doc{padding:8px 4px 12px;}
+  .contract-brand{display:flex;align-items:center;gap:14px;border-radius:10px;padding:14px 18px;margin:0 0 26px;font-weight:700;font-size:16px;}
+  .contract-brand img{max-height:52px;max-width:160px;object-fit:contain;}
   .contract-doc h1{font-size:20px;text-align:center;margin:0 0 10px;text-transform:uppercase;letter-spacing:.04em;color:#2C2C2C;}
   .contract-rule{width:64px;height:2px;background:#354B38;margin:0 auto 28px;}
   .contract-meta{background:#F7F5F1;border-radius:8px;padding:16px 18px;margin-bottom:28px;}
@@ -6447,6 +6646,24 @@ function buildContractPdfBlob(bk){
     y+=gapAfter||0;
   };
   const c=buildContractBlocks(bk);
+  // En-tête aux couleurs de la structure (logo + nom), si réglé.
+  const br=structBrand(roomStructId(bk.roomId));
+  if(br){
+    const hH=24;
+    doc.setFillColor(br.bg);doc.roundedRect(margin,y-10,maxW,hH,2.5,2.5,'F');
+    let tx=margin+7;
+    if(br.logo){
+      try{
+        const ip=doc.getImageProperties(br.logo);
+        const ih=hH-8,iw=Math.min(50,ip.width/ip.height*ih),ihh=iw/(ip.width/ip.height);
+        doc.addImage(br.logo,'PNG',margin+6,y-10+(hH-ihh)/2,iw,ihh);
+        tx=margin+6+iw+6;
+      }catch(e){}
+    }
+    doc.setFont('helvetica','bold');doc.setFontSize(13);doc.setTextColor(br.fg);
+    if(br.name)doc.text(br.name,tx,y-10+hH/2+1.6);
+    y+=hH+8;
+  }
   doc.setFont('helvetica','bold');doc.setFontSize(18);doc.setTextColor('#2C2C2C');
   doc.text(c.title.toUpperCase(),pageW/2,y,{align:'center'});
   y+=3;
@@ -9891,6 +10108,8 @@ function renderSettings(){
     });
     structBody+=`<button class="set-add" onclick="addStructureThreshold('${s.id}')">+ Ajouter un seuil</button>
       </div>
+      ${brandHTML(s)}
+      ${availShareHTML(s)}
     </div>`;
   });
   if(st.plan==='pro'||structsForThr.length<1){
@@ -12839,6 +13058,7 @@ function cancelSettings(){
       if(c.icalImports)r.icalImports=c.icalImports;else delete r.icalImports;
       if(c.icalExportUrl)r.icalExportUrl=c.icalExportUrl;
     });
+    if(cur.availShare)S.settings.availShare=cur.availShare;
     applySettings();
   }
   closeM('modalSettings');
