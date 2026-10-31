@@ -381,6 +381,14 @@ section[id]{scroll-margin-top:72px;}
 .pl-check li::before{content:""; flex:0 0 24px; height:24px; border-radius:50%; margin-top:1px;
   background:var(--yellow) url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231D2820' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><path d='M5 12.5l4.5 4.5L19 7.5'/></svg>") center/13px no-repeat;}
 .pl-small{font-size:13.5px; color:var(--muted);}
+/* Questions fréquentes (demande de César) : accordéon natif <details>. */
+.pl-faq{max-width:780px; margin:30px auto 0; display:flex; flex-direction:column; gap:10px;}
+.pl-faq-item{background:var(--cream); border-radius:20px; padding:0 20px;}
+.pl-faq-item summary{list-style:none; display:flex; align-items:center; justify-content:space-between; gap:14px; padding:17px 0; font-size:16.5px; font-weight:600; color:var(--sauge-deep); cursor:pointer;}
+.pl-faq-item summary::-webkit-details-marker{display:none;}
+.pl-faq-item summary svg{flex:none; width:20px; height:20px; color:var(--sauge); transition:transform .2s;}
+.pl-faq-item[open] summary svg{transform:rotate(180deg);}
+.pl-faq-item p{margin:0; padding:0 0 18px; font-size:15.5px; line-height:1.6; color:var(--muted);}
 .pl-notice{max-width:640px; margin:22px auto 0; text-align:center; font-size:13.5px; line-height:1.55; color:var(--muted);}
 
 /* Schéma iCal (aucune maquette ne montre cet échange) */
@@ -794,6 +802,32 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
   </div>
 </section>
 
+<section class="da-zone white" id="faq">
+  <div class="da-wrap">
+    <div class="pl-head">
+      <p class="da-kicker">Questions fréquentes</p>
+      <h2 class="da-h2">Vos questions, nos réponses.</h2>
+    </div>
+    <div class="pl-faq">
+      <details class="pl-faq-item"><summary>Pour quelles activités Fiftin Planning est-il pensé ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Pour celles et ceux qui accueillent : chambres d’hôtes, gîtes, meublés de tourisme, domaines et petits établissements, avec ou sans table d’hôtes. Il est né à La Ferme Fanost, une maison d’hôtes, pour en gérer le quotidien.</p></details>
+      <details class="pl-faq-item"><summary>Faut-il installer une application ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Non. Fiftin Planning s’ouvre dans le navigateur, sur ordinateur, tablette ou téléphone. Sur téléphone, vous pouvez l’ajouter à l’écran d’accueil pour l’ouvrir comme une application. Une connexion internet est nécessaire pour enregistrer vos modifications.</p></details>
+      <details class="pl-faq-item"><summary>Comment démarrer ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Créez votre compte : un assistant vous guide pour votre établissement, votre statut juridique, la taxe de séjour, vos locations et leurs prix, et vos calendriers Airbnb ou Booking. Une visite guidée vous montre ensuite les menus et la création d’une réservation ; vous pouvez la relancer depuis les Réglages.</p></details>
+      <details class="pl-faq-item"><summary>Puis-je synchroniser Airbnb et Booking.com ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Oui, par les liens de calendrier iCal. Les dates réservées sur Airbnb ou Booking sont importées et vérifiées toutes les 30 minutes ; vos réservations Fiftin Planning peuvent être exportées vers leurs calendriers. L’iCal ne transmet que des dates bloquées (ni nom, ni prix) et avec un délai : vérifiez toujours avant de confirmer une réservation.</p></details>
+      <details class="pl-faq-item"><summary>Quel lien avec Fiftin Séjours ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Si vous publiez une annonce sur Fiftin Séjours et la reliez à une location de Fiftin Planning, ses dates occupées et son prix y sont mis à jour automatiquement, sans aucun nom de client. Le sens est unique : rien ne remonte de Fiftin Séjours vers votre planning.</p></details>
+      <details class="pl-faq-item"><summary>Puis-je gérer plusieurs structures juridiques ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Oui, avec la formule Avancé : SASU, LMNP, EI, SARL… Chaque location est rattachée à sa structure, et les chiffres se lisent structure par structure. La formule Essentiel couvre une seule structure.</p></details>
+      <details class="pl-faq-item"><summary>Fiftin Planning fait-il ma comptabilité ou mes déclarations ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Il suit vos revenus, vos charges et vos indicateurs (taux d’occupation, revenu moyen…), par mois, par année et par structure, et vous rappelle les échéances. Il ne remplace ni un expert-comptable ni vos déclarations. Les seuils affichés (franchise de TVA, LMP…) varient selon votre situation et chaque année : c’est à vous de saisir les vôtres, sans engagement de Fiftin.</p></details>
+      <details class="pl-faq-item"><summary>Puis-je éditer des factures ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Non : Fiftin Planning n’est pas un logiciel de facturation. Vous pouvez générer un contrat de location (PDF, avec votre logo et vos couleurs) et une note de séjour à copier pour votre client.</p></details>
+      <details class="pl-faq-item"><summary>Comment est gérée la taxe de séjour ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Vous choisissez le mode de votre commune (montant fixe par personne et par nuit, ou pourcentage du prix avec plafond) ; elle est ensuite calculée sur chaque séjour. Vous pouvez aussi ne pas la collecter.</p></details>
+      <details class="pl-faq-item"><summary>Si je change un prix, mes anciens séjours changent-ils ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Non. Les tarifs sont datés : quand vous modifiez un prix déjà utilisé, Fiftin vous demande à partir de quand il s’applique, et les séjours passés gardent l’ancien prix. Un journal garde la trace de chaque changement.</p></details>
+      <details class="pl-faq-item"><summary>Peut-on travailler à plusieurs ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Oui, avec la formule Avancé : un sous-compte Staff est inclus, en lecture seule ou en écriture au choix ; chaque sous-compte supplémentaire coûte 5 €/mois.</p></details>
+      <details class="pl-faq-item"><summary>Mes données m’appartiennent-elles ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Oui. Vous pouvez à tout moment exporter vos données en CSV et faire une sauvegarde complète au format JSON depuis les Réglages.</p></details>
+      <details class="pl-faq-item"><summary>Combien coûte Fiftin Planning ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Essentiel : 24 €/mois (une structure, jusqu’à 4 hébergements, une personne). Avancé : 47 €/mois (plusieurs structures, jusqu’à 8 hébergements, un sous-compte Staff ; +5 €/mois par hébergement ou sous-compte supplémentaire). Deux mois offerts en facturation annuelle. Les conditions complètes figurent dans les CGV.</p></details>
+      <details class="pl-faq-item"><summary>Comment changer de formule ou résilier ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Depuis les Réglages de l’outil, « Gérer mon abonnement » ouvre votre espace de paiement sécurisé (Stripe) : changement de carte, factures de votre abonnement, résiliation.</p></details>
+      <details class="pl-faq-item"><summary>Est-ce le même compte que Fiftin Séjours ?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><p>Oui : un seul compte pour Fiftin Planning et Fiftin Séjours.</p></details>
+    </div>
+  </div>
+</section>
+
 <section class="da-zone green" id="histoire">
   <div class="da-wrap">
     <div class="pl-story">
@@ -813,6 +847,7 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
         <a href="sejours/?espace=voyageur&amp;onglet=explore">Séjours</a>
         <a href="planning/#fonctionnalites">Fonctionnalités</a>
         <a href="planning/#tarifs">Formules</a>
+        <a href="planning/#faq">Questions</a>
       </nav>
     </footer>
   </div>
