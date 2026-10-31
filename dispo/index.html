@@ -48,7 +48,15 @@ button{font-family:inherit;}
 .dp-kicker{font-size:12.5px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow-light);}
 .dp-title{max-width:560px;margin:18px auto 0;}
 .dp-title h1{margin:0;font-size:clamp(26px,7vw,34px);font-weight:600;line-height:1.15;}
-.dp-title p{margin:8px 0 0;font-size:14.5px;line-height:1.45;color:rgba(255,255,255,.78);}
+.dp-title p{margin:8px 0 0;font-size:14.5px;line-height:1.45;color:inherit;opacity:.8;}
+/* En attendant les données : bandeau neutre (pas de vert Fiftin qui
+   clignoterait avant les couleurs de la structure). */
+.dp-head.dp-wait{background:#E4E1D9;color:transparent;}
+.dp-head.dp-wait .dp-logo{visibility:hidden;}
+.dp-head.dp-wait .dp-kicker{color:transparent;}
+/* Identité visuelle de la structure (Réglages → Structures juridiques). */
+.dp-brand-logo{display:block;max-height:56px;max-width:180px;object-fit:contain;}
+.dp-head.branded .dp-kicker{color:inherit;opacity:.75;}
 
 .dp-main{max-width:560px;margin:0 auto;padding:18px 16px calc(110px + env(safe-area-inset-bottom,0px));}
 .dp-legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 2px 8px;}
@@ -88,7 +96,7 @@ button{font-family:inherit;}
 </style>
 </head>
 <body>
-<header class="dp-head">
+<header class="dp-head dp-wait" id="dpHead">
   <div class="dp-top">
     <a class="dp-logo" href="./" aria-label="Fiftin"><img src="assets/logo-fiftin-mark-glass.png" width="102" height="80" alt=""></a>
     <span class="dp-kicker">Disponibilités</span>
@@ -117,7 +125,9 @@ button{font-family:inherit;}
   function dateAt(from, i){ var d = new Date(from+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+i); return d; }
   function longDate(d){ return DOW_FULL[d.getUTCDay()]+" "+d.getUTCDate()+" "+MONTHS[d.getUTCMonth()]; }
   function waUrl(phone, text){ return "https://wa.me/"+phone+"?text="+encodeURIComponent(text); }
+  var head = document.getElementById("dpHead");
   function fail(title, text){
+    head.classList.remove("dp-wait");
     main.innerHTML = '<div class="dp-msg"><b>'+title+'</b>'+text+'</div>';
     document.getElementById("dpName").textContent = "Disponibilités";
   }
@@ -134,6 +144,20 @@ button{font-family:inherit;}
 
   function render(data){
     var name = data.name || "Disponibilités";
+    var br = data.brand;
+    if(br && (br.bg || br.logo)){
+      var hex = function(v){ return /^#[0-9a-fA-F]{6}$/.test(v||"") ? v : null; };
+      var bg = hex(br.bg) || "#354B38";
+      var lum = function(h){ var n = parseInt(h.slice(1),16); return [n>>16,(n>>8)&255,n&255].map(function(v){ v/=255; return v<=.03928 ? v/12.92 : Math.pow((v+.055)/1.055,2.4); }).reduce(function(a,v,i){ return a + v*[.2126,.7152,.0722][i]; },0); };
+      var fg = hex(br.fg) || (lum(bg) > .4 ? "#1D2820" : "#FFFFFF");
+      head.style.background = bg; head.style.color = fg; head.classList.add("branded");
+      var tc = document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute("content", bg);
+      if(br.logo && /^data:image\/png;base64,/.test(br.logo)){
+        var img = document.createElement("img"); img.className = "dp-brand-logo"; img.alt = name; img.src = br.logo;
+        var lg = head.querySelector(".dp-logo"); lg.parentNode.replaceChild(img, lg);
+      }
+    }
+    head.classList.remove("dp-wait");
     document.title = "Disponibilités · " + name;
     document.getElementById("dpName").textContent = name;
     var phone = data.phone || "";

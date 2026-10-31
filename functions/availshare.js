@@ -83,4 +83,14 @@ function waDigits(phone) {
   return d.length >= 8 ? d : "";
 }
 
-module.exports = {structureRooms, structureAvailability, waDigits, addDays};
+/* Identité visuelle de la structure (Réglages → Structures juridiques) :
+ * seulement un logo PNG en data URL et deux couleurs #RRGGBB, vérifiés. */
+function publicBrand(b) {
+  if (!b || typeof b !== "object") return null;
+  const hex = (v) => (typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v) ? v : null);
+  const logo = typeof b.logo === "string" && /^data:image\/png;base64,[A-Za-z0-9+/=]+$/.test(b.logo) && b.logo.length < 200000 ? b.logo : null;
+  const out = {bg: hex(b.bg), fg: hex(b.fg), logo: logo};
+  return out.bg || out.logo ? out : null;
+}
+
+module.exports = {structureRooms, structureAvailability, waDigits, addDays, publicBrand};

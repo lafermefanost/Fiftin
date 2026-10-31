@@ -1,7 +1,7 @@
 /* Tests du lien de disponibilités (functions/availshare.js) :
  * node functions/availshare.test.js */
 const assert = require("assert");
-const {structureRooms, structureAvailability, waDigits} = require("./availshare");
+const {structureRooms, structureAvailability, waDigits, publicBrand} = require("./availshare");
 
 const settings = {
   structures: [{id: "fanost", name: "La Ferme Fanost"}, {id: "vissou", name: "Vissou"}],
@@ -59,5 +59,13 @@ assert.strictEqual(waDigits("06 12 34 56 78"), "33612345678");
 assert.strictEqual(waDigits("+33 (0)6 12 34 56 78"), "33612345678");
 assert.strictEqual(waDigits(""), "");
 assert.strictEqual(waDigits("123"), "");
+
+// Identité visuelle : seulement ce qui est sûr à afficher.
+assert.strictEqual(publicBrand(null), null);
+assert.strictEqual(publicBrand({}), null);
+assert.deepStrictEqual(publicBrand({bg: "#123456", fg: "red", palette: ["#000000"]}), {bg: "#123456", fg: null, logo: null});
+assert.deepStrictEqual(publicBrand({logo: "data:image/png;base64,iVBORw0KGgo=", bg: "x"}), {bg: null, fg: null, logo: "data:image/png;base64,iVBORw0KGgo="});
+assert.strictEqual(publicBrand({logo: "javascript:alert(1)"}), null);
+assert.strictEqual(publicBrand({logo: "data:image/svg+xml;base64,PHN2Zz4="}), null);
 
 console.log("availshare : tous les tests passent");

@@ -1008,6 +1008,7 @@ exports.availShare = onRequest(async (req, res) => {
     from: from,
     days: days,
     phone: await availSharePhone(tok.uid, tok.phone),
+    brand: availshare.publicBrand(struct && struct.brand),
   });
 });
 
