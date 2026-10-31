@@ -7,7 +7,7 @@ Ce dépôt contient **deux projets distincts** qui partagent la même marque. Av
 Outil de planning pour hébergeurs (calendrier de réservations, fichier client, comptabilité). C'est l'application existante, utilisée par de vrais clients payants.
 
 - `index.html` (racine) — page d'accueil Fiftin « deux univers » (Séjours / Planning) : fiftin.fr/.
-- Page commerciale Fiftin Planning : fiftin.fr/planning/ = `planning/index.html`, page autonome (`hotes/` y renvoie).
+- Page commerciale Fiftin Planning : fiftin.fr/planning/ = `planning/index.html`, page autonome (`hotes/` y renvoie). Section « Questions fréquentes » (`#faq`, demande de César du 31/10/2026) entre les Formules et « Notre histoire » : 15 questions en accordéon `<details>` (`.pl-faq`), écrites d'après le fonctionnement réel de l'outil (démarrage, iCal toutes les 30 min, lien Séjours à sens unique, structures, comptabilité sans engagement, pas de facturation, taxe de séjour, tarifs datés, Staff, exports CSV/JSON, prix et résiliation via Stripe, compte unique) ; lien « Questions » dans le pied de page. À tenir à jour avec l'outil et les tarifs.
 - Pictogramme Fiftin toujours visible en haut de Séjours, de Planning et de l'outil : lien de retour vers l'accueil fiftin.fr/ (l'accueil n'a que son grand logo).
 - `app/index.html` — l'outil lui-même : fiftin.fr/app/.
 - Voir le reste de ce README pour l'architecture (Firebase, comptes, règles Firestore, formules).
