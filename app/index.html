@@ -2325,6 +2325,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .br-auto{width:auto;padding:0 8px;background:#fff;font:500 11px 'Jost',sans-serif;color:var(--gray);}
 .br-btn{padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;}
 .br-st{font-size:11px;color:var(--gray);}
+.app-outdated{position:fixed;left:12px;right:12px;top:calc(8px + env(safe-area-inset-top,0px));z-index:5000;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background:#1D2820;color:#fff;border-radius:16px;padding:8px 8px 8px 16px;font:500 13.5px 'Jost',sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);}
+@media(min-width:600px){.app-outdated{left:50%;right:auto;transform:translateX(-50%);border-radius:999px;white-space:nowrap;}}
+.app-outdated button{border:none;border-radius:999px;background:var(--yellow);color:var(--green-deep);font:600 13.5px 'Jost',sans-serif;padding:8px 14px;cursor:pointer;white-space:nowrap;}
+.eff-ov{position:fixed;inset:0;z-index:4000;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;}
+.eff-card{background:#fff;border-radius:22px;padding:22px 20px 14px;width:min(420px,100%);font-family:'Jost',sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.35);}
+.eff-card h3{margin:0 0 8px;font-size:19px;color:var(--green-deep);}
+.eff-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#4a4a44;}
+.eff-l{display:block;font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
+.eff-note{font-size:12px;color:var(--gray);margin-top:6px;}
+.eff-ok{width:100%;margin-top:14px;}
+.eff-retro,.eff-cancel{display:block;width:100%;border:none;background:none;font:500 13.5px 'Jost',sans-serif;padding:10px 4px 2px;cursor:pointer;}
+.eff-retro{color:var(--danger);text-decoration:underline;text-underline-offset:3px;}
+.eff-cancel{color:var(--gray);}
 .cat-hist-line{flex:1 1 100%;display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:11px;color:var(--gray);margin-top:-2px;}
 .cat-hist-line button{border:none;background:none;padding:0;font:500 11px 'Jost',sans-serif;color:var(--green);text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
 .cat-hist{margin-top:-4px;background:#F7F6F2;}
@@ -8520,6 +8534,119 @@ function catalogPrice(item,ds){
 }
 // Article vendu un jour antérieur à `before` (réservations, événements,
 // personnes extérieures) ?
+// ── Version de l'outil à jour (demande de César, 31/10/2026) ──
+// Un appareil resté ouvert longtemps (ou chargé hors ligne depuis la copie
+// gardée) peut faire tourner une ancienne version de l'outil, qui calcule
+// autrement (ex. prix des consommations non datés avant le 21/10). On
+// compare l'empreinte des scripts et styles de la page en cours à celle de
+// la page en ligne ; si elle diffère : bandeau « Recharger », et toute
+// modification de tarif est bloquée tant qu'on n'a pas rechargé.
+let appOutdated=false, appSigBoot=null, appSigLastCheck=0;
+// Scripts de la page tels que chargés (relevés pendant l'exécution de ce
+// script, avant qu'une extension du navigateur n'ajoute les siens) ; les
+// styles ne comptent pas : seuls les scripts font les calculs.
+const APP_BOOT_PARTS=[...document.querySelectorAll('script:not([src])')].map(e=>e.textContent);
+async function appSignature(doc){
+  const parts=doc===document?APP_BOOT_PARTS:[...doc.querySelectorAll('script:not([src])')].map(e=>e.textContent);
+  const buf=new TextEncoder().encode(parts.join('\u0001'));
+  const h=await crypto.subtle.digest('SHA-256',buf);
+  return [...new Uint8Array(h)].slice(0,12).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function checkAppVersion(force){
+  if(!window.crypto||!crypto.subtle||!navigator.onLine)return;
+  if(!force&&Date.now()-appSigLastCheck<5*60*1000)return;
+  appSigLastCheck=Date.now();
+  try{
+    if(!appSigBoot)appSigBoot=await appSignature(document);
+    const r=await fetch('./index.html?v='+Date.now(),{cache:'no-store'});
+    if(!r.ok)return;
+    const doc=new DOMParser().parseFromString(await r.text(),'text/html');
+    const sig=await appSignature(doc);
+    if(sig&&sig!==appSigBoot)showAppOutdated();
+  }catch(e){}
+}
+function showAppOutdated(){
+  if(appOutdated)return;
+  appOutdated=true;
+  const b=document.createElement('div');b.id='appOutdatedBar';b.className='app-outdated';
+  b.innerHTML='<span>Une nouvelle version de l\'outil est disponible.</span><button type="button" onclick="location.reload()">Recharger</button>';
+  document.body.appendChild(b);
+}
+// Garde-fou des modifications de tarif sur une version périmée.
+function priceEditBlocked(){
+  if(!appOutdated)return false;
+  alert('Une nouvelle version de l\'outil est disponible : touchez « Recharger » avant de modifier un tarif.');
+  if(byId('modalSettings')&&byId('modalSettings').style.display==='flex')renderSettings();
+  return true;
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  appSignature(document).then(x=>{appSigBoot=x;}).catch(()=>{});
+  setTimeout(()=>checkAppVersion(true),15000);
+  setInterval(()=>checkAppVersion(true),15*60*1000);
+});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkAppVersion(false);});
+
+// ── Modification datée d'un tarif (demande de César, 31/10/2026) ──
+// Toute modification d'un prix qui a déjà servi à des séjours passés demande
+// « À partir de quand ? » : par défaut aujourd'hui (nouvelle version datée,
+// le passé garde l'ancien prix), une autre date au choix, ou — choix
+// explicite — « Corriger aussi les séjours passés » (modifie la version
+// elle-même, comme avant). list : versions {from,…} ; v : version modifiée ;
+// scope : {roomId} | {taxe:true} | {catalogId} | {} (tous les séjours).
+function datedPastUse(scope,from,end){
+  const today=todayISO();
+  if(scope.catalogId){
+    const id=scope.catalogId;
+    const inDays=x=>Object.keys(x||{}).some(ds=>ds>=from&&ds<end&&ds<today&&x[ds]&&x[ds][id]>0);
+    if(S.bookings.some(bk=>inDays(bk.extras)))return true;
+    if((S.events||[]).some(ev=>inDays(ev.extras)))return true;
+    return Object.keys(S.extDiners||{}).some(ds=>ds>=from&&ds<end&&ds<today&&(S.extDiners[ds]||[]).some(e=>e.extras&&e.extras[id]>0));
+  }
+  return S.bookings.some(b=>b&&b.status!=='no'&&b.checkIn<today&&b.checkOut>from&&b.checkIn<end
+    &&(!scope.roomId||b.roomId===scope.roomId)&&(!scope.taxe||b.taxeSejour));
+}
+function datedEdit(o){
+  // o : {list, v, scope, label, mutate(version), after()}
+  if(priceEditBlocked())return;
+  const today=todayISO(), v=o.v;
+  const next=[...o.list].filter(x=>x.from>v.from).sort((a,b)=>a.from.localeCompare(b.from))[0];
+  const end=next?next.from:'9999-12-31';
+  const apply=(target)=>{o.mutate(target);o.after();};
+  // Version qui ne couvre que l'avenir, ou jamais utilisée : modification directe.
+  if(v.from>=today||!datedPastUse(o.scope||{},v.from,end)){apply(v);return;}
+  const min=v.from>'2000-01-01'?addDays(v.from,1):'';
+  const max=next?addDays(next.from,-1):'';
+  let def=today; if(max&&def>max)def=max; if(min&&def<min)def=min;
+  openEffDateModal({label:o.label,since:v.from>'2000-01-01'?'le '+fmtShortDate(v.from):'le début',min,max,def},choice=>{
+    if(!choice){o.cancel?o.cancel():renderSettings();return;}
+    if(choice.retro||choice.date<=v.from){apply(v);return;}
+    const same=o.list.find(x=>x.from===choice.date);
+    if(same){apply(same);return;}
+    const c=JSON.parse(JSON.stringify(v));c.from=choice.date;if(v.id)c.id=uid();
+    o.list.push(c);o.list.sort((a,b)=>a.from.localeCompare(b.from));
+    apply(c);
+  });
+}
+function openEffDateModal(opt,cb){
+  let el=byId('effDateModal');
+  if(!el){el=document.createElement('div');el.id='effDateModal';el.className='eff-ov';document.body.appendChild(el);}
+  const done=(r)=>{el.style.display='none';cb(r);};
+  el.innerHTML=`<div class="eff-card" role="dialog" aria-modal="true">
+    <h3>À partir de quand ?</h3>
+    <p>${escHtml(opt.label)} : ce tarif a déjà servi à des séjours passés. Le nouveau prix s'appliquera à partir de la date choisie ; les séjours d'avant gardent l'ancien prix.</p>
+    <label class="eff-l">Nouveau prix à partir du</label>
+    <input type="date" class="fi" id="effDateIn" value="${opt.def}"${opt.min?` min="${opt.min}"`:''}${opt.max?` max="${opt.max}"`:''}>
+    ${opt.max?`<div class="eff-note">Un tarif suivant commence le ${fmtShortDate(addDays(opt.max,1))} : choisissez une date avant.</div>`:''}
+    <button type="button" class="btn-p eff-ok" id="effOk">Appliquer à partir de cette date</button>
+    <button type="button" class="eff-retro" id="effRetro">Corriger aussi les séjours passés (depuis ${opt.since})</button>
+    <button type="button" class="eff-cancel" id="effCancel">Annuler</button>
+  </div>`;
+  el.style.display='flex';
+  const inp=byId('effDateIn');
+  byId('effOk').onclick=()=>{const d=inp.value;if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||(opt.min&&d<opt.min)||(opt.max&&d>opt.max)){inp.focus();return;}done({date:d});};
+  byId('effRetro').onclick=()=>{if(confirm('Modifier aussi le prix des séjours passés ? Les montants déjà enregistrés de cette période changeront.'))done({retro:true});};
+  byId('effCancel').onclick=()=>done(null);
+}
 function catalogSoldBefore(id,before){
   const inDays=x=>Object.keys(x||{}).some(ds=>ds<before&&x[ds]&&x[ds][id]>0);
   if(S.bookings.some(bk=>inDays(bk.extras)))return true;
@@ -9975,11 +10102,15 @@ function roomTariffById(roomId,tid){
   const r=S.settings.rooms.find(x=>x.id===roomId);
   return r&&r.tariffHistory&&r.tariffHistory.find(x=>x.id===tid);
 }
+function roomRuleCtx(roomId,tid,label,mutate,after){
+  const r=S.settings.rooms.find(x=>x.id===roomId);const t=roomTariffById(roomId,tid);if(!r||!t)return;
+  datedEdit({list:r.tariffHistory,v:t,scope:{roomId},label:`${r.name}, ${label}`,mutate,after:after||(()=>{saveSettings();renderSettings();refreshRevenueViews();})});
+}
 function addRoomRule(roomId,tid,kind){
-  const t=roomTariffById(roomId,tid);if(!t)return;
-  if(kind==='long'){(t.longStay=t.longStay||[]).push({minNights:7,pct:10});}
-  else{t.seasons=t.seasons||[];t.seasons.push(kind==='weekend'?{type:'weekend',mode:'pct',value:20}:{type:'period',label:'Été',from:'07-01',to:'08-31',mode:'pct',value:20});}
-  saveSettings();renderSettings();refreshRevenueViews();
+  roomRuleCtx(roomId,tid,kind==='long'?'remise long séjour':kind==='weekend'?'week-end':'période',t=>{
+    if(kind==='long'){(t.longStay=t.longStay||[]).push({minNights:7,pct:10});}
+    else{t.seasons=t.seasons||[];t.seasons.push(kind==='weekend'?{type:'weekend',mode:'pct',value:20}:{type:'period',label:'Été',from:'07-01',to:'08-31',mode:'pct',value:20});}
+  });
 }
 function updRoomRule(roomId,tid,list,i,field,val){
   const t=roomTariffById(roomId,tid);const x=t&&t[list]&&t[list][i];if(!x)return;
@@ -9987,13 +10118,12 @@ function updRoomRule(roomId,tid,list,i,field,val){
   if(field==='from'||field==='to'){v=frToMd(val);if(!v){alert('Date attendue au format jj/mm, ex. 01/07.');renderSettings();return;}}
   else if(field==='value'||field==='minNights'||field==='pct'){v=val===''?0:+val;if(isNaN(v))return;}
   if(x[field]===v)return;
-  x[field]=v;saveSettings();refreshRevenueViews();
-  if(field==='mode')renderSettings();
+  if(field==='label'){x[field]=v;saveSettings();return;}
+  roomRuleCtx(roomId,tid,list==='longStay'?'remise long séjour':(x.type==='weekend'?'week-end':(x.label||'période')),t=>{const y=t[list]&&t[list][i];if(y)y[field]=v;});
 }
 function delRoomRule(roomId,tid,list,i){
   const t=roomTariffById(roomId,tid);if(!t||!t[list])return;
-  t[list].splice(i,1);if(!t[list].length)delete t[list];
-  saveSettings();renderSettings();refreshRevenueViews();
+  roomRuleCtx(roomId,tid,'suppression d\'une règle',x=>{if(!x[list])return;x[list].splice(i,1);if(!x[list].length)delete x[list];});
 }
 // Services proposés par une location (Réglages → Locations → Services).
 function roomServicesHTML(r){
@@ -10020,8 +10150,10 @@ function updateRoomTariffSvc(roomId,tid,field,val){
   const next=v===''?undefined:+v;
   if((t[field]===undefined||t[field]===null||t[field]==='')&&next===undefined)return;
   if(t[field]===next)return;
-  if(next===undefined||isNaN(next))delete t[field];else t[field]=next;
-  saveSettings();refreshRevenueViews();
+  if(next!==undefined&&isNaN(next))return;
+  datedEdit({list:r.tariffHistory,v:t,scope:{roomId},label:`${r.name}, ${field==='th'?'repas':'petit-déjeuner'}`,
+    mutate:x=>{if(next===undefined)delete x[field];else x[field]=next;},
+    after:()=>{saveSettings();refreshRevenueViews();renderSettings();}});
 }
 
 function renderSettings(){
@@ -10599,9 +10731,11 @@ function delTariff(id){
 function updateTariff(id,field,val){
   const t=S.settings.tariffHistory.find(x=>x.id===id);
   if(!t)return;
-  t[field]=val;
-  saveSettings();
-  refreshRevenueViews();
+  if(t[field]===val||(typeof val==='number'&&+t[field]===val))return;
+  if(field==='from'){if(priceEditBlocked())return;t.from=val;saveSettings();refreshRevenueViews();return;}
+  const lbl={th:'table d\'hôtes',bf:'petit-déjeuner',thExt:'table d\'hôtes extérieurs'}[field]||field;
+  datedEdit({list:S.settings.tariffHistory,v:t,scope:{},label:'Prix commun : '+lbl,
+    mutate:x=>{x[field]=val;},after:()=>{saveSettings();refreshRevenueViews();renderSettings();}});
 }
 
 // Taxe de séjour CRUD (même logique que les tarifs ci-dessus)
@@ -10623,14 +10757,12 @@ function delTaxeSejourRate(id){
 function updateTaxeSejourRate(id,field,val){
   const t=S.settings.taxeSejourHistory.find(x=>x.id===id);
   if(!t)return;
-  t[field]=val;
-  saveSettings();
-  // Le modal de réservation peut être ouvert avec la case déjà cochée : le montant
-  // affiché doit refléter le nouveau taux sans attendre une fermeture/réouverture.
-  if(byId('modalBooking').style.display==='flex')updateModalTotal();
-  refreshRevenueViews();
+  if(t[field]===val)return;
+  if(field==='from'){if(priceEditBlocked())return;t.from=val;saveSettings();refreshRevenueViews();return;}
+  datedEdit({list:S.settings.taxeSejourHistory,v:t,scope:{taxe:true},label:'Taxe de séjour',
+    mutate:x=>{x[field]=val;},after:()=>{saveSettings();renderSettings();
+      if(byId('modalBooking').style.display==='flex')updateModalTotal();refreshRevenueViews();}});
 }
-
 // Contrat de location — champ simple (pas une liste), un seul objet à jour.
 function updateContractField(field,val){
   if(!S.settings.contract)S.settings.contract={};
@@ -10840,6 +10972,9 @@ function addRoomTariff(roomId){
 function delRoomTariff(roomId,tid){
   const r=S.settings.rooms.find(x=>x.id===roomId);
   if(!r||!r.tariffHistory||r.tariffHistory.length<=1)return;
+  if(priceEditBlocked())return;
+  const t=r.tariffHistory.find(x=>x.id===tid);
+  if(t&&!confirm(`Supprimer le tarif du ${fmtShortDate(t.from)} ? Les séjours de cette période reprendront le tarif précédent.`))return;
   r.tariffHistory=r.tariffHistory.filter(t=>t.id!==tid);
   saveSettings();renderSettings();
   refreshRevenueViews();
@@ -10848,6 +10983,8 @@ function updateRoomTariff(roomId,tid,field,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
   const t=r&&r.tariffHistory.find(x=>x.id===tid);
   if(!t)return;
+  if(t[field]===val)return;
+  if(priceEditBlocked())return;
   t[field]=val;
   saveSettings();
   refreshRevenueViews();
@@ -10856,10 +10993,10 @@ function updateRoomTariffPrice(roomId,tid,pax,val){
   const r=S.settings.rooms.find(x=>x.id===roomId);
   const t=r&&r.tariffHistory.find(x=>x.id===tid);
   if(!t)return;
-  if(!t.prices)t.prices={};
-  t.prices[pax]=val;
-  saveSettings();
-  refreshRevenueViews();
+  if(t.prices&&+t.prices[pax]===+val)return;
+  datedEdit({list:r.tariffHistory,v:t,scope:{roomId},label:`${r.name}, ${pax} pers.`,
+    mutate:x=>{if(!x.prices)x.prices={};x.prices[pax]=val;},
+    after:()=>{saveSettings();refreshRevenueViews();renderSettings();}});
 }
 
 // Structures juridiques — CRUD
@@ -11181,6 +11318,7 @@ function catHistSave(item,v){
   refreshYearMaybe();
 }
 function setCatHist(id,i,field,value){
+  if(priceEditBlocked())return;
   const item=S.catalog.find(c=>c.id===id);if(!item)return;
   const v=catHistVersions(item);if(!v[i])return;
   if(field==='from'){
@@ -11191,6 +11329,7 @@ function setCatHist(id,i,field,value){
   catHistSave(item,v);
 }
 function addCatHist(id){
+  if(priceEditBlocked())return;
   const item=S.catalog.find(c=>c.id===id);if(!item)return;
   const v=catHistVersions(item);
   let d=todayISO();
@@ -11199,6 +11338,7 @@ function addCatHist(id){
   catHistSave(item,v);
 }
 function delCatHist(id,i){
+  if(priceEditBlocked())return;
   const item=S.catalog.find(c=>c.id===id);if(!item)return;
   const v=catHistVersions(item);if(i<=0||!v[i])return;
   if(!confirm(`Supprimer le prix du ${fmtShortDate(v[i].from)} (${v[i].price} €) ? Les ventes concernées reprendront le prix précédent.`))return;
@@ -11211,17 +11351,13 @@ function updateCatalogItem(id,field,value){
   const item=S.catalog[i];
   if(field==='price'){
     if(+value===+item.price)return;
-    // Déjà vendu avant aujourd'hui : nouveau prix daté d'aujourd'hui, les
-    // ventes passées gardent l'ancien. Jamais vendu avant : simple correction.
+    if(priceEditBlocked())return;
     const today=todayISO();
-    if(catalogSoldBefore(id,today)){
-      if(!Array.isArray(item.priceHistory)||!item.priceHistory.length)item.priceHistory=[{from:'2000-01-01',price:+item.price||0}];
-      const last=item.priceHistory[item.priceHistory.length-1];
-      if(last.from===today)last.price=value;
-      else item.priceHistory.push({from:today,price:value});
-    }else if(Array.isArray(item.priceHistory)&&item.priceHistory.length){
-      item.priceHistory[item.priceHistory.length-1].price=value;
-    }
+    const v=catHistVersions(item);
+    const cur=[...v].reverse().find(x=>x.from<=today)||v[0];
+    datedEdit({list:v,v:cur,scope:{catalogId:id},label:(item.emoji?item.emoji+' ':'')+item.name,
+      mutate:x=>{x.price=+value||0;},after:()=>catHistSave(item,v)});
+    return;
   }
   item[field]=value;
   saveCatalog();
