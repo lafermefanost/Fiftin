@@ -32,7 +32,10 @@ function table(rows) {
  * tarifs des locations, prix des clients (nombre seulement), réservations
  * modifiées (nombre seulement). Aucun nom de client affiché. */
 function diagnose(before, now) {
-  const j = (v) => JSON.stringify(v == null ? null : v);
+  // Comparaison insensible à l'ordre des clés (Firestore ne renvoie pas
+  // toujours les champs d'une map dans le même ordre).
+  const norm = (v) => Array.isArray(v) ? v.map(norm) : (v && typeof v === "object" ? Object.keys(v).sort().reduce((o, k) => { o[k] = norm(v[k]); return o; }, {}) : v);
+  const j = (v) => JSON.stringify(norm(v == null ? null : v));
   const sb = before.settings || {}, sn = now.settings || {};
   console.log("\n--- Autres changements entre les deux instants ---");
   const keys = Array.from(new Set(Object.keys(sb).concat(Object.keys(sn)))).filter((k) => j(sb[k]) !== j(sn[k]));
