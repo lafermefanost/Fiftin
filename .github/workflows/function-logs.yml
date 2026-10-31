@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 env:
-  FUNCS: "availsharegeturl availshare"
+  FUNCS: "availsharegeturl availshare icalgetexporturl"
 
 jobs:
   logs:
@@ -28,7 +28,11 @@ jobs:
         run: |
           for f in $FUNCS; do
             echo "=== $f ==="
-            gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$f\" AND severity>=WARNING" \
+            gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$f\"" \
               --project=fiftin-e30c2 --freshness=1d --limit=15 \
-              --format="value(timestamp,severity,textPayload,jsonPayload.message,httpRequest.status)" || true
+              --format="value(timestamp,severity,logName.basename(),httpRequest.status,httpRequest.requestMethod,textPayload,jsonPayload.message)" || true
+          done
+          echo "=== Rôle IAM invoker des deux fonctions ==="
+          for f in availsharegeturl availshare icalgetexporturl; do
+            echo "--- $f"; gcloud run services get-iam-policy $f --region=us-central1 --project=fiftin-e30c2 --format="value(bindings)" || true
           done
