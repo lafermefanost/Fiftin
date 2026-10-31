@@ -1226,6 +1226,7 @@ body.ro-ui label:has(>input:disabled),body.ro-ui label:has(input:disabled){point
 .mocc-bar-bg{flex:1;height:11px;background:var(--light);border-radius:3px;overflow:hidden;}
 .mocc-bar-fill{height:100%;border-radius:3px;background:var(--green);transition:width .3s;}
 .mocc-pct{font-size:13px;font-weight:500;color:var(--gray);width:30px;text-align:right;flex-shrink:0;}
+.mocc-amt{font-size:13px;font-weight:600;color:var(--dark);width:78px;text-align:right;flex-shrink:0;white-space:nowrap;}
 .mocc-taxe{display:flex;justify-content:space-between;align-items:center;
   margin-top:10px;padding-top:10px;border-top:1px solid var(--light);
   font-size:12px;color:var(--gray);font-weight:500;}
@@ -13929,6 +13930,30 @@ function renderYear(){
     // gauge/nightsGauge) — pour que l'encart soit repérable au même titre
     // que "Revenus par mois" etc. sans avoir à le déplier pour comprendre.
     const gaugesCardHTML=gaugesHTML?subSection('Seuils',gaugesHTML):'';
+    // Par location (demande de César) : occupation à ce jour (même calcul que
+    // la carte « occupation à ce jour » : nuits passées / jours écoulés ;
+    // année à venir : nuits réservées / 365) et revenu de l'année
+    // (réservations à venir comprises, comme le Top clients).
+    const yrElapsed=daysBetween(yStart,today<yEnd?today:yEnd);
+    const realEndR=today<yEnd?today:yEnd;
+    const roomRows=st.rooms.map(r=>{
+      const rb=st.bks.filter(b=>b.roomId===r.id);
+      const nightsIn=(a,b)=>rb.reduce((n,bk)=>{const oS=bk.checkIn>a?bk.checkIn:a,oE=bk.checkOut<b?bk.checkOut:b;return n+Math.max(0,daysBetween(oS,oE));},0);
+      const occ=yrElapsed>0?Math.round(nightsIn(yStart,realEndR)/yrElapsed*100):Math.round(nightsIn(yStart,yEnd)/daysBetween(yStart,yEnd)*100);
+      const rev=rb.reduce((t,bk)=>t+getBookingRevForPeriod(bk,yStart,yEnd),0);
+      return{r,occ:Math.min(100,occ),rev};
+    });
+    const roomOccBody=roomRows.map(x=>`<div class="mocc-row">
+        <div class="mocc-room">${x.r.short}</div>
+        <div class="mocc-bar-bg"><div class="mocc-bar-fill" style="width:${x.occ}%"></div></div>
+        <div class="mocc-pct">${x.occ}%</div>
+      </div>`).join('');
+    const maxRoomRev=Math.max(1,...roomRows.map(x=>x.rev));
+    const roomRevBody=roomRows.slice().sort((a,b)=>b.rev-a.rev).map(x=>`<div class="mocc-row">
+        <div class="mocc-room">${x.r.short}</div>
+        <div class="mocc-bar-bg"><div class="mocc-bar-fill" style="width:${Math.round(x.rev/maxRoomRev*100)}%"></div></div>
+        <div class="mocc-amt"><span class="money">${Math.round(x.rev).toLocaleString('fr-FR')}</span> €</div>
+      </div>`).join('');
     return`<div class="yr-group${collapsed?' collapsed':''}">
       <div class="yr-group-hd" onclick="toggleYearGroup('${gid}',${structs.length>1})">
         <div class="yr-group-name">${STRUCTURE_ICON}${name.replace(/\s*\([^)]*\)\s*$/,'')}</div>
@@ -13966,6 +13991,8 @@ function renderYear(){
         </div>
         ${gaugesCardHTML}
         ${subSection('Revenus par mois',structMonthlyChart(gid,'var(--green)'))}
+        ${st.rooms.length?subSection(`Occupation par location <span class="mocc-title-note">(${yrElapsed>0?'à ce jour':'réservations'})</span>`,roomOccBody):''}
+        ${st.rooms.length?subSection(`Revenu par location <span class="mocc-title-note">(année, à venir compris)</span>`,roomRevBody):''}
         ${subSection(topClientRows.length?`Top ${topClientRows.length} client${topClientRows.length>1?'s':''}`:'Top clients',topClientsBody)}
         <span class="money">${subSection(`Répartition par source${sourceEntries.length?` <span class="mocc-title-note">(sur ${Math.round(sourceRevTotal(sourceEntries)).toLocaleString('fr-FR')} € au total)</span>`:''}`,sourceEntries.length?buildSourceRevGauge(sourceEntries):'<div class="yr-chart-nodata">Aucun revenu par source pour cette structure</div>','yr-subhd-plain')}</span>
         ${subSection('Répartition des charges',chargesTotal>0?`<div class="mch-total-row" style="margin-top:0;padding-top:0;border-top:none">
