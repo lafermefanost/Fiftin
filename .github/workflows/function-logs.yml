@@ -1,0 +1,34 @@
+# Journaux des fonctions — LECTURE SEULE (diagnostic).
+#
+# Affiche les dernières entrées de journal (erreurs et avertissements) des
+# fonctions listées dans FUNCS. Ne crée, ne modifie et ne supprime rien.
+# Se lance quand ce fichier change sur main, ou à la main.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions).
+name: Journaux des fonctions
+
+on:
+  push:
+    branches: [main]
+    paths: [".github/workflows/function-logs.yml"]
+  workflow_dispatch:
+
+env:
+  FUNCS: "availsharegeturl availshare"
+
+jobs:
+  logs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Journaux
+        run: |
+          for f in $FUNCS; do
+            echo "=== $f ==="
+            gcloud logging read "resource.type=\"cloud_run_revision\" AND resource.labels.service_name=\"$f\" AND severity>=WARNING" \
+              --project=fiftin-e30c2 --freshness=1d --limit=15 \
+              --format="value(timestamp,severity,textPayload,jsonPayload.message,httpRequest.status)" || true
+          done
