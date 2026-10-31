@@ -251,6 +251,14 @@ header{height:calc(var(--hdr) + env(safe-area-inset-top));box-sizing:border-box;
 .tbtn{padding:5px 14px;border:none;border-radius:20px;font-family:'Jost',sans-serif;
   font-size:12px;font-weight:500;cursor:pointer;}
 .tbtn-today{background:var(--green);color:var(--white);margin-left:auto;}
+/* Raccourci vers Réglages → Liens de disponibilités (demande de César), vue
+   Grille seulement, propriétaire seulement : il prend la marge automatique
+   d'« Aujourd'hui » quand il est affiché. */
+.tb-share{display:none;width:28px;height:28px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--green);
+  background:var(--white);color:var(--green);cursor:pointer;align-items:center;justify-content:center;padding:0;margin-left:auto;}
+.tb-share.show{display:flex;}
+.tb-share.show+.tbtn-today{margin-left:0;}
+.tb-share:hover{background:var(--light);}
 .tbtn-add{background:var(--yellow);color:var(--green-deep);}
 .tbtn-ical{background:#F7E9D7;color:#9A6420;}
 .ical-alert{display:flex;flex-direction:column;gap:8px;padding:12px 0;border-top:1px solid var(--light);}
@@ -2348,6 +2356,8 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .al-chip{border:1.5px solid var(--light);background:#fff;color:var(--gray);border-radius:999px;padding:5px 11px;font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
 .al-chip.on{background:var(--green);border-color:var(--green);color:#fff;}
 .al-chip.al-all{border-style:dashed;}
+.al-voice{display:flex;gap:6px;margin-bottom:6px;}
+.al-msg{width:100%;box-sizing:border-box;font:inherit;font-size:12px;line-height:1.45;resize:vertical;min-height:150px;}
 .al-chip.al-all.on{border-style:solid;}
 .al-card{margin-bottom:12px;}
 .aide-sub{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);margin:4px 0 8px;}
@@ -2553,6 +2563,7 @@ fiftinSetBrandVideoSrc("lockVideo");</script>
     <button class="vtab" id="vt-month" onclick="setView('month')">Mois</button>
     <button class="vtab" id="vt-year" onclick="setView('year')">Année</button>
   </div>
+  <button class="tb-share" id="availShareBtn" onclick="openAvailLinksFromGrid()" title="Partager mes disponibilités" aria-label="Partager mes disponibilités"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></button>
   <button class="tbtn tbtn-today" onclick="goToday()">Aujourd'hui</button>
   <button class="tbtn tbtn-add" id="addResaBtn" onclick="openAddModal()">+ Résa</button>
   <button class="tbtn tbtn-ical" id="icalAlertBtn" onclick="openIcalAlerts()" style="display:none"></button>
@@ -4784,7 +4795,7 @@ function applyPersonnelUIRestrictions(){
   // le clic ne déclenche même plus l'alerte de blocage, plutôt que de réagir
   // au survol pour finalement ne rien permettre.
   document.body.classList.add('ro-ui');
-  ['guestsBtn','addResaBtn'].forEach(id=>{
+  ['guestsBtn','addResaBtn','availShareBtn'].forEach(id=>{
     const el=byId(id);
     if(el)el.style.display='none';
   });
@@ -5767,6 +5778,14 @@ function availLinksHTML(){
       <div class="sc-field" style="margin-top:8px"><label>Numéro WhatsApp affiché</label>
         <input class="set-fi" style="width:100%;font-size:12px" inputmode="tel" value="${esc(L.phone)}" placeholder="Vide = celui de votre profil Fiftin Séjours" onchange="availLinkPhone(${i},this.value)"></div>
       <div id="availSt-${i}" style="font-size:11px;color:var(--gray);margin-top:3px"></div>
+      <div class="sc-field" style="margin-top:8px"><label>Message envoyé avec le lien</label>
+        <div class="al-voice">${['tu','vous'].map(v=>`<button type="button" class="al-chip${(L.voice||'tu')===v?' on':''}" onclick="availLinkVoice(${i},'${v}')">${v==='tu'?'Tutoyer':'Vouvoyer'}</button>`).join('')}</div>
+        <textarea class="set-fi al-msg" rows="9" onchange="availLinkMsg(${i},this.value)">${String(availLinkMsgTpl(L)).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</textarea>
+        <div style="font-size:10.5px;color:var(--gray);line-height:1.4;margin-top:3px">{lien} = l'adresse de la page, {nom} = le nom affiché. Envoyer partage ce message tel quel.</div>
+        <div style="display:flex;gap:14px;margin-top:5px;font-size:11px;flex-wrap:wrap">
+          <a href="#" style="color:var(--green)" onclick="event.preventDefault();availLinkCopyMsg(${i},this)">Copier le message</a>
+          ${L.message?`<a href="#" style="color:var(--gray)" onclick="event.preventDefault();availLinkMsg(${i},'')">Rétablir le message proposé</a>`:''}
+        </div></div>
       <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;flex-wrap:wrap">
         ${L.url?`<a href="${u}" target="_blank" rel="noopener" style="color:var(--green)">Ouvrir la page</a>
         <a href="#" style="color:var(--gray)" onclick="event.preventDefault();if(confirm('Créer un nouveau lien ? L\\'ancien cessera de fonctionner pour tous ceux à qui vous l\\'avez envoyé.'))availLinkSync(${i},{regenerate:true})">Changer le lien</a>`:''}
@@ -5822,6 +5841,36 @@ function availLinkRemove(i){
   if(!L.url||!icalAvailable()){done();return;}
   icalCall('availShareGetUrl',{linkId:L.id,legacyStructureId:L.legacySid||'',remove:true}).then(done).catch(e=>alert('Suppression impossible : '+((e&&e.message)||e)));
 }
+// Message d'envoi (demande de César) : proposé en tutoiement ou vouvoiement,
+// modifiable lien par lien (L.message ; vide = message proposé).
+function availLinkDefaultMsg(voice){
+  if(voice==='vous')return "Bonjour,\n\nComme vous faites partie de nos habitués, nous avons pensé qu'il vous serait utile de pouvoir consulter nos disponibilités à tout moment. Voici une page mise à jour en direct : nuit par nuit sur les 6 prochains mois, vous voyez d'un coup d'œil ce qui est libre, vous choisissez vos dates et vous nous écrivez directement sur WhatsApp. De quoi gagner du temps pour organiser vos prochains séjours !\n\n👉 {lien}\n\nPour l'avoir toujours sous la main, ajoutez-la à l'écran d'accueil de votre téléphone, comme une application :\n• iPhone : ouvrez le lien dans Safari, touchez le bouton Partager (le carré avec une flèche), puis « Sur l'écran d'accueil ».\n• Android : ouvrez le lien dans Chrome, touchez le menu ⋮, puis « Ajouter à l'écran d'accueil ».\n\nCes disponibilités sont indicatives : nous confirmons toujours ensemble avant de réserver.\n\nAu plaisir de vous revoir à {nom} !";
+  return "Bonjour !\n\nComme tu fais partie de nos habitués, nous avons pensé que ce serait pratique pour toi de pouvoir consulter nos disponibilités à tout moment. Voici une page mise à jour en direct : nuit par nuit sur les 6 prochains mois, tu vois d'un coup d'œil ce qui est libre, tu choisis tes dates et tu nous écris directement sur WhatsApp. De quoi gagner du temps pour organiser tes prochains déplacements !\n\n👉 {lien}\n\nPour l'avoir toujours sous la main, ajoute-la à l'écran d'accueil de ton téléphone, comme une appli :\n• iPhone : ouvre le lien dans Safari, touche le bouton Partager (le carré avec une flèche), puis « Sur l'écran d'accueil ».\n• Android : ouvre le lien dans Chrome, touche le menu ⋮, puis « Ajouter à l'écran d'accueil ».\n\nCes disponibilités sont indicatives : on confirme toujours ensemble avant de réserver.\n\nÀ très vite à {nom} !";
+}
+function availLinkMsgTpl(L){return (L&&L.message)||availLinkDefaultMsg(L&&L.voice);}
+function availLinkMsgText(L){
+  const nom=(L.name||S.settings.name||'').trim();
+  let t=availLinkMsgTpl(L);
+  t=nom?t.replace(/\{nom\}/g,nom):t.replace(/ à \{nom\}/g,'').replace(/\{nom\}/g,'');
+  return t.indexOf('{lien}')>=0?t.replace(/\{lien\}/g,L.url):t.replace(/\s+$/,'')+'\n\n'+L.url;
+}
+function availLinkLocal(i,fn){
+  const list=availLinks().map(x=>Object.assign({},x));if(!list[i])return;fn(list[i]);availLinksSave(list);
+}
+function availLinkMsg(i,v){
+  availLinkLocal(i,L=>{const t=String(v||'').trim();if(!t||t===availLinkDefaultMsg(L.voice).trim())delete L.message;else L.message=t;});
+}
+function availLinkVoice(i,v){
+  const L=availLinks()[i];if(!L||(L.voice||'tu')===v)return;
+  if(L.message&&!confirm('Remplacer votre message par le message proposé ('+(v==='tu'?'tutoiement':'vouvoiement')+') ?'))return;
+  availLinkLocal(i,X=>{X.voice=v;delete X.message;});
+}
+function availLinkCopyMsg(i,a){
+  const L=availLinks()[i];if(!L||!L.url)return;
+  const t=availLinkMsgText(L), done=()=>{a.textContent='Copié ✓';setTimeout(()=>{a.textContent='Copier le message';},1800);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(t).then(done).catch(()=>{});
+  else{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done();}
+}
 function availLinkCopy(i,btn){
   const L=availLinks()[i];if(!L||!L.url)return;
   const done=()=>{btn.textContent='Copié ✓';setTimeout(()=>{btn.textContent='Copier';},1800);};
@@ -5830,9 +5879,11 @@ function availLinkCopy(i,btn){
 }
 function availLinkSend(i){
   const L=availLinks()[i];if(!L||!L.url)return;
-  const text='Nos disponibilités'+(L.name?' ('+L.name+')':'')+', mises à jour en direct :';
-  if(navigator.share)navigator.share({title:'Disponibilités',text,url:L.url}).catch(()=>{});
-  else window.open('https://wa.me/?text='+encodeURIComponent(text+' '+L.url),'_blank','noopener');
+  // Lien dans le texte, sans champ url séparé : certaines applis (WhatsApp
+  // sur iPhone) ne gardent que l'un des deux.
+  const text=availLinkMsgText(L);
+  if(navigator.share)navigator.share({text}).catch(()=>{});
+  else window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener');
 }
 function copyIcalExport(rid,btn){
   const r=(S.settings.rooms||[]).find(x=>x.id===rid);if(!r||!r.icalExportUrl)return;
@@ -10153,6 +10204,16 @@ function openBackupExport(){
   prefetchSejoursListings();
   requestAnimationFrame(()=>byId('setpanel-export')?.scrollIntoView({block:'start'}));
 }
+// Bouton de partage de la Grille (demande de César) : ouvre directement
+// Réglages → Liens de disponibilités.
+function openAvailLinksFromGrid(){
+  if(currentRole==='personnel')return;
+  settingsPanelOpen={dispo:true};
+  renderSettings();
+  openM('modalSettings');
+  prefetchSejoursListings();
+  requestAnimationFrame(()=>byId('setpanel-dispo')?.scrollIntoView({block:'start'}));
+}
 function dismissBackupReminder(){
   localStorage.setItem('ff2_lastExport',todayISO());
   byId('backupReminder').classList.remove('show');
@@ -13346,6 +13407,7 @@ function setView(v){
   if(zb)zb.style.display=v==='grid'?'flex':'none';
   const eb=byId('moneyEyeBtn');
   if(eb)eb.style.display=v==='grid'?'none':'flex';
+  byId('availShareBtn')?.classList.toggle('show',v==='grid'&&currentRole!=='personnel');
   if(v==='today')renderToday();
   if(v==='week')renderWeek();
   if(v==='month')renderMonth();
@@ -14796,6 +14858,9 @@ function obFinish(){
 const OB_RESA='Créer une réservation';
 const OB_TOUR=[
   {sel:['#mn-grid','#vt-grid'],view:'grid',title:'Grille',text:'Toutes vos locations, jour par jour, avec vos réservations en couleur. Touchez une réservation pour l\'ouvrir.'},
+  {sel:['#availShareBtn'],view:'grid',title:'Partager vos disponibilités',text:()=>S.settings.plan==='pro'
+    ?'Envoyez à vos habitués une page de vos disponibilités, mise à jour en direct : ils choisissent leurs dates et vous écrivent sur WhatsApp. Ce bouton ouvre vos liens et leur message d\'envoi.'
+    :'Une page de vos disponibilités, mise à jour en direct, à envoyer à vos habitués (formule Avancé). Ce bouton ouvre les réglages de ces liens.'},
   {sel:['#mn-today','#vt-today'],view:'today',title:'Location',text:'L\'année d\'un seul logement à la fois : ses périodes occupées et libres d\'un coup d\'œil. Passez d\'une location à l\'autre avec les flèches.'},
   {chap:OB_RESA,view:'grid',range:true,wait:260,el:()=>obSpotEls(),title:'Choisir les dates dans la Grille',text:'Touchez la case libre du jour d\'arrivée, puis celle de la dernière nuit : la période se colore. Touchez une autre case pour l\'allonger ou la raccourcir.'},
   {chap:OB_RESA,view:'grid',range:true,sel:['#rangeBar'],title:'Réserver',text:'La location, les dates et le nombre de nuits s\'affichent ici. « Réserver → » ouvre la fiche réservation déjà remplie ; ✕ annule la sélection.'},

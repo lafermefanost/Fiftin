@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <!-- Lien de disponibilités d'une structure (fiftin.fr/dispo/?t=…), demande
      de César : page que l'hôte partage à ses habitués depuis Fiftin Planning
-     (Réglages → Structures juridiques, formule Avancé). Nuit par nuit sur
+     (Réglages → Liens de disponibilités, formule Avancé). Nuit par nuit sur
      6 mois : Disponible (au moins 2 locations libres, 1 pour une structure
      d'une seule location) / Peut-être disponible (une seule libre, ou option)
      / Complet — « à confirmer avec nous » ; choix d'une période (arrivée puis
@@ -20,6 +20,11 @@
 <title>Disponibilités</title>
 <meta name="theme-color" content="#354B38">
 <link rel="icon" type="image/png" href="assets/logo-fiftin-mark-glass.png">
+<!-- Ajout à l'écran d'accueil (message d'envoi proposé dans l'outil) : nom
+     et icône remplacés par ceux de l'hôte une fois la page chargée. -->
+<meta name="apple-mobile-web-app-title" content="Disponibilités">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="assets/fiftin-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -57,7 +62,7 @@ button{font-family:inherit;}
 .dp-head.dp-wait{background:#E4E1D9;color:transparent;}
 .dp-head.dp-wait .dp-logo{visibility:hidden;}
 .dp-head.dp-wait .dp-kicker{color:transparent;}
-/* Identité visuelle de la structure (Réglages → Structures juridiques). */
+/* Identité visuelle de la structure (Réglages → Établissement, structures). */
 .dp-brand-logo{display:block;max-height:56px;max-width:180px;object-fit:contain;}
 .dp-head.branded .dp-kicker{color:inherit;opacity:.75;}
 
@@ -157,6 +162,19 @@ button{font-family:inherit;}
     else fail("Disponibilités indisponibles pour l'instant", "Vérifiez votre connexion et réessayez dans un moment.");
   });
 
+  // Icône d'écran d'accueil aux couleurs de l'hôte : logo centré sur sa
+  // couleur de fond, carré 180 px (iPhone) ; sinon l'icône Fiftin.
+  function homeIcon(br){
+    var bg = /^#[0-9a-fA-F]{6}$/.test(br.bg||"") ? br.bg : null;
+    if(!br.logo || !/^data:image\/png;base64,/.test(br.logo)) return;
+    try{
+      var c = document.createElement("canvas"); c.width = c.height = 180;
+      var x = c.getContext("2d"); x.fillStyle = bg || "#FFFFFF"; x.fillRect(0,0,180,180);
+      var set = function(){ var u = c.toDataURL("image/png");
+        ["apple-touch-icon","icon"].forEach(function(rel){ var l = document.querySelector('link[rel="'+rel+'"]'); if(l){ l.setAttribute("href", u); l.removeAttribute("type"); } }); };
+      var im = new Image(); im.onload = function(){ var k = Math.min(140/im.width, 140/im.height); var w = im.width*k, h = im.height*k; x.drawImage(im, (180-w)/2, (180-h)/2, w, h); set(); }; im.src = br.logo;
+    }catch(e){}
+  }
   function render(data){
     var name = data.name || "Disponibilités";
     var br = data.brand;
@@ -173,7 +191,9 @@ button{font-family:inherit;}
       }
     }
     head.classList.remove("dp-wait");
-    document.title = "Disponibilités · " + name;
+    document.title = name + " · Disponibilités";
+    var at = document.querySelector('meta[name="apple-mobile-web-app-title"]'); if(at && data.name) at.setAttribute("content", name);
+    if(br) homeIcon(br);
     document.getElementById("dpName").textContent = name;
     var phone = data.phone || "";
     var days = String(data.days || "");
