@@ -1338,6 +1338,10 @@ textarea.text-input{resize:vertical; min-height:80px;}
    .google-link, juste carrées et sans libellé — un picto suffit à
    identifier Instagram/Facebook, pas la peine du texte qui ferait
    déborder la ligne. */
+.ext-links-edit{margin-top:12px;}
+button.google-link{border:none; font-family:'Jost',sans-serif; cursor:pointer;}
+.google-link.off{background:#fff; color:var(--gray-mid); box-shadow:inset 0 0 0 1.5px var(--line);}
+.google-link.off svg{color:var(--gray-mid);}
 .google-link.icon-only{padding:8px; width:30px; height:30px; justify-content:center;}
 .google-link.icon-only svg{width:14px; height:14px;}
 /* Mes annonces : ce que Fiftin a apporté ce mois-ci (fillHostClickStats()). */
@@ -10108,9 +10112,33 @@ function contactEditHtml(d, prof, pre, extraNote){
     (mailOn ? '<span>'+((d.email||"").trim() ? 'E-mail : <b>'+esc(d.email)+'</b> · '+src(d.email, prof.email) : '<em class="cr-warn">E-mail à renseigner</em>')+'</span>' : '');
   return '<p class="cr-note" style="margin:-4px 0 12px;">Touchez un moyen de contact pour le proposer aux voyageurs ; touchez-le à nouveau pour le personnaliser ou le retirer.</p>'+
     '<div class="send-row ct-row">'+CONTACT_CHANNELS.map(function(c){ return tile(c.k, c.k, "ch", SEND_ICONS[c.k], c.label, chs.indexOf(c.k)!==-1); }).join("")+'</div>'+
-    (lines || extraNote ? '<div class="ct-lines">'+lines+(extraNote ? '<span>'+esc(extraNote)+'</span>' : '')+'</div>' : '')+
-    '<div class="ct-sub">Liens affichés sur l’annonce</div>'+
-    '<div class="send-row ct-row">'+CONTACT_LINKS.map(function(c){ return tile("link-"+c.k, c.k, "link", LINK_ICONS[c.k], c.label, !!(d[c.k]||"").trim()); }).join("")+'</div>';
+    (lines || extraNote ? '<div class="ct-lines">'+lines+(extraNote ? '<span>'+esc(extraNote)+'</span>' : '')+'</div>' : '');
+}
+/* Liens (avis Google, Instagram, Facebook, site) dans les éditeurs : à la
+   fin de la première carte, en pastilles, là où l'Aperçu les montre
+   (hostExtLinksHtml) — demande de César, pages Modifier / Aperçu
+   symétriques. Lien renseigné = pastille verte de l'Aperçu ; à ajouter =
+   pastille discrète « + … ». pre = "cr" / "pe" (même câblage
+   data-<pre>-link qu'avant, contactLinkTap) ; pre vide = lecture seule
+   (hébergement d'un établissement : liens réglés dans l'établissement). */
+function linksEditHtml(d, pre, voice){
+  var lv = {hostVoice: voice};
+  var label = {
+    googleUrl: hv(lv, "Mes avis Google", "Nos avis Google"),
+    instagramUrl: hv(lv, "Mon Instagram", "Notre Instagram"),
+    facebookUrl: hv(lv, "Mon Facebook", "Notre Facebook"),
+    websiteUrl: hv(lv, "Mon site", "Notre site")
+  };
+  var keys = ["googleUrl", "instagramUrl", "facebookUrl", "websiteUrl"];
+  if(!pre){
+    keys = keys.filter(function(k){ return (d[k]||"").trim(); });
+    if(!keys.length) return "";
+    return '<div class="ext-links ext-links-edit">'+keys.map(function(k){ return '<span class="google-link">'+LINK_ICONS[k]+'<span>'+label[k]+'</span></span>'; }).join("")+'</div>';
+  }
+  return '<div class="ext-links ext-links-edit">'+keys.map(function(k){
+    var on = !!(d[k]||"").trim();
+    return '<button type="button" class="google-link'+(on?'':' off')+'" data-'+pre+'-link="'+k+'">'+LINK_ICONS[k]+'<span>'+(on ? label[k] : '+ '+label[k])+'</span></button>';
+  }).join("")+'</div>';
 }
 function openContactSheet(o){
   var root = document.getElementById("sheet-root");
@@ -10387,6 +10415,8 @@ function crRender(){
         // Adresse sous la description (retour de César) ; dans un établissement, celle de l'établissement.
         (cr.site ? '' : '<button type="button" class="cr-addr" data-cr-sec="address" data-cr-open="address">'+PIN_ICON_SVG+
           (d.address ? '<span>'+esc(d.address)+(typeof d.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’hébergement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>')+
+        // Liens en fin de carte, comme dans l'Aperçu.
+        linksEditHtml(d, cr.site ? "" : "cr", host.voice)+
       '</div>'+
       crSiteBannerHtml()+
       '<div class="detail-cards">'+
@@ -11421,6 +11451,7 @@ function peRender(){
         // Adresse sous la description (retour de César).
         '<button type="button" class="cr-addr" data-pe-open="address">'+PIN_ICON_SVG+
           (sh.address ? '<span>'+esc(sh.address)+(typeof sh.lat!=="number" ? ' <em class="cr-warn">· introuvable, à préciser</em>' : '')+'</span>' : '<span class="cr-ph">Adresse de l’établissement (jamais affichée telle quelle aux voyageurs)</span>')+'</button>'+
+        linksEditHtml(sh, "pe", hostV.voice)+
       '</div>'+
       '<div class="detail-cards">'+
         '<div class="detail-card" data-sync="meta"><div class="meta-row">'+
