@@ -3331,6 +3331,10 @@ const FISCAL_CALENDAR=[
 // Types de structure reconnus par le calendrier fiscal (voir Réglages →
 // Structures juridiques). Une structure sans type assigné ('autre' ou
 // vide) ne masque ni ne fait apparaître d'échéance spécifique.
+// Mention sur les seuils (demande de César) : montants variables selon la
+// situation, à saisir et revoir chaque année par le client ; aucun engagement
+// de Fiftin. Affichée partout où des seuils apparaissent.
+const THRESHOLD_NOTE='Seuils indicatifs : leur montant dépend de votre situation et change chaque année. C\'est à vous de saisir les vôtres, de les vérifier chaque année et d\'ajouter ceux qui vous concernent (pas seulement la TVA). Fiftin ne garantit pas ces montants et n\'en est pas responsable.';
 const STRUCTURE_TYPES=[
   {id:'sasu',      label:'SASU / SAS'},
   {id:'ei_reel',   label:'EI (régime réel)'},
@@ -9665,7 +9669,7 @@ function regulatoryItemsHTML(){
     <div class="yr-regl-item">📎 <b>Nouvelle mention TVA (à partir du 1ᵉʳ sept. 2026)</b> — « TVA non applicable, art. 293 B du CGI » devient « TVA non applicable, art. L. 223-3 du CIBS » (recodification à droit constant, ordonnance n° 2025-1247 du 17 déc. 2025). L'ancienne mention reste tolérée sur les factures jusqu'au 31/12/2027 — rien d'urgent, mais à mettre à jour sur vos modèles de facture.</div>
     <div class="yr-regl-item">🧾 <b>Facturation électronique</b> — réception obligatoire dès le <b>1ᵉʳ septembre 2026</b> pour toutes les entreprises, y compris en franchise de TVA : il faut pouvoir recevoir vos factures fournisseurs via une plateforme agréée (PA, ex-PDP). Émission obligatoire à partir du 1ᵉʳ septembre 2027 pour les micro-entreprises/TPE (2026 déjà pour les grandes entreprises/ETI). Sanctions renforcées par la loi de finances 2026 : jusqu'à 50 €/facture non conforme et 500 €/e-reporting manquant (plafond 15 000 €/an).</div>
     <div class="yr-regl-item">🏠 <b>Loi Le Meur (nov. 2024)</b> — résidence principale : limite de <b>${(nightsThr?.amount||120)} nuits/an</b> via plateformes numériques. Les communes >200 000 hab. peuvent abaisser à 90 nuits. Nouvelles exigences DPE pour les meublés de tourisme neufs dès 2025.</div>
-    <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px">Ces informations sont indicatives — consultez votre expert-comptable.</div>`;
+    <div class="yr-regl-item" style="color:var(--gray);font-style:italic;font-size:11px">Ces informations sont indicatives et peuvent changer chaque année : vérifiez-les avec votre expert-comptable. ${THRESHOLD_NOTE}</div>`;
 }
 // Enveloppe une section des réglages dans un volet dépliant, comme les volets des
 // vues Mois/Année (même chevron, même mécanique). L'état ouvert/fermé est mémorisé
@@ -9866,7 +9870,8 @@ function renderSettings(){
         </select>
       </div>
       <div class="set-card-sub" style="margin-top:0;padding-top:10px">
-        <div class="set-card-sub-title">Seuils</div>`;
+        <div class="set-card-sub-title">Seuils</div>
+        <div style="font-size:11px;color:var(--gray);margin:0 0 8px;line-height:1.45">${THRESHOLD_NOTE}</div>`;
     if(!thr.length)structBody+=`<div style="font-size:11px;color:#bbb;padding:2px 0 6px">Aucun seuil configuré pour cette structure.</div>`;
     thr.forEach(t=>{
       structBody+=`<div class="set-card-row" style="gap:6px;margin-bottom:6px">
@@ -13240,7 +13245,8 @@ function renderYear(){
     const showPlatform=nightsThr.length>0;
     const platLimit=nightsThr[0]?.amount||120;
     const gaugesHTML=revenueThr.map(t=>gauge(st.realCA,st.projCA,t.amount,t.color||'#1D2820',t.label)).join('')
-      +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('');
+      +nightsThr.map(t=>nightsGauge(st.platNights,t.amount,t.label)).join('')
+      +((revenueThr.length||nightsThr.length)?`<div style="font-size:10.5px;color:var(--gray);font-style:italic;line-height:1.45;margin:2px 0 6px">${THRESHOLD_NOTE}</div>`:'');
     // Charges réelles / marge nette de CETTE structure : relevé bancaire +
     // ménage de la structure (même total que « Répartition des charges »
     // plus bas) ; la somme des structures redonne l'encart global.
@@ -13768,12 +13774,14 @@ function obRender(){
       '<div class="ob-q">Taxe de séjour</div>'+
       '<div class="ob-picks">'+
         [['fixed','Montant fixe','Hébergement classé'],['percent','% du prix','Hébergement non classé'],['none','Pas de taxe',''],['later','Je ne sais pas encore','']].map(o=>
-          '<button type="button" class="'+(ob.ts.mode===o[0]?'on':'')+'" onclick="ob.ts.mode=\''+o[0]+'\';obRerender()">'+o[1]+(o[2]?'<small>'+o[2]+'</small>':'')+'</button>').join('')+
+          '<button type="button" class="'+(ob.ts.mode===o[0]?'on':'')+'" onclick="ob.ts.mode=\''+o[0]+'\';ob.err=\'\';obRerender()">'+o[1]+(o[2]?'<small>'+o[2]+'</small>':'')+'</button>').join('')+
       '</div>'+
-      (ob.ts.mode==='fixed'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Par personne et par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex. 1" value="'+obEsc(ob.ts.amount)+'" oninput="ob.ts.amount=this.value"><span>€</span></div></div></div>':'')+
-      (ob.ts.mode==='percent'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Taux</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ex. 5" value="'+obEsc(ob.ts.percent)+'" oninput="ob.ts.percent=this.value"><span>%</span></div></div>'+
-        '<div class="ob-field"><label>Plafond / pers. / nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Plafond" value="'+obEsc(ob.ts.cap)+'" oninput="ob.ts.cap=this.value"><span>€</span></div></div></div>':'')+
-      '<p class="ob-hint">'+(ob.ts.mode==='later'||ob.ts.mode==null?'Votre mairie ou votre intercommunalité vous donne le tarif. ':'')+'Ajoutée au total d\'une réservation quand vous la cochez, et tenue à l\'écart de votre chiffre d\'affaires. Modifiable dans Réglages → Taxe de séjour.</p>'+
+      (ob.ts.mode==='fixed'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Par personne et par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex. 1" value="'+obEsc(ob.ts.amount)+'" oninput="ob.ts.amount=this.value;ob.err=\'\';var e=byId(\'obErr\');if(e)e.textContent=\'\'"><span>€</span></div></div></div>':'')+
+      (ob.ts.mode==='percent'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Taux</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ex. 5" value="'+obEsc(ob.ts.percent)+'" oninput="ob.ts.percent=this.value;ob.err=\'\';var e=byId(\'obErr\');if(e)e.textContent=\'\'"><span>%</span></div></div>'+
+        '<div class="ob-field"><label>Plafond / pers. / nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Plafond" value="'+obEsc(ob.ts.cap)+'" oninput="ob.ts.cap=this.value;ob.err=\'\';var e=byId(\'obErr\');if(e)e.textContent=\'\'"><span>€</span></div></div></div>':'')+
+      '<p class="ob-hint">'+(ob.ts.mode==='later'
+        ?'En attendant, la taxe de séjour reste désactivée : activez-la dans Réglages → Taxe de séjour dès que vous connaissez le tarif (votre mairie ou votre intercommunalité vous le donne).'
+        :(ob.ts.mode==null?'Votre mairie ou votre intercommunalité vous donne le tarif. ':'')+'Ajoutée au total d\'une réservation quand vous la cochez, et tenue à l\'écart de votre chiffre d\'affaires. Modifiable dans Réglages → Taxe de séjour.')+'</p>'+
       '<div class="ob-err" id="obErr">'+obEsc(ob.err)+'</div>';
     foot='<button class="ob-back" onclick="obGo(0)">Retour</button><button class="ob-primary" onclick="obGo(2)">Continuer</button>';
   }else if(st===2){
@@ -13848,7 +13856,8 @@ function obRender(){
         (ob.result.legal?'<div>'+OB_ICON.check+'<span>'+obEsc((STRUCTURE_TYPES.find(t=>t.id===ob.result.legal)||{}).label||'')+' : échéances fiscales inscrites</span></div>':'')+
         (ob.result.ts==='fixed'||ob.result.ts==='percent'?'<div>'+OB_ICON.check+'<span>Taxe de séjour réglée</span></div>':'')+
       '</div>'+
-      (!ob.result.legal||ob.result.ts==='later'||ob.result.ts==null?'<p class="ob-hint" style="margin-top:12px">À compléter quand vous aurez l\'info : '+[!ob.result.legal?'votre statut (Réglages → Structures juridiques)':'',ob.result.ts==='later'||ob.result.ts==null?'la taxe de séjour (Réglages → Taxe de séjour)':''].filter(Boolean).join(' et ')+'.</p>':'')+
+      (!ob.result.legal||ob.result.ts==='later'||ob.result.ts==null?'<p class="ob-hint" style="margin-top:12px">À compléter quand vous aurez l\'info : '+[!ob.result.legal?'votre statut (Réglages → Structures juridiques)':'',ob.result.ts==='later'||ob.result.ts==null?'la taxe de séjour, désactivée d\'ici là (Réglages → Taxe de séjour)':''].filter(Boolean).join(' et ')+'.</p>':'')+
+      '<p class="ob-hint" style="margin-top:12px">Un seuil d\'exemple (franchise de TVA) est inscrit dans Réglages → Structures juridiques. '+obEsc(THRESHOLD_NOTE)+'</p>'+
       '<p class="ob-hint" style="margin-top:16px">Prenez une minute pour découvrir l\'outil : on vous montre à quoi sert chaque menu.</p>'+
       '<button class="ob-skip" onclick="obClose()">Plus tard, je commence directement</button>';
     foot='<button class="ob-primary" onclick="obClose();obStartTour()">Découvrir l\'outil</button>';
@@ -14020,7 +14029,7 @@ function obFinish(){
   }
   // Taxe de séjour : remplace le tarif d'exemple (1 €) par celui saisi.
   const num=v=>{const x=parseFloat(String(v).replace(',','.'));return x>=0?x:null;};
-  if(ob.ts.mode==='none')S.settings.taxeSejourEnabled=false;
+  if(ob.ts.mode==='none'||ob.ts.mode==='later')S.settings.taxeSejourEnabled=false;
   else if(ob.ts.mode==='fixed'&&num(ob.ts.amount)!=null){S.settings.taxeSejourEnabled=true;S.settings.taxeSejourHistory=[{id:uid(),from:'2000-01-01',type:'fixed',amount:num(ob.ts.amount)}];}
   else if(ob.ts.mode==='percent'&&num(ob.ts.percent)!=null){const t={id:uid(),from:'2000-01-01',type:'percent',percent:num(ob.ts.percent)};if(num(ob.ts.cap)!=null)t.cap=num(ob.ts.cap);S.settings.taxeSejourEnabled=true;S.settings.taxeSejourHistory=[t];}
   S.settings.rooms=base.concat(rooms);
@@ -14059,7 +14068,7 @@ const OB_TOUR=[
   {chap:OB_RESA,modal:true,sel:['#bSaveTopBtn'],title:'Enregistrer',text:'« ✓ OK » enregistre la réservation ; ✕ ferme sans rien garder. Ici, rien n\'est enregistré : c\'était une démonstration.'},
   {sel:['#mn-week','#vt-week'],view:'week',title:'Semaine',text:'Votre quotidien : arrivées, départs, ménage, table d\'hôtes et extras du jour, jour par jour.'},
   {sel:['#mn-month','#vt-month'],view:'month',title:'Mois',text:'Le bilan du mois : revenus, taux d\'occupation, charges et marge.'},
-  {sel:['#mn-year','#vt-year'],view:'year',title:'Année',text:'Vos comptes de l\'année par structure, avec vos seuils fiscaux et un simulateur d\'impôt.'},
+  {sel:['#mn-year','#vt-year'],view:'year',title:'Année',text:'Vos comptes de l\'année par structure, avec vos seuils (à saisir et revoir chaque année dans les Réglages) et un simulateur d\'impôt.'},
   {sel:['#guestsBtn'],title:'Clients',text:'Votre fichier client : coordonnées, séjours passés, notes. Il se remplit au fil des réservations.'},
   {sel:['button[title="Événements"]'],title:'Événements',text:'Vos rendez-vous pro et perso, et les échéances fiscales de votre structure, déjà inscrites.'},
   {sel:['#settingsBtn'],title:'Réglages',text:'Locations et tarifs, liens Airbnb et Booking, équipe, compte et formule. Vous pourrez y relancer cette visite.'},
