@@ -10,8 +10,12 @@
  *                 plage importée d'Airbnb / Booking (calendrier iCal) ;
  *   - en option : seulement des réservations « option » (status "opt") ;
  *   - libre     : rien ce soir-là.
- * La nuit est « free » si au moins une location est libre, sinon « maybe »
- * si au moins une n'est qu'en option, sinon « full ».
+ * Règle de César (nov. 2026) :
+ *   - « F » Disponible : au moins 2 locations libres (1 suffit pour une
+ *     structure d'une seule location) ;
+ *   - « M » Peut-être  : une seule location libre, ou aucune libre mais
+ *     au moins une en option ;
+ *   - « X » Complet    : rien de libre, aucune option.
  */
 
 const DAY_MS = 86400000;
@@ -55,20 +59,21 @@ function structureAvailability(opts) {
       (byRoom[rid] = byRoom[rid] || []).push({a: r.checkIn, b: r.checkOut, opt: false});
     });
   });
+  const need = rooms.length >= 2 ? 2 : 1;
   let out = "";
   for (let i = 0; i < n; i++) {
     const day = addDays(from, i);
-    let anyFree = false, anyOpt = false;
+    let free = 0, opt = 0;
     for (const r of rooms) {
       const ranges = byRoom[r.id] || [];
-      let full = false, opt = false;
+      let full = false, isOpt = false;
       for (const x of ranges) {
-        if (day >= x.a && day < x.b) { if (x.opt) opt = true; else { full = true; break; } }
+        if (day >= x.a && day < x.b) { if (x.opt) isOpt = true; else { full = true; break; } }
       }
-      if (!full && !opt) { anyFree = true; break; }
-      if (!full && opt) anyOpt = true;
+      if (!full && !isOpt) free++;
+      else if (!full && isOpt) opt++;
     }
-    out += !rooms.length ? "X" : anyFree ? "F" : anyOpt ? "M" : "X";
+    out += !rooms.length ? "X" : free >= need ? "F" : (free >= 1 || opt >= 1) ? "M" : "X";
   }
   return out;
 }

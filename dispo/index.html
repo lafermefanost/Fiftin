@@ -5,10 +5,13 @@
 <!-- Lien de disponibilités d'une structure (fiftin.fr/dispo/?t=…), demande
      de César : page que l'hôte partage à ses habitués depuis Fiftin Planning
      (Réglages → Structures juridiques, formule Avancé). Nuit par nuit sur
-     6 mois : Probablement disponible / Peut-être disponible / Complet
-     (formulation prudente voulue par César : à confirmer avec l'hôte) — jamais de nom, de nombre de
+     6 mois : Disponible (au moins 2 locations libres, 1 pour une structure
+     d'une seule location) / Peut-être disponible (une seule libre, ou option)
+     / Complet — « à confirmer avec nous » ; choix d'une période (arrivée puis
+     dernière nuit) et message WhatsApp adapté (nuits complètes ou incertaines
+     citées, demande d'option) — jamais de nom, de nombre de
      chambres ni de prix (calcul côté serveur, fonction availShare de
-     functions/index.js). Toucher une nuit ouvre WhatsApp vers l'hôte avec
+     functions/index.js). La période choisie ouvre WhatsApp vers l'hôte avec
      un message prérempli. Page autonome, aucune donnée gardée. -->
 <base href="/">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -75,19 +78,30 @@ button{font-family:inherit;}
 .dp-month h2 small{font-size:12.5px;font-weight:500;color:var(--muted);text-transform:none;}
 .dp-row{display:flex;align-items:center;gap:10px;width:100%;padding:10px 18px;border:none;border-top:1px solid var(--line);background:none;text-align:left;color:inherit;font-size:15px;}
 .dp-row.we{background:var(--cream-light);}
-.dp-row[data-tap]{cursor:pointer;}
-.dp-row[data-tap]:active{background:var(--sauge-bg);}
+.dp-row[data-i]{cursor:pointer;-webkit-tap-highlight-color:transparent;}
 .dp-d{flex:1;min-width:0;display:flex;align-items:center;gap:8px;white-space:nowrap;}
 .dp-dow{width:32px;flex:none;font-size:13px;color:var(--muted);text-transform:capitalize;}
 .dp-num{font-weight:600;}
 .dp-today{color:var(--sauge-mid);}
-.dp-row .wa{flex:none;width:18px;height:18px;color:var(--sauge-light);}
-.dp-row:not([data-tap]) .wa{visibility:hidden;}
 .dp-row.X .dp-num,.dp-row.X .dp-dow{color:#A8A59C;}
 
+.dp-row.sel{background:#DCE4D7;}
+.dp-row.sel .dp-num,.dp-row.sel .dp-dow{color:var(--sauge-deep);}
+.dp-row.sel-a{box-shadow:inset 4px 0 0 var(--sauge);}
+.dp-row.sel-b{box-shadow:inset 4px 0 0 var(--sauge);}
+.dp-bar{max-width:528px;margin:0 auto;background:#fff;border-radius:24px;padding:14px 14px 12px;box-shadow:0 8px 28px rgba(29,40,32,.22);}
+.dp-bar-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:0 4px 10px;}
+.dp-bar-top b{display:block;font-size:16px;color:var(--sauge-deep);}
+.dp-sum{display:inline-block;margin-top:4px;font-size:12.5px;font-weight:600;border-radius:999px;padding:3px 10px;}
+.dp-sum.k-F{background:var(--sauge-bg);color:var(--sauge);}
+.dp-sum.k-M{background:var(--yellow-light);color:var(--sauge-deep);}
+.dp-sum.k-X{background:#E4E2DC;color:#6F6C62;}
+.dp-x{flex:none;width:32px;height:32px;border-radius:50%;border:none;background:var(--cream);color:var(--muted);font-size:14px;cursor:pointer;}
+.dp-bar-hint{font-size:12.5px;color:var(--muted);margin:-4px 4px 10px;}
 .dp-cta{position:fixed;left:0;right:0;bottom:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg, rgba(239,238,234,0) 0%, var(--cream) 34%);}
-.dp-cta a{display:flex;align-items:center;justify-content:center;gap:10px;max-width:528px;margin:0 auto;border-radius:999px;padding:15px 24px;background:var(--yellow);color:var(--sauge-deep);font-weight:600;font-size:16px;text-decoration:none;box-shadow:0 6px 18px rgba(29,40,32,.18);}
+.dp-cta a.dp-wa{display:flex;align-items:center;justify-content:center;gap:10px;max-width:528px;margin:0 auto;border-radius:999px;padding:15px 24px;background:var(--yellow);color:var(--sauge-deep);font-weight:600;font-size:16px;text-decoration:none;box-shadow:0 6px 18px rgba(29,40,32,.18);}
 .dp-cta svg{width:20px;height:20px;}
+.dp-bar .dp-wa{box-shadow:none;}
 .dp-foot{text-align:center;font-size:12px;color:var(--muted);margin:18px 0 0;}
 .dp-foot a{color:inherit;}
 .dp-msg{background:#fff;border-radius:24px;padding:28px 22px;text-align:center;font-size:15px;line-height:1.5;color:var(--muted);}
@@ -115,7 +129,7 @@ button{font-family:inherit;}
 (function(){
   var API = "https://us-central1-fiftin-e30c2.cloudfunctions.net/availShare";
   var WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8s-.4-.1-.6.1-.7.8-.8 1-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2s.2-1.1.2-1.2-.2-.2-.4-.3z"/></svg>';
-  var LABEL = {F:"Probablement disponible", M:"Peut-être disponible", X:"Complet"};
+  var LABEL = {F:"Disponible", M:"Peut-être disponible", X:"Complet"};
   var DOW = ["dim.","lun.","mar.","mer.","jeu.","ven.","sam."];
   var DOW_FULL = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
   var MON3 = ["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
@@ -123,7 +137,8 @@ button{font-family:inherit;}
   var main = document.getElementById("dpMain");
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function dateAt(from, i){ var d = new Date(from+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+i); return d; }
-  function longDate(d){ return DOW_FULL[d.getUTCDay()]+" "+d.getUTCDate()+" "+MONTHS[d.getUTCMonth()]; }
+  function dnum(d){ return d.getUTCDate()===1 ? "1er" : String(d.getUTCDate()); }
+  function longDate(d){ return DOW_FULL[d.getUTCDay()]+" "+dnum(d)+" "+MONTHS[d.getUTCMonth()]; }
   function waUrl(phone, text){ return "https://wa.me/"+phone+"?text="+encodeURIComponent(text); }
   var head = document.getElementById("dpHead");
   function fail(title, text){
@@ -163,9 +178,10 @@ button{font-family:inherit;}
     var phone = data.phone || "";
     var days = String(data.days || "");
     var html = '<div class="dp-legend"><span class="st st-F">'+LABEL.F+'</span><span class="st st-M">'+LABEL.M+'</span><span class="st st-X">'+LABEL.X+'</span></div>'+
-      '<p class="dp-hint">Disponibilités indicatives, à confirmer avec nous avant de réserver. « Peut-être » : une réservation y attend encore confirmation.'+(phone?' Touchez une nuit pour nous écrire sur WhatsApp.':'')+'</p>';
+      '<p class="dp-hint">Disponibilités indicatives, à confirmer avec nous avant de réserver. « Peut-être disponible » : il reste peu de place, ou une réservation y attend encore confirmation.'+
+      (phone?' Touchez la nuit d\'arrivée puis la dernière nuit pour choisir vos dates, puis écrivez-nous sur WhatsApp.':'')+'</p>';
     var curMonth = -1, block = "", free = 0;
-    function closeMonth(){ if(curMonth<0) return; html += block.replace("{free}", free ? free+" nuit"+(free>1?"s":"")+" probablement libre"+(free>1?"s":"") : "complet"); }
+    function closeMonth(){ if(curMonth<0) return; html += block.replace("{free}", free ? free+" nuit"+(free>1?"s":"")+" disponible"+(free>1?"s":"") : "peu de place"); }
     for(var i=0;i<days.length;i++){
       var d = dateAt(data.from, i), s = days.charAt(i);
       if(d.getUTCMonth() !== curMonth){
@@ -175,27 +191,80 @@ button{font-family:inherit;}
       }
       if(s === "F") free++;
       var dow = d.getUTCDay(), we = dow === 5 || dow === 6;
-      var msg = s === "F" ? "Bonjour, auriez-vous de la place la nuit du "+longDate(d)+" ? Merci !"
-              : s === "M" ? "Bonjour, la nuit du "+longDate(d)+" est indiquée « peut-être disponible » : reste-t-il de la place ? Merci !" : "";
-      var tap = phone && msg ? ' data-tap="'+esc(waUrl(phone, msg))+'"' : "";
-      block += '<button type="button" class="dp-row '+s+(we?" we":"")+'"'+tap+(tap?"":" disabled")+' aria-label="'+esc(longDate(d)+" : "+(LABEL[s]||""))+'">'+
+      block += '<button type="button" class="dp-row '+s+(we?" we":"")+'"'+(phone?' data-i="'+i+'"':' disabled')+' aria-label="'+esc(longDate(d)+" : "+(LABEL[s]||""))+'">'+
         '<span class="dp-d"><span class="dp-dow">'+DOW[dow]+'</span><span class="dp-num'+(i===0?' dp-today':'')+'">'+(i===0?'Ce soir':d.getUTCDate()+' '+MON3[d.getUTCMonth()])+'</span></span>'+
-        '<span class="st st-'+s+'">'+(LABEL[s]||"")+'</span>'+WA_ICON.replace('<svg','<svg class="wa"')+'</button>';
+        '<span class="st st-'+s+'">'+(LABEL[s]||"")+'</span></button>';
       var next = dateAt(data.from, i+1);
       if(next.getUTCMonth() !== curMonth || i === days.length-1) block += '</section>';
     }
     closeMonth();
     html += '<p class="dp-foot">Disponibilités publiées depuis <a href="planning/">Fiftin Planning</a></p>';
     main.innerHTML = html;
-    main.addEventListener("click", function(e){
-      var b = e.target.closest("[data-tap]"); if(!b) return;
-      window.open(b.getAttribute("data-tap"), "_blank", "noopener");
-    });
-    if(phone){
-      var cta = document.getElementById("dpCta");
-      cta.innerHTML = '<a href="'+esc(waUrl(phone, "Bonjour, je regarde vos disponibilités et j'aurais une question."))+'" target="_blank" rel="noopener">'+WA_ICON+'Nous écrire sur WhatsApp</a>';
-      cta.hidden = false;
+    if(!phone) return;
+
+    // ── Choix d'une période (même geste que la Grille de Fiftin Planning) :
+    // 1er toucher = nuit d'arrivée, 2e = dernière nuit, 3e = on recommence.
+    var cta = document.getElementById("dpCta");
+    var selA = null, selB = null;
+    var GENERAL = "Bonjour, je regarde vos disponibilités et j'aurais une question.";
+    function dayName(d, withMonth){ return DOW_FULL[d.getUTCDay()]+" "+dnum(d)+(withMonth?" "+MONTHS[d.getUTCMonth()]:""); }
+    function nightsList(idx, a, b, verbSing, verbPlur){
+      var multiMonth = dateAt(data.from, a).getUTCMonth() !== dateAt(data.from, b+1).getUTCMonth();
+      if(idx.length > 3) return idx.length+" nuits "+verbPlur+" sur la période";
+      var names = idx.map(function(k){ return dayName(dateAt(data.from, k), multiMonth); });
+      if(idx.length === 1) return "la nuit du "+names[0]+" "+verbSing;
+      return "les nuits du "+names.slice(0,-1).join(", du ")+" et du "+names[names.length-1]+" "+verbPlur;
     }
+    function buildMessage(a, b){
+      var n = b - a + 1, dA = dateAt(data.from, a), dOut = dateAt(data.from, b+1);
+      var idxM = [], idxX = [];
+      for(var k=a;k<=b;k++){ var c = days.charAt(k); if(c==="M") idxM.push(k); else if(c==="X") idxX.push(k); }
+      if(n === 1){
+        var st = days.charAt(a), ln = longDate(dA);
+        if(st === "X") return {msg:"Bonjour, j'ai vu que la nuit du "+ln+" était complète : serait-il possible de poser une option pour cette date ? Merci !", sum:"1 nuit · complète", kind:"X"};
+        if(st === "M") return {msg:"Bonjour, la nuit du "+ln+" est indiquée « peut-être disponible » : reste-t-il de la place ? Merci !", sum:"1 nuit · peut-être", kind:"M"};
+        return {msg:"Bonjour, auriez-vous de la place la nuit du "+ln+" ? Merci !", sum:"1 nuit disponible", kind:"F"};
+      }
+      var sameMonth = dA.getUTCMonth() === dOut.getUTCMonth();
+      var period = "du "+dayName(dA, !sameMonth)+" au "+longDate(dOut)+" ("+n+" nuits)";
+      if(idxX.length) return {msg:"Bonjour, je souhaiterais venir "+period+". J'ai vu que "+nightsList(idxX, a, b, "était complète", "étaient complètes")+" : serait-il possible de poser une option, ou d'adapter les dates ? Merci !",
+        sum:n+" nuits · dont "+idxX.length+" complète"+(idxX.length>1?"s":""), kind:"X"};
+      if(idxM.length) return {msg:"Bonjour, auriez-vous de la place "+period+" ? J'ai vu que "+nightsList(idxM, a, b, "était indiquée « peut-être disponible »", "étaient indiquées « peut-être disponible »")+". Merci !",
+        sum:n+" nuits · dont "+idxM.length+" peut-être", kind:"M"};
+      return {msg:"Bonjour, auriez-vous de la place "+period+" ? Merci !", sum:n+" nuits disponibles", kind:"F"};
+    }
+    function shortDay(d){ return DOW[d.getUTCDay()]+" "+d.getUTCDate()+" "+MON3[d.getUTCMonth()]; }
+    function paint(){
+      var a = selA, b = selB == null ? selA : selB;
+      main.querySelectorAll(".dp-row[data-i]").forEach(function(r){
+        var k = +r.getAttribute("data-i"), on = a != null && k >= a && k <= b;
+        r.classList.toggle("sel", on);
+        r.classList.toggle("sel-a", on && k === a);
+        r.classList.toggle("sel-b", on && k === b);
+      });
+      if(a == null){
+        cta.innerHTML = '<a class="dp-wa" href="'+esc(waUrl(phone, GENERAL))+'" target="_blank" rel="noopener">'+WA_ICON+'Nous écrire sur WhatsApp</a>';
+        return;
+      }
+      var m = buildMessage(a, b), dA = dateAt(data.from, a), dOut = dateAt(data.from, b+1);
+      var range = b === a ? "Nuit du "+shortDay(dA) : "Du "+shortDay(dA)+" au "+shortDay(dOut);
+      cta.innerHTML = '<div class="dp-bar"><div class="dp-bar-top"><div><b>'+esc(range)+'</b><span class="dp-sum k-'+m.kind+'">'+esc(m.sum)+'</span></div>'+
+          '<button type="button" class="dp-x" aria-label="Annuler la sélection">✕</button></div>'+
+        (b === a ? '<div class="dp-bar-hint">Plusieurs nuits ? Touchez maintenant la dernière nuit.</div>' : '')+
+        '<a class="dp-wa" href="'+esc(waUrl(phone, m.msg))+'" target="_blank" rel="noopener">'+WA_ICON+(b === a ? 'Demander cette nuit sur WhatsApp' : 'Demander ces dates sur WhatsApp')+'</a></div>';
+      cta.querySelector(".dp-x").addEventListener("click", function(){ selA = selB = null; paint(); });
+    }
+    main.addEventListener("click", function(e){
+      var r = e.target.closest(".dp-row[data-i]"); if(!r) return;
+      var k = +r.getAttribute("data-i");
+      if(selA == null || selB != null){ selA = k; selB = null; }
+      else if(k === selA){ selA = null; }
+      else if(k > selA){ selB = k; }
+      else { selB = selA; selA = k; }
+      paint();
+    });
+    cta.hidden = false;
+    paint();
   }
 })();
 </script>
