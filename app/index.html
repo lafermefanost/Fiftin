@@ -2908,6 +2908,7 @@ fiftinSetBrandVideoSrc("lockVideo");</script>
       <div class="fg">
         <label class="fl">Prix / nuit (€) <span style="font-weight:400;color:var(--gray)">(défaut : 100€ solo · 125€ double)</span></label>
         <input type="number" class="fi" id="gePrice" placeholder="Laisser vide = tarif standard" min="0" step="1">
+        <div style="font-size:11px;color:var(--gray);margin-top:4px;">Un changement s'applique aux séjours qui commencent à partir d'aujourd'hui : les séjours passés gardent leur prix.</div>
       </div>
       <div class="fg">
         <label class="fl">Notes</label>
@@ -3882,14 +3883,25 @@ function nightPriceDetail(base,R,ds,totalNights){
 // Le champ vide était enregistré comme price:0 : un 0 ne compte donc comme
 // vrai prix (séjour offert) que s'il a été saisi depuis ce correctif
 // (priceSet), sans quoi les fiches existantes passeraient toutes à 0 €.
-function guestPrice(g){
+// Daté comme le prix des consommations (catalogPrice) : g.priceHistory
+// (versions {from, price}, price null = tarif standard, voir saveGuest)
+// donne le prix en vigueur au jour d'arrivée `ds` ; un changement ne
+// s'applique ainsi qu'aux séjours qui commencent à partir de sa date, les
+// séjours passés gardent leur prix. Sans `ds` : le prix actuel de la fiche.
+function guestPrice(g,ds){
   if(!g)return null;
+  const h=g.priceHistory;
+  if(ds&&Array.isArray(h)&&h.length){
+    let cur=h[0];
+    h.forEach(v=>{if(v.from<=ds)cur=v;});
+    return cur.price==null?null:(+cur.price||0);
+  }
   if(g.priceSet)return +g.price||0;
   return g.price>0?+g.price:null;
 }
 function bookingRules(bk){
   const g=guest(bk.guestId);
-  if(guestPrice(g)!=null)return null; // prix client : appliqué tel quel, sans saison
+  if(guestPrice(g,bk.checkIn||todayISO())!=null)return null; // prix client : appliqué tel quel, sans saison
   const R=tariffRules(getRoomTariffForDate(bk.roomId,bk.checkIn||todayISO()));
   return (R.seasons.length||R.longStay.length)?R:null;
 }
@@ -3929,7 +3941,7 @@ function getNightlyRate(bk){
   // Source "sans tarif nuitée" (réglages → Sources, ex. échange, personnel) :
   // aucun prix calculé sur la nuitée, quel que soit le prix client/chambre.
   if(isSourceNoRevenue(bk.source))return 0;
-  const gp=guestPrice(guest(bk.guestId));
+  const gp=guestPrice(guest(bk.guestId),bk.checkIn||todayISO());
   if(gp!=null)return gp;
   return getRoomPriceForDate(bk.roomId,bk.checkIn||todayISO(),bk.nbPersons||2);
 }
@@ -7654,7 +7666,26 @@ function saveGuest(){
     notes:byId('geNotes').value,thNotes:byId('geThNotes').value,rating:geRating};
   if(editGid){
     const i=S.guests.findIndex(g=>g.id===editGid);
-    if(i!==-1)S.guests[i]={...S.guests[i],...data};
+    if(i!==-1){
+      // Comme updateCatalogItem : client ayant déjà un séjour commencé avant
+      // aujourd'hui → nouveau prix daté d'aujourd'hui, ses séjours passés
+      // gardent l'ancien ; sinon, simple correction.
+      const old=S.guests[i],before=guestPrice(old),after=guestPrice(data);
+      if(before!==after){
+        const today=todayISO();
+        let h=Array.isArray(old.priceHistory)?old.priceHistory.map(v=>({...v})):null;
+        if(S.bookings.some(b=>b.guestId===editGid&&b.checkIn&&b.checkIn<today)){
+          if(!h||!h.length)h=[{from:'2000-01-01',price:before}];
+          const last=h[h.length-1];
+          if(last.from===today)last.price=after;
+          else h.push({from:today,price:after});
+        }else if(h&&h.length){
+          h[h.length-1].price=after;
+        }
+        if(h)data.priceHistory=h;
+      }
+      S.guests[i]={...old,...data};
+    }
   }else{
     S.guests.push({id:uid(),...data});
   }
