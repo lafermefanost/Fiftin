@@ -85,7 +85,7 @@ button{font-family:inherit;}
 .dp-today{color:var(--sauge-mid);}
 .dp-row.X .dp-num,.dp-row.X .dp-dow{color:#A8A59C;}
 
-.dp-row.sel{background:var(--sauge-bg);}
+.dp-row.sel{background:#DCE4D7;}
 .dp-row.sel .dp-num,.dp-row.sel .dp-dow{color:var(--sauge-deep);}
 .dp-row.sel-a{box-shadow:inset 4px 0 0 var(--sauge);}
 .dp-row.sel-b{box-shadow:inset 4px 0 0 var(--sauge);}
@@ -137,7 +137,8 @@ button{font-family:inherit;}
   var main = document.getElementById("dpMain");
   function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
   function dateAt(from, i){ var d = new Date(from+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+i); return d; }
-  function longDate(d){ return DOW_FULL[d.getUTCDay()]+" "+d.getUTCDate()+" "+MONTHS[d.getUTCMonth()]; }
+  function dnum(d){ return d.getUTCDate()===1 ? "1er" : String(d.getUTCDate()); }
+  function longDate(d){ return DOW_FULL[d.getUTCDay()]+" "+dnum(d)+" "+MONTHS[d.getUTCMonth()]; }
   function waUrl(phone, text){ return "https://wa.me/"+phone+"?text="+encodeURIComponent(text); }
   var head = document.getElementById("dpHead");
   function fail(title, text){
@@ -206,7 +207,7 @@ button{font-family:inherit;}
     var cta = document.getElementById("dpCta");
     var selA = null, selB = null;
     var GENERAL = "Bonjour, je regarde vos disponibilités et j'aurais une question.";
-    function dayName(d, withMonth){ return DOW_FULL[d.getUTCDay()]+" "+d.getUTCDate()+(withMonth?" "+MONTHS[d.getUTCMonth()]:""); }
+    function dayName(d, withMonth){ return DOW_FULL[d.getUTCDay()]+" "+dnum(d)+(withMonth?" "+MONTHS[d.getUTCMonth()]:""); }
     function nightsList(idx, a, b, verbSing, verbPlur){
       var multiMonth = dateAt(data.from, a).getUTCMonth() !== dateAt(data.from, b+1).getUTCMonth();
       if(idx.length > 3) return idx.length+" nuits "+verbPlur+" sur la période";
