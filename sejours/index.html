@@ -1337,7 +1337,9 @@ textarea.text-input{resize:vertical; min-height:80px;}
 /* Mes annonces : ce que Fiftin a apporté ce mois-ci (fillHostClickStats()). */
 .hlc-clicks{display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:10px 0 10px; padding:10px 12px; border-radius:14px; background:var(--sauge-bg);
   font-size:13px; color:var(--sauge-deep); width:100%; border:none; text-align:left; font-family:'Jost',sans-serif; cursor:pointer;}
-.hlc-clicks .hc-title{flex-basis:100%; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge);}
+.hlc-clicks .hc-title{flex-basis:100%; display:flex; gap:.4em; min-width:0; white-space:nowrap; font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--sauge);}
+.hlc-clicks .hc-title > span{flex:none;}
+.hlc-clicks .hc-title .hc-name{flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis;}
 .hlc-clicks .hc-stat{display:inline-flex; align-items:center; gap:6px;}
 .hlc-clicks .hc-stat svg{width:16px; height:16px; color:var(--sauge);}
 .hlc-clicks .hc-stat b{font-size:16px; font-weight:700;}
@@ -2609,7 +2611,8 @@ body.map-fullscreen{overflow:hidden;}
 .hsh-btn{white-space:nowrap;}
 .host-site-members{padding:2px 0 12px;}
 .host-site-members .host-listing-card{background:#fff; color:var(--ink); margin-bottom:12px; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.18);}
-.hsm-label{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--yellow); margin:6px 4px 8px;}
+.hsm-label{display:flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.62); margin:6px 4px 8px;}
+.hsm-label.hsh-label{color:var(--yellow);}
 .hsm-label svg{width:16px; height:16px;}
 .hsm-label.hsh-label{margin:0 4px 8px;}
 .hsm-add{display:block; width:100%; border:1.5px dashed var(--sauge-light); background:transparent; border-radius:16px; padding:13px; font-family:'Jost',sans-serif; font-size:14px; font-weight:600; color:var(--sauge); cursor:pointer;}
@@ -2631,18 +2634,31 @@ body.map-fullscreen{overflow:hidden;}
 span.hs-status{cursor:default;}
 .hs-dot{flex:none; width:7px; height:7px; border-radius:50%; background:currentColor; opacity:.55;}
 .hs-status.on .hs-dot{background:var(--yellow); opacity:1;}
-.hs-mini{flex:none; margin-left:auto; margin-right:-5px; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; background:#fff;}
-.hs-mini svg{width:11px; height:11px;}
+.hs-switch{position:relative; padding:0 42px 0 10px;}
+.hs-switch.off{padding:0 10px 0 42px; justify-content:flex-end;}
+.hs-sw-txt{display:inline-flex; align-items:center; gap:5px; min-width:0; overflow:hidden; transition:opacity .15s;}
+.hs-sw-txt > span{overflow:hidden; text-overflow:ellipsis;}
+.hs-knob{position:absolute; top:4px; left:calc(100% - 37px); width:33px; height:24px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.15); transition:left .28s cubic-bezier(.4,0,.2,1);}
+.hs-switch.off .hs-knob{left:4px;}
+.hs-switch.hs-flip .hs-knob{left:4px;}
+.hs-switch.off.hs-flip .hs-knob{left:calc(100% - 37px);}
+.hs-switch.hs-flip .hs-sw-txt{opacity:0;}
+.hs-knob svg{width:11px; height:11px;}
 .host-site-head .hs-pill{background:rgba(255,255,255,.14); color:#fff;}
 .host-site-head .hs-pill.hlc-del{color:#FFD9CF;}
 .host-site-head .hs-status{color:rgba(255,255,255,.8);}
 .host-site-head .hs-status.on{color:#fff;}
-.host-site-head .hs-mini{background:rgba(255,255,255,.22);}
+.host-site-head .hs-knob{background:rgba(255,255,255,.24); box-shadow:none;}
+.host-site-head .hs-pill.hlc-del span{color:#fff;}
 /* Calendrier d'un hébergement d'établissement : centré, picto blanc. */
 .hsm-card .cal-acc .cal-disclose{justify-content:center;}
 .hsm-card .cal-acc .cal-disclose span{flex:none;}
 .hsm-card .cal-disclose-ico{color:#fff;}
 .host-listing-card.hsm-card .hlc-edit{gap:6px;}
+.host-listing-card.hsm-card .hlc-clicks{margin:10px 0 0;}
+.host-listing-card.hsm-card .hlc-edit, .host-listing-card.hsm-card .cal-acc{margin-top:6px;}
+.host-site-head .hsh-actions{margin-top:6px;}
+.host-site-head .hsh-top + .hlc-clicks, .host-site-head .hsh-top + .hlc-clicks[hidden] + .hsh-actions{margin-top:12px;}
 .host-listing-card.hsm-card .hlc-clicks{margin-top:10px;}
 .host-listing-card.hsm-card .hlc-edit{margin-top:10px;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
@@ -13414,7 +13430,7 @@ function renderHostListings(){
       state.hostListingId = null; state.hostUnitId = null;
     }
     feed.innerHTML = '<div class="host-view">'+
-      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Ajouter</button>'+
+      '<button type="button" class="btn-apply" id="host-new-listing" style="margin-bottom:18px;">+ Ajouter un hébergement seul ou un établissement</button>'+
       siteHintHtml(listings)+
       hostSiteGroups(listings).map(function(g){ return g.members ? hostSiteHtml(g, listings) : hostListingCardHtml(g.listing, listings); }).join("")+
     '</div>';
@@ -13437,7 +13453,7 @@ function renderHostListings(){
       btn.addEventListener("click", function(e){
         e.stopPropagation();
         var g = hostSiteGroups(listings).filter(function(x){ return x.members && x.siteId===btn.getAttribute("data-site-pause"); })[0];
-        if(g) toggleSitePause(g, btn.getAttribute("data-pause-to"));
+        if(g) toggleSitePause(g, btn.getAttribute("data-pause-to"), btn);
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-delete]"), function(btn){
@@ -13536,8 +13552,8 @@ function renderHostListings(){
         var l = listings.filter(function(x){ return x.id===id; })[0];
         var name = (l && l.name) || "cette annonce";
         // Confirmation, comme pour la suppression (retour de César).
-        if(to==="paused") openConfirmSheet('Mettre "'+name+'" en pause ? Elle n’apparaîtra plus aux voyageurs jusqu’à ce que vous la remettiez en ligne.', "Oui, mettre en pause", "Non, la garder en ligne", function(){ toggleListingPause(id, to); });
-        else openConfirmSheet('Remettre "'+name+'" en ligne ? Les voyageurs la verront de nouveau.', "Oui, remettre en ligne", "Non, la laisser en pause", function(){ toggleListingPause(id, to); });
+        if(to==="paused") openConfirmSheet('Mettre "'+name+'" en pause ? Elle n’apparaîtra plus aux voyageurs jusqu’à ce que vous la remettiez en ligne.', "Oui, mettre en pause", "Non, la garder en ligne", function(){ hsFlip(btn, function(){ toggleListingPause(id, to); }); });
+        else openConfirmSheet('Remettre "'+name+'" en ligne ? Les voyageurs la verront de nouveau.', "Oui, remettre en ligne", "Non, la laisser en pause", function(){ hsFlip(btn, function(){ toggleListingPause(id, to); }); });
       });
     });
     Array.prototype.forEach.call(document.querySelectorAll("[data-host-delete]"), function(btn){
@@ -13589,7 +13605,15 @@ function siteNameOf(g){
   var p = (g.members.filter(function(m){ return m.place; })[0] || {}).place || {};
   return p.name || "votre établissement";
 }
-function toggleSitePause(g, to){
+/* Glissement de l'interrupteur, puis l'action (le rendu suivant le montre
+   dans sa nouvelle position). */
+function hsFlip(btn, fn){
+  if(btn && btn.classList && btn.classList.contains("hs-switch")){
+    btn.classList.add("hs-flip");
+    setTimeout(fn, 300);
+  } else fn();
+}
+function toggleSitePause(g, to, btn){
   var from = to==="paused" ? "published" : "paused";
   var ids = g.members.filter(function(m){ return m.status===from; }).map(function(m){ return m.id; });
   if(!ids.length) return;
@@ -13597,14 +13621,14 @@ function toggleSitePause(g, to){
   var msg = to==="paused"
     ? 'Mettre « '+name+' » en pause ? '+(n>1 ? 'Ses '+n+' hébergements en ligne n’apparaîtront plus' : 'Son hébergement en ligne n’apparaîtra plus')+' aux voyageurs jusqu’à ce que vous '+(n>1?'les':'le')+' remettiez en ligne.'
     : 'Remettre « '+name+' » en ligne ? '+(n>1 ? 'Ses '+n+' hébergements en pause seront' : 'Son hébergement en pause sera')+' de nouveau visible'+(n>1?'s':'')+' des voyageurs.';
-  openConfirmSheet(msg, to==="paused" ? "Oui, mettre en pause" : "Oui, remettre en ligne", to==="paused" ? "Non, le garder en ligne" : "Non, le laisser en pause", function(){
+  openConfirmSheet(msg, to==="paused" ? "Oui, mettre en pause" : "Oui, remettre en ligne", to==="paused" ? "Non, le garder en ligne" : "Non, le laisser en pause", function(){ hsFlip(btn, function(){
     var db = firebase.firestore(), batch = db.batch();
     ids.forEach(function(id){ batch.update(db.collection("listings").doc(id), {status:to}); });
     batch.commit().then(function(){
       hostListingsCache = [];
       if(state.hostMode && state.hostTab==="listings") renderHostListings();
     }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
-  });
+  }); });
 }
 /* Supprimer un établissement = le défaire (comme « Défaire l’établissement »
    de l'éditeur) : ses hébergements redeviennent des annonces seules,
@@ -13702,7 +13726,8 @@ function fillHostClickStats(){
       el.hidden = !(ever.contacts + ever.redirects); // rien depuis le début : pas de ligne
       if(el.hidden) return;
       var m = clickSplit(clickStatsFor(ids, month));
-      el.innerHTML = '<span class="hc-title">Trafic · ce mois-ci sur Fiftin Séjours</span>'+
+      // « Trafic sur <titre> · ce mois-ci » (titre coupé s'il est trop long).
+      el.innerHTML = '<span class="hc-title"><span>Trafic sur</span><span class="hc-name">'+esc(el.getAttribute("data-clicks-title") || "votre annonce")+'</span><span>· ce mois-ci</span></span>'+
         '<span class="hc-stat">'+CLICK_ICON_CONTACT+'<b>'+m.contacts+'</b> contact'+(m.contacts>1?'s':'')+'</span>'+
         '<span class="hc-stat">'+CLICK_ICON_REDIRECT+'<b>'+m.redirects+'</b> redirection'+(m.redirects>1?'s':'')+'</span>'+
         '<span class="hc-more">Historique ›</span>';
@@ -13778,8 +13803,11 @@ var HS_ICON_TRASH = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-line
    del: attributs data-*}. */
 function hsToolsHtml(o){
   var dot = '<i class="hs-dot"></i>';
+  // Interrupteur (demande de César) : « En ligne » à gauche et, à droite,
+  // une petite pilule pause ; en pause, la petite pilule (lecture) passe à
+  // gauche et « En pause » à droite — elle glisse au changement (hsFlip()).
   var st = o.pause
-    ? '<button type="button" class="hs-pill hs-status'+(o.on?' on':'')+'" '+o.pause+' aria-label="'+(o.to==="paused"?"Mettre en pause":"Remettre en ligne")+'">'+dot+'<span>'+esc(o.status)+'</span><i class="hs-mini">'+(o.to==="paused" ? HS_ICON_PAUSE : HS_ICON_PLAY)+'</i></button>'
+    ? '<button type="button" class="hs-pill hs-status hs-switch'+(o.on?' on':' off')+'" '+o.pause+' aria-label="'+(o.to==="paused"?"Mettre en pause":"Remettre en ligne")+'"><span class="hs-sw-txt">'+dot+'<span>'+esc(o.status)+'</span></span><i class="hs-knob">'+(o.to==="paused" ? HS_ICON_PAUSE : HS_ICON_PLAY)+'</i></button>'
     : '<span class="hs-pill hs-status'+(o.on?' on':'')+'">'+dot+'<span>'+esc(o.status)+'</span></span>';
   return '<div class="hs-tools">'+st+
     '<button type="button" class="hs-pill" '+o.preview+'>'+HS_ICON_EYE+'<span>Aperçu</span></button>'+
@@ -13825,7 +13853,8 @@ function hostSiteHtml(g, listings){
         hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots)+
         '<div class="hsh-body">'+
           '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
-          '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' hébergement'+(g.members.length>1?'s':'')+'</span>'+
+          (kind ? '<span>'+esc(kind)+'</span>' : '')+
+          '<span>'+g.members.length+' hébergement'+(g.members.length>1?'s':'')+'</span>'+
         '</div>'+
       '</div>'+
       '<button type="button" class="hlc-clicks on-dark" data-clicks="'+esc(g.members.map(function(m){ return m.id; }).join(","))+'" data-clicks-title="'+esc(place.name || "Votre établissement")+'" hidden></button>'+
@@ -13899,7 +13928,8 @@ function hostListingCardHtml(l, listings, inSite){
         hsThumbHtml("hsm-photo", "hsm-"+l.id, allShots.map(photoMid))+
         '<div class="hsm-body">'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
-          '<span>'+(typeLbl ? esc(typeLbl)+' · ' : '')+esc(priceLbl)+'</span>'+
+          (typeLbl ? '<span>'+esc(typeLbl)+'</span>' : '')+
+          '<span>'+esc(priceLbl)+'</span>'+
         '</div>'+
       '</div>'+
       tail+
@@ -13958,7 +13988,7 @@ function openCreateChoice(){
 function hostEmptyHtml(){
   return '<div class="host-view">'+
     '<div class="empty-state"><p>Vous n\'avez pas encore d\'annonce sur Fiftin Séjours.</p></div>'+
-    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Ajouter</button>'+
+    '<button type="button" class="btn-apply" id="host-new-listing-empty">+ Ajouter un hébergement seul ou un établissement</button>'+
   '</div>';
 }
 function wireHostEmpty(){
