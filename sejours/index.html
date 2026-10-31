@@ -2618,10 +2618,12 @@ body.map-fullscreen{overflow:hidden;}
 .host-site-members .host-listing-card{background:#fff; color:var(--ink); margin-bottom:12px; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.18);}
 /* Hébergement seul (demande de César) : grande carte blanche titrée
    « Hébergement N », qui contient la même carte que dans un établissement. */
-.host-solo{background:#fff; border-radius:22px; padding:14px 12px 12px; margin-bottom:22px; box-shadow:0 2px 10px rgba(0,0,0,.12);}
+.host-solo{background:var(--sauge-light); border-radius:22px; padding:14px 12px 12px; margin-bottom:22px; box-shadow:0 2px 10px rgba(0,0,0,.12);}
 .host-solo .host-listing-card{background:#fff; color:var(--ink); margin-bottom:0; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.16);}
-.host-solo .hsm-label{color:var(--sauge-light); margin:0 4px 10px;}
-.host-solo .site-bridge{margin-top:12px;}
+.host-solo .hsm-label{color:#fff; margin:0 4px 10px;}
+.host-solo .site-bridge{margin-top:12px; border-color:rgba(255,255,255,.7); color:#fff;}
+.host-solo .site-bridge small{color:rgba(255,255,255,.85);}
+.host-solo .hs-move{background:rgba(255,255,255,.25); color:#fff;}
 .host-solo > .hsm-label{position:relative; min-height:32px;}
 .hs-move{position:absolute; right:-4px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--sauge-bg); color:var(--sauge); cursor:pointer;}
 .hs-move svg{width:16px; height:16px;}
