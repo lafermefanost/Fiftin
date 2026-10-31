@@ -5694,7 +5694,7 @@ function brandPick(ev,sid){
 // l'affichage ; le jeton et le numéro font foi côté serveur.
 function availShareHTML(s){
   if(currentRole==='personnel')return '';
-  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Une page simple à partager à vos habitués : nuit par nuit sur 6 mois, « Probablement disponible », « Peut-être disponible » (réservation en option) ou « Complet », pour l'ensemble des locations de cette structure, à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Toucher une nuit leur ouvre WhatsApp vers vous.</div>`;
+  const intro=`<div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Une page simple à partager à vos habitués : nuit par nuit sur 6 mois, « Disponible » (au moins 2 locations libres), « Peut-être disponible » (une seule libre, ou une option) ou « Complet », pour l'ensemble des locations de cette structure, à confirmer avec vous. Aucun nom, aucun nombre de chambres, aucun prix. Ils choisissent leurs dates et vous écrivent sur WhatsApp, message prérempli.</div>`;
   if(S.settings.plan!=='pro')return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<div style="font-size:11px;color:var(--gray)">Réservé à la formule Avancé (Réglages → Compte).</div></div>`;
   const sh=(S.settings.availShare||{})[s.id];
   if(!sh||!sh.url)return `<div class="set-card-sub"><div class="set-card-sub-title">Lien de disponibilités</div>${intro}<button class="set-add" onclick="availShareGet('${s.id}',false)">Créer le lien</button></div>`;

@@ -14,46 +14,37 @@ assert.deepStrictEqual(structureRooms(settings, "fanost").map((r) => r.id), ["a"
 assert.deepStrictEqual(structureRooms(settings, "vissou").map((r) => r.id), ["c"]);
 assert.deepStrictEqual(structureRooms(settings, "inconnue"), []);
 
-const rooms = [{id: "a"}, {id: "b"}];
+const rooms = [{id: "a"}, {id: "b"}, {id: "c"}];
 const from = "2026-11-01";
 const run = (bookings, feed) => structureAvailability({rooms, bookings, feedRangesByRoom: feed, from, days: 6});
+const bk = (roomId, checkIn, checkOut, status) => ({roomId, checkIn, checkOut, status});
 
-// Rien de réservé : tout libre.
+// Rien de réservé : tout disponible.
 assert.strictEqual(run([]), "FFFFFF");
-// Une seule chambre prise : encore libre (au moins une libre).
-assert.strictEqual(run([{roomId: "a", checkIn: "2026-11-01", checkOut: "2026-11-04"}]), "FFFFFF");
-// Les deux prises les nuits du 2 et du 3 ; départ le 4 = nuit du 4 libre.
-assert.strictEqual(run([
-  {roomId: "a", checkIn: "2026-11-02", checkOut: "2026-11-04"},
-  {roomId: "b", checkIn: "2026-11-01", checkOut: "2026-11-04"},
-]), "FXXFFF");
-// Une option sur la dernière chambre libre → « peut-être ».
-assert.strictEqual(run([
-  {roomId: "a", checkIn: "2026-11-01", checkOut: "2026-11-06"},
-  {roomId: "b", checkIn: "2026-11-02", checkOut: "2026-11-03", status: "opt"},
-]), "FMFFFF");
-// Option sur une chambre déjà prise ailleurs : reste complet.
-assert.strictEqual(run([
-  {roomId: "a", checkIn: "2026-11-01", checkOut: "2026-11-02"},
-  {roomId: "b", checkIn: "2026-11-01", checkOut: "2026-11-02"},
-  {roomId: "b", checkIn: "2026-11-01", checkOut: "2026-11-02", status: "opt"},
-]), "XFFFFF");
+// Une prise sur trois : encore 2 libres → disponible.
+assert.strictEqual(run([bk("a", "2026-11-01", "2026-11-04")]), "FFFFFF");
+// Deux prises sur trois : une seule libre → peut-être.
+assert.strictEqual(run([bk("a", "2026-11-01", "2026-11-04"), bk("b", "2026-11-02", "2026-11-03")]), "FMFFFF");
+// Trois prises : complet ; départ le 4 = nuit du 4 de nouveau libre.
+assert.strictEqual(run([bk("a", "2026-11-02", "2026-11-04"), bk("b", "2026-11-02", "2026-11-04"), bk("c", "2026-11-01", "2026-11-04")]), "FXXFFF");
+// Toutes prises sauf une en option → peut-être.
+assert.strictEqual(run([bk("a", "2026-11-01", "2026-11-06"), bk("b", "2026-11-01", "2026-11-06"), bk("c", "2026-11-02", "2026-11-03", "opt")]), "MMMMMF");
+// Option sur une location déjà prise par ailleurs : reste complet.
+assert.strictEqual(run([bk("a", "2026-11-01", "2026-11-02"), bk("b", "2026-11-01", "2026-11-02"), bk("c", "2026-11-01", "2026-11-02"), bk("c", "2026-11-01", "2026-11-02", "opt")]), "XFFFFF");
 // Annulée : ne bloque rien.
-assert.strictEqual(run([
-  {roomId: "a", checkIn: "2026-11-01", checkOut: "2026-11-03", status: "no"},
-  {roomId: "b", checkIn: "2026-11-01", checkOut: "2026-11-03"},
-]), "FFFFFF");
+assert.strictEqual(run([bk("a", "2026-11-01", "2026-11-03", "no"), bk("b", "2026-11-01", "2026-11-03", "no")]), "FFFFFF");
 // Calendrier Airbnb importé : bloque comme une réservation.
-assert.strictEqual(run(
-  [{roomId: "a", checkIn: "2026-11-05", checkOut: "2026-11-07"}],
-  {b: [{checkIn: "2026-11-05", checkOut: "2026-11-06"}]}
-), "FFFFXF");
+assert.strictEqual(run([bk("a", "2026-11-05", "2026-11-07")], {b: [{checkIn: "2026-11-05", checkOut: "2026-11-06"}]}), "FFFFMF");
 // Réservation d'une location d'une autre structure : ignorée.
-assert.strictEqual(run([{roomId: "c", checkIn: "2026-11-01", checkOut: "2026-11-07"}]), "FFFFFF");
+assert.strictEqual(run([bk("z", "2026-11-01", "2026-11-07")]), "FFFFFF");
+// Structure d'une seule location : libre = disponible.
+const one = (bookings) => structureAvailability({rooms: [{id: "a"}], bookings, from, days: 4});
+assert.strictEqual(one([]), "FFFF");
+assert.strictEqual(one([bk("a", "2026-11-02", "2026-11-03", "opt"), bk("a", "2026-11-03", "2026-11-04")]), "FMXF");
 // Structure sans location : tout complet (rien à proposer).
 assert.strictEqual(structureAvailability({rooms: [], bookings: [], from, days: 3}), "XXX");
 // Passage de mois.
-assert.strictEqual(structureAvailability({rooms: [{id: "a"}], bookings: [{roomId: "a", checkIn: "2026-11-30", checkOut: "2026-12-02"}], from: "2026-11-29", days: 4}), "FXXF");
+assert.strictEqual(structureAvailability({rooms: [{id: "a"}], bookings: [bk("a", "2026-11-30", "2026-12-02")], from: "2026-11-29", days: 4}), "FXXF");
 
 assert.strictEqual(waDigits("06 12 34 56 78"), "33612345678");
 assert.strictEqual(waDigits("+33 (0)6 12 34 56 78"), "33612345678");
