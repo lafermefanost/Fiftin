@@ -2624,11 +2624,10 @@ body.map-fullscreen{overflow:hidden;}
 .hsm-status::before{content:""; width:7px; height:7px; border-radius:50%; background:currentColor; opacity:.55;}
 .hsm-status.on{background:var(--sauge-bg); color:var(--sauge);}
 .hsm-status.on::before{background:var(--yellow); opacity:1;}
-.hsm-acts{display:flex; gap:8px; margin-left:auto;}
-.hsm-act{width:38px; height:38px; border-radius:50%; border:none; background:var(--sauge-bg); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0;}
-.hsm-act svg{width:17px; height:17px; stroke:var(--sauge); fill:none; stroke-width:1.9;}
-.hsm-act.hlc-del{background:#F8E9E4;}
-.hsm-act.hlc-del svg{stroke:var(--danger);}
+.hs-acts{position:absolute; top:7px; right:7px; z-index:3; display:flex; flex-direction:column; gap:6px;}
+.hs-acts .save-btn{position:relative; top:auto; right:auto; width:30px; height:30px;}
+.hs-acts .save-btn svg{width:14px; height:14px; stroke:#fff; fill:none; stroke-width:2;}
+.hs-acts .hlc-del svg{stroke:#FFD9CF;}
 .host-listing-card.hsm-card .hlc-clicks{margin-top:10px;}
 .host-listing-card.hsm-card .hlc-edit{margin-top:10px;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
@@ -13419,6 +13418,20 @@ function renderHostListings(){
         openPlace(null, {rep:shown.filter(function(x){ return x.status==="published"; })[0] || shown[0], members:shown});
       });
     });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-site-pause]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var g = hostSiteGroups(listings).filter(function(x){ return x.members && x.siteId===btn.getAttribute("data-site-pause"); })[0];
+        if(g) toggleSitePause(g, btn.getAttribute("data-pause-to"));
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-site-delete]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var g = hostSiteGroups(listings).filter(function(x){ return x.members && x.siteId===btn.getAttribute("data-site-delete"); })[0];
+        if(g) deleteSite(g);
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-add]"), function(btn){
       btn.addEventListener("click", function(){
         // Logement existant ou nouveau : le volet « Ajouter un logement » de l'éditeur.
@@ -13554,6 +13567,45 @@ function toggleListingPause(id, toStatus){
    contrairement à toggleListingPause() ci-dessus. syncPublicListingIndex
    retire aussi l'entrée listingIndex correspondante (onDocumentWritten
    couvre les suppressions : before rempli, after vide). */
+/* Établissement (Mes annonces) : pause de tous ses hébergements en ligne,
+   ou remise en ligne de ceux en pause — même règle Firestore que
+   toggleListingPause() (published <-> paused, annonce par annonce). */
+function siteNameOf(g){
+  var p = (g.members.filter(function(m){ return m.place; })[0] || {}).place || {};
+  return p.name || "votre établissement";
+}
+function toggleSitePause(g, to){
+  var from = to==="paused" ? "published" : "paused";
+  var ids = g.members.filter(function(m){ return m.status===from; }).map(function(m){ return m.id; });
+  if(!ids.length) return;
+  var n = ids.length, name = siteNameOf(g);
+  var msg = to==="paused"
+    ? 'Mettre « '+name+' » en pause ? '+(n>1 ? 'Ses '+n+' hébergements en ligne n’apparaîtront plus' : 'Son hébergement en ligne n’apparaîtra plus')+' aux voyageurs jusqu’à ce que vous '+(n>1?'les':'le')+' remettiez en ligne.'
+    : 'Remettre « '+name+' » en ligne ? '+(n>1 ? 'Ses '+n+' hébergements en pause seront' : 'Son hébergement en pause sera')+' de nouveau visible'+(n>1?'s':'')+' des voyageurs.';
+  openConfirmSheet(msg, to==="paused" ? "Oui, mettre en pause" : "Oui, remettre en ligne", to==="paused" ? "Non, le garder en ligne" : "Non, le laisser en pause", function(){
+    var db = firebase.firestore(), batch = db.batch();
+    ids.forEach(function(id){ batch.update(db.collection("listings").doc(id), {status:to}); });
+    batch.commit().then(function(){
+      hostListingsCache = [];
+      if(state.hostMode && state.hostTab==="listings") renderHostListings();
+    }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+  });
+}
+/* Supprimer un établissement = le défaire (comme « Défaire l’établissement »
+   de l'éditeur) : ses hébergements redeviennent des annonces seules,
+   inchangées ; seuls le nom, le type, la présentation et les photos de
+   l'établissement sont effacés. */
+function deleteSite(g){
+  var name = siteNameOf(g);
+  openConfirmSheet('Supprimer l’établissement « '+name+' » ? Ses hébergements sont conservés : ils redeviennent des annonces seules (sans changer de statut). Le nom, le type, la présentation et les photos de l’établissement sont effacés.', "Oui, supprimer l’établissement", "Non, le garder", function(){
+    var db = firebase.firestore(), batch = db.batch();
+    g.members.forEach(function(m){ batch.update(db.collection("listings").doc(m.id), {siteId:firebase.firestore.FieldValue.delete(), place:firebase.firestore.FieldValue.delete()}); });
+    batch.commit().then(function(){
+      hostListingsCache = [];
+      if(state.hostMode && state.hostTab==="listings") renderHostListings();
+    }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+  });
+}
 function deleteListing(l){
   openConfirmSheet('Supprimer "'+(l.name||"cette annonce")+'" ? Cette action est définitive.', "Oui, supprimer", "Non, garder l'annonce", function(){
     firebase.firestore().collection("listings").doc(l.id).delete()
@@ -13692,13 +13744,17 @@ document.addEventListener("click", function(e){
   var el = e.target && e.target.closest ? e.target.closest("[data-clicks]") : null;
   if(el && !el.hidden) openClickHistory(el.getAttribute("data-clicks-title") || "", el.getAttribute("data-clicks").split(","));
 });
-function hsThumbHtml(cls, key, urls){
+function hsThumbHtml(cls, key, urls, acts){
   urls = (urls || []).filter(Boolean).filter(function(u,i,a){ return a.indexOf(u)===i; });
-  return '<div class="hs-thumb '+cls+'">'+(urls.length ?
+  return '<div class="hs-thumb '+cls+'">'+(acts ? '<div class="hs-acts">'+acts+'</div>' : '')+(urls.length ?
     '<div class="cover-carousel" data-cc="'+esc(key)+'">'+urls.map(function(u){ return '<img class="cc-slide" src="'+esc(u)+'" alt="" loading="lazy">'; }).join("")+'</div>'+
     (urls.length>1 ? '<div class="cover-dots">'+urls.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '') : '')+
   '</div>';
 }
+var HS_ICON_PAUSE = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5v14M15 5v14"/></svg>';
+var HS_ICON_PLAY = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z"/></svg>';
+var HS_ICON_EYE = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+var HS_ICON_TRASH = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
 function hostSiteHtml(g, listings){
   var first = g.members[0];
   var withPlace = g.members.filter(function(x){ return x.place; })[0];
@@ -13707,6 +13763,17 @@ function hostSiteHtml(g, listings){
   // Comme la carte du fil : toutes les photos du lieu, puis la couverture
   // de chacun de ses hébergements.
   var shots = (place.gallery || []).map(photoMid).concat(g.members.map(memberCoverUrl));
+  // Pause / aperçu / supprimer sur la photo (demande de César) — pour
+  // l'établissement : pause = tous ses hébergements en ligne mis en pause
+  // (ou, s'il n'y en a plus aucun en ligne, ceux en pause remis en ligne) ;
+  // supprimer = défaire l'établissement, ses hébergements restent des
+  // annonces (jamais de suppression d'annonce en cascade).
+  var nOn = g.members.filter(function(m){ return m.status==="published"; }).length;
+  var nPaused = g.members.filter(function(m){ return m.status==="paused"; }).length;
+  var siteTo = nOn ? "paused" : nPaused ? "published" : "";
+  var siteActs = (siteTo ? '<button type="button" class="save-btn hs-act" data-site-pause="'+esc(g.siteId)+'" data-pause-to="'+siteTo+'" aria-label="'+(siteTo==="paused"?"Mettre l’établissement en pause":"Remettre l’établissement en ligne")+'" title="'+(siteTo==="paused"?"Mettre en pause":"Remettre en ligne")+'">'+(siteTo==="paused" ? HS_ICON_PAUSE : HS_ICON_PLAY)+'</button>' : '')+
+    '<button type="button" class="save-btn hs-act" data-site-preview="'+esc(g.siteId)+'" aria-label="Aperçu" title="Aperçu">'+HS_ICON_EYE+'</button>'+
+    '<button type="button" class="save-btn hs-act hlc-del" data-site-delete="'+esc(g.siteId)+'" aria-label="Supprimer l’établissement" title="Supprimer l’établissement">'+HS_ICON_TRASH+'</button>';
   var kind = placeKindLabel(place);
   var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation", g.members.length<2 && "un deuxième hébergement (l’établissement apparaît aux voyageurs à partir de deux hébergements en ligne)"].filter(Boolean);
   // Une seule carte : en-tête vert propriétaire (l'établissement), puis
@@ -13714,7 +13781,7 @@ function hostSiteHtml(g, listings){
   return '<section class="host-site">'+
     '<div class="host-site-head">'+
       '<div class="hsh-top">'+
-        hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots)+
+        hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots, siteActs)+
         '<div class="hsh-body">'+
           '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
           '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
@@ -13725,7 +13792,6 @@ function hostSiteHtml(g, listings){
       (todo.length ? '<p class="hsh-todo">À compléter pour les voyageurs : '+todo.join(", ")+'.</p>' : '')+
       '<div class="hsh-actions">'+
         '<button type="button" class="hsh-btn main" data-site-link="'+esc(first.id)+'">Modifier l’établissement</button>'+
-        '<button type="button" class="hsh-btn" data-site-preview="'+esc(g.siteId)+'">Aperçu</button>'+
       '</div>'+
     '</div>'+
     '<div class="host-site-members">'+
@@ -13784,7 +13850,7 @@ function hostListingCardHtml(l, listings, inSite){
     var priceLbl = l.units && l.units.length ? listingPriceLabel(l) : "Prix à compléter";
     return '<div class="admin-card host-listing-card hsm-card">'+
       '<div class="hsm-top">'+
-        hsThumbHtml("hsm-photo", "hsm-"+l.id, allShots.map(photoMid))+
+        hsThumbHtml("hsm-photo", "hsm-"+l.id, allShots.map(photoMid), acts("save-btn hs-act"))+
         '<div class="hsm-body">'+
           '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>Hébergement</small>'+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
@@ -13793,7 +13859,6 @@ function hostListingCardHtml(l, listings, inSite){
       '</div>'+
       '<div class="hsm-bar">'+
         '<span class="hsm-status'+(l.status==="published"?' on':'')+'">'+esc(statusTxt)+'</span>'+
-        '<div class="hsm-acts">'+acts("hsm-act")+'</div>'+
       '</div>'+
       tail+
     '</div>';
