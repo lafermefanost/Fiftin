@@ -424,7 +424,7 @@ a{color:inherit; text-decoration:none;}
    puisque le 100px fixe d'origine ne comptait pas la marge de sécurité
    côté appareil. 85px (77 + 8px de respiration) + l'encoche : réduit le
    vide sur la plupart des appareils, sans jamais recouvrir la carte. */
-#feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(85px + env(safe-area-inset-bottom, 0px)); gap:2px; background:#fff;}
+#feed.feed-explore{padding-left:0; padding-right:0; padding-top:4px; padding-bottom:calc(63px + env(safe-area-inset-bottom, 0px)); gap:2px; background:#fff;}
 #feed.feed-explore .card{border-radius:0;}
 /* Pas de grain sur les vraies photos du fil Explorer (retour utilisateur :
    "retirer l'effet de grain par-dessus les images") — .has-photos posé par
@@ -1262,7 +1262,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 .dots{position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:5px; z-index:5;}
 .dots span{width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.5);}
 .dots span.on{background:#fff; width:16px; border-radius:3px;}
-.detail-body{padding:16px 11px 90px;}
+.detail-body{padding:16px 11px 70px;}
 .detail-body .region{font-size:11.5px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; color:var(--sauge);}
 .detail-body h1{font-size:28px; font-weight:700; line-height:1.1; margin:3px 0 5px; letter-spacing:-0.01em;}
 .detail-body .tagline{font-size:15px; line-height:1.2; margin:0 0 10px; color:var(--sauge-deep);}
@@ -1554,7 +1554,7 @@ textarea.text-input{resize:vertical; min-height:80px;}
 nav.tabbar{position:fixed; bottom:0; left:0; right:0; max-width:520px; margin:0 auto; z-index:50;
   background:rgba(239,238,234,0.94); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
   border-top:1px solid var(--line); transform:translateZ(0); -webkit-transform:translateZ(0);
-  display:flex; padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));}
+  display:flex; padding:4px 6px calc(4px + env(safe-area-inset-bottom,0px));} /* barre basse resserrée (retour de César) */
 /* Exception, seulement pendant que la fiche détail est ouverte
    (body.detail-open, posé par openDetail()/retiré par closeDetail()) :
    nav.tabbar remonte au-dessus de .detail pour qu'Explorer/Carte/Envies/
@@ -1584,7 +1584,7 @@ body.detail-open nav.tabbar{z-index:220;}
    à égalité, ce bouton (plus ancien dans le DOM que la carte, insérée
    dynamiquement par renderFeed()) se serait retrouvé caché DESSOUS la
    carte en plein écran, impossible à recliquer pour refermer. */
-.map-back-btn{position:fixed; right:14px; bottom:calc(104px + env(safe-area-inset-bottom, 0px)); z-index:45;
+.map-back-btn{position:fixed; right:14px; bottom:calc(82px + env(safe-area-inset-bottom, 0px)); z-index:45;
   width:44px; height:44px; border-radius:50%; background:var(--sauge-deep); color:var(--cream);
   border:none; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.25); cursor:pointer;}
 .map-back-btn[hidden]{display:none;}
@@ -1621,15 +1621,15 @@ body.detail-open nav.tabbar{z-index:220;}
    très légèrement, et après c'est bon" : dernier petit ajustement
    (.15->.12 / .18->.14) — point d'arrêt de ce réglage. */
 .fade-edge-top{top:calc(51px + var(--sej-home-h)); height:70px; background:linear-gradient(to bottom, rgba(20,26,20,.12), rgba(20,26,20,.06) 55%, transparent);}
-.fade-edge-bottom{bottom:calc(77px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
+.fade-edge-bottom{bottom:calc(55px + env(safe-area-inset-bottom,0px)); height:90px; background:linear-gradient(to top, rgba(20,26,20,.14), rgba(20,26,20,.07) 55%, transparent);}
 #feed.feed-explore ~ .fade-edge{opacity:1;}
-.tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
+.tab{flex:1; display:flex; flex-direction:column; align-items:center; gap:1px; padding:3px 2px; background:none; border:none; color:var(--sauge-light); position:relative;}
 /* Encart de sélection carré façon icône d'appli mobile (contrairement à
    app/ où .mbnav-btn.on colore tout le bouton, rectangle qui suit la
    largeur flex du bouton) : seul un carré fixe autour du pictogramme
    passe en vert sauge --sauge (propriétaire, pas --sauge-mid qui sert
    ailleurs de "vert moyen"), le libellé reste en dehors, coloré seul. */
-.tab-icon{width:34px; height:34px; border-radius:12px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
+.tab-icon{width:30px; height:30px; border-radius:11px; display:flex; align-items:center; justify-content:center; transition:background .15s;}
 .tab svg{width:21px; height:21px; stroke:currentColor; fill:none; stroke-width:1.7;}
 .tab span{font-size:10px; font-weight:700;}
 .tab.active{color:var(--sauge-deep);}
@@ -1641,7 +1641,7 @@ body.detail-open nav.tabbar{z-index:220;}
    --sauge-bg (même teinte claire que .cal-access-note.rw) ; côté hôte,
    .tabbar.host-mode .tab-primary .tab-icon la remplace par --lavender-bg,
    même logique que le reste de la barre hôte un peu plus bas. */
-.tab-primary .tab-icon{width:40px; height:40px; background:var(--sauge-bg);}
+.tab-primary .tab-icon{width:36px; height:36px; background:var(--sauge-bg);}
 .tab-primary svg{width:24px; height:24px;}
 /* Effet "verre liquide" adapté au petit format (34px) — retour
    utilisateur : "adapter un peu cet effet sur les menus du footer".
@@ -2485,7 +2485,7 @@ body.map-fullscreen{overflow:hidden;}
 .empty-state p{font-size:14px; font-weight:600; margin:0;}
 
 /* ---------- espace hôtes : annonces + calendrier simplifié ---------- */
-.host-view{padding:24px 0 110px;}
+.host-view{padding:24px 0 90px;}
 /* Page promo "App gestion" (renderHostAppPromo()) : mêmes captures déjà
    utilisées sur la page marketing (shot-planning.webp, shot-clients.webp),
    simplement empilées en une colonne mobile — contrairement à .phone-stage/
@@ -2911,7 +2911,7 @@ body.map-fullscreen{overflow:hidden;}
    aplat vert propriétaire sans effet verre, étoile blanche, sans libellé
    (aria-label sur le bouton) ; plus gros que les deux autres pictos. */
 .tab.tab-solo{justify-content:center; gap:0;}
-.tab.tab-solo .tab-icon{width:54px; height:54px; border-radius:17px; position:relative; overflow:hidden; background:var(--sauge-bg);
+.tab.tab-solo .tab-icon{width:46px; height:46px; border-radius:15px; position:relative; overflow:hidden; background:var(--sauge-bg);
   transition:background .2s ease;}
 .tab.tab-solo .tab-icon svg{position:relative; z-index:1;}
 /* Onglet actif : même verre que le logo Fiftin (dégradé diagonal, reliefs
