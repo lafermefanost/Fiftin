@@ -14,6 +14,7 @@
 <meta name="theme-color" content="#354B38">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="../assets/fiftin-auth.css?v=2">
+<script src="../assets/fiftin-legal.js?v=1"></script>
 <!-- Retour utilisateur : "même typo que fiftin séjours ?" — en vérifiant,
      seuls les graisses 300-600 étaient chargées ici (fiftin.fr charge
      aussi 700/800, voir son <link> équivalent). .vnav-title/.rv-year-label
@@ -2333,6 +2334,20 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .eff-card{background:#fff;border-radius:22px;padding:22px 20px 14px;width:min(420px,100%);font-family:'Jost',sans-serif;box-shadow:0 18px 50px rgba(0,0,0,.35);}
 .eff-card h3{margin:0 0 8px;font-size:19px;color:var(--green-deep);}
 .eff-card p{margin:0 0 14px;font-size:14px;line-height:1.5;color:#4a4a44;}
+/* Réglages → Aide, contact & informations légales (demande de César) */
+.aide-sub{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--gray);margin:4px 0 8px;}
+.aide-sub:not(:first-child){margin-top:18px;}
+.aide-faq{border-bottom:1px solid rgba(0,0,0,.08);}
+.aide-faq summary{list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;font-size:13px;font-weight:600;cursor:pointer;}
+.aide-faq summary::-webkit-details-marker{display:none;}
+.aide-faq summary::after{content:'▾';flex:none;color:var(--gray);transition:transform .2s;}
+.aide-faq[open] summary::after{transform:rotate(180deg);}
+.aide-faq p{margin:0 0 12px;font-size:12.5px;line-height:1.55;color:#4a4a44;}
+.aide-legal{display:flex;flex-direction:column;gap:6px;}
+.aide-legal button{display:flex;justify-content:space-between;align-items:center;width:100%;padding:11px 12px;border:1px solid rgba(0,0,0,.1);border-radius:12px;background:#fff;font:inherit;font-size:13px;font-weight:600;text-align:left;cursor:pointer;}
+.legal-card{width:min(640px,100%);max-height:86vh;overflow-y:auto;padding:22px 22px 16px;}
+.legal-card h4{margin:16px 0 6px;font-size:14px;color:var(--green-deep);}
+.legal-card .field-hint{font-size:12px;color:var(--gray);}
 .eff-l{display:block;font-size:12px;font-weight:600;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;}
 .eff-note{font-size:12px;color:var(--gray);margin-top:6px;}
 .eff-ok{width:100%;margin-top:14px;}
@@ -3434,6 +3449,7 @@ function categoryIconHTML(id){
 // rester cohérent plutôt que d'inventer un nouveau glyphe pour un concept
 // déjà illustré.
 const SETTINGS_PANEL_ICONS={
+  aide:'<circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.2h.01"/>',
   priceLog:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>',
   messages:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
   etablissement:'<path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/><rect x="9" y="14" width="6" height="6"/>',
@@ -10233,6 +10249,59 @@ function updateRoomTariffSvc(roomId,tid,field,val){
     after:()=>{saveSettings();refreshRevenueViews();renderSettings();}});
 }
 
+const PLANNING_FAQ=[{"q": "Pour quelles activités Fiftin Planning est-il pensé ?", "a": "Pour celles et ceux qui accueillent : chambres d’hôtes, gîtes, meublés de tourisme, domaines et petits établissements, avec ou sans table d’hôtes. Il est né à La Ferme Fanost, une maison d’hôtes, pour en gérer le quotidien."}, {"q": "Faut-il installer une application ?", "a": "Non. Fiftin Planning s’ouvre dans le navigateur, sur ordinateur, tablette ou téléphone. Sur téléphone, vous pouvez l’ajouter à l’écran d’accueil pour l’ouvrir comme une application. Une connexion internet est nécessaire pour enregistrer vos modifications."}, {"q": "Comment démarrer ?", "a": "Créez votre compte : un assistant vous guide pour votre établissement, votre statut juridique, la taxe de séjour, vos locations et leurs prix, et vos calendriers Airbnb ou Booking. Une visite guidée vous montre ensuite les menus et la création d’une réservation ; vous pouvez la relancer depuis les Réglages."}, {"q": "Puis-je synchroniser Airbnb et Booking.com ?", "a": "Oui, par les liens de calendrier iCal. Les dates réservées sur Airbnb ou Booking sont importées et vérifiées toutes les 30 minutes ; vos réservations Fiftin Planning peuvent être exportées vers leurs calendriers. L’iCal ne transmet que des dates bloquées (ni nom, ni prix) et avec un délai : vérifiez toujours avant de confirmer une réservation."}, {"q": "Quel lien avec Fiftin Séjours ?", "a": "Si vous publiez une annonce sur Fiftin Séjours et la reliez à une location de Fiftin Planning, ses dates occupées et son prix y sont mis à jour automatiquement, sans aucun nom de client. Le sens est unique : rien ne remonte de Fiftin Séjours vers votre planning."}, {"q": "Puis-je gérer plusieurs structures juridiques ?", "a": "Oui, avec la formule Avancé : SASU, LMNP, EI, SARL… Chaque location est rattachée à sa structure, et les chiffres se lisent structure par structure. La formule Essentiel couvre une seule structure."}, {"q": "Fiftin Planning fait-il ma comptabilité ou mes déclarations ?", "a": "Il suit vos revenus, vos charges et vos indicateurs (taux d’occupation, revenu moyen…), par mois, par année et par structure, et vous rappelle les échéances. Il ne remplace ni un expert-comptable ni vos déclarations. Les seuils affichés (franchise de TVA, LMP…) varient selon votre situation et chaque année : c’est à vous de saisir les vôtres, sans engagement de Fiftin."}, {"q": "Puis-je éditer des factures ?", "a": "Non : Fiftin Planning n’est pas un logiciel de facturation. Vous pouvez générer un contrat de location (PDF, avec votre logo et vos couleurs) et une note de séjour à copier pour votre client."}, {"q": "Comment est gérée la taxe de séjour ?", "a": "Vous choisissez le mode de votre commune (montant fixe par personne et par nuit, ou pourcentage du prix avec plafond) ; elle est ensuite calculée sur chaque séjour. Vous pouvez aussi ne pas la collecter."}, {"q": "Si je change un prix, mes anciens séjours changent-ils ?", "a": "Non. Les tarifs sont datés : quand vous modifiez un prix déjà utilisé, Fiftin vous demande à partir de quand il s’applique, et les séjours passés gardent l’ancien prix. Un journal garde la trace de chaque changement."}, {"q": "Peut-on travailler à plusieurs ?", "a": "Oui, avec la formule Avancé : un sous-compte Staff est inclus, en lecture seule ou en écriture au choix ; chaque sous-compte supplémentaire coûte 5 €/mois."}, {"q": "Mes données m’appartiennent-elles ?", "a": "Oui. Vous pouvez à tout moment exporter vos données en CSV et faire une sauvegarde complète au format JSON depuis les Réglages."}, {"q": "Combien coûte Fiftin Planning ?", "a": "Essentiel : 24 €/mois (une structure, jusqu’à 4 hébergements, une personne). Avancé : 47 €/mois (plusieurs structures, jusqu’à 8 hébergements, un sous-compte Staff ; +5 €/mois par hébergement ou sous-compte supplémentaire). Deux mois offerts en facturation annuelle. Les conditions complètes figurent dans les CGV."}, {"q": "Comment changer de formule ou résilier ?", "a": "Depuis les Réglages de l’outil, « Gérer mon abonnement » ouvre votre espace de paiement sécurisé (Stripe) : changement de carte, factures de votre abonnement, résiliation."}, {"q": "Est-ce le même compte que Fiftin Séjours ?", "a": "Oui : un seul compte pour Fiftin Planning et Fiftin Séjours."}];
+function aideHTML(){
+  const faq=PLANNING_FAQ.map(it=>`<details class="aide-faq"><summary>${escHtml(it.q)}</summary><p>${escHtml(it.a)}</p></details>`).join('');
+  return `<div class="aide-sub">Questions fréquentes</div>${faq}
+    <div class="aide-sub">Nous contacter</div>
+    <div class="fg"><label class="fl">Objet</label><select class="fi" id="aideSubject">
+      <option value="">— Choisir —</option><option>Question sur l'outil</option><option>Problème technique</option><option>Abonnement et paiement</option><option>Suggestion</option><option>Autre</option></select></div>
+    <div class="fg"><label class="fl">Votre e-mail (pour la réponse)</label><input type="email" class="fi" id="aideEmail" value="${escHtml(currentUserEmail||'')}"></div>
+    <div class="fg"><label class="fl">Message</label><textarea class="fi" id="aideMsg" rows="5" placeholder="Votre question, le problème rencontré…"></textarea></div>
+    <label style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;color:var(--gray);margin:2px 0 10px"><input type="checkbox" id="aideConsent" style="margin-top:2px"> J'accepte que ces informations soient utilisées pour traiter ma demande.</label>
+    <button type="button" class="btn-p" style="width:100%" id="aideSend" onclick="aideSendContact()">Envoyer</button>
+    <div id="aideMsgOut" style="font-size:12px;margin-top:8px"></div>
+    <div class="aide-sub">Informations légales</div>
+    <div class="aide-legal">
+      <button type="button" onclick="openLegalDoc('cgv')">Conditions générales de vente<span>›</span></button>
+      <button type="button" onclick="openLegalDoc('confidentialite')">Politique de confidentialité<span>›</span></button>
+      <button type="button" onclick="openLegalDoc('mentions')">Mentions légales<span>›</span></button>
+    </div>`;
+}
+function aideSendContact(){
+  const subject=byId('aideSubject').value, email=byId('aideEmail').value.trim(), msg=byId('aideMsg').value.trim();
+  const out=byId('aideMsgOut'), btn=byId('aideSend');
+  out.style.color='#c0392b';
+  if(!subject||!email||!msg){out.textContent='Merci de choisir un objet et de remplir votre e-mail et votre message.';return;}
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){out.textContent='Adresse e-mail invalide.';return;}
+  if(!byId('aideConsent').checked){out.textContent="Merci d'accepter l'utilisation de ces informations pour pouvoir vous répondre.";return;}
+  const url=window.FIFTIN_CONTACT_URL;
+  if(!url){out.textContent='Envoi indisponible pour le moment : rechargez la page.';return;}
+  btn.disabled=true;btn.textContent='Envoi…';
+  const fd=new FormData();
+  fd.append('name',(S.settings&&S.settings.name)||'');
+  fd.append('email',email);
+  fd.append('subject',subject);
+  fd.append('message',msg+'\n\n— Envoyé depuis Fiftin Planning (compte : '+(currentUserEmail||'?')+')');
+  fd.append('_subject','Fiftin Planning — '+subject);
+  fd.append('_gotcha','');
+  fetch(url,{method:'POST',headers:{'Accept':'application/json'},body:fd}).then(r=>{if(!r.ok)throw new Error('http-'+r.status);}).then(()=>{
+    out.style.color='var(--green-deep)';out.textContent='Message envoyé. Nous vous répondrons par e-mail.';
+    byId('aideMsg').value='';btn.textContent='Envoyer';btn.disabled=false;
+  }).catch(()=>{out.textContent="Erreur lors de l'envoi : réessayez dans un instant.";btn.textContent='Envoyer';btn.disabled=false;});
+}
+function openLegalDoc(key){
+  const doc=(window.FIFTIN_LEGAL||{})[key];
+  let el=byId('legalModal');
+  if(!el){el=document.createElement('div');el.id='legalModal';el.className='eff-ov';document.body.appendChild(el);
+    el.addEventListener('click',e=>{if(e.target===el)el.style.display='none';});}
+  el.innerHTML=`<div class="eff-card legal-card" role="dialog" aria-modal="true">
+    <h3>${escHtml(doc?doc.title:'Informations légales')}</h3>
+    ${doc?doc.html:'<p>Document momentanément indisponible : rechargez la page.</p>'}
+    <button type="button" class="btn-p" style="width:100%;margin-top:14px" onclick="byId('legalModal').style.display='none'">Fermer</button>
+  </div>`;
+  el.style.display='flex';
+}
 function renderSettings(){
   const st=S.settings;
   let h='';
@@ -10660,6 +10729,11 @@ function renderSettings(){
   // consulté bien moins souvent que le reste — dernier onglet plutôt que de
   // l'alourdir en permanence là-bas.
   h+=settingsPanel('reglementation','Réglementation — rappels',regulatoryItemsHTML());
+
+  // — Aide, contact & informations légales (demande de César) : FAQ propre à
+  // Fiftin Planning (mêmes réponses que planning/#faq), formulaire de
+  // contact, CGV / confidentialité / mentions légales (assets/fiftin-legal.js).
+  h+=settingsPanel('aide','Aide, contact & informations légales',aideHTML());
 
   byId('settingsBody').innerHTML=h;
 }
