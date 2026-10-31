@@ -1183,7 +1183,8 @@ textarea.text-input{resize:vertical; min-height:80px;}
 #host-new-listing{background:var(--sauge);}
 /* « + Hébergement » / « + Établissement » côte à côte (demande de César). */
 .host-add-row{display:flex; gap:10px; margin-bottom:18px;}
-.host-add-row .btn-apply{flex:1; margin:0; background:var(--sauge); white-space:nowrap;}
+.host-add-row .btn-apply{flex:1; margin:0; background:var(--sauge); white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; gap:7px;}
+.host-add-row .btn-apply svg{width:18px; height:18px; flex:none;}
 .host-add-row .btn-apply[data-host-add="listing"]{background:var(--sauge-light);} /* même vert que Modifier l’annonce / Calendrier (choix de César) */
 
 /* ---------- crop overlay (recadrage manuel des photos, cadre 4:5 unique) ---------- */
@@ -14040,8 +14041,9 @@ function openCreateChoice(){
    place de « + Ajouter un hébergement seul ou un établissement ». */
 function hostAddRowHtml(){
   return '<div class="host-add-row">'+
-    '<button type="button" class="btn-apply" data-host-add="listing">+ Hébergement</button>'+
-    '<button type="button" class="btn-apply" data-host-add="place">+ Établissement</button>'+
+    // Picto maison seule / deux maisons, comme les titres des cartes (demande de César).
+    '<button type="button" class="btn-apply" data-host-add="listing">'+HS_ICON_HOUSE+'<span>+ Hébergement</span></button>'+
+    '<button type="button" class="btn-apply" data-host-add="place"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg><span>+ Établissement</span></button>'+
   '</div>';
 }
 function wireHostAddRow(){
