@@ -2617,6 +2617,17 @@ body.map-fullscreen{overflow:hidden;}
 .host-solo .host-listing-card{background:#fff; color:var(--ink); margin-bottom:0; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.16);}
 .host-solo .hsm-label{color:var(--sauge-light); margin:0 4px 10px;}
 .host-solo .site-bridge{margin-top:12px;}
+.host-solo > .hsm-label{position:relative; min-height:32px;}
+.hs-move{position:absolute; right:-4px; top:50%; transform:translateY(-50%); width:34px; height:34px; border-radius:50%; border:none; padding:0; display:inline-flex; align-items:center; justify-content:center; background:var(--sauge-bg); color:var(--sauge); cursor:pointer;}
+.hs-move svg{width:16px; height:16px;}
+.hs-move-list{display:flex; flex-direction:column; gap:8px;}
+.hs-move-list .radio-row{width:100%; background:#fff; text-align:left; font-family:'Jost',sans-serif; cursor:pointer;}
+.hs-move-ico{flex:none; width:34px; height:34px; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; background:var(--sauge-bg); color:var(--sauge);}
+.hs-move-ico.site{background:var(--sauge); color:var(--yellow);}
+.hs-move-ico svg{width:17px; height:17px;}
+.hs-move-txt{display:flex; flex-direction:column; min-width:0;}
+.hs-move-txt b{font-size:14.5px; color:var(--ink);}
+.hs-move-txt small{font-size:12px; font-weight:500; color:var(--muted);}
 .hsm-label{display:flex; align-items:center; justify-content:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:rgba(255,255,255,.62); margin:6px 4px 8px;}
 .hsm-label.hsh-label{color:var(--yellow);}
 .hsm-label svg{width:16px; height:16px;}
@@ -13452,6 +13463,13 @@ function renderHostListings(){
         openPlace(null, {rep:shown.filter(function(x){ return x.status==="published"; })[0] || shown[0], members:shown});
       });
     });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-host-move]"), function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var l = listings.filter(function(x){ return x.id===btn.getAttribute("data-host-move"); })[0];
+        if(l) openHostMove(l, listings);
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll("[data-site-pause]"), function(btn){
       btn.addEventListener("click", function(e){
         e.stopPropagation();
@@ -13875,11 +13893,78 @@ function hostSiteHtml(g, listings){
     '</div>'+
   '</section>';
 }
+var HS_ICON_MOVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20"/><path d="M9 5l3-3 3 3M9 19l3 3 3-3M5 9l-3 3 3 3M19 9l3 3-3 3"/></svg>';
+/* Où déplacer un hébergement seul : les établissements et les autres
+   hébergements seuls de l'hôte (jamais une annonce retirée). */
+function hostMoveTargets(l, listings){
+  return hostSiteGroups(listings).filter(function(g){
+    if(g.members) return true;
+    return g.listing.id!==l.id && g.listing.status!=="removed";
+  });
+}
+function hostMoveTargetName(g){
+  if(g.members){ var p = (g.members.filter(function(m){ return m.place; })[0] || {}).place || {}; return p.name || "Établissement sans nom"; }
+  return g.listing.name || "(sans nom)";
+}
+/* Déplacer « l » dans une cible (demande de César) : il rejoint
+   l'établissement (ou, avec un hébergement seul, les deux en forment un)
+   et prend l'adresse — ainsi que le contact, réglé dans l'établissement —
+   de celui qui l'accueille ; prestations de l'établissement appliquées. */
+function openHostMove(l, listings){
+  var targets = hostMoveTargets(l, listings);
+  var root = document.getElementById("sheet-root");
+  root.innerHTML = '<div class="sheet-backdrop" id="sheet-backdrop"><div class="frame"><div class="sheet" style="position:relative;">'+
+    '<button class="sheet-close" id="sheet-close">&times;</button><div class="sheet-handle"></div>'+
+    '<h3>Déplacer « '+esc(l.name || "cet hébergement")+' »</h3>'+
+    '<p class="sheet-sub">Dans quel hébergement ou établissement ? Il prendra son adresse et son contact. Avec un hébergement seul, les deux forment un établissement.</p>'+
+    '<div class="sort-row hs-move-list">'+targets.map(function(g, i){
+      var isSite = !!g.members;
+      return '<button type="button" class="radio-row" data-move-to="'+i+'">'+
+        '<span class="hs-move-ico'+(isSite?' site':'')+'">'+(isSite ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>' : HS_ICON_HOUSE)+'</span>'+
+        '<span class="hs-move-txt"><b>'+esc(hostMoveTargetName(g))+'</b><small>'+(isSite ? 'Établissement · '+g.members.length+' hébergement'+(g.members.length>1?'s':'') : 'Hébergement seul')+'</small></span></button>';
+    }).join("")+'</div>'+
+  '</div></div></div>';
+  document.getElementById("sheet-close").addEventListener("click", closeSheet);
+  document.getElementById("sheet-backdrop").addEventListener("click", function(e){ if(e.target.id==="sheet-backdrop") closeSheet(); });
+  Array.prototype.forEach.call(root.querySelectorAll("[data-move-to]"), function(b){
+    b.addEventListener("click", function(){
+      var g = targets[Number(b.getAttribute("data-move-to"))];
+      var name = hostMoveTargetName(g);
+      openConfirmSheet(g.members
+          ? 'Déplacer « '+(l.name || "cet hébergement")+' » dans l’établissement « '+name+' » ? Il prendra son adresse et son contact.'
+          : 'Réunir « '+(l.name || "cet hébergement")+' » et « '+name+' » dans un établissement ? « '+(l.name || "cet hébergement")+' » prendra l’adresse et le contact de « '+name+' ».',
+        g.members ? "Oui, déplacer" : "Oui, créer l’établissement", "Annuler", function(){ hostMoveInto(l, g); });
+    });
+  });
+}
+function hostMoveInto(l, g){
+  var db = firebase.firestore(), batch = db.batch(), del = firebase.firestore.FieldValue.delete();
+  var ref = g.members ? (g.members.filter(function(m){ return m.place; })[0] || g.members[0]) : g.listing;
+  var siteId = g.members ? g.siteId : (ref.siteId || newSiteId());
+  var place = ref.place || null;
+  var upd = {siteId: siteId, place: place ? place : del};
+  PE_ADDR_KEYS.concat(PE_CONTACT_KEYS).forEach(function(k){ upd[k] = ref[k]===undefined ? del : ref[k]; });
+  if(place){
+    var merged = mergeSharedAmen(l.amen, [], placeSharedAmen(place));
+    if(JSON.stringify(merged)!==JSON.stringify(l.amen || [])) upd.amen = merged;
+  }
+  batch.update(db.collection("listings").doc(l.id), upd);
+  if(!g.members && ref.siteId!==siteId) batch.update(db.collection("listings").doc(ref.id), {siteId: siteId});
+  batch.commit().then(function(){
+    hostListingsCache = [];
+    if(state.hostMode && state.hostTab==="listings") renderHostListings();
+  }).catch(function(err){ alert("Erreur : "+(err.message||err.code)); });
+}
 /* Hébergement seul : « Hébergement N » puis la même carte que dans un
    établissement, et la passerelle vers un établissement. */
 function hostSoloHtml(l, listings, n){
+  // Picto « Déplacer » (demande de César) : seulement s'il y a ailleurs un
+  // hébergement ou un établissement où le mettre.
+  var canMove = hostMoveTargets(l, listings).length > 0;
   return '<section class="host-solo">'+
-    '<div class="hsm-label">'+HS_ICON_HOUSE+'Hébergement '+n+'</div>'+
+    '<div class="hsm-label">'+HS_ICON_HOUSE+'Hébergement '+n+
+      (canMove ? '<button type="button" class="hs-move" data-host-move="'+esc(l.id)+'" aria-label="Déplacer dans un autre hébergement ou un établissement" title="Déplacer">'+HS_ICON_MOVE+'</button>' : '')+
+    '</div>'+
     hostListingCardHtml(l, listings, true)+
     '<button type="button" class="hsm-add site-bridge" data-site-bridge="'+esc(l.id)+'">+ Ajouter un hébergement au même endroit'+
       '<small>Votre annonce devient alors un établissement</small></button>'+
