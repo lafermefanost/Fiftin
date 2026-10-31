@@ -2311,6 +2311,17 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .ob-choice button{flex:1;background:#fff;border:1.5px solid var(--light);border-radius:16px;padding:16px 12px;font:600 14.5px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.3;}
 .ob-choice button small{display:block;font-weight:400;font-size:12px;color:var(--gray);margin-top:3px;}
 .ob-choice button.on{border-color:var(--green);background:#EDF1E8;color:var(--green-deep);}
+.ob-picks{display:flex;flex-wrap:wrap;gap:8px;}
+.ob-picks button{background:#fff;border:1.5px solid var(--light);border-radius:14px;padding:10px 13px;font:500 14px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.25;text-align:left;}
+.ob-picks button small{display:block;font-size:11.5px;color:var(--gray);font-weight:400;}
+.ob-picks button.on{border-color:var(--green);background:#EDF1E8;color:var(--green-deep);font-weight:600;}
+.ob-pax-link{display:block;margin:10px 2px 0;border:none;background:none;padding:0;font:500 13px 'Jost',sans-serif;color:var(--green);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+.ob-pax-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 2px 6px;}
+.ob-pax-head label{font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--gray);}
+.ob-pax-head button{border:none;background:none;padding:0;font:500 12.5px 'Jost',sans-serif;color:var(--green);text-decoration:underline;text-underline-offset:3px;cursor:pointer;white-space:nowrap;}
+.ob-pax{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.ob-pax .ob-price em{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-style:normal;font-size:12.5px;color:var(--gray);pointer-events:none;}
+.ob-pax .ob-input{padding-left:58px;}
 .ob-help{background:#fff;border-radius:16px;margin:14px 0;overflow:hidden;}
 .ob-help summary{list-style:none;cursor:pointer;padding:13px 15px;font-weight:600;font-size:14px;color:var(--green);display:flex;align-items:center;justify-content:space-between;}
 .ob-help summary::-webkit-details-marker{display:none;}
@@ -13700,11 +13711,11 @@ function obMaybeStart(d){
   setTimeout(obOpenWizard,350);
 }
 function obNewRoom(name,max,price,link){
-  return {id:uid(),name:name||'',max:max||2,price:price!=null?String(price):'',link:link||null,ical:{airbnb:{url:'',state:'',msg:'',saved:''},booking:{url:'',state:'',msg:'',saved:''}},exportUrl:''};
+  return {id:uid(),name:name||'',max:max||2,price:price!=null?String(price):'',perPax:false,pax:{},link:link||null,ical:{airbnb:{url:'',state:'',msg:'',saved:''},booking:{url:'',state:'',msg:'',saved:''}},exportUrl:''};
 }
 function obOpenWizard(){
   ob={step:0,name:S.settings.name&&S.settings.name!=='Planning'?S.settings.name:'',breakfast:true,dinner:false,
-    rooms:[obNewRoom('',2,'')],hasOta:null,sejours:null,err:''};
+    rooms:[obNewRoom('',2,'')],hasOta:null,sejours:null,err:'',legal:null,ts:{mode:null,amount:'',percent:'',cap:''}};
   let el=byId('obWiz');
   if(!el){el=document.createElement('div');el.id='obWiz';el.className='ob-wiz';document.body.appendChild(el);}
   el.style.display='flex';
@@ -13745,7 +13756,25 @@ function obRender(){
       '<div class="ob-q">Que proposez-vous à vos hôtes ?</div>'+
       '<button type="button" class="ob-toggle'+(ob.breakfast?' on':'')+'" onclick="ob.breakfast=!ob.breakfast;obRender()"><div>Petit-déjeuner<small>Compté dans le séjour et la vue Semaine</small></div><span class="ob-check"></span></button>'+
       '<button type="button" class="ob-toggle'+(ob.dinner?' on':'')+'" onclick="ob.dinner=!ob.dinner;obRender()"><div>Table d\'hôtes<small>Repas du soir, couverts et menus du jour</small></div><span class="ob-check"></span></button>'+
-      '<p class="ob-hint">Réglable ensuite location par location.</p>';
+      '<p class="ob-hint">Réglable ensuite location par location.</p>'+
+      // Statut juridique et taxe de séjour (demande de César : que le compte
+      // ait d'emblée les bonnes infos) : mêmes champs que Réglages →
+      // Structures juridiques (structure.type, STRUCTURE_TYPES) et Réglages →
+      // Taxe de séjour (taxeSejourHistory / taxeSejourEnabled).
+      '<div class="ob-q">Sous quel statut louez-vous ?</div>'+
+      '<div class="ob-picks">'+STRUCTURE_TYPES.map(t=>'<button type="button" class="'+(ob.legal===t.id?'on':'')+'" onclick="ob.legal=\''+t.id+'\';obRerender()">'+obEsc(t.label)+'</button>').join('')+
+        '<button type="button" class="'+(ob.legal===''?'on':'')+'" onclick="ob.legal=\'\';obRerender()">Je ne sais pas encore</button></div>'+
+      '<p class="ob-hint">Il sert à vos échéances fiscales (Événements) et à vos comptes de l\'année. Modifiable dans Réglages → Structures juridiques.</p>'+
+      '<div class="ob-q">Taxe de séjour</div>'+
+      '<div class="ob-picks">'+
+        [['fixed','Montant fixe','Hébergement classé'],['percent','% du prix','Hébergement non classé'],['none','Pas de taxe',''],['later','Je ne sais pas encore','']].map(o=>
+          '<button type="button" class="'+(ob.ts.mode===o[0]?'on':'')+'" onclick="ob.ts.mode=\''+o[0]+'\';obRerender()">'+o[1]+(o[2]?'<small>'+o[2]+'</small>':'')+'</button>').join('')+
+      '</div>'+
+      (ob.ts.mode==='fixed'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Par personne et par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Ex. 1" value="'+obEsc(ob.ts.amount)+'" oninput="ob.ts.amount=this.value"><span>€</span></div></div></div>':'')+
+      (ob.ts.mode==='percent'?'<div class="ob-room-row" style="margin-top:10px"><div class="ob-field"><label>Taux</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.1" placeholder="Ex. 5" value="'+obEsc(ob.ts.percent)+'" oninput="ob.ts.percent=this.value"><span>%</span></div></div>'+
+        '<div class="ob-field"><label>Plafond / pers. / nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="0.01" placeholder="Plafond" value="'+obEsc(ob.ts.cap)+'" oninput="ob.ts.cap=this.value"><span>€</span></div></div></div>':'')+
+      '<p class="ob-hint">'+(ob.ts.mode==='later'||ob.ts.mode==null?'Votre mairie ou votre intercommunalité vous donne le tarif. ':'')+'Ajoutée au total d\'une réservation quand vous la cochez, et tenue à l\'écart de votre chiffre d\'affaires. Modifiable dans Réglages → Taxe de séjour.</p>'+
+      '<div class="ob-err" id="obErr">'+obEsc(ob.err)+'</div>';
     foot='<button class="ob-back" onclick="obGo(0)">Retour</button><button class="ob-primary" onclick="obGo(2)">Continuer</button>';
   }else if(st===2){
     const linked=new Set(ob.rooms.map(r=>r.link&&r.link.unitId).filter(Boolean));
@@ -13763,11 +13792,17 @@ function obRender(){
           '</div>'+
           '<div class="ob-room-row">'+
             '<div class="ob-field"><label>Capacité</label><div class="ob-stepper"><button type="button" onclick="obMax('+i+',-1)" aria-label="Moins">−</button><b>'+r.max+' pers.</b><button type="button" onclick="obMax('+i+',1)" aria-label="Plus">+</button></div></div>'+
-            '<div class="ob-field"><label>Prix par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="1" placeholder="Ex. 90" value="'+obEsc(r.price)+'" oninput="ob.rooms['+i+'].price=this.value"><span>€</span></div></div>'+
+            (r.perPax?'':'<div class="ob-field"><label>Prix par nuit</label><div class="ob-price"><input class="ob-input small" type="number" inputmode="decimal" min="0" step="1" placeholder="Ex. 90" value="'+obEsc(r.price)+'" oninput="ob.rooms['+i+'].price=this.value"><span>€</span></div></div>')+
           '</div>'+
+          // Prix selon le nombre de voyageurs (demande de César) : même
+          // découpage que le tarif d'une location (prices[nb de personnes]).
+          (r.max>1?(r.perPax
+            ?'<div class="ob-pax-head"><label>Prix par nuit selon le nombre de voyageurs</label><button type="button" onclick="obPerPax('+i+',false)">Un seul prix</button></div>'+
+              '<div class="ob-pax">'+Array.from({length:r.max},(_,k)=>k+1).map(k=>'<div class="ob-price"><em>'+k+' pers.</em><input class="ob-input small" type="number" inputmode="decimal" min="0" step="1" placeholder="'+obEsc(r.price||'€')+'" value="'+obEsc(r.pax[k]||'')+'" oninput="ob.rooms['+i+'].pax['+k+']=this.value"><span>€</span></div>').join('')+'</div>'
+            :'<button type="button" class="ob-pax-link" onclick="obPerPax('+i+',true)">Prix différent selon le nombre de voyageurs ?</button>'):'')+
         '</div>').join('')+
       '<button type="button" class="ob-add" onclick="obAddRoom()">+ Ajouter une location</button>'+
-      '<p class="ob-hint">Le prix pré-remplit vos réservations. Vous pourrez le détailler par nombre de personnes et par saison dans Réglages → Locations &amp; services.</p>'+
+      '<p class="ob-hint">Le prix pré-remplit vos réservations. Les saisons se règlent ensuite dans Réglages → Locations &amp; services.</p>'+
       '<div class="ob-err" id="obErr">'+obEsc(ob.err)+'</div>';
     foot='<button class="ob-back" onclick="obGo(1)">Retour</button><button class="ob-primary" onclick="obGo(3)">Continuer</button>';
   }else if(st===3){
@@ -13810,7 +13845,10 @@ function obRender(){
         '<div>'+OB_ICON.check+'<span><b>'+obEsc(S.settings.name||'Votre établissement')+'</b></span></div>'+
         '<div>'+OB_ICON.home+'<span>'+n+' location'+(n>1?'s':'')+' dans votre planning</span></div>'+
         (c?'<div>'+OB_ICON.sync+'<span>'+c+' calendrier'+(c>1?'s':'')+' Airbnb / Booking relié'+(c>1?'s':'')+'</span></div>':'')+
+        (ob.result.legal?'<div>'+OB_ICON.check+'<span>'+obEsc((STRUCTURE_TYPES.find(t=>t.id===ob.result.legal)||{}).label||'')+' : échéances fiscales inscrites</span></div>':'')+
+        (ob.result.ts==='fixed'||ob.result.ts==='percent'?'<div>'+OB_ICON.check+'<span>Taxe de séjour réglée</span></div>':'')+
       '</div>'+
+      (!ob.result.legal||ob.result.ts==='later'||ob.result.ts==null?'<p class="ob-hint" style="margin-top:12px">À compléter quand vous aurez l\'info : '+[!ob.result.legal?'votre statut (Réglages → Structures juridiques)':'',ob.result.ts==='later'||ob.result.ts==null?'la taxe de séjour (Réglages → Taxe de séjour)':''].filter(Boolean).join(' et ')+'.</p>':'')+
       '<p class="ob-hint" style="margin-top:16px">Prenez une minute pour découvrir l\'outil : on vous montre à quoi sert chaque menu.</p>'+
       '<button class="ob-skip" onclick="obClose()">Plus tard, je commence directement</button>';
     foot='<button class="ob-primary" onclick="obClose();obStartTour()">Découvrir l\'outil</button>';
@@ -13828,6 +13866,11 @@ function obRerender(){const b=byId('obWiz')&&byId('obWiz').querySelector('.ob-bo
 function obGo(step){
   if(!ob)return;
   ob.err='';
+  if(step===2&&ob.step===1){
+    const t=ob.ts, bad=v=>String(v).trim()!==''&&!(parseFloat(String(v).replace(',','.'))>=0);
+    if(t.mode==='fixed'&&(String(t.amount).trim()===''||bad(t.amount))){ob.err='Indiquez le montant de la taxe de séjour, ou choisissez « Je ne sais pas encore ».';obRerender();return;}
+    if(t.mode==='percent'&&(String(t.percent).trim()===''||bad(t.percent)||bad(t.cap))){ob.err='Indiquez le taux de la taxe de séjour, ou choisissez « Je ne sais pas encore ».';obRerender();return;}
+  }
   if(step===3&&ob.step===2){
     const named=ob.rooms.filter(r=>r.name.trim());
     if(!named.length){ob.err='Ajoutez au moins une location, avec son nom.';obRerender();return;}
@@ -13865,6 +13908,10 @@ function obDropIcal(r){
 function obAddRoom(){ob.rooms.push(obNewRoom('',2,''));obRerender();
   setTimeout(()=>{const ins=byId('obWiz').querySelectorAll('.ob-room .ob-room-top .ob-input');const l=ins[ins.length-1];if(l)l.focus();},60);}
 function obDelRoom(i){const r=ob.rooms[i];if(!r)return;obDropIcal(r);ob.rooms.splice(i,1);obRerender();}
+function obPerPax(i,on){const r=ob.rooms[i];if(!r)return;r.perPax=on;
+  if(on){for(let k=1;k<=r.max;k++)if(!r.pax[k]&&r.price)r.pax[k]=r.price;}
+  else{const v=r.pax[r.max]||r.pax[Object.keys(r.pax).filter(k=>r.pax[k]).pop()];if(v&&!r.price)r.price=v;}
+  obRerender();}
 function obMax(i,d){const r=ob.rooms[i];if(!r)return;r.max=Math.max(1,Math.min(30,r.max+d));obRerender();}
 function obAddFromSejours(listingId,unitId){
   const l=(ob.sejours||[]).find(x=>x.id===listingId);const u=l&&(l.units||[]).find(x=>x.id===unitId);if(!u)return;
@@ -13913,9 +13960,17 @@ function obCopy(i,btn){
   if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(r.exportUrl).then(done).catch(()=>{});
   else{const inp=btn.previousElementSibling;inp.select();document.execCommand('copy');done();}
 }
-function obShort(name,i){
-  const w=name.trim().split(/\s+/).filter(Boolean);
-  return w.length>1?w.slice(0,3).map(x=>x[0]).join('').toUpperCase():(w[0]?w[0].charAt(0).toUpperCase()+w[0].slice(1,3):'L'+(i+1));
+// Nom court (en-têtes étroits, barre « Réserver », fiche réservation) : le
+// mot qui distingue la location (« Chambre du Jardin » → « Jardin »), pas des
+// initiales illisibles ; dédoublonné.
+const OB_GENERIC=new Set(['chambre','chambres','gite','gîte','gites','gîtes','suite','studio','appartement','appart','maison','logement','location','villa','cabane','roulotte','tente','lodge','chalet','du','de','des','la','le','les','l','d','au','aux','et','en','sur','sous','à','a','petit','petite','grand','grande']);
+function obShort(name,i,used){
+  const words=name.trim().replace(/[’']/g,' ').split(/\s+/).filter(Boolean);
+  const pick=words.find(w=>!OB_GENERIC.has(w.toLowerCase()))||words[0]||('L'+(i+1));
+  let sh=pick.charAt(0).toUpperCase()+pick.slice(1);
+  if(sh.length>9)sh=sh.slice(0,8)+'.';
+  if(used){let base=sh,n=2;while(used.has(sh.toLowerCase()))sh=base+' '+(n++);used.add(sh.toLowerCase());}
+  return sh;
 }
 function obFinish(){
   if(!ob)return;
@@ -13928,12 +13983,19 @@ function obFinish(){
   const keepExisting=S.bookings.length>0; // garde-fou : jamais de locations remplacées sous des réservations
   const base=keepExisting?(S.settings.rooms||[]):[];
   let cals=0;
+  const usedShort=new Set(base.map(r=>String(r.short||'').toLowerCase()));
   const rooms=ob.rooms.map((r,i)=>{
     const max=r.max||2;
     const prices=defaultRoomPrices(max);
     const price=parseFloat(String(r.price).replace(',','.'));
     if(price>0)for(let k=1;k<=max;k++)prices[k]=price;
-    const room={id:r.id,name:r.name.trim(),short:obShort(r.name,base.length+i),color:OB_COLORS[(base.length+i)%OB_COLORS.length],maxPersons:max,
+    if(r.perPax){let last=price>0?price:0;
+      for(let k=1;k<=max;k++){const v=parseFloat(String(r.pax[k]||'').replace(',','.'));if(v>0)last=v;if(last>0)prices[k]=last;}
+      // Un palier vide en tête (1 pers.) prend le premier prix saisi.
+      const first=Object.keys(r.pax).map(Number).sort((a,b)=>a-b).map(k=>parseFloat(String(r.pax[k]).replace(',','.'))).find(v=>v>0);
+      if(first)for(let k=1;k<=max;k++){const v=parseFloat(String(r.pax[k]||'').replace(',','.'));if(v>0)break;prices[k]=first;}
+    }
+    const room={id:r.id,name:r.name.trim(),short:obShort(r.name,base.length+i,usedShort),color:OB_COLORS[(base.length+i)%OB_COLORS.length],maxPersons:max,
       babyCrib:false,babyCribPrice:15,group:structs[0].id,tariffHistory:[{id:uid(),from:'2000-01-01',prices}]};
     if(!ob.breakfast)room.noBreakfastService=true;
     if(!ob.dinner)room.noDinnerService=true;
@@ -13948,13 +14010,26 @@ function obFinish(){
   });
   const name=ob.name.trim();
   if(name)S.settings.name=name;
+  // Statut juridique : la 1re structure (celle des locations) prend le type
+  // choisi, et le nom de l'établissement plutôt que « Structure 1 ».
+  if(!keepExisting){
+    S.settings.structures=JSON.parse(JSON.stringify(structs));
+    const st0=S.settings.structures[0];
+    if(ob.legal)st0.type=ob.legal;
+    if(/^Structure \d+$/.test(st0.name||'')&&(name||ob.legal))st0.name=name||(STRUCTURE_TYPES.find(t=>t.id===ob.legal)||{}).label;
+  }
+  // Taxe de séjour : remplace le tarif d'exemple (1 €) par celui saisi.
+  const num=v=>{const x=parseFloat(String(v).replace(',','.'));return x>=0?x:null;};
+  if(ob.ts.mode==='none')S.settings.taxeSejourEnabled=false;
+  else if(ob.ts.mode==='fixed'&&num(ob.ts.amount)!=null){S.settings.taxeSejourEnabled=true;S.settings.taxeSejourHistory=[{id:uid(),from:'2000-01-01',type:'fixed',amount:num(ob.ts.amount)}];}
+  else if(ob.ts.mode==='percent'&&num(ob.ts.percent)!=null){const t={id:uid(),from:'2000-01-01',type:'percent',percent:num(ob.ts.percent)};if(num(ob.ts.cap)!=null)t.cap=num(ob.ts.cap);S.settings.taxeSejourEnabled=true;S.settings.taxeSejourHistory=[t];}
   S.settings.rooms=base.concat(rooms);
   delete S.settings.dinnerEnabled;delete S.settings.breakfastEnabled;
   obMarkDone();
   saveSettings();applySettings();renderGrid();refreshRevenueViews();
   obWriteBackLinks(rooms);
   if(cals){icalLastRun=0;maybeRunIcalImport(true);}
-  ob.result={rooms:rooms.length,cals};
+  ob.result={rooms:rooms.length,cals,legal:ob.legal,ts:ob.ts.mode};
   ob.step=4;obRender();
 }
 
@@ -13980,7 +14055,7 @@ const OB_TOUR=[
   {chap:OB_RESA,modal:true,el:()=>byId('bRoom')&&byId('bRoom').closest('.fg'),title:'Location, voyageurs, prix',text:'Le prix de l\'hébergement pour tout le séjour se calcule avec le tarif de la location (en gris) : tapez un montant pour le remplacer. Plusieurs locations au même nom ? « + Ajouter une location ».'},
   {chap:OB_RESA,modal:true,el:()=>obUnion([byId('bIn')&&byId('bIn').closest('.fg'),byId('bOut')&&byId('bOut').closest('.fg'),byId('bstatus-ok')&&byId('bstatus-ok').closest('.fg')]),title:'Dates et statut',text:'Arrivée et départ, avec l\'heure si vous la connaissez. Confirmé, ou Option tant que le client n\'a pas confirmé.'},
   {chap:OB_RESA,modal:true,el:()=>obSvcBlock(),title:'Services',text:'Petit-déjeuner et table d\'hôtes, nuit par nuit. Les consommations du séjour s\'ajoutent une fois la réservation enregistrée.'},
-  {chap:OB_RESA,modal:true,el:()=>obMsec(3),title:'Paiement',text:'Taxe de séjour, paiement en attente, acompte ou honoré, et la source (direct, Airbnb, Booking…). Le total du séjour se détaille en bas.'},
+  {chap:OB_RESA,modal:true,el:()=>obMsec(3),title:'Paiement',text:()=>(taxeSejourEnabled()?'Taxe de séjour à cocher, paiement':'Paiement')+' en attente, acompte ou honoré, et la source (direct, Airbnb, Booking…). Le total du séjour se détaille en bas.'},
   {chap:OB_RESA,modal:true,sel:['#bSaveTopBtn'],title:'Enregistrer',text:'« ✓ OK » enregistre la réservation ; ✕ ferme sans rien garder. Ici, rien n\'est enregistré : c\'était une démonstration.'},
   {sel:['#mn-week','#vt-week'],view:'week',title:'Semaine',text:'Votre quotidien : arrivées, départs, ménage, table d\'hôtes et extras du jour, jour par jour.'},
   {sel:['#mn-month','#vt-month'],view:'month',title:'Mois',text:'Le bilan du mois : revenus, taux d\'occupation, charges et marge.'},
@@ -13989,7 +14064,9 @@ const OB_TOUR=[
   {sel:['button[title="Événements"]'],title:'Événements',text:'Vos rendez-vous pro et perso, et les échéances fiscales de votre structure, déjà inscrites.'},
   {sel:['#settingsBtn'],title:'Réglages',text:'Locations et tarifs, liens Airbnb et Booking, équipe, compte et formule. Vous pourrez y relancer cette visite.'},
   {sel:['#syncPip'],title:'Enregistrement',text:'Ce point indique l\'état de l\'enregistrement : vert, tout est sauvegardé et visible sur vos autres appareils.'},
-  {sel:['#backToSejoursBtn'],title:'Fiftin Séjours',text:'Votre annonce en réservation directe : vos disponibilités y sont mises à jour depuis ce planning.'}
+  {sel:['#backToSejoursBtn'],title:'Fiftin Séjours',text:()=>(S.settings.rooms||[]).some(r=>r.linkedListingId)
+    ?'Votre annonce en réservation directe : vos disponibilités y sont mises à jour depuis ce planning.'
+    :'L\'annuaire de réservation directe de Fiftin : déposez-y votre annonce, et reliez-la à ce planning pour que vos disponibilités s\'y mettent à jour toutes seules.'}
 ];
 let obTourIdx=0, obTourSteps=[], obDir=1, obSpot=null, obModalOpen=false, obTimer=0;
 function obIsVis(e){if(!e)return false;const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&getComputedStyle(e).visibility!=='hidden';}
@@ -14081,6 +14158,8 @@ function obStartTour(){
       if(e.key==='Escape')obEndTour(); else if(e.key==='ArrowRight')obTourGo(1); else if(e.key==='ArrowLeft')obTourGo(-1); },true);
   }
   t.style.display='block';
+  // La Grille s'ouvre sur aujourd'hui, pas sur le 1er janvier.
+  if(S.view==='grid')setTimeout(()=>byId('row-today')?.scrollIntoView({block:'center'}),60);
   obTourShow();
 }
 function obTourShow(){
@@ -14091,7 +14170,7 @@ function obTourShow(){
   if(s.view&&S.view!==s.view)setView(s.view);
   const n=obTourSteps.length, last=obTourIdx===n-1;
   byId('obBubble').innerHTML='<button class="ob-quit" onclick="obEndTour()" aria-label="Quitter la visite guidée">Quitter<span aria-hidden="true">✕</span></button>'+
-    '<div class="ob-bubble-kicker">'+(s.chap||'Visite guidée')+' · '+(obTourIdx+1)+'/'+n+'</div><h4>'+s.title+'</h4><p>'+s.text+'</p>'+
+    '<div class="ob-bubble-kicker">'+(s.chap||'Visite guidée')+' · '+(obTourIdx+1)+'/'+n+'</div><h4>'+s.title+'</h4><p>'+(typeof s.text==='function'?s.text():s.text)+'</p>'+
     '<div class="ob-bubble-foot"><div class="ob-prog"><i style="width:'+Math.round((obTourIdx+1)/n*100)+'%"></i></div>'+
       (obTourIdx>0?'<button class="ob-back" onclick="obTourGo(-1)">Retour</button>':'')+
       '<button class="ob-primary" onclick="obTourGo(1)">'+(last?'Terminer':'Suivant')+'</button></div>';
