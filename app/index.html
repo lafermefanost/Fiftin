@@ -2325,6 +2325,9 @@ body.no-taxe-sejour #taxeSejourFg{display:none!important;}
 .br-auto{width:auto;padding:0 8px;background:#fff;font:500 11px 'Jost',sans-serif;color:var(--gray);}
 .br-btn{padding:4px 10px;cursor:pointer;display:inline-flex;align-items:center;}
 .br-st{font-size:11px;color:var(--gray);}
+.cat-hist-line{flex:1 1 100%;display:flex;align-items:center;justify-content:flex-end;gap:10px;font-size:11px;color:var(--gray);margin-top:-2px;}
+.cat-hist-line button{border:none;background:none;padding:0;font:500 11px 'Jost',sans-serif;color:var(--green);text-decoration:underline;text-underline-offset:2px;cursor:pointer;}
+.cat-hist{margin-top:-4px;background:#F7F6F2;}
 .ob-picks{display:flex;flex-wrap:wrap;gap:8px;}
 .ob-picks button{background:#fff;border:1.5px solid var(--light);border-radius:14px;padding:10px 13px;font:500 14px 'Jost',sans-serif;color:var(--dark);cursor:pointer;line-height:1.25;text-align:left;}
 .ob-picks button small{display:block;font-size:11.5px;color:var(--gray);font-weight:400;}
@@ -10293,7 +10296,8 @@ function renderSettings(){
           <option value="__new__">+ Nouvelle catégorie…</option>
         </select>
         <button class="set-del" onclick="delCatalogItem('${item.id}')">×</button>
-      </div>`;
+        ${catHistLineHTML(item)}
+      </div>${catHistPanelHTML(item)}`;
     });
   });
   if(catArchived.length){
@@ -11131,6 +11135,75 @@ function openCatalogSettings(){
   settingsPanelOpen.catalogue=true;
   renderSettings();
   setTimeout(()=>byId('setpanel-catalogue')?.scrollIntoView({block:'start',behavior:'smooth'}),80);
+}
+// ── Historique des prix d'un article (demande de César, 31/10/2026) ──
+// Chaque version {from, price} s'applique aux ventes à partir de sa date
+// (catalogPrice). Visible et modifiable ici : date d'effet au choix, ajout
+// d'un nouveau prix daté, suppression d'une version. item.price reste le
+// prix en vigueur aujourd'hui.
+let catHistOpen={};
+function catHistVersions(item){
+  const h=Array.isArray(item.priceHistory)&&item.priceHistory.length?item.priceHistory:[{from:'2000-01-01',price:+item.price||0}];
+  return h.map(v=>({from:v.from,price:+v.price||0})).sort((a,b)=>a.from.localeCompare(b.from));
+}
+function fmtShortDate(ds){const[y,m,d]=ds.split('-');return `${d}/${m}/${y}`;}
+function catHistLineHTML(item){
+  const v=catHistVersions(item), today=todayISO();
+  const cur=[...v].reverse().find(x=>x.from<=today)||v[0];
+  const prev=v[v.indexOf(cur)-1];
+  const next=v.find(x=>x.from>today);
+  const info=next?`${next.price} € à partir du ${fmtShortDate(next.from)}`:(prev&&cur.from!=='2000-01-01'?`depuis le ${fmtShortDate(cur.from)} · avant : ${prev.price} €`:'');
+  return `<div class="cat-hist-line">${info?`<span>${info}</span>`:''}<button type="button" onclick="catHistOpen['${item.id}']=!catHistOpen['${item.id}'];renderSettings()">${catHistOpen[item.id]?'Masquer l\'historique':'Historique des prix'+(v.length>1?' ('+v.length+')':'')}</button></div>`;
+}
+function catHistPanelHTML(item){
+  if(!catHistOpen[item.id])return '';
+  const v=catHistVersions(item);
+  return `<div class="set-card cat-hist">
+    <div style="font-size:11px;color:var(--gray);line-height:1.45;margin-bottom:8px">Chaque prix s'applique aux ventes à partir de sa date d'effet ; les ventes plus anciennes gardent le prix d'avant.</div>
+    ${v.map((x,i)=>`<div class="set-card-row" style="gap:6px;margin-bottom:6px">
+      ${x.from==='2000-01-01'&&i===0?`<span style="flex:1;font-size:12px;color:var(--gray)">Prix d'origine</span>`
+        :`<span style="font-size:12px;color:var(--gray)">À partir du</span><input type="date" class="set-fi" style="flex:1;min-width:0" value="${x.from}" onchange="setCatHist('${item.id}',${i},'from',this.value)">`}
+      <input type="number" class="set-fi-sm" style="width:60px" step="0.5" min="0" value="${x.price}" onchange="setCatHist('${item.id}',${i},'price',parseFloat(this.value)||0)">
+      <span style="font-size:11px;color:var(--gray)">€</span>
+      ${i>0?`<button class="set-del" onclick="delCatHist('${item.id}',${i})">×</button>`:'<span style="width:22px"></span>'}
+    </div>`).join('')}
+    <button class="set-add" style="margin-top:2px" onclick="addCatHist('${item.id}')">+ Nouveau prix à partir d'une date</button>
+  </div>`;
+}
+function catHistSave(item,v){
+  v.sort((a,b)=>a.from.localeCompare(b.from));
+  item.priceHistory=v;
+  item.price=catalogPrice(item,todayISO());
+  saveCatalog();
+  if(db)pushToFirebase();
+  renderSettings();
+  if(S.view==='week')renderWeek();
+  refreshYearMaybe();
+}
+function setCatHist(id,i,field,value){
+  const item=S.catalog.find(c=>c.id===id);if(!item)return;
+  const v=catHistVersions(item);if(!v[i])return;
+  if(field==='from'){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(value)){renderSettings();return;}
+    if(v.some((x,k)=>k!==i&&x.from===value)){alert('Un prix existe déjà à cette date.');renderSettings();return;}
+    v[i].from=value;
+  }else v[i].price=+value||0;
+  catHistSave(item,v);
+}
+function addCatHist(id){
+  const item=S.catalog.find(c=>c.id===id);if(!item)return;
+  const v=catHistVersions(item);
+  let d=todayISO();
+  while(v.some(x=>x.from===d))d=addDays(d,1);
+  v.push({from:d,price:+item.price||0});
+  catHistSave(item,v);
+}
+function delCatHist(id,i){
+  const item=S.catalog.find(c=>c.id===id);if(!item)return;
+  const v=catHistVersions(item);if(i<=0||!v[i])return;
+  if(!confirm(`Supprimer le prix du ${fmtShortDate(v[i].from)} (${v[i].price} €) ? Les ventes concernées reprendront le prix précédent.`))return;
+  v.splice(i,1);
+  catHistSave(item,v);
 }
 function updateCatalogItem(id,field,value){
   const i=S.catalog.findIndex(c=>c.id===id);
