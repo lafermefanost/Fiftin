@@ -27,6 +27,40 @@ function table(rows) {
   rows.forEach((r) => console.log([r.name, f(r.before), f(r.pastNow), f(r.price), r.dated ? "oui" : "non", r.sold, r.action].join(" | ")));
 }
 
+/* Diagnostic (lecture seule) : quels AUTRES prix ont changé entre les
+ * deux instants — tarifs des services (table d'hôtes, petit-déjeuner),
+ * tarifs des locations, prix des clients (nombre seulement), réservations
+ * modifiées (nombre seulement). Aucun nom de client affiché. */
+function diagnose(before, now) {
+  const j = (v) => JSON.stringify(v == null ? null : v);
+  const sb = before.settings || {}, sn = now.settings || {};
+  console.log("\n--- Autres changements entre les deux instants ---");
+  const keys = Array.from(new Set(Object.keys(sb).concat(Object.keys(sn)))).filter((k) => j(sb[k]) !== j(sn[k]));
+  console.log("Réglages modifiés : " + (keys.length ? keys.join(", ") : "aucun"));
+  if (j(sb.tariffHistory) !== j(sn.tariffHistory)) {
+    console.log("Tarifs des services (table d'hôtes / petit-déj) — avant : " + j(sb.tariffHistory));
+    console.log("Tarifs des services (table d'hôtes / petit-déj) — maintenant : " + j(sn.tariffHistory));
+  }
+  (sn.rooms || []).forEach((r) => {
+    const o = (sb.rooms || []).find((x) => x && x.id === r.id);
+    if (!o) { console.log("Location ajoutée : " + r.name); return; }
+    if (j(o.tariffHistory) !== j(r.tariffHistory)) {
+      console.log("Tarifs de « " + r.name + " » — avant : " + j(o.tariffHistory));
+      console.log("Tarifs de « " + r.name + " » — maintenant : " + j(r.tariffHistory));
+    }
+  });
+  const gb = before.guests || [], gn = now.guests || [];
+  const gChanged = gn.filter((g) => { const o = gb.find((x) => x && x.id === g.id); return o && (j(o.price) !== j(g.price) || j(o.priceSet) !== j(g.priceSet) || j(o.priceHistory) !== j(g.priceHistory)); }).length;
+  console.log("Clients dont le prix a changé : " + gChanged + " (sur " + gn.length + ")");
+  const bb = before.bookings || [], bn = now.bookings || [];
+  const today = new Date().toISOString().slice(0, 10);
+  const bChanged = bn.filter((b) => { const o = bb.find((x) => x && x.id === b.id); return o && j(o) !== j(b); });
+  console.log("Réservations modifiées : " + bChanged.length + " (dont " + bChanged.filter((b) => b.checkIn < today).length + " passées), ajoutées : " + bn.filter((b) => !bb.some((x) => x && x.id === b.id)).length + ", supprimées : " + bb.filter((b) => !bn.some((x) => x && x.id === b.id)).length);
+  const fields = {};
+  bChanged.forEach((b) => { const o = bb.find((x) => x.id === b.id); Object.keys(Object.assign({}, o, b)).forEach((k) => { if (j(o[k]) !== j(b[k])) fields[k] = (fields[k] || 0) + 1; }); });
+  if (Object.keys(fields).length) console.log("Champs modifiés dans ces réservations : " + Object.keys(fields).map((k) => k + " ×" + fields[k]).join(", "));
+}
+
 (async () => {
   if (mode !== "simulation" && mode !== "application") throw new Error("Mode inconnu : " + mode);
   const uid = (await getAuth().getUserByEmail(cfg.email)).uid;
@@ -39,6 +73,7 @@ function table(rows) {
   const plan = planRepair(before, nowSnap.data(), cfg.effective);
   console.log("Catalogue actuel : " + (nowSnap.data().catalog || []).length + " articles — " + plan.changes + " à réparer\n");
   table(plan.rows);
+  diagnose(before, nowSnap.data());
   if (mode === "simulation") { console.log("\nSimulation : rien n'a été écrit."); return; }
   const written = await db.runTransaction(async (t) => {
     const snap = await t.get(ref);
