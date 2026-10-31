@@ -36,3 +36,11 @@ jobs:
           for f in availsharegeturl availshare icalgetexporturl; do
             echo "--- $f"; gcloud run services get-iam-policy $f --region=us-central1 --project=fiftin-e30c2 --format="value(bindings)" || true
           done
+      - name: En-têtes CORS (sans connexion, aucune donnée)
+        run: |
+          for f in availShareGetUrl icalGetExportUrl; do
+            echo "=== $f : OPTIONS ==="
+            curl -s -o /dev/null -D - -X OPTIONS -H "Origin: https://fiftin.fr" -H "Access-Control-Request-Method: POST" -H "Access-Control-Request-Headers: content-type,authorization" "https://us-central1-fiftin-e30c2.cloudfunctions.net/$f" | grep -i "^HTTP\|access-control" || true
+            echo "=== $f : POST sans connexion ==="
+            curl -s -D - -X POST -H "Origin: https://fiftin.fr" -H "Content-Type: application/json" --data '{"data":{}}' "https://us-central1-fiftin-e30c2.cloudfunctions.net/$f" | grep -i "^HTTP\|access-control\|error" || true
+          done
