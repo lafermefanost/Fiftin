@@ -2583,7 +2583,7 @@ body.map-fullscreen{overflow:hidden;}
    hébergements sont des cartes blanches distinctes DANS la carte verte. */
 .host-site{background:var(--sauge); color:#fff; border-radius:22px; overflow:hidden; margin-bottom:22px; box-shadow:0 2px 10px rgba(0,0,0,.12);}
 .host-site-head{padding:14px;}
-.hsh-top{display:flex; align-items:center; gap:14px;}
+.hsh-top{display:flex; align-items:flex-start; gap:14px;}
 .hsh-photo{background:rgba(255,255,255,.15);}
 /* Aperçu de l'établissement et de ses hébergements (demande de César) :
    format 4/5 du site, carrousel complet (mêmes classes que le fil,
@@ -2598,36 +2598,47 @@ body.map-fullscreen{overflow:hidden;}
 .hsh-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
 .hsh-body small{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--yellow);}
 .hsh-body small svg{width:16px; height:16px;}
-.hsh-body b{font-size:20px; font-weight:700; line-height:1.15;}
+.hsh-body b{font-size:17px; font-weight:700; line-height:1.2; overflow-wrap:anywhere;}
 .hsh-body span{font-size:13.5px; opacity:.85;}
 .hsh-todo{margin:12px 0 0; font-size:13px; opacity:.9;}
 .hsh-actions{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;}
-.hsh-btn{flex:1; border:1.5px solid rgba(255,255,255,.55); background:transparent; color:#fff; border-radius:16px; padding:11px 10px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:700; cursor:pointer;}
+.hsh-btn{flex:1; display:inline-flex; align-items:center; justify-content:center; gap:6px; border:1.5px solid rgba(255,255,255,.55); background:transparent; color:#fff; border-radius:16px; padding:11px 10px; font-family:'Jost',sans-serif; font-size:13.5px; font-weight:700; cursor:pointer;}
+.hsh-btn svg{width:13px; height:13px; flex-shrink:0;}
 .hsh-btn.main{flex:2; background:var(--yellow); border-color:var(--yellow); color:var(--sauge-deep);}
 .hsh-btn{white-space:nowrap;}
 .host-site-members{padding:2px 12px 12px;}
 .host-site-members .host-listing-card{background:#fff; color:var(--ink); margin-bottom:12px; border:none; border-radius:18px; box-shadow:0 2px 8px rgba(0,0,0,.18);}
-.hsm-label{font-size:12px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:rgba(255,255,255,.75); margin:4px 4px 10px;}
+.hsm-label{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--yellow); margin:6px 4px 8px;}
+.hsm-label svg{width:16px; height:16px;}
 .hsm-add{display:block; width:100%; border:1.5px dashed var(--sauge-light); background:transparent; border-radius:16px; padding:13px; font-family:'Jost',sans-serif; font-size:14px; font-weight:600; color:var(--sauge); cursor:pointer;}
 .host-site-members > .hsm-add{border-color:rgba(255,255,255,.55); color:#fff;}
 /* Hébergement d'un établissement : construit comme l'en-tête de
    l'établissement (aperçu photo à gauche, titre à droite), sur fond blanc. */
-.hsm-top{display:flex; align-items:center; gap:14px;}
+.hsm-top{display:flex; align-items:flex-start; gap:14px;}
 .hsm-photo{background:var(--line);}
 .hsm-body{flex:1; min-width:0; display:flex; flex-direction:column; gap:1px;}
-.hsm-body small{display:flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--sauge-mid);}
-.hsm-body small svg{width:16px; height:16px;}
-.hsm-body b{font-size:20px; font-weight:700; line-height:1.15; color:var(--ink); overflow-wrap:anywhere;}
+.hsm-body b{font-size:17px; font-weight:700; line-height:1.2; color:var(--ink); overflow-wrap:anywhere;}
 .hsm-body > span{font-size:13.5px; color:var(--muted);}
-.hsm-bar{display:flex; align-items:center; gap:8px; margin-top:12px;}
-.hsm-status{display:inline-flex; align-items:center; gap:7px; padding:6px 11px; border-radius:999px; background:var(--cream-deep); color:var(--gray-mid); font-size:12.5px; font-weight:700; white-space:nowrap;}
-.hsm-status::before{content:""; width:7px; height:7px; border-radius:50%; background:currentColor; opacity:.55;}
-.hsm-status.on{background:var(--sauge-bg); color:var(--sauge);}
-.hsm-status.on::before{background:var(--yellow); opacity:1;}
-.hs-acts{position:absolute; top:7px; right:7px; z-index:3; display:flex; flex-direction:column; gap:6px;}
-.hs-acts .save-btn{position:relative; top:auto; right:auto; width:30px; height:30px;}
-.hs-acts .save-btn svg{width:14px; height:14px; stroke:#fff; fill:none; stroke-width:2;}
-.hs-acts .hlc-del svg{stroke:#FFD9CF;}
+.hs-tools{display:flex; align-items:center; justify-content:flex-end; gap:5px; margin-bottom:10px; min-width:0;}
+.hs-status{display:inline-flex; align-items:center; gap:5px; min-width:0; padding:4px 8px; border-radius:999px; font-size:11px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; background:var(--cream-deep); color:var(--gray-mid);}
+.hs-status::before{content:""; flex:none; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55;}
+.hs-status.on{background:var(--sauge-bg); color:var(--sauge);}
+.hs-status.on::before{background:var(--yellow); opacity:1;}
+.hs-acts{display:flex; gap:4px; flex:none;}
+.hs-act{width:27px; height:27px; border-radius:50%; border:none; padding:0; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; background:var(--sauge-bg);}
+.hs-act svg{width:14px; height:14px; fill:none; stroke:var(--sauge); stroke-width:2;}
+.hs-act.hlc-del{background:#F8E9E4;}
+.hs-act.hlc-del svg{stroke:var(--danger);}
+.host-site-head .hs-status{background:rgba(255,255,255,.14); color:rgba(255,255,255,.8);}
+.host-site-head .hs-status.on{color:#fff;}
+.host-site-head .hs-act{background:rgba(255,255,255,.14);}
+.host-site-head .hs-act svg{stroke:#fff;}
+.host-site-head .hs-act.hlc-del svg{stroke:#FFD9CF;}
+/* Calendrier d'un hébergement d'établissement : centré, picto blanc. */
+.hsm-card .cal-acc .cal-disclose{justify-content:center;}
+.hsm-card .cal-acc .cal-disclose span{flex:none;}
+.hsm-card .cal-disclose-ico{color:#fff;}
+.host-listing-card.hsm-card .hlc-edit{gap:6px;}
 .host-listing-card.hsm-card .hlc-clicks{margin-top:10px;}
 .host-listing-card.hsm-card .hlc-edit{margin-top:10px;}
 /* Éditeur d'établissement : type modifiable sous le nom. */
@@ -13744,9 +13755,9 @@ document.addEventListener("click", function(e){
   var el = e.target && e.target.closest ? e.target.closest("[data-clicks]") : null;
   if(el && !el.hidden) openClickHistory(el.getAttribute("data-clicks-title") || "", el.getAttribute("data-clicks").split(","));
 });
-function hsThumbHtml(cls, key, urls, acts){
+function hsThumbHtml(cls, key, urls){
   urls = (urls || []).filter(Boolean).filter(function(u,i,a){ return a.indexOf(u)===i; });
-  return '<div class="hs-thumb '+cls+'">'+(acts ? '<div class="hs-acts">'+acts+'</div>' : '')+(urls.length ?
+  return '<div class="hs-thumb '+cls+'">'+(urls.length ?
     '<div class="cover-carousel" data-cc="'+esc(key)+'">'+urls.map(function(u){ return '<img class="cc-slide" src="'+esc(u)+'" alt="" loading="lazy">'; }).join("")+'</div>'+
     (urls.length>1 ? '<div class="cover-dots">'+urls.map(function(_,i){ return '<span class="'+(i===0?"on":"")+'"></span>'; }).join("")+'</div>' : '') : '')+
   '</div>';
@@ -13755,6 +13766,14 @@ var HS_ICON_PAUSE = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-line
 var HS_ICON_PLAY = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5l11 7-11 7z"/></svg>';
 var HS_ICON_EYE = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 var HS_ICON_TRASH = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>';
+/* Haut à droite de la carte (demande de César) : statut puis pause /
+   aperçu / supprimer, hors de la photo — même rangée pour l'établissement
+   et pour chacun de ses hébergements. */
+function hsToolsHtml(statusTxt, on, acts){
+  return '<div class="hs-tools"><span class="hs-status'+(on?' on':'')+'">'+esc(statusTxt)+'</span><span class="hs-acts">'+acts+'</span></div>';
+}
+var HS_ICON_HOUSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>';
+var HS_ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
 function hostSiteHtml(g, listings){
   var first = g.members[0];
   var withPlace = g.members.filter(function(x){ return x.place; })[0];
@@ -13763,7 +13782,7 @@ function hostSiteHtml(g, listings){
   // Comme la carte du fil : toutes les photos du lieu, puis la couverture
   // de chacun de ses hébergements.
   var shots = (place.gallery || []).map(photoMid).concat(g.members.map(memberCoverUrl));
-  // Pause / aperçu / supprimer sur la photo (demande de César) — pour
+  // Pause / aperçu / supprimer en haut à droite (demande de César) — pour
   // l'établissement : pause = tous ses hébergements en ligne mis en pause
   // (ou, s'il n'y en a plus aucun en ligne, ceux en pause remis en ligne) ;
   // supprimer = défaire l'établissement, ses hébergements restent des
@@ -13771,9 +13790,10 @@ function hostSiteHtml(g, listings){
   var nOn = g.members.filter(function(m){ return m.status==="published"; }).length;
   var nPaused = g.members.filter(function(m){ return m.status==="paused"; }).length;
   var siteTo = nOn ? "paused" : nPaused ? "published" : "";
-  var siteActs = (siteTo ? '<button type="button" class="save-btn hs-act" data-site-pause="'+esc(g.siteId)+'" data-pause-to="'+siteTo+'" aria-label="'+(siteTo==="paused"?"Mettre l’établissement en pause":"Remettre l’établissement en ligne")+'" title="'+(siteTo==="paused"?"Mettre en pause":"Remettre en ligne")+'">'+(siteTo==="paused" ? HS_ICON_PAUSE : HS_ICON_PLAY)+'</button>' : '')+
-    '<button type="button" class="save-btn hs-act" data-site-preview="'+esc(g.siteId)+'" aria-label="Aperçu" title="Aperçu">'+HS_ICON_EYE+'</button>'+
-    '<button type="button" class="save-btn hs-act hlc-del" data-site-delete="'+esc(g.siteId)+'" aria-label="Supprimer l’établissement" title="Supprimer l’établissement">'+HS_ICON_TRASH+'</button>';
+  var siteStatus = nOn ? "En ligne" : nPaused ? "En pause" : "Brouillon";
+  var siteActs = (siteTo ? '<button type="button" class="hs-act" data-site-pause="'+esc(g.siteId)+'" data-pause-to="'+siteTo+'" aria-label="'+(siteTo==="paused"?"Mettre l’établissement en pause":"Remettre l’établissement en ligne")+'" title="'+(siteTo==="paused"?"Mettre en pause":"Remettre en ligne")+'">'+(siteTo==="paused" ? HS_ICON_PAUSE : HS_ICON_PLAY)+'</button>' : '')+
+    '<button type="button" class="hs-act" data-site-preview="'+esc(g.siteId)+'" aria-label="Aperçu" title="Aperçu">'+HS_ICON_EYE+'</button>'+
+    '<button type="button" class="hs-act hlc-del" data-site-delete="'+esc(g.siteId)+'" aria-label="Supprimer l’établissement" title="Supprimer l’établissement">'+HS_ICON_TRASH+'</button>';
   var kind = placeKindLabel(place);
   var todo = [!place.name && "un nom", !place.kind && "un type", !(place.gallery && place.gallery.length) && "des photos", !place.desc && "une présentation", g.members.length<2 && "un deuxième hébergement (l’établissement apparaît aux voyageurs à partir de deux hébergements en ligne)"].filter(Boolean);
   // Une seule carte : en-tête vert propriétaire (l'établissement), puis
@@ -13781,8 +13801,9 @@ function hostSiteHtml(g, listings){
   return '<section class="host-site">'+
     '<div class="host-site-head">'+
       '<div class="hsh-top">'+
-        hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots, siteActs)+
+        hsThumbHtml("hsh-photo", "hs-"+g.siteId, shots)+
         '<div class="hsh-body">'+
+          hsToolsHtml(siteStatus, nOn>0, siteActs)+
           '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PLACE_ICON+'</svg>Établissement</small>'+
           '<b>'+esc(place.name || "Établissement sans nom")+'</b>'+
           '<span>'+(kind ? esc(kind)+' · ' : '')+g.members.length+' hébergement'+(g.members.length>1?'s':'')+'</span>'+
@@ -13791,12 +13812,14 @@ function hostSiteHtml(g, listings){
       '<button type="button" class="hlc-clicks on-dark" data-clicks="'+esc(g.members.map(function(m){ return m.id; }).join(","))+'" data-clicks-title="'+esc(place.name || "Votre établissement")+'" hidden></button>'+
       (todo.length ? '<p class="hsh-todo">À compléter pour les voyageurs : '+todo.join(", ")+'.</p>' : '')+
       '<div class="hsh-actions">'+
-        '<button type="button" class="hsh-btn main" data-site-link="'+esc(first.id)+'">Modifier l’établissement</button>'+
+        '<button type="button" class="hsh-btn main" data-site-link="'+esc(first.id)+'">'+HS_ICON_PENCIL+'<span>Modifier l’établissement</span></button>'+
       '</div>'+
     '</div>'+
     '<div class="host-site-members">'+
-      '<div class="hsm-label">'+(g.members.length>1 ? 'Les '+g.members.length+' hébergements' : 'Son hébergement')+'</div>'+
-      g.members.map(function(l){ return hostListingCardHtml(l, listings, true); }).join("")+
+      // « Hébergement 1 », puis sa carte ; « Hébergement 2 »… (demande de César)
+      g.members.map(function(l, i){
+        return '<div class="hsm-label">'+HS_ICON_HOUSE+'Hébergement'+(g.members.length>1 ? ' '+(i+1) : '')+'</div>'+hostListingCardHtml(l, listings, true);
+      }).join("")+
       '<button type="button" class="hsm-add" data-site-add="'+esc(first.id)+'">+ Ajouter un hébergement à l’établissement</button>'+
     '</div>'+
   '</section>';
@@ -13850,15 +13873,12 @@ function hostListingCardHtml(l, listings, inSite){
     var priceLbl = l.units && l.units.length ? listingPriceLabel(l) : "Prix à compléter";
     return '<div class="admin-card host-listing-card hsm-card">'+
       '<div class="hsm-top">'+
-        hsThumbHtml("hsm-photo", "hsm-"+l.id, allShots.map(photoMid), acts("save-btn hs-act"))+
+        hsThumbHtml("hsm-photo", "hsm-"+l.id, allShots.map(photoMid))+
         '<div class="hsm-body">'+
-          '<small><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>Hébergement</small>'+
+          hsToolsHtml(statusTxt, l.status==="published", acts("hs-act"))+
           '<b>'+esc(l.name||"(sans nom)")+'</b>'+
           '<span>'+(typeLbl ? esc(typeLbl)+' · ' : '')+esc(priceLbl)+'</span>'+
         '</div>'+
-      '</div>'+
-      '<div class="hsm-bar">'+
-        '<span class="hsm-status'+(l.status==="published"?' on':'')+'">'+esc(statusTxt)+'</span>'+
       '</div>'+
       tail+
     '</div>';
