@@ -689,11 +689,11 @@ body.creator-open.detail-open nav.tabbar{display:none;}
 .place-rail{display:flex; gap:10px; overflow-x:auto; scroll-snap-type:x mandatory; margin:0 -14px; padding:2px 14px 4px; scroll-padding:0 14px;
   -webkit-overflow-scrolling:touch; scrollbar-width:none;}
 .place-rail::-webkit-scrollbar{display:none;}
-.place-rail-card{flex:0 0 62%; min-width:0; scroll-snap-align:start; cursor:pointer;}
+.place-rail-card{flex:0 0 53%; /* 15 % plus petites (demande de César, 31/10/2026 ; avant 62 %) */ min-width:0; scroll-snap-align:start; cursor:pointer;}
 /* Vignettes réduites (retour de César) : textes, pastilles et boutons
    ramenés dans les mêmes proportions que la carte. */
 .place-rail .cover-info{padding:12px 12px 12px;}
-.place-rail .cover-info h2{font-size:15.5px; margin-bottom:2px;}
+.place-rail .cover-info h2{font-size:14px; margin-bottom:2px;}
 .place-rail .save-btn, .place-rail .share-btn{width:30px; height:30px; right:10px;}
 .place-rail .save-btn{top:10px;}
 .place-rail .share-btn{top:46px;}
@@ -3169,6 +3169,11 @@ a.is-menu:hover, button.is-menu:hover{filter:none; background:rgba(255,255,255,.
 .hl-menu-group a:hover,.hl-menu-group button:hover{background:#fff;}
 .hl-menu-foot{border-top:1px solid #E7E4DC; padding-top:4px;}
 
+/* Flèches des défilements horizontaux, ordinateur seulement (voir script en fin de page). */
+.hscroll-arrow{position:fixed; z-index:9000; display:none; align-items:center; justify-content:center; padding:0; border:none; border-radius:50%; cursor:pointer; background:rgba(255,255,255,.92); color:var(--sauge); box-shadow:0 2px 10px rgba(0,0,0,.22);}
+.hscroll-arrow.on{display:flex;}
+.hscroll-arrow:hover{background:#fff; color:var(--sauge-deep);}
+.hscroll-arrow svg{width:55%; height:55%;}
 </style>
 
 <script>
@@ -14670,6 +14675,67 @@ document.getElementById("app").addEventListener("click", function(e){
 bootFirebaseAuth();
 fetchListingIndex();
 
+})();
+
+/* Ordinateur (souris) : flèches de navigation sur les défilements
+   horizontaux (demande de César) — carrousels de photos, rails
+   d'hébergements, bandeau de filtres. Une seule paire de flèches flottantes,
+   placée sur la zone survolée : rien n'est ajouté dans les cartes. Au
+   toucher (téléphone, tablette), rien ne change : le geste suffit. */
+(function(){
+  if(!window.matchMedia || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+  var SEL = ".cover-carousel, .detail-gallery-scroll, .place-rail, .filters";
+  var ICON = function(d){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="'+d+'"/></svg>'; };
+  var prev = document.createElement("button"), next = document.createElement("button");
+  prev.type = next.type = "button";
+  prev.className = "hscroll-arrow prev"; next.className = "hscroll-arrow next";
+  prev.setAttribute("aria-label", "Précédent"); next.setAttribute("aria-label", "Suivant");
+  prev.innerHTML = ICON("M15 5l-7 7 7 7"); next.innerHTML = ICON("M9 5l7 7-7 7");
+  document.body.appendChild(prev); document.body.appendChild(next);
+  var cur = null, hideT = null;
+  var scrollable = function(el){ return el.scrollWidth > el.clientWidth + 4; };
+  function place(){
+    if(!cur || !document.body.contains(cur) || !scrollable(cur)){ hide(); return; }
+    var r = cur.getBoundingClientRect();
+    if(r.bottom < 0 || r.top > innerHeight || r.width < 60){ hide(); return; }
+    var small = r.width < 200 || r.height < 120;
+    var sz = small ? 26 : 36, inset = small ? 4 : 10;
+    var top = Math.max(r.top, 0) + (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0))/2 - sz/2;
+    [prev, next].forEach(function(b){ b.style.width = b.style.height = sz+"px"; b.style.top = top+"px"; });
+    prev.style.left = (r.left + inset)+"px";
+    next.style.left = (r.right - inset - sz)+"px";
+    var max = cur.scrollWidth - cur.clientWidth;
+    prev.classList.toggle("on", cur.scrollLeft > 2);
+    next.classList.toggle("on", cur.scrollLeft < max - 2);
+  }
+  function hide(){ cur = null; prev.classList.remove("on"); next.classList.remove("on"); }
+  // Zone sous la souris : la pile d'éléments au point (photos recouvertes
+  // par le voile, les pastilles et le titre de la carte).
+  var raf = 0, lx = 0, ly = 0;
+  function pick(){
+    raf = 0;
+    var stack = document.elementsFromPoint ? document.elementsFromPoint(lx, ly) : [];
+    if(stack[0] === prev || stack[0] === next || prev.contains(stack[0]) || next.contains(stack[0])){ clearTimeout(hideT); return; }
+    var el = null;
+    // Seulement la zone réellement visible : l'élément du dessus doit être
+    // dans la même carte (pas un volet ou une fenêtre posés par-dessus).
+    for(var i = 0; i < stack.length && !el; i++){ var c = stack[i].closest ? stack[i].closest(SEL) : null; if(c && scrollable(c) && c.parentElement && c.parentElement.contains(stack[0])) el = c; }
+    if(el){ clearTimeout(hideT); if(el !== cur){ cur = el; } place(); }
+    else if(cur){ clearTimeout(hideT); hideT = setTimeout(hide, 150); }
+  }
+  document.addEventListener("mousemove", function(e){ lx = e.clientX; ly = e.clientY; if(!raf) raf = requestAnimationFrame(pick); }, {passive:true});
+  document.addEventListener("scroll", function(e){ if(cur) place(); }, true);
+  window.addEventListener("resize", function(){ if(cur) place(); });
+  function go(dir){
+    if(!cur) return;
+    // Carrousel de photos : une photo ; rail et filtres : presque une largeur.
+    var step = /cover-carousel|detail-gallery-scroll/.test(cur.className) ? cur.clientWidth : Math.max(120, cur.clientWidth * 0.8);
+    cur.scrollBy({left: dir * step, behavior: "smooth"});
+  }
+  [prev, next].forEach(function(b, i){
+    b.addEventListener("click", function(e){ e.preventDefault(); e.stopPropagation(); go(i ? 1 : -1); });
+    b.addEventListener("mousedown", function(e){ e.preventDefault(); });
+  });
 })();
 </script>
 </body>
