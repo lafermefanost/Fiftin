@@ -28,13 +28,18 @@ function placePath(siteId, name) { const sl = slugify(name); return "/sejours/e/
 const TYPE_LABELS = {chambre: "Chambre d'hôtes", gite: "Gîte"};
 const PLACE_KINDS = {maison: "Maison d’hôtes", hotel: "Petit hôtel", domaine: "Domaine de gîtes", ferme: "Ferme", insolite: "Hébergements insolites"};
 
-/* Photo d'aperçu : version d'affichage 1280 px si elle existe (galleryMid),
- * sinon le plein format ; première photo de l'annonce, sinon d'une location. */
+/* Photo d'aperçu : la plus légère qui existe — miniature 480 px
+ * (galleryThumb), sinon version 1280 px (galleryMid), sinon le plein format ;
+ * première photo de l'annonce, sinon d'une location. WhatsApp fabrique
+ * l'aperçu sur le téléphone de l'expéditeur et abandonne la photo si elle
+ * est lourde ou lente (constaté avec la version 1280 px : une fois sur deux). */
+function lightest(o) {
+  if (!o || !o.gallery || !o.gallery.length || !o.gallery[0]) return null;
+  const ok = function (v) { return typeof v === "string" && v ? v : null; };
+  return ok(o.galleryThumb && o.galleryThumb[0]) || ok(o.galleryMid && o.galleryMid[0]) || o.gallery[0];
+}
 function coverOf(l) {
-  const pick = function (o) {
-    if (!o || !o.gallery || !o.gallery.length || !o.gallery[0]) return null;
-    return (o.galleryMid && o.galleryMid[0]) || o.gallery[0];
-  };
+  const pick = lightest;
   const own = pick(l);
   if (own) return own;
   const units = (l && l.units) || [];
@@ -82,7 +87,7 @@ function placeMeta(siteId, members) {
   const n = members.length + " hébergement" + (members.length > 1 ? "s" : "");
   const title = name + (where ? " — " + where : "") + " | Fiftin Séjours";
   const description = clip([[kind, place.claim].filter(Boolean).join(" · "), n + (pt ? ", " + pt : ""), place.desc || ref.desc].filter(Boolean).join(". "), 200);
-  const image = absUrl((place.gallery && place.gallery[0]) ? ((place.galleryMid && place.galleryMid[0]) || place.gallery[0]) : coverOf(ref));
+  const image = absUrl(lightest(place) || coverOf(ref));
   return {
     title: title, description: description, image: image, path: placePath(siteId, name),
     heading: name, sub: [kind, where, n, pt].filter(Boolean).join(" · "), body: clip(place.desc || ref.desc, 600),
