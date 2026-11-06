@@ -24,9 +24,56 @@
       "CNAME"
     ],
     "rewrites": [
-      {"source": "/sejours/h/**", "function": {"functionId": "sejoursPage", "region": "us-central1"}},
-      {"source": "/sejours/e/**", "function": {"functionId": "sejoursPage", "region": "us-central1"}},
-      {"source": "/sitemap.xml", "function": {"functionId": "sitemap", "region": "us-central1"}}
+      {
+        "source": "/sejours/h/**",
+        "function": {
+          "functionId": "sejoursPage",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/sejours/e/**",
+        "function": {
+          "functionId": "sejoursPage",
+          "region": "us-central1"
+        }
+      },
+      {
+        "source": "/sitemap.xml",
+        "function": {
+          "functionId": "sitemap",
+          "region": "us-central1"
+        }
+      }
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|css|json|webmanifest|txt)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      },
+      {
+        "source": "/@(app|sejours|planning|dispo|hotes)/",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
     ]
   }
 }

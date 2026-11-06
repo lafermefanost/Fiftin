@@ -16,6 +16,8 @@ assert.strictEqual(sp.parsePath("/sejours/h/%E0%A4%A"), null, "encodage invalide
 assert.strictEqual(sp.parsePath("/planning/"), null);
 
 // Photo : version 1280 px d'abord, puis plein format, puis une location
+assert.strictEqual(sp.coverOf({gallery: ["a.jpg"], galleryMid: ["a__mid.jpg"], galleryThumb: ["a-thumb.jpg"]}), "a-thumb.jpg", "miniature d'abord");
+assert.strictEqual(sp.coverOf({gallery: ["a.jpg"], galleryMid: ["a__mid.jpg"], galleryThumb: [null]}), "a__mid.jpg");
 assert.strictEqual(sp.coverOf({gallery: ["a.jpg"], galleryMid: ["a__mid.jpg"]}), "a__mid.jpg");
 assert.strictEqual(sp.coverOf({gallery: ["a.jpg"]}), "a.jpg");
 assert.strictEqual(sp.coverOf({gallery: [], units: [{gallery: ["u.jpg"]}]}), "u.jpg");
@@ -49,13 +51,13 @@ assert.ok(sp.injectPage(TPL, m2).includes('content="summary"'));
 // Établissement
 const members = [
   {id: "b0", price: 50, data: {name: "Sans lieu recopié"}},
-  {id: "a", price: 150, data: {name: "Chambre A", city: "Le Fanost", place: {name: "La Ferme Fanost", kind: "maison", claim: "Une ferme", desc: "Présentation", gallery: ["p.jpg"]}}},
+  {id: "a", price: 150, data: {name: "Chambre A", city: "Le Fanost", place: {name: "La Ferme Fanost", kind: "maison", claim: "Une ferme", desc: "Présentation", gallery: ["p.jpg"], galleryThumb: ["p-thumb.jpg"]}}},
   {id: "b", price: 90, data: {name: "Chambre B"}},
 ];
 const pm = sp.placeMeta("site_1", members);
 assert.strictEqual(pm.title, "La Ferme Fanost — Le Fanost | Fiftin Séjours");
 assert.ok(pm.description.startsWith("Maison d’hôtes · Une ferme. 3 hébergements, dès 50 € / nuit. Présentation"), pm.description);
-assert.strictEqual(pm.image, "https://fiftin.fr/p.jpg", "adresse absolue");
+assert.strictEqual(pm.image, "https://fiftin.fr/p-thumb.jpg", "adresse absolue, miniature");
 assert.strictEqual(pm.path, "/sejours/e/site_1/la-ferme-fanost");
 const ph = sp.injectPage(TPL, pm);
 assert.ok(ph.includes('<li><a href="/sejours/h/b/chambre-b">Chambre B</a></li>'));
