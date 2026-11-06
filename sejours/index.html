@@ -1238,6 +1238,10 @@ textarea.text-input{resize:vertical; min-height:80px;}
 
 /* ---------- detail sheet ---------- */
 .detail{position:fixed; inset:0; z-index:200; background:var(--cream); overflow-y:auto; max-width:520px; margin:0 auto;}
+/* Lien de page en cours d'ouverture (openPageLink()) : jamais le fil derrière. */
+.page-link-wait{min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; color:var(--muted); font-size:15px;}
+.page-link-spin{width:34px; height:34px; border-radius:50%; border:3px solid var(--sauge-bg, #E5E9E4); border-top-color:var(--sauge); animation:pl-spin .8s linear infinite;}
+@keyframes pl-spin{to{transform:rotate(360deg);}}
 /* Retour utilisateur, bug réel : "les flèches [bulles retour/like/
    partage] défilent avec la première image au lieu de rester en place".
    Cause : ces boutons étaient posés en position:absolute à même
@@ -3686,20 +3690,60 @@ var SHARE_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
    chargement si ce paramètre est présent et correspond à une annonce
    chargée. */
 function shareListing(l){
-  shareUrl(location.origin + "/sejours/?listing=" + l.id, l.name, l.name + (l.claim ? " — " + l.claim : ""));
+  var path = listingPagePath(l) || ("/sejours/?listing=" + l.id);
+  shareUrl(location.origin + path, l.name, l.name + (l.claim ? " — " + l.claim : ""));
+}
+
+/* Adresse propre à chaque page (demande de César : un hôte avait partagé
+   son annonce et la personne n'avait reçu que l'adresse du fil — la barre
+   d'adresse restait sur /sejours/ quand une fiche était ouverte).
+   /sejours/h/<id Firestore>/<nom> : un hébergement ; /sejours/e/<siteId>/<nom> :
+   un établissement. L'adresse du navigateur suit la fiche ouverte
+   (setPageUrl, sans nouvelle entrée d'historique), et la page s'ouvre
+   directement sur ce lien (openPageLink(), sans attendre l'index). Servies
+   par Firebase Hosting (fonction sejoursPage : titre, description, photo
+   pour les aperçus et Google) ; sur GitHub Pages, 404.html renvoie vers
+   /sejours/?h=… / ?e=…. */
+function slugify(s){
+  return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60).replace(/-+$/, "");
+}
+function listingPagePath(l){
+  var d = l && (l.docId || (typeof l.id==="string" ? l.id : ""));
+  if(!d) return null;
+  var sl = slugify(l.name);
+  return "/sejours/h/" + encodeURIComponent(d) + (sl ? "/" + sl : "");
+}
+function placePagePath(l){
+  if(!l || !l.siteId) return null;
+  var withName = (l.place && l.place.name) ? l : siteMembers(siteOf(l)).concat(LISTINGS).filter(function(x){ return x.siteId===l.siteId && x.place && x.place.name; })[0];
+  var sl = slugify((withName && withName.place.name) || l.name);
+  return "/sejours/e/" + encodeURIComponent(l.siteId) + (sl ? "/" + sl : "");
+}
+function setPageUrl(path){
+  if(!path) return;
+  try{ if(location.pathname + location.search !== path) history.replaceState(history.state, "", path); }catch(e){}
+}
+function parsePageLink(){
+  var m = /^\/sejours\/(h|e)\/([^\/?#]+)/.exec(location.pathname);
+  if(m) return {kind:m[1], key:decodeURIComponent(m[2])};
+  var q = new URLSearchParams(location.search);
+  if(q.get("h")) return {kind:"h", key:q.get("h")};
+  if(q.get("e")) return {kind:"e", key:q.get("e")};
+  return null;
 }
 
 /* Lien profond vers un établissement (?etablissement=<n>, voir
    maybeOpenDeepLink()) : n = idFromString(siteOf(l)), propriétaire + siteId
    — le même pour toutes les annonces de l'établissement, sans rien exposer
    de plus que l'index public. */
-function placeShareId(l){ var s = siteOf(l); return s ? idFromString(s) : null; }
+function placeShareId(l){ var s = siteOf(l); return s ? legacyIdFromString(s) : null; } // anciens liens ?etablissement=
 function sharePlace(l, members){
-  var pid = placeShareId(l);
-  if(!pid){ shareListing(l); return; }
+  var path = placePagePath(l);
+  if(!path){ shareListing(l); return; }
   var name = (l.place && l.place.name) || l.name;
   var kind = placeKindLabel(l.place);
-  shareUrl(location.origin + "/sejours/?etablissement=" + pid, name, name + " — " + (kind ? kind + ", " : "") + members.length + " hébergements");
+  shareUrl(location.origin + path, name, name + " — " + (kind ? kind + ", " : "") + members.length + " hébergements");
 }
 function shareUrl(url, title, text){
   if(navigator.share){
@@ -4027,7 +4071,23 @@ function photoEntryUrl(entry){ return entry.type==="existing" ? entry.url : URL.
 var ADMIN_EMAILS = ["lafermefanost@gmail.com", "cesarmarandin@gmail.com"];
 function isAdmin(){ return !!authState.email && ADMIN_EMAILS.indexOf(authState.email.toLowerCase())!==-1; }
 
+/* Identifiant numérique interne d'une annonce, tiré de son id Firestore.
+   Ancien calcul (legacyIdFromString) : 900 000 valeurs seulement, soit
+   ~200 paires d'annonces au même numéro à 20 000 annonces — liens et
+   fiches mélangés. Désormais deux empreintes combinées sur 53 bits
+   (entier exact en JavaScript) : collision négligeable. Rien n'est
+   enregistré avec ce numéro (favoris, demandes : id Firestore) ; l'ancien
+   calcul ne sert plus qu'à rouvrir les anciens liens ?listing= / ?etablissement=. */
 function idFromString(str){
+  var h1 = 0, h2 = 5381;
+  for(var i=0;i<str.length;i++){
+    var c = str.charCodeAt(i);
+    h1 = (Math.imul(31,h1) + c)|0;
+    h2 = (Math.imul(33,h2) ^ c)|0;
+  }
+  return (h1>>>0)*2097152 + ((h2>>>0) & 0x1FFFFF) + 1;
+}
+function legacyIdFromString(str){
   var h = 0;
   for(var i=0;i<str.length;i++){ h = (Math.imul(31,h) + str.charCodeAt(i))|0; }
   return 100000 + Math.abs(h % 900000);
@@ -4588,11 +4648,29 @@ function fetchListingIndex(){
   loadFirebaseSDK(function(){
     if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
     ensureFirestoreSettings();
-    firebase.firestore().collection("listingIndex").get().then(function(snap){
-      listingIndexCache = snap.docs.map(function(doc){
-        var d = doc.data();
-        d.id = idFromString(doc.id); // même id numérique que normalizeHostListing(), pour que scrollToFeedCard() retrouve la bonne carte
-        d.docId = doc.id;
+    // Index en lots (listingIndexShards, voir functions/indexshards.js) :
+    // quelques documents au lieu d'un par annonce. Lots incomplets (pas
+    // encore reconstruits) : l'index annonce par annonce, comme avant.
+    var fs = firebase.firestore();
+    fs.collection("listingIndexShards").get().then(function(ss){
+      var n = ss.size ? (ss.docs[0].data().n || 0) : 0;
+      if(n && ss.size===n && ss.docs.every(function(d){ return d.data().full; })){
+        var rows = [];
+        ss.docs.forEach(function(d){ var e = d.data().e || {}; Object.keys(e).forEach(function(k){ rows.push({id:k, data:e[k]}); }); });
+        return {empty:!rows.length, rows:rows};
+      }
+      return fs.collection("listingIndex").get().then(function(snap){
+        return {empty:snap.empty, rows:snap.docs.map(function(doc){ return {id:doc.id, data:doc.data()}; })};
+      });
+    }, function(){
+      return fs.collection("listingIndex").get().then(function(snap){
+        return {empty:snap.empty, rows:snap.docs.map(function(doc){ return {id:doc.id, data:doc.data()}; })};
+      });
+    }).then(function(snap){
+      listingIndexCache = snap.rows.map(function(row){
+        var d = row.data;
+        d.id = idFromString(row.id); // même id numérique que normalizeHostListing(), pour que scrollToFeedCard() retrouve la bonne carte
+        d.docId = row.id;
         d.amen = d.amen || [];
         return d;
       });
@@ -8023,6 +8101,7 @@ function openDetail(id, listingOverride, forceVisitorView){
     openCollectionPicker(l, function(){ renderLikeBadge(); openDetail(id); });
   });
   root.querySelector("[data-share]").addEventListener("click", function(){ shareListing(l); });
+  if(!listingOverride) setPageUrl(listingPagePath(l));
   var hostBioMoreBtn = document.getElementById("host-bio-more");
   if(hostBioMoreBtn) hostBioMoreBtn.addEventListener("click", function(){
     hostBioSheetContext = {bio:l.host.bio, hostName:l.host.name, ownerUid:l.ownerUid, excludeDocId:l.docId};
@@ -8271,6 +8350,7 @@ function openPlace(id, override, loaded){
   '</div>';
   document.getElementById("detail-back").addEventListener("click", closeDetail);
   document.getElementById("place-share").addEventListener("click", function(){ sharePlace(l, members); });
+  if(!override) setPageUrl(placePagePath(l));
   var placeLike = document.getElementById("place-like");
   placeLike.addEventListener("click", function(){
     if(override){ alert("Aperçu uniquement : vous ne pouvez pas ajouter votre propre établissement à vos favoris."); return; }
@@ -8307,6 +8387,7 @@ function openPlace(id, override, loaded){
   applyPreviewBar();
 }
 function closeDetail(){
+  if(/^\/sejours\/(h|e)\//.test(location.pathname) || /[?&](h|e)=/.test(location.search)) setPageUrl("/sejours/");
   detailBackToPlace = null;
   previewBarCtx = null;
   document.getElementById("detail-root").innerHTML = "";
@@ -14529,7 +14610,16 @@ function maybeOpenDeepLink(){
   }
   var idParam = new URLSearchParams(location.search).get("listing");
   if(!idParam) return;
-  var id = Number(idParam);
+  // Ancien lien (?listing=<numéro de l'ancien calcul>) : numéro retrouvé
+  // dans l'index par l'ancien calcul, puis ouvert avec le nouveau.
+  if(!listingIndexCache.length){
+    if(placeLinkTries++<20) setTimeout(maybeOpenDeepLink, 500);
+    return;
+  }
+  var legacy = Number(idParam);
+  var hit = listingIndexCache.filter(function(x){ return legacyIdFromString(x.docId)===legacy; })[0];
+  if(!hit){ deepLinkHandled = true; return; }
+  var id = hit.id;
   // resolveListingById() va elle-même chercher l'annonce au-delà de la
   // page actuellement chargée si besoin (pagination, voir son
   // commentaire) — plusieurs appels avant résolution sont possibles
@@ -14553,6 +14643,64 @@ function maybeOpenDeepLink(){
    session hôte doit rouvrir directement l'espace hôtes, hero compris
    (sinon il resterait affiché par-dessus la barre d'onglets hôte, voir
    le commentaire de enterHostMode()), pas revenir sur Explorer. */
+/* Lien de page (/sejours/h/…, /sejours/e/…, ?h=, ?e=, voir parsePageLink()) :
+   toujours côté voyageur (même sur un appareil resté en espace hôte, sans
+   l'enregistrer), sans l'accueil, fiche ouverte dès que son document
+   arrive — jamais d'attente de l'index complet. */
+var PAGE_LINK = parsePageLink();
+if(PAGE_LINK){
+  state.hostMode = false;
+  heroDismissed = true;
+  var heroElLink = document.getElementById("hero");
+  if(heroElLink) heroElLink.hidden = true;
+  deepLinkHandled = true; // anciens liens ?listing= / ?etablissement= : sans objet
+}
+function pageLinkLoading(on){
+  var root = document.getElementById("detail-root");
+  if(on){
+    root.innerHTML = '<div class="detail" id="detail-panel"><div class="page-link-wait"><span class="page-link-spin"></span>Chargement…</div></div>';
+    document.body.classList.add("detail-open");
+  } else if(document.querySelector(".page-link-wait")){
+    root.innerHTML = ""; document.body.classList.remove("detail-open");
+  }
+}
+function pageLinkGone(what){
+  pageLinkLoading(false);
+  setPageUrl("/sejours/");
+  setTimeout(function(){ alert(what + " n'est plus en ligne. Voici les autres hébergements de Fiftin Séjours."); }, 50);
+}
+function openPageLink(link){
+  pageLinkLoading(true);
+  loadFirebaseSDK(function(){
+    if(!firebase.apps.length) firebase.initializeApp(FIFTIN_FIREBASE_CONFIG);
+    ensureFirestoreSettings();
+    var db = firebase.firestore();
+    if(link.kind==="h"){
+      db.collection("listings").doc(link.key).get().then(function(doc){
+        if(!doc.exists || (doc.data() || {}).status!=="published"){ pageLinkGone("Cet hébergement"); return; }
+        var known = LISTINGS.filter(function(x){ return listingKey(x)===doc.id; })[0];
+        if(!known){ hostFirestoreListings.push(normalizeHostListing(doc)); rebuildListings(); }
+        openDetail(idFromString(doc.id));
+      }).catch(function(){ pageLinkGone("Cet hébergement"); });
+      return;
+    }
+    db.collection("listings").where("status","==","published").where("siteId","==",link.key).get().then(function(snap){
+      if(snap.empty){ pageLinkGone("Cet établissement"); return; }
+      var known = {};
+      LISTINGS.forEach(function(x){ known[listingKey(x)] = true; });
+      snap.docs.forEach(function(d){ if(!known[d.id]) hostFirestoreListings.push(normalizeHostListing(d)); });
+      rebuildListings();
+      // Point d'entrée : l'hébergement le moins cher (comme les anciens liens).
+      var ids = snap.docs.map(function(d){ return idFromString(d.id); });
+      var reps = LISTINGS.filter(function(x){ return ids.indexOf(x.id)!==-1; })
+        .sort(function(a, b){ return (displayPriceOf(a)||0)-(displayPriceOf(b)||0); });
+      // Membres : siteMembers() lit les fiches chargées tant que l'index
+      // complet n'est pas là (indexSource()).
+      openPlace(reps[0].id);
+    }).catch(function(){ pageLinkGone("Cet établissement"); });
+  });
+}
+
 if(state.hostMode){
   heroDismissed = true;
   var heroElBoot = document.getElementById("hero");
@@ -14574,6 +14722,7 @@ if(state.hostMode){
   renderResultLine();
 }
 updateHeroMenu();
+if(PAGE_LINK) openPageLink(PAGE_LINK);
 
 /* Entrées depuis la page d'accueil (menu « Mon compte », voir index.html
    racine) : ?espace=voyageur → Explorer (&onglet=sejours : Mes séjours, &onglet=profil : Profil)

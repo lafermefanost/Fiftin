@@ -1,0 +1,4 @@
+User-agent: *
+Disallow: /app/
+Disallow: /dispo/
+Sitemap: https://fiftin.fr/sitemap.xml

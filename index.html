@@ -943,7 +943,9 @@ hlLoadFirebase(function(){
     if(!u) hlMenu.classList.remove("open");
   });
   var db=firebase.firestore();
-  db.collection("listingIndex").get().then(function(snap){
+  // Une annonce d'illustration : 30 entrées de l'index suffisent (jamais
+  // tout l'index — une lecture par annonce à chaque visite de l'accueil).
+  db.collection("listingIndex").limit(30).get().then(function(snap){
     var all=snap.docs.map(function(d){ var x=d.data(); x.docId=d.id; return x; }).filter(function(x){ return x.thumbUrl; });
     if(!all.length) return;
     var pick=all.filter(function(x){ return /fanost/i.test(x.name||""); })[0] || all[0];
