@@ -1,6 +1,7 @@
 # Déploie les Cloud Functions (functions/) à chaque mise à jour de main qui
 # les touche — remplace le "firebase deploy --only functions" à lancer à la
-# main. Le site (HTML) reste servi par GitHub Pages, indépendamment.
+# main. Le site (HTML) est servi par GitHub Pages et publié en parallèle sur
+# Firebase Hosting (deploy-hosting.yml).
 #
 # Secret requis (GitHub → Settings → Secrets and variables → Actions) :
 #   FIREBASE_SERVICE_ACCOUNT : contenu JSON complet de la clé du compte de
@@ -39,6 +40,10 @@ jobs:
         run: node functions/pricing.test.js
       - name: Tests du lien de disponibilités
         run: node functions/availshare.test.js
+      - name: Tests des pages propres de Séjours
+        run: node functions/seopage.test.js
+      - name: Tests de l'index en lots
+        run: node functions/indexshards.test.js
       # Action officielle Google : écrit la clé dans un fichier temporaire
       # du runner, positionne GOOGLE_APPLICATION_CREDENTIALS, et l'efface en
       # fin de job. La clé n'est jamais affichée dans les journaux (GitHub

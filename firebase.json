@@ -7,5 +7,26 @@
   ],
   "firestore": {
     "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "scripts/**",
+      "tests/**",
+      "docs/**",
+      "**/*.md",
+      "firestore.rules",
+      "firestore.rules.baseline",
+      "CNAME"
+    ],
+    "rewrites": [
+      {"source": "/sejours/h/**", "function": {"functionId": "sejoursPage", "region": "us-central1"}},
+      {"source": "/sejours/e/**", "function": {"functionId": "sejoursPage", "region": "us-central1"}},
+      {"source": "/sitemap.xml", "function": {"functionId": "sitemap", "region": "us-central1"}}
+    ]
   }
 }

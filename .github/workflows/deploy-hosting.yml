@@ -1,0 +1,37 @@
+# Publie le site sur Firebase Hosting (fiftin-e30c2.web.app) à chaque mise à
+# jour de main : mêmes fichiers que GitHub Pages, plus les pages propres de
+# Fiftin Séjours (/sejours/h/…, /sejours/e/…, servies par la fonction
+# sejoursPage avec titre, description et photo pour les aperçus de liens et
+# Google) et /sitemap.xml. Tant que le domaine fiftin.fr pointe vers GitHub
+# Pages, ce déploiement ne change rien pour les visiteurs : il prépare la
+# bascule (réglage DNS à faire par César, voir README « Pages propres »).
+# La fonction sejoursPage relit son gabarit sur ce site : garder les deux
+# à jour ensemble.
+#
+# Secret requis : FIREBASE_SERVICE_ACCOUNT (le même que pour les fonctions ;
+# le compte de service doit avoir le rôle « Administrateur Firebase Hosting »).
+name: Déploiement du site sur Firebase Hosting
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["functions/**", "scripts/**", "tests/**", "**/*.md", "firestore.rules", ".github/workflows/deploy-functions.yml", ".github/workflows/deploy-rules.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-hosting
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+      - name: Déploiement
+        run: npx --yes firebase-tools@13.29.1 deploy --only hosting --project fiftin-e30c2 --non-interactive

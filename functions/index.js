@@ -31,9 +31,11 @@ const crypto = require("crypto");
 const pricing = require("./pricing");
 const ical = require("./ical");
 const availshare = require("./availshare");
+const seopage = require("./seopage");
+const indexshards = require("./indexshards");
 const {defineSecret} = require("firebase-functions/params");
 const {initializeApp} = require("firebase-admin/app");
-const {getFirestore, FieldValue} = require("firebase-admin/firestore");
+const {getFirestore, FieldValue, FieldPath} = require("firebase-admin/firestore");
 const {getAuth} = require("firebase-admin/auth");
 const Stripe = require("stripe");
 
@@ -1082,4 +1084,93 @@ exports.icalScheduledSync = onSchedule({schedule: "every 30 minutes", timeoutSec
     const acc = await db.collection("accounts").doc(uid).get();
     await republishAccountAvail(uid, acc.exists ? (acc.data().bookings || []) : [], acc.exists ? (((acc.data().settings || {}).rooms) || []) : undefined);
   }
+});
+
+/* ── Index public en lots (voir functions/indexshards.js) ─────────────── */
+exports.syncListingIndexShards = onDocumentWritten({document: "listingIndex/{listingId}", region: FIRESTORE_TRIGGER_REGION}, async (event) => {
+  const id = event.params.listingId;
+  const after = event.data && event.data.after && event.data.after.exists ? event.data.after.data() : null;
+  const field = new FieldPath("e", id);
+  await db.collection("listingIndexShards").doc(String(indexshards.shardOf(id)))
+    .set({e: {[id]: after || FieldValue.delete()}}, {mergeFields: [field]});
+});
+
+async function rebuildListingIndexShards() {
+  const snap = await db.collection("listingIndex").get();
+  const next = indexshards.distribute(snap.docs.map(function (d) { return {id: d.id, data: d.data()}; }));
+  const col = db.collection("listingIndexShards");
+  const builtAt = new Date().toISOString();
+  for (let i = 0; i < next.length; i++) {
+    const ref = col.doc(String(i));
+    const cur = await ref.get();
+    // Une entrée absente de la relecture n'est retirée que si l'annonce a
+    // vraiment quitté l'index (une publication arrivée entre-temps reste).
+    let stale = indexshards.staleKeys(cur.exists ? (cur.data().e || {}) : {}, next[i]);
+    if (stale.length) {
+      const docs = await db.getAll(...stale.map(function (k) { return db.collection("listingIndex").doc(k); }));
+      stale = stale.filter(function (k, j) { return !docs[j].exists; });
+    }
+    const e = Object.assign({}, next[i]);
+    stale.forEach(function (k) { e[k] = FieldValue.delete(); });
+    const fields = ["full", "n", "builtAt"].concat(Object.keys(e).map(function (k) { return new FieldPath("e", k); }));
+    await ref.set({e: e, full: true, n: indexshards.INDEX_SHARDS, builtAt: builtAt}, {mergeFields: fields});
+  }
+  return snap.size;
+}
+exports.rebuildListingIndexShards = onSchedule({schedule: "every 6 hours", timeoutSeconds: 540}, async () => {
+  const n = await rebuildListingIndexShards();
+  console.log("listingIndexShards reconstruit : " + n + " annonces");
+});
+
+/* ── Pages propres de Fiftin Séjours (voir functions/seopage.js) ──────────
+ * Servies par Firebase Hosting (firebase.json, réécriture de /sejours/h/**
+ * et /sejours/e/**) : la page Séjours elle-même, avec le titre, la
+ * description et la photo de l'hébergement ou de l'établissement. Gabarit
+ * relu sur Hosting (5 min en mémoire), réponses en cache CDN 10 min. */
+const SEJOURS_TEMPLATE_URL = process.env.SEJOURS_TEMPLATE_URL || "https://fiftin-e30c2.web.app/sejours/index.html";
+let sejoursTpl = {at: 0, html: null};
+async function sejoursTemplate() {
+  if (sejoursTpl.html && Date.now() - sejoursTpl.at < 5 * 60 * 1000) return sejoursTpl.html;
+  const r = await fetch(SEJOURS_TEMPLATE_URL);
+  if (!r.ok) throw new Error("gabarit Séjours : HTTP " + r.status);
+  sejoursTpl = {at: Date.now(), html: await r.text()};
+  return sejoursTpl.html;
+}
+async function sejoursPageMeta(link) {
+  if (!link) return null;
+  if (link.kind === "h") {
+    const [doc, ix] = await Promise.all([db.collection("listings").doc(link.key).get(), db.collection("listingIndex").doc(link.key).get()]);
+    if (!doc.exists || doc.data().status !== "published") return null;
+    return seopage.listingMeta(doc.id, doc.data(), ix.exists ? ix.data().price : null);
+  }
+  const snap = await db.collection("listings").where("status", "==", "published").where("siteId", "==", link.key).get();
+  if (snap.empty) return null;
+  const ixs = await db.getAll(...snap.docs.map(function (d) { return db.collection("listingIndex").doc(d.id); }));
+  const members = snap.docs.map(function (d, i) { return {id: d.id, data: d.data(), price: ixs[i].exists ? ixs[i].data().price : null}; })
+    .sort(function (a, b) { return (a.price || 0) - (b.price || 0); });
+  // Un seul hébergement encore en ligne : sa propre fiche (comme le site).
+  return members.length >= 2 ? seopage.placeMeta(link.key, members) : seopage.listingMeta(members[0].id, members[0].data, members[0].price);
+}
+exports.sejoursPage = onRequest({maxInstances: 20}, async (req, res) => {
+  const link = seopage.parsePath(req.path);
+  let tpl;
+  try { tpl = await sejoursTemplate(); } catch (e) {
+    console.error(e);
+    // Gabarit injoignable : la page Séjours ordinaire ouvre le lien elle-même.
+    res.redirect(302, link ? "/sejours/?" + link.kind + "=" + encodeURIComponent(link.key) : "/sejours/");
+    return;
+  }
+  let meta = null;
+  try { meta = await sejoursPageMeta(link); } catch (e) { console.error(e); }
+  res.set("Cache-Control", meta ? "public, max-age=300, s-maxage=600" : "public, max-age=60, s-maxage=60");
+  res.status(meta ? 200 : 404).type("html").send(seopage.injectPage(tpl, meta));
+});
+
+/* Plan du site pour les moteurs de recherche (fiftin.fr/sitemap.xml via
+ * Firebase Hosting) : pages fixes, hébergements et établissements en ligne. */
+exports.sitemap = onRequest({maxInstances: 5}, async (req, res) => {
+  const snap = await db.collection("listingIndex").select("name", "siteId", "ownerUid").get();
+  const entries = snap.docs.map(function (d) { const x = d.data(); return {id: d.id, name: x.name, siteId: x.siteId, ownerUid: x.ownerUid}; });
+  res.set("Cache-Control", "public, max-age=3600, s-maxage=86400");
+  res.type("application/xml").send(seopage.sitemapXml(entries));
 });

@@ -186,6 +186,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Même index regroupé en lots (functions/indexshards.js) : le fil
+    // Séjours lit ces quelques documents au lieu d'un document par
+    // annonce. Écrit uniquement par les fonctions serveur.
+    match /listingIndexShards/{shardId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // Historique personnel du voyageur (Envies → Demandes, voir
     // logContact() dans sejours/index.html) : un document par contact
     // initié (Mail/WhatsApp/SMS/Appeler cliqué), pour qu'il puisse

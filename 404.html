@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<!-- Page introuvable (GitHub Pages sert ce fichier pour toute adresse
+     inconnue). Adresses propres de Fiftin Séjours — /sejours/h/<id>/<nom>
+     (hébergement) et /sejours/e/<id>/<nom> (établissement) — renvoyées vers
+     /sejours/?h=<id> / ?e=<id>, que la page ouvre directement (puis remet
+     l'adresse propre dans la barre). Sur Firebase Hosting, ces adresses sont
+     servies par la fonction sejoursPage et ce renvoi ne sert plus. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Page introuvable — Fiftin</title>
+<script>
+(function(){
+  var m = /^\/sejours\/(h|e)\/([^\/?#]+)/.exec(location.pathname);
+  if(m) location.replace("/sejours/?" + m[1] + "=" + m[2]);
+})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#EFEEEA;--sauge:#354B38;--muted:#6F6C62;}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--cream);font-family:'Jost',sans-serif;color:var(--sauge);text-align:center;padding:24px;box-sizing:border-box;}
+h1{font-size:28px;font-weight:600;margin:0 0 10px;}
+p{color:var(--muted);font-size:16.5px;margin:0 0 22px;}
+a{display:inline-block;background:var(--sauge);color:#fff;text-decoration:none;font-weight:600;font-size:16px;padding:15px 24px;border-radius:999px;margin:4px;}
+</style>
+</head>
+<body>
+<main>
+  <h1>Page introuvable</h1>
+  <p>Cette adresse n'existe pas ou plus.</p>
+  <a href="/sejours/?espace=voyageur&amp;onglet=explore">Voir les hébergements</a>
+  <a href="/">Accueil Fiftin</a>
+</main>
+</body>
+</html>

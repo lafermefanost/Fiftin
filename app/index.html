@@ -11104,12 +11104,12 @@ function sejoursLinkOf(room){
   if(!l&&room.linkedListingId)l=listings.find(x=>x.id===room.linkedListingId&&(x.units||[]).some(u=>u.id===room.linkedUnitId&&!u.linkedRoomId));
   return l||null;
 }
-function sejoursDeepId(docId){let h=0;for(let i=0;i<docId.length;i++){h=(Math.imul(31,h)+docId.charCodeAt(i))|0;}return 100000+Math.abs(h%900000);}
+// « Voir l'annonce » : adresse propre de l'annonce (/sejours/h/<id>, voir sejours/index.html).
 function sejoursLinkHTML(room){
   const l=sejoursLinkOf(room);
   if(!l)return '';
   const st=l.status==='published'?'':l.status==='draft'?' (brouillon)':l.status==='paused'?' (en pause)':' (hors ligne)';
-  const view=l.status==='published'?`<a href="/sejours/?listing=${sejoursDeepId(l.id)}" target="_blank" rel="noopener">Voir l'annonce</a> · `:'';
+  const view=l.status==='published'?`<a href="/sejours/h/${encodeURIComponent(l.id)}" target="_blank" rel="noopener">Voir l'annonce</a> · `:'';
   return `<div class="set-sejours-link"><span class="ssl-dot"></span><span><b>Connecté à Fiftin Séjours</b> · « ${escHtml(l.name||'Annonce')} »${st}<br><small>Disponibilités, prix « dès » et capacité de l'annonce suivent cette location. ${view}<a href="/sejours/?espace=hote" target="_blank" rel="noopener">Gérer dans Séjours</a></small></span></div>`;
 }
 // Une chambre reliée (linkedListingId/linkedUnitId, voir addRoomFromListingUnit)
