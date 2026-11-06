@@ -42,6 +42,9 @@ const ld = JSON.parse(/<script type="application\/ld\+json">([^<]*)<\/script>/.e
 assert.strictEqual(ld["@type"], "LodgingBusiness");
 assert.strictEqual(ld.name, "Cottage <piscine>");
 assert.ok(!/<\/script>/.test(/application\/ld\+json">([\s\S]*?)<\/script>/.exec(html)[1]));
+// Accroche terminée par un point : pas de double point
+assert.ok(sp.listingMeta("x", {name: "C", accomType: "chambre", claim: "Une cabane en bordure de forêt.", desc: "Une chambre."}, 110).description
+  .startsWith("Chambre d'hôtes · Une cabane en bordure de forêt. dès 110 € / nuit. Une chambre"));
 // Sans prix ni photo
 const m2 = sp.listingMeta("x", {name: "Sans rien"}, null);
 assert.strictEqual(m2.image, null);

@@ -50,6 +50,10 @@ function coverOf(l) {
 function absUrl(u) { return !u ? null : /^https?:\/\//.test(u) ? u : SITE + "/" + String(u).replace(/^\/+/, ""); }
 function placeOf(l) { return (l && l.place) || {}; }
 function whereOf(l) { return [l.city, l.regionName || l.deptName].filter(Boolean).join(", ") || l.region || ""; }
+// Phrases jointes par « . » : sans la ponctuation finale de chacune (pas de « forêt.. dès »).
+function sentences(parts) {
+  return parts.filter(Boolean).map(function (x) { return String(x).trim().replace(/[\s.!…;:,]+$/, ""); }).filter(Boolean).join(". ");
+}
 function priceText(p) { return typeof p === "number" && p > 0 ? "dès " + Math.round(p) + " € / nuit" : ""; }
 
 /* Méta d'un hébergement : l = document listings/{id}, price = prix public
@@ -60,7 +64,7 @@ function listingMeta(id, l, price) {
   const title = (l.name || "Hébergement") + (where ? " — " + where : "") + " | Fiftin Séjours";
   const lead = [type, l.claim].filter(Boolean).join(" · ");
   const pt = priceText(price);
-  const description = clip([lead, pt, l.desc].filter(Boolean).join(". "), 200);
+  const description = clip(sentences([lead, pt, l.desc]), 200);
   const image = absUrl(coverOf(l));
   return {
     title: title, description: description, image: image, path: listingPath(id, l.name),
@@ -86,7 +90,7 @@ function placeMeta(siteId, members) {
   const pt = prices.length ? priceText(Math.min.apply(null, prices)) : "";
   const n = members.length + " hébergement" + (members.length > 1 ? "s" : "");
   const title = name + (where ? " — " + where : "") + " | Fiftin Séjours";
-  const description = clip([[kind, place.claim].filter(Boolean).join(" · "), n + (pt ? ", " + pt : ""), place.desc || ref.desc].filter(Boolean).join(". "), 200);
+  const description = clip(sentences([[kind, place.claim].filter(Boolean).join(" · "), n + (pt ? ", " + pt : ""), place.desc || ref.desc]), 200);
   const image = absUrl(lightest(place) || coverOf(ref));
   return {
     title: title, description: description, image: image, path: placePath(siteId, name),
